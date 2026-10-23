@@ -38,8 +38,8 @@
   function credDots(n) { return '<span class="dots">' + [0, 1].map(function (i) { return '<i class="' + (i < n ? 'on' : '') + '"></i>'; }).join('') + '</span>'; }
   function credHtml(pid) {
     var lv = ['faible', 'moyen', 'fort'];
-    return '<div class="cred">' + D.THEMES.slice().sort(function (a, b) { return E.cred(pid, b.id) - E.cred(pid, a.id); }).map(function (t) {
-      var c = E.cred(pid, t.id);
+    return '<div class="cred">' + D.THEMES.slice().sort(function (a, b) { return E.cred(g, pid, b.id) - E.cred(g, pid, a.id); }).map(function (t) {
+      var c = E.cred(g, pid, t.id);
       return '<span class="cred-row cred-' + c + '">' + t.icon + ' ' + esc(t.name) + credDots(c) + '<em>' + lv[c] + '</em></span>';
     }).join('') + '</div>';
   }
@@ -50,6 +50,7 @@
 
   /* ---------- Écrans ---------- */
   function go(name) {
+    if (name === 'choose' || name === 'title') g = null;
     Array.prototype.forEach.call(document.querySelectorAll('.screen'), function (s) { s.classList.remove('active'); });
     $('screen-' + name).classList.add('active');
     if (name === 'choose') renderChoose();
@@ -118,30 +119,77 @@
   function nextTurn() {
     var info = E.startTurn(g);
     queue = []; themePicked = false; theme = E.bestTheme(g, me, selected);
+    // le dilemme d'une IA se règle tout de suite ; le tien t'attend après le journal
+    var aiDil = null;
+    if (info.dilemma && info.dilemma.pid !== me) aiDil = E.resolveDilemma(g, info.dilemma.pid, AI.chooseDilemma(g, info.dilemma.pid));
     render();
-    var ev = D.EVENTS.filter(function (e) { return e.id === info.event.id; })[0];
-    var html = '';
-    if (info.income.length) {
-      var mine = info.income.filter(function (x) { return x.pid === me; })[0];
-      html += '<p>Revenus : <b>+' + mine.money + ' €</b> et <b>+' + mine.infl + ' ★</b>.</p>';
-    }
-    if (info.usure) html += '<p>' + chip('EM') + ' Usure du pouvoir : En Mouvement perd 1 cube en ' + esc(E.REG[info.usure].name) + '.</p>';
-    html += newsHtml(g.news);
-    html += '<div class="event-card"><span class="kicker">Événement</span><div class="h2">' + esc(ev.title) + '</div><p>' + esc(ev.text) + '</p></div>';
-    var fx = info.event.effects.filter(function (f) { return f.pid; });
-    if (fx.length) html += '<div class="log">' + fx.map(function (f) { return '<div class="log-row">' + chip(f.pid) + '<span>' + esc(f.text) + '</span></div>'; }).join('') + '</div>';
-    if (E.isDebateTurn(g)) html += '<p><b>Débat télévisé à la fin de ce tour.</b> Garde de l\'influence (★) pour miser.</p>';
-    modal({ kicker: 'Tour ' + g.turn + ' / ' + R.maxTurns, title: g.turn === 1 ? 'La campagne commence' : 'Nouveau tour', html: html,
-            buttons: [{ label: 'À mes actions', primary: true, onClick: function () {
-              render();
-              if (g.turn === 1 && (forceTuto || !T.isActive())) { var before = T.isActive(); T.maybeStart(forceTuto); tutoGame = !before && T.isActive(); forceTuto = false; }
+    modal({ kicker: 'Tour ' + g.turn + ' / ' + R.maxTurns, title: g.turn === 1 ? 'La campagne commence' : 'Le journal du matin', html: journalHtml(info, aiDil),
+            buttons: [{ label: g.dilemma && g.dilemma.pid === me ? 'Une décision t’attend →' : 'À mes actions', primary: true, onClick: function () {
+              if (g.dilemma && g.dilemma.pid === me) return showDilemma(startActions);
+              startActions();
             } }] });
+  }
+  function startActions() {
+    render();
+    if (g.turn === 1 && (forceTuto || !T.isActive())) { var before = T.isActive(); T.maybeStart(forceTuto); tutoGame = !before && T.isActive(); forceTuto = false; }
+  }
+  function line(icon, html) { return '<div class="brief-row"><span class="brief-i">' + icon + '</span><span>' + html + '</span></div>'; }
+  /* Le journal du tour : la une, puis « en bref » (seulement ce qui compte) */
+  function journalHtml(info, aiDil) {
+    var h = '<div class="paper"><div class="paper-mast">LE QUOTIDIEN NATIONAL <span>· Tour ' + g.turn + '</span></div>';
+    if (info.crisis) {
+      h += '<div class="paper-crisis">Crise · ' + esc(info.crisis.name) + ' · ' + (info.crisis.index + 1) + '/3</div>' +
+        '<div class="paper-head">' + esc(info.crisis.title) + '</div><div class="paper-text">' + esc(info.crisis.text) + '</div>';
+    } else {
+      var ev = D.EVENTS.filter(function (e) { return e.id === info.event.id; })[0];
+      h += '<div class="paper-head">' + esc(ev.title) + '</div><div class="paper-text">' + esc(ev.text) + '</div>';
+      if (!ev.theme) h += '<div class="paper-text"><i>Aussi :</i> ' + esc(g.news.headline) + '</div>';
+    }
+    h += '<div class="paper-foot">🔥 À la une : ' + g.hot.map(function (x) { return th(x).icon + ' <b>' + esc(th(x).name) + '</b>'; }).join(' + ') +
+      ' <span class="muted">(+1 d\'impact)</span></div></div>';
+    var b = [];
+    var inc = info.income.filter(function (x) { return x.pid === me; })[0];
+    if (inc) b.push(line('💰', 'Ta caisse : <b>+' + inc.money + ' €</b> · <b>+' + inc.infl + ' ★</b>' + (inc.forme ? ' · <b>+' + inc.forme + ' ⚡</b>' : '')));
+    var myMil = info.militants.filter(function (x) { return x.pid === me; });
+    if (myMil.length) b.push(line('👥', 'Tes militants : +1 cube en ' + myMil.map(function (x) { return SHORT[x.rid]; }).join(', ')));
+    if (info.event) info.event.effects.filter(function (f) { return f.pid === me; }).forEach(function (f) { b.push(line('📰', esc(f.text))); });
+    if (info.crisis) info.crisis.effects.forEach(function (t) { b.push(line('📰', esc(t))); });
+    info.scandals.forEach(function (x) {
+      b.push(line('💥', '<b>Scandale' + (x.pid === me ? ' pour toi' : ' pour ' + esc(party(x.pid).short)) + ' !</b> Les casseroles finissent par sortir' + (x.rid ? ' : −' + x.lost + ' cubes en ' + esc(E.REG[x.rid].name) : '') + '.'));
+    });
+    info.later.forEach(function (x) {
+      if (x.hit) b.push(line('⏳', '<b>' + esc(x.title) + '</b>' + (x.pid === me ? '' : ' (' + esc(party(x.pid).short) + ')') + ' — ' + esc(x.text) + ' ' + esc(x.effects.join(', ')) + '.'));
+      else if (x.pid === me) b.push(line('😮‍💨', '« ' + esc(x.title) + ' » : fausse alerte, l\'affaire ne sort pas.'));
+    });
+    if (info.usure) b.push(line('🕰️', 'Usure du pouvoir : En Mouvement perd 1 cube en ' + esc(E.REG[info.usure].name) + '.'));
+    if (aiDil) b.push(line('🤔', esc(party(aiDil.pid).short) + ', face à « ' + esc(aiDil.title) + ' », choisit : <b>' + esc(aiDil.choice) + '</b>' + (aiDil.effects.length ? ' — ' + esc(aiDil.effects.join(', ')) : '') + '.'));
+    if (E.isDebateTurn(g)) b.push(line('🎙️', '<b>Débat télévisé</b> à la fin de ce tour : garde de l\'influence (★) pour miser.'));
+    if (b.length) h += '<div class="brief"><div class="kicker">En bref</div>' + b.join('') + '</div>';
+    return h;
+  }
+  /* Ton dilemme du tour */
+  function showDilemma(then) {
+    var d = E.dilemmaDef(g.dilemma.id);
+    var html = '<p>' + esc(d.text) + '</p><div class="pick">' + d.options.map(function (o, i) {
+      return '<button type="button" class="pick-row" data-o="' + i + '"><span class="pick-txt"><b>' + esc(o.label) + '</b><small>' + esc(o.hint) + '</small></span></button>';
+    }).join('') + '</div>';
+    modal({ kicker: 'Dilemme', title: d.title, html: html, buttons: [],
+      onOpen: function () {
+        Array.prototype.forEach.call(document.querySelectorAll('.pick-row'), function (row) {
+          row.addEventListener('click', function () {
+            var res = E.resolveDilemma(g, me, +row.getAttribute('data-o'));
+            closeModal(); render();
+            modal({ kicker: 'Ton choix', title: res.choice, html: res.effects.length ? '<div class="brief">' + res.effects.map(function (t) { return line('•', esc(t)); }).join('') + '</div>' : '<p>Rien de plus… pour l\'instant.</p>',
+              buttons: [{ label: 'À mes actions', primary: true, onClick: then }] });
+          });
+        });
+      } });
   }
 
   /* La Une du tour : le thème qui fait l'actu (+ ceux imposés par les partis) */
   function newsHtml(n) {
     if (!n) return '';
-    var t = th(n.theme), mine = E.cred(me, n.theme);
+    var t = th(n.theme), mine = E.cred(g, me, n.theme);
     var h = '<div class="paper"><div class="paper-mast">LE QUOTIDIEN NATIONAL <span>· Tour ' + g.turn + '</span></div>' +
       '<div class="paper-head">' + esc(n.headline) + '</div>' +
       '<div class="paper-foot">' + t.icon + ' <b>' + esc(t.name) + '</b> fait l\'actu : +1 d\'impact pour tous les messages sur ce thème.</div>';
@@ -161,14 +209,14 @@
 
   /* Ressources projetées après les actions déjà programmées */
   function projected() {
-    var pl = mePl(), m = pl.money, f = pl.infl;
+    var pl = mePl(), m = pl.money, f = pl.infl, fo = pl.forme;
     queue.forEach(function (a) {
-      var c = E.actionCost(g, me, a); m -= c.money; f -= c.infl;
+      var c = E.actionCost(g, me, a); m -= c.money; f -= c.infl; fo -= c.forme;
       if (a.type === 'fonds') { m += me === 'EM' ? 4 : me === 'VP' ? 2 : 3; if (me === 'EM') f += 1; }
       if (a.type === 'card' && a.card === 'primaire') f += 3;
       if (a.type === 'card' && a.card === 'rassemblement') { m += 3; f += 1; }
     });
-    return { money: m, infl: f };
+    return { money: m, infl: f, forme: fo };
   }
   function canQueue(act) {
     if (g.phase !== 'actions') return 'Ce n’est pas le moment.';
@@ -178,6 +226,7 @@
     var c = E.actionCost(g, me, act), pr = projected();
     if (pr.money < c.money) return 'Pas assez d’argent.';
     if (pr.infl < c.infl) return 'Pas assez d’influence.';
+    if (pr.forme < c.forme) return 'Ton candidat est épuisé (⚡ 0). Il récupère au prochain tour.';
     return null;
   }
   function addAction(act) {
@@ -192,8 +241,15 @@
     var pl = mePl(), pr = projected();
     $('turn-label').textContent = 'TOUR ' + g.turn + ' / ' + R.maxTurns;
     $('phase-label').textContent = E.isDebateTurn(g) ? 'Actions · débat ce tour' : 'Actions';
-    $('res-money').textContent = '€ ' + pr.money + (pr.money !== pl.money ? ' / ' + pl.money : '');
-    $('res-infl').textContent = '★ ' + pr.infl + (pr.infl !== pl.infl ? ' / ' + pl.infl : '');
+    function pill(id, sym, now, before) { $(id).innerHTML = sym + ' ' + now + (now !== before ? '<small>/' + before + '</small>' : ''); }
+    pill('res-money', '€', pr.money, pl.money); pill('res-infl', '★', pr.infl, pl.infl); pill('res-forme', '⚡', pr.forme, pl.forme);
+    $('res-forme').classList.toggle('low', pr.forme <= 0);
+    // dynamique et casseroles : une seule ligne discrète dans l'encadré du sondage
+    var st = [];
+    if (pl.momentum > 0) st.push('<span class="st st-up">↗ En dynamique</span>');
+    if (pl.momentum < 0) st.push('<span class="st st-down">↘ Passage à vide</span>');
+    if (pl.cas > 0) st.push('<span class="st st-cas" title="Casseroles">' + new Array(pl.cas + 1).join('🍳') + '</span>');
+    $('race-status').innerHTML = st.length ? st.join('') : '50 % = élu direct';
     renderRace(); renderNews(); renderMap(); renderRegion(); renderQueue(); renderMessage(); renderActions();
   }
   function renderRace() {
@@ -225,6 +281,19 @@
       gb.appendChild(svg('circle', { cx: m.x, cy: m.y, r: rr }));
       var t = svg('text', { x: m.x, y: m.y + 3.5 }); t.textContent = r.pts; gb.appendChild(t);
       s.appendChild(gb);
+    });
+    // crises : icônes posées sur la carte
+    var seen = {};
+    (g.markers || []).forEach(function (mk) {
+      if (seen[mk.rid]) return; seen[mk.rid] = 1;
+      var m = M.regions[mk.rid];
+      var t = svg('text', { x: m.x - 15, y: m.y - 5, class: 'marker' }); t.textContent = mk.icon; s.appendChild(t);
+    });
+    // tes équipes de militants
+    Object.keys(g.bases || {}).forEach(function (rid) {
+      if (g.bases[rid].indexOf(me) < 0) return;
+      var m = M.regions[rid];
+      var t = svg('text', { x: m.x - 4, y: m.y + 19, class: 'marker marker-sm' }); t.textContent = '👥'; s.appendChild(t);
     });
     // actions programmées
     var count = {};
@@ -262,8 +331,11 @@
       .sort(function (a, b) { return E.cubes(g, selected, b.id) - E.cubes(g, selected, a.id); });
     html += '<div class="forces">' + rows.map(function (p) {
       var n = E.cubes(g, selected, p.id), P = party(p.id);
-      return '<span class="force' + (p.id === me ? ' me' : '') + '"><i style="background:' + P.color + '"></i>' + (p.id === me ? 'Toi' : p.id) + ' <b>' + n + '</b></span>';
+      var mil = (g.bases[selected] || []).indexOf(p.id) >= 0 ? ' 👥' : '';
+      return '<span class="force' + (p.id === me ? ' me' : '') + '"><i style="background:' + P.color + '"></i>' + (p.id === me ? 'Toi' : p.id) + ' <b>' + n + '</b>' + mil + '</span>';
     }).join('') + '<span class="force-hint">cubes · ' + E.minControl(me) + ' pour tenir</span></div>';
+    var mk = E.markerAt(g, selected);
+    if (mk) html += '<div class="mk-line">' + mk.icon + ' ' + esc(mk.title) + ' : ici, ' + th(mk.theme).icon + ' ' + esc(th(mk.theme).name) + ' compte comme à la une.</div>';
     box.innerHTML = html;
   }
   function renderQueue() {
@@ -280,10 +352,15 @@
     $('btn-validate').textContent = queue.length < R.actionsPerTurn ? 'Valider (' + queue.length + '/3)' : 'Valider';
     $('btn-validate').disabled = g.phase !== 'actions';
   }
-  function costLabel(act) {
-    var c = E.actionCost(g, me, act), parts = [];
-    if (c.money) parts.push(c.money + ' €'); if (c.infl) parts.push(c.infl + ' ★');
-    return parts.length ? parts.join(' + ') : 'gratuit';
+  function costLabel(act, compact) {
+    var c = E.actionCost(g, me, act), parts = [], sp = compact ? '' : ' ';
+    if (c.money) parts.push(c.money + sp + '€'); if (c.infl) parts.push(c.infl + sp + '★'); if (c.forme) parts.push(c.forme + sp + '⚡');
+    return parts.length ? parts.join(compact ? ' ' : ' + ') : 'gratuit';
+  }
+  /* Vrai si cette action viderait la forme du candidat (risque de gaffe) */
+  function tiring(act) {
+    var c = E.actionCost(g, me, act);
+    return c.forme > 0 && projected().forme - c.forme === 0;
   }
   /* Ce que fait une action, en clair, sur son bouton (avec les chiffres réels du moment) */
   var PROF_PLURAL = { urbaine: 'urbaines', rurale: 'rurales', industrielle: 'industrielles', historique: 'historiques' };
@@ -299,7 +376,8 @@
         return '<b>+' + n + ' cube' + (n > 1 ? 's' : '') + '</b> · 3 régions';
       case 'reseaux': return 'dé : <b>−1 à +' + (4 + (E.isHot(g, act.theme) ? 1 : 0)) + '</b> cubes';
       case 'imposer': return 'ton thème <b>à la une</b>';
-      case 'contre': return 'rival en tête <b>−2 cubes</b>';
+      case 'contre': return 'rival en tête <b>−2 cubes</b> · +1 🍳';
+      case 'militants': return '<b>+1 cube</b> ici à chaque tour · ' + (R.militantsMax - mePl().militants) + ' équipe' + (R.militantsMax - mePl().militants > 1 ? 's' : '') + ' dispo';
       case 'fonds': return '<b>+' + (me === 'EM' ? '4 € +1 ★' : me === 'VP' ? '2 €' : '3 €') + '</b>';
       case 'reforme':
         if (!r) return '+1 cube dans des régions';
@@ -321,9 +399,12 @@
     var html = '<p class="hint">Plus l\'impact est fort, plus ton action rapporte.' + (selected ? ' Ici, en ' + esc(E.REG[selected].name) + ' :' : '') + '</p><div class="pick">' +
       list.map(function (x) {
         var why = [];
-        var c = E.cred(me, x.t.id); why.push(['pas ton sujet', 'tu es crédible', 'ton point fort'][c]);
+        var c = E.cred(g, me, x.t.id); why.push(['pas ton sujet', 'tu es crédible', 'ton point fort'][c]);
+        if (c < 2) { var left = R.credTalk - (mePl().talk[x.t.id] || 0); why.push('encore ' + left + ' action' + (left > 1 ? 's' : '') + ' pour progresser'); }
         if (selected && E.concerns(selected, x.t.id)) why.push('la région s\'en soucie');
+        var mk = selected && E.markerAt(g, selected, x.t.id);
         if (E.isHot(g, x.t.id)) why.push('🔥 à la une');
+        else if (mk) why.push(mk.icon + ' sujet brûlant ici');
         return '<button type="button" class="pick-row' + (x.t.id === theme ? ' on' : '') + '" data-theme="' + x.t.id + '"><span class="pick-i">' + x.t.icon + '</span>' +
           '<span class="pick-txt"><b>' + esc(x.t.name) + '</b><small>' + why.join(' · ') + '</small></span>' + (selected ? impactDots(x.imp) : '') + '</button>';
       }).join('') + '</div>';
@@ -341,7 +422,8 @@
       var def = D.ACTIONS[type], act = { type: type, region: selected || undefined, theme: theme };
       var big = type === 'terrain' || type === 'medias' ? (selected ? '+' + bigGain(act) : '—') : (selected ? '🎲' : '—');
       var b = el('button', { class: 'tile', type: 'button', 'aria-label': def.name + ', ' + costLabel(act) },
-        '<span class="tile-n">' + def.icon + ' ' + def.name + '</span><span class="tile-big">' + big + '</span><span class="tile-cost">' + costLabel(act) + '</span>');
+        '<span class="tile-n">' + def.icon + ' ' + def.name + '</span><span class="tile-big">' + big + '</span>' +
+        (selected && tiring(act) && !canQueue(act) ? '<span class="tile-cost tile-warn">⚠️ risque de gaffe</span>' : '<span class="tile-cost">' + costLabel(act, true) + '</span>'));
       if (!selected) b.disabled = true;
       else if (canQueue(act)) b.classList.add('dim');
       b.addEventListener('click', function () { addAction(act); });
@@ -359,7 +441,7 @@
   function moreMenu() {
     if (g.phase !== 'actions') return;
     var items = [];
-    ['imposer', 'contre', 'fonds', 'reforme'].forEach(function (type) {
+    ['militants', 'imposer', 'contre', 'fonds', 'reforme'].forEach(function (type) {
       var def = D.ACTIONS[type], act = { type: type, region: def.target === 'region' ? selected : undefined, theme: def.theme ? theme : undefined };
       var err = def.target === 'region' && !selected ? 'choisis d\'abord une région' : canQueue(act);
       items.push({ act: act, icon: def.icon, name: def.name, cost: costLabel(act), fx: effect(act), err: err });
@@ -425,7 +507,7 @@
     var log = E.resolveActions(g, plans);
     queue = []; render();
     var html = '<div class="log">' + log.map(function (l) {
-      return '<div class="log-row' + (l.ok ? '' : ' fail') + '">' + chip(l.pid) + '<span><b>' + esc(l.action) + '</b>' + (l.theme ? ' ' + th(l.theme).icon : '') + (l.region ? ' · ' + SHORT[l.region] : '') + ' — ' + esc(l.text) + '</span></div>';
+      return '<div class="log-row' + (l.gaffe ? ' gaffe' : l.ok ? '' : ' fail') + (l.credUp && l.pid === me ? ' up' : '') + '">' + chip(l.pid) + '<span><b>' + esc(l.action) + '</b>' + (l.theme ? ' ' + th(l.theme).icon : '') + (l.region ? ' · ' + SHORT[l.region] : '') + ' — ' + esc(l.text) + '</span></div>';
     }).join('') + '</div>';
     var after = E.isDebateTurn(g) ? debate : spotlight;
     modal({ kicker: 'Tour ' + g.turn, title: 'Résultats des actions', html: html,
@@ -482,7 +564,9 @@
     if (g.turn === 1 && tutoGame) {
       tutoGame = false;
       return modal({ kicker: 'Tutoriel', title: 'Bon à savoir', html:
-        '<p><b>Chaque tour</b> commence par tes revenus et un <b>événement</b> (crise, scandale, fête…) qui touche tous les partis.</p>' +
+        '<p><b>Chaque tour</b> commence par le journal : un événement, le thème à la une, et parfois un <b>dilemme</b> pour toi.</p>' +
+        '<p><b>⚡ Ménage ton candidat :</b> Meeting et Télé le fatiguent. À 0 ⚡, il risque la gaffe.</p>' +
+        '<p><b>🍳 Attention aux casseroles :</b> attaquer ou tricher en ajoute, et elles finissent par sortir en scandale.</p>' +
         '<p><b>Aux tours 3, 6 et 8</b>, un <b>débat télévisé</b> : tu mises de l\'influence (★). Le plus gros parieur gagne des cubes, mais toutes les mises sont perdues.</p>' +
         '<p><b>Sous les projecteurs</b> : à la fin de chaque tour, le parti en tête paie 2 ★ ou perd des cubes. Être premier trop tôt, ça se paie !</p>' +
         '<p>Tu peux revoir les règles à tout moment avec le bouton <b>•••</b>.</p>',
@@ -522,12 +606,19 @@
 
   /* ---------- Menu & règles ---------- */
   $('btn-menu').addEventListener('click', function () {
-    var o = D.OBJECTIVES.filter(function (x) { return x.id === mePl().objective; })[0], p = party(me);
-    modal({ kicker: 'Ton parti', title: p.name, html: '<p><b>Objectif secret :</b> ' + esc(o.name) + ' — ' + esc(o.text) + ' (+' + o.bonus + ' pts).</p><p><b>Force :</b> ' + esc(p.force) + '</p><p><b>Faiblesse :</b> ' + esc(p.weakness) + '</p>' + credHtml(me),
-            buttons: [{ label: 'Reprendre', primary: true }, { label: 'Règles du jeu', onClick: showRules }, { label: 'Abandonner la partie', onClick: function () { g = null; go('title'); } }] });
+    var pl = mePl(), o = D.OBJECTIVES.filter(function (x) { return x.id === pl.objective; })[0], p = party(me);
+    var html = '<p>🎯 <b>Objectif secret :</b> ' + esc(o.name) + ' — ' + esc(o.text) + ' (+' + o.bonus + ' pts).</p>' +
+      '<div class="brief"><div class="kicker">Ton candidat</div>' +
+      line('⚡', '<b>Forme ' + pl.forme + ' / ' + R.formeMax + '</b> — Meeting et Télé en coûtent 1. À 0, risque de gaffe. +' + (R.formeRegen + (me === 'EM' ? 1 : 0)) + ' par tour.') +
+      line('🍳', '<b>' + pl.cas + ' casserole' + (pl.cas > 1 ? 's' : '') + '</b> — chacune = ' + Math.round(R.scandalPerCasserole * 100) + ' % de risque de scandale par tour. Attaquer, trahir, le 49.3 et certains choix en ajoutent.') +
+      line(pl.momentum > 0 ? '↗' : pl.momentum < 0 ? '↘' : '→', pl.momentum > 0 ? '<b>En dynamique</b> : +1 cube sur tes Meetings.' : pl.momentum < 0 ? '<b>Passage à vide</b> : −1 cube sur tes Meetings.' : '<b>Dynamique stable.</b> Gagne 1,5 point au sondage en un tour pour être en dynamique.') +
+      line('👥', '<b>' + pl.militants + ' / ' + R.militantsMax + ' équipes de militants</b> — chacune rapporte 1 cube par tour.') +
+      '</div><p><b>Force :</b> ' + esc(p.force) + '</p><p><b>Faiblesse :</b> ' + esc(p.weakness) + '</p>' + credHtml(me);
+    modal({ kicker: 'Ton parti', title: p.name, html: html,
+            buttons: [{ label: 'Reprendre', primary: true }, { label: 'Règles du jeu', onClick: showRules }, { label: 'Abandonner la partie', onClick: function () { go('title'); } }] });
   });
   function showRules() {
-    modal({ kicker: 'Règles v0.3', title: 'Comment gagner', html:
+    modal({ kicker: 'Règles v0.5', title: 'Comment gagner', html:
       '<p><b>But :</b> remporter l\'élection présidentielle à la fin des <b>8 tours de campagne</b>. Chaque région vote selon ses cubes, pondérée par sa population (ses points). Le parti qui contrôle une région y gagne un petit bonus.</p>' +
       '<p><b>Premier tour :</b> plus de 50 % des voix = élu directement. Sinon, les deux premiers vont au <b>second tour</b>, et les électeurs des autres partis se reportent selon leur proximité politique (alliés : 85 %).</p>' +
       axisHtml(me || chosen) +
@@ -543,7 +634,14 @@
         '<li>🥊 <b>Attaquer</b> (2 € + 1 ★) : le rival le plus fort de la région perd 2 cubes (il faut y avoir 1 cube).</li>' +
         '<li>💰 <b>Collecte</b> (gratuit) : +3 € dans la caisse.</li>' +
         '<li>📜 <b>Promesse</b> (4 ★) : dans une région que tu tiens, +1 cube dans toutes les régions du même type.</li>' +
+        '<li>👥 <b>Militants</b> (3 €) : une équipe dans la région, +1 cube à chaque début de tour (3 équipes au plus).</li>' +
         '<li>🤝 <b>Alliance</b> (1 ★) et 2 cartes spéciales par parti.</li></ul>' +
+      '<p><b>⚡ La forme du candidat</b> (4 au plus, +2 par tour). Meeting et Télé coûtent 1 ⚡. Si une action la fait tomber à 0, le candidat épuisé peut faire une <b>gaffe</b> (4 chances sur 10) : aucun cube et une casserole.</p>' +
+      '<p><b>↗ La dynamique.</b> Si tu gagnes 1,5 point au sondage en un tour, tes Meetings rapportent 1 cube de plus au tour suivant. Si tu en perds 1,5, 1 de moins.</p>' +
+      '<p><b>Crédibilité qui évolue.</b> Après 3 actions sur un même thème, ta crédibilité dessus augmente (2 au plus).</p>' +
+      '<p><b>🍳 Les casseroles.</b> Attaquer, trahir un allié, le 49.3, une gaffe ou certains choix en ajoutent. Au début de chaque tour, chaque casserole donne 8 % de risque de <b>scandale</b> : −2 cubes, et l\'affaire est soldée (−3 casseroles).</p>' +
+      '<p><b>🤔 Les dilemmes.</b> Chaque tour, un parti (à tour de rôle) doit faire un choix. Certains choix ont des <b>conséquences différées</b> qui peuvent ressortir quelques tours plus tard.</p>' +
+      '<p><b>Les crises.</b> Chaque partie connaît une crise en 3 actes (krach, grève, été brûlant, désindustrialisation). Les régions touchées sont marquées sur la carte : leur thème y compte comme à la une.</p>' +
       '<p><b>Débats</b> aux tours 3, 6 et 8. <b>Sous les projecteurs :</b> le premier des sondages paie 2 ★ ou perd des cubes à chaque fin de tour.</p>' });
   }
 

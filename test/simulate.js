@@ -7,6 +7,7 @@ var AI = require('../js/ai.js');
 var N = parseInt(process.argv[2] || '600', 10);
 var all = D.PARTIES.map(function (p) { return p.id; });
 var stats = {}; all.forEach(function (id) { stats[id] = { played: 0, wins: 0, pts: 0 }; });
+var dil = {}, scandals = 0, gaffes = 0, credUps = 0, mil = 0, casSum = 0;
 var firstRound = 0, alliances = 0, finals = {}, turnsSum = 0, errors = 0, actionCount = {}, failed = 0, totalActs = 0;
 
 for (var i = 0; i < N; i++) {
@@ -15,11 +16,13 @@ for (var i = 0; i < N; i++) {
   var g = E.createGame(null, { seed: 5000 + i, aiParties: parties });
   try {
     while (!g.over) {
-      E.startTurn(g);
+      var info = E.startTurn(g);
+      if (info.dilemma) { var dp = info.dilemma.pid, ch = AI.chooseDilemma(g, dp); dil[ch] = (dil[ch] || 0) + 1; E.resolveDilemma(g, dp, ch); }
+      info.scandals.forEach(function () { scandals++; });
       var plans = {};
       g.players.forEach(function (p) { plans[p.id] = AI.plan(g, p.id); });
       var log = E.resolveActions(g, plans);
-      log.forEach(function (l) { totalActs++; if (!l.ok) failed++; actionCount[l.action] = (actionCount[l.action] || 0) + 1; });
+      log.forEach(function (l) { totalActs++; if (l.gaffe) gaffes++; if (l.credUp) credUps++; if (!l.ok && !l.gaffe) failed++; actionCount[l.action] = (actionCount[l.action] || 0) + 1; });
       if (E.isDebateTurn(g)) { var bids = {}; g.players.forEach(function (p) { bids[p.id] = AI.bid(g, p.id); }); E.resolveDebate(g, bids); }
       var t = E.spotlightTarget(g); if (t) E.applySpotlight(g, t, AI.paySpotlight(g, t));
       E.endTurn(g);
@@ -27,9 +30,10 @@ for (var i = 0; i < N; i++) {
       Object.keys(g.regions).forEach(function (rid) {
         Object.keys(g.regions[rid].cubes).forEach(function (pid) { var n = g.regions[rid].cubes[pid]; if (n < 0 || n > 10) throw new Error('cubes hors limites'); });
       });
-      g.players.forEach(function (p) { if (p.money < 0 || p.infl < 0) throw new Error('ressources négatives ' + p.id); });
+      g.players.forEach(function (p) { if (p.money < 0 || p.infl < 0 || p.forme < 0) throw new Error('ressources négatives ' + p.id); });
     }
   } catch (e) { errors++; if (errors < 3) console.error(e.stack); continue; }
+  g.players.forEach(function (p) { mil += p.militants; casSum += p.cas; });
   if (g.result.direct) firstRound++;
   else { var k = [g.result.second.a, g.result.second.b].sort().join('-'); finals[k] = (finals[k] || 0) + 1; }
   alliances += Object.keys(g.alliances).length / 2;
@@ -41,6 +45,8 @@ for (var i = 0; i < N; i++) {
 
 console.log('Parties : ' + N + ' · erreurs : ' + errors);
 console.log('Élu dès le 1er tour : ' + (100 * firstRound / N).toFixed(1) + ' % · alliances en fin de partie : ' + (alliances / N).toFixed(2) + ' par partie');
+console.log('Par partie : ' + (scandals / N).toFixed(2) + ' scandales · ' + (gaffes / N).toFixed(2) + ' gaffes · ' + (credUps / N).toFixed(2) + ' gains de crédibilité · ' + (mil / N).toFixed(2) + ' équipes de militants · ' + (casSum / N / 4).toFixed(2) + ' casseroles en fin de partie (par parti)');
+console.log('Choix aux dilemmes (option 1/2/3) :', JSON.stringify(dil));
 console.log('Actions échouées : ' + (100 * failed / totalActs).toFixed(1) + ' %');
 console.log('\nParti                 Taux de victoire (attendu 25 %)   % moyen au 1er tour');
 all.forEach(function (id) {

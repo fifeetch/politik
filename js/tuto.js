@@ -20,9 +20,9 @@
     { target: '.queue', title: '3 actions par tour',
       text: 'Ton action est programmée (son numéro apparaît sur la carte). Touche-la pour l\'annuler.' },
     { target: '#btn-more', title: 'Plus d\'options',
-      text: 'Ici : attaquer un rival, collecter de l\'argent, faire la une, tes <b>2 cartes spéciales</b> et les <b>alliances</b>.' },
+      text: 'Ici : implanter des <b>militants</b>, attaquer un rival, collecter de l\'argent, faire la une, tes <b>2 cartes spéciales</b> et les <b>alliances</b>.' },
     { target: '.res', title: 'Argent et influence',
-      text: '<b>€</b> paie les campagnes. <b>★</b> (influence) sert à la télé, aux attaques et aux débats. « 5 / 7 » = il te restera 5 sur 7.' },
+      text: '<b>€</b> paie les campagnes. <b>★</b> (influence) sert à la télé, aux attaques et aux débats. <b>⚡</b> c\'est la forme de ton candidat : Meeting et Télé le fatiguent. Le petit « /7 » = ce que tu avais avant tes actions.<br>Le bouton <b>•••</b> montre ton objectif secret et l\'état de ton candidat.' },
     { target: '#btn-validate', title: 'À toi de jouer',
       text: 'Choisis encore 2 actions, puis <b>Valider</b>. Tous les partis jouent en secret et en même temps, puis les actions sont révélées une à une.', last: true }
   ];

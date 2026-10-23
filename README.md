@@ -11,14 +11,16 @@ Jeu de stratégie électorale parodique sur la carte de France, pensé pour le t
 - En local : ouvre `index.html` dans un navigateur. Aucune installation n'est nécessaire.
 - Première partie : un tutoriel guidé se lance automatiquement (relançable avec « Comment jouer » sur l'écran titre).
 
-## Règles (v0.3, résumé)
+## Règles (v0.5, résumé)
 
 - **But** : remporter l'élection présidentielle après **8 tours de campagne**. Chaque région vote selon ses cubes, pondérée par sa population ; le parti qui contrôle une région y gagne un bonus de voix.
 - **Scrutin** : plus de 50 % au premier tour = élu. Sinon, second tour entre les deux premiers, avec reports de voix selon la proximité politique (alliés : 85 %).
 - **Axe politique** : FI · VP · SM · EM · UG · MN. Faire campagne là où un parti voisin est présent lui prend des électeurs.
 - **Alliances** : avec un parti à distance 2 au plus ; pas d'attaque entre alliés ; rompre coûte 2 ★ et ruine les reports.
 - **Thèmes (v0.3)** : chaque campagne porte un message (💶 🏭 🏥 🌿 🚓 🛂). Son impact, de 0 à 4 = crédibilité du parti sur le thème (0 à 2) + 1 si la région s'en préoccupe + 1 si le thème fait l'actu. Plus l'impact est fort, plus l'action rapporte de cubes. L'action **Imposer** met ton thème à la une du tour suivant.
-- **Un tour** : revenus → à la une + événement → 3 actions secrètes jouées par tous en même temps → débat (tours 3, 6, 8) → « Sous les projecteurs » pour le premier des sondages.
+- **Le candidat (v0.4)** : sa forme ⚡ limite les Meetings et la Télé (risque de gaffe à 0). Les militants 👥 rapportent 1 cube par tour. La dynamique ↗ récompense une progression au sondage. Parler souvent d'un thème rend crédible dessus.
+- **Dilemmes et casseroles (v0.5)** : un parti par tour fait face à un dilemme, avec parfois des conséquences différées. Les casseroles 🍳 font courir un risque de scandale. Une crise en 3 actes marque la carte.
+- **Un tour** : journal du matin (revenus, militants, scandales, crise ou événement, dilemme) → 3 actions secrètes jouées par tous en même temps → débat (tours 3, 6, 8) → « Sous les projecteurs » pour le premier des sondages.
 
 ## Organisation du code
 
@@ -42,18 +44,18 @@ node test/simulate.js 1000
 
 Le script affiche le taux de victoire de chaque parti (l'idéal est autour de 25 %).
 
-## Équilibre actuel (v0.3, IA contre IA, 1500 parties)
+## Équilibre actuel (v0.5, IA contre IA, 2000 parties)
 
 | Parti | Victoires (idéal 25 %) |
 | --- | --- |
-| Les Verts Pâturages | 29 % |
 | Socialisme Modéré | 29 % |
-| La France Indignée | 25 % |
-| Mouvement National | 25 % |
-| L'Union Gaulliste | 24 % |
+| Mouvement National | 28 % |
+| Les Verts Pâturages | 26 % |
+| La France Indignée | 26 % |
+| L'Union Gaulliste | 22 % |
 | En Mouvement | 18 % |
 
-Les thèmes ont bien resserré l'écart (en v0.2 : de 11 % à 39 %). En Mouvement reste un peu en dessous : à surveiller avec de vraies parties.
+Par partie, en moyenne : 2 scandales, 6 à 7 gains de crédibilité, 5 équipes de militants. En Mouvement reste un peu en dessous : à surveiller avec de vraies parties.
 
 Les idées pour la suite sont dans [ROADMAP.md](ROADMAP.md).
 

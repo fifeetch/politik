@@ -301,3 +301,29 @@ button { font-family: inherit; color: inherit; }
 @media (max-width: 380px) {
   .msg-k { display: none; }
 }
+
+/* v0.4 / v0.5 : candidat, journal, dilemmes, crises */
+.res { gap: 5px; }
+.res .pill { padding: 5px 8px; font-size: 13px; }
+#res-forme.low { background: #FFE1DC; }
+.st { font-size: 11px; font-weight: 800; margin-left: 6px; white-space: nowrap; }
+.st-up { color: #1F7A3E; }
+.st-down { color: #B3261E; }
+.st-cas { letter-spacing: -2px; }
+.tile-warn { color: #B3261E; font-weight: 800; }
+.map .marker { font-size: 13px; text-anchor: middle; pointer-events: none; }
+.map .marker-sm { font-size: 9px; }
+.mk-line { font-size: 12px; font-weight: 600; background: #FFF1B0; border-radius: 6px; padding: 3px 6px; }
+.paper-crisis { align-self: flex-start; background: #B3261E; color: #fff; font-size: 10px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; padding: 2px 6px; border-radius: 3px; }
+.paper-text { font-size: 13px; line-height: 1.4; }
+.paper-foot .muted { color: var(--muted); font-size: 11px; }
+.brief { display: flex; flex-direction: column; gap: 5px; background: var(--white); border: 1.5px solid var(--line); border-radius: 12px; padding: 8px 10px; }
+.brief-row { display: flex; gap: 8px; font-size: 13px; line-height: 1.35; align-items: flex-start; }
+.brief-i { width: 18px; text-align: center; flex-shrink: 0; }
+.log-row.gaffe { background: #FFE1DC; border-radius: 6px; padding: 2px 4px; }
+.log-row.up { background: #E4F4E8; border-radius: 6px; padding: 2px 4px; }
+
+.res .pill { white-space: nowrap; gap: 3px; }
+.res .pill small { font-size: 10px; font-weight: 600; color: var(--muted); }
+.turn-label { white-space: nowrap; }
+@media (max-width: 380px) { .res .pill { padding: 4px 6px; font-size: 12px; } .turn-label { font-size: 18px; } }
