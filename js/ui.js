@@ -194,7 +194,7 @@
     $('phase-label').textContent = E.isDebateTurn(g) ? 'Actions · débat ce tour' : 'Actions';
     $('res-money').textContent = '€ ' + pr.money + (pr.money !== pl.money ? ' / ' + pl.money : '');
     $('res-infl').textContent = '★ ' + pr.infl + (pr.infl !== pl.infl ? ' / ' + pl.infl : '');
-    renderRace(); renderNews(); renderMap(); renderRegion(); renderQueue(); renderThemes(); renderActions();
+    renderRace(); renderNews(); renderMap(); renderRegion(); renderQueue(); renderMessage(); renderActions();
   }
   function renderRace() {
     var bar = $('race-bar'), leg = $('race-legend'); bar.innerHTML = ''; leg.innerHTML = '';
@@ -214,10 +214,6 @@
       p.addEventListener('click', function () { selectRegion(r.id); });
       p.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectRegion(r.id); } });
       s.appendChild(p);
-    });
-    // régions que ton message (thème) préoccupe : contour pointillé
-    if (theme) D.REGIONS.forEach(function (r) {
-      if (E.concerns(r.id, theme)) s.appendChild(svg('path', { d: M.regions[r.id].d, class: 'concern' }));
     });
     if (selected) {
       s.appendChild(svg('path', { d: M.regions[selected].d, class: 'sel' }));
@@ -249,27 +245,25 @@
     var box = $('region-info');
     if (!selected) {
       var o = D.OBJECTIVES.filter(function (x) { return x.id === mePl().objective; })[0];
-      box.innerHTML = '<div class="region-head"><div><h2 class="region-name">Touche une région</h2><span class="region-sub">pour voir les forces en présence et agir</span></div>' +
-        '<span class="tag" style="background:' + party(me).color + ';color:' + party(me).ink + '">' + esc(party(me).short) + '</span></div>' +
-        '<div class="hint">Objectif secret : <b>' + esc(o.name) + '</b> — ' + esc(o.text) + ' (+' + o.bonus + ').</div>' +
-        '<div class="hint">En pointillé : les régions préoccupées par ton message.</div>';
+      box.innerHTML = '<div class="region-head"><div><h2 class="region-name">Touche une région</h2>' +
+        '<span class="region-sub">🎯 Objectif secret : ' + esc(o.name) + ' (' + esc(o.text.charAt(0).toLowerCase() + o.text.slice(1)) + ')</span></div></div>';
       return;
     }
     var r = E.REG[selected], reg = g.regions[selected], c = reg.controller;
-    var status = c ? 'contrôlée par ' + (c === me ? 'toi' : party(c).short) : 'non contrôlée';
-    var html = '<div class="region-head"><div><h2 class="region-name">' + esc(r.name) + '</h2><span class="region-sub">' + D.PROFILES[r.profile] + ' · ' + r.pts + ' pts · ' + status + '</span></div>' +
-      (c === me ? '<span class="tag" style="background:' + party(me).color + ';color:' + party(me).ink + '">À toi</span>' : '<span class="tag tag-yellow">À prendre</span>') + '</div>' +
-      '<div class="concerns"><span class="concerns-k">Préoccupations</span>' + concernsHtml(selected) + '</div>';
-    g.players.slice().sort(function (a, b) { return E.cubes(g, selected, b.id) - E.cubes(g, selected, a.id); }).forEach(function (p) {
-      var n = E.cubes(g, selected, p.id), P = party(p.id), cubes = '';
-      for (var i = 0; i < R.maxCubes; i++) cubes += '<i class="cube' + (i < n ? ' on' : '') + '"' + (i < n ? ' style="background:' + P.color + '"' : '') + '></i>';
-      var rel = '';
-      if (p.id !== me) {
-        if (E.allyOf(g, me) === p.id) rel = '<em class="rel rel-ally">allié</em>';
-        else if (E.dist(me, p.id) === 1) rel = '<em class="rel">proche</em>';
-      }
-      html += '<div class="cube-row"><span class="lbl">' + (p.id === me ? 'Toi' : esc(P.short)) + rel + '</span><span class="cubes">' + cubes + '</span><span class="n">' + n + '</span></div>';
-    });
+    var tag = c === me ? '<span class="tag" style="background:' + party(me).color + ';color:' + party(me).ink + '">À toi</span>'
+      : c ? '<span class="tag" style="background:' + party(c).color + ';color:' + party(c).ink + '">' + c + '</span>'
+      : '<span class="tag tag-yellow">À prendre</span>';
+    var html = '<div class="region-head"><div><h2 class="region-name">' + esc(r.name) + '</h2>' +
+      '<span class="region-sub">' + r.pts + ' pts · ' + D.PROFILES[r.profile] + ' · préoccupée par ' +
+      r.concerns.map(function (x) { return '<span class="concern-ic' + (E.isHot(g, x) ? ' hot' : '') + '" title="' + esc(th(x).name) + '">' + th(x).icon + '</span>'; }).join('') +
+      '</span></div>' + tag + '</div>';
+    // forces en présence : une seule ligne, seulement les partis présents (et toi)
+    var rows = g.players.filter(function (p) { return p.id === me || E.cubes(g, selected, p.id) > 0; })
+      .sort(function (a, b) { return E.cubes(g, selected, b.id) - E.cubes(g, selected, a.id); });
+    html += '<div class="forces">' + rows.map(function (p) {
+      var n = E.cubes(g, selected, p.id), P = party(p.id);
+      return '<span class="force' + (p.id === me ? ' me' : '') + '"><i style="background:' + P.color + '"></i>' + (p.id === me ? 'Toi' : p.id) + ' <b>' + n + '</b></span>';
+    }).join('') + '<span class="force-hint">cubes · ' + E.minControl(me) + ' pour tenir</span></div>';
     box.innerHTML = html;
   }
   function renderQueue() {
@@ -314,46 +308,88 @@
     }
     return '';
   }
-  function renderThemes() {
-    var box = $('themes'); box.innerHTML = '';
-    D.THEMES.forEach(function (t) {
-      var imp = E.impact(g, me, selected, t.id), on = t.id === theme;
-      var cls = 'theme' + (on ? ' on' : '') + (E.isHot(g, t.id) ? ' hot' : '') + (selected && E.concerns(selected, t.id) ? ' fit' : '');
-      var b = el('button', { class: cls, type: 'button', role: 'radio', 'aria-checked': on, 'aria-label': t.name + (selected ? ', impact ' + imp : '') },
-        '<span class="theme-i">' + t.icon + '</span><span class="theme-n">' + esc(t.short) + '</span>' + (selected ? '<span class="theme-imp">' + imp + '</span>' : credDots(E.cred(me, t.id))));
-      b.addEventListener('click', function () { theme = t.id; themePicked = true; render(); T.notify('theme'); });
-      box.appendChild(b);
-    });
+  function impactDots(n) { var h = ''; for (var i = 0; i < 4; i++) h += '<i class="' + (i < n ? 'on' : '') + '"></i>'; return '<span class="imp">' + h + '</span>'; }
+  function renderMessage() {
+    var b = $('message'), t = th(theme);
+    b.innerHTML = '<span class="msg-k">Message</span><span class="msg-t">' + t.icon + ' ' + esc(t.name) + (E.isHot(g, theme) ? ' 🔥' : '') + '</span>' +
+      (selected ? impactDots(E.impact(g, me, selected, theme)) : '') + '<span class="msg-change">Changer</span>';
   }
+  $('message').addEventListener('click', function () {
+    if (!g || g.phase !== 'actions') return;
+    var list = D.THEMES.map(function (t) { return { t: t, imp: E.impact(g, me, selected, t.id) }; })
+      .sort(function (a, b) { return b.imp - a.imp; });
+    var html = '<p class="hint">Plus l\'impact est fort, plus ton action rapporte.' + (selected ? ' Ici, en ' + esc(E.REG[selected].name) + ' :' : '') + '</p><div class="pick">' +
+      list.map(function (x) {
+        var why = [];
+        var c = E.cred(me, x.t.id); why.push(['pas ton sujet', 'tu es crédible', 'ton point fort'][c]);
+        if (selected && E.concerns(selected, x.t.id)) why.push('la région s\'en soucie');
+        if (E.isHot(g, x.t.id)) why.push('🔥 à la une');
+        return '<button type="button" class="pick-row' + (x.t.id === theme ? ' on' : '') + '" data-theme="' + x.t.id + '"><span class="pick-i">' + x.t.icon + '</span>' +
+          '<span class="pick-txt"><b>' + esc(x.t.name) + '</b><small>' + why.join(' · ') + '</small></span>' + (selected ? impactDots(x.imp) : '') + '</button>';
+      }).join('') + '</div>';
+    modal({ kicker: 'Ton message', title: 'De quoi parles-tu ?', html: html, buttons: [{ label: 'Fermer' }],
+      onOpen: function () {
+        Array.prototype.forEach.call(document.querySelectorAll('.pick-row'), function (row) {
+          row.addEventListener('click', function () { theme = row.getAttribute('data-theme'); themePicked = true; closeModal(); render(); T.notify('theme'); });
+        });
+      } });
+  });
+  var MAIN = ['terrain', 'medias', 'reseaux'];
   function renderActions() {
     var box = $('actions'); box.innerHTML = '';
-    ['terrain', 'medias', 'reseaux', 'imposer', 'contre', 'fonds', 'reforme'].forEach(function (type) {
-      var def = D.ACTIONS[type], act = { type: type, region: def.target === 'region' ? selected : undefined };
-      if (def.theme) act.theme = theme;
-      var b = el('button', { class: 'act' + (type === 'imposer' ? ' act-impose' : ''), type: 'button', title: def.text },
-        '<span class="act-i">' + def.icon + '</span><span class="act-txt"><span class="act-top"><b class="act-n">' + def.name + '</b><span class="act-cost">' + costLabel(act) + '</span></span><span class="act-fx">' + effect(act) + '</span></span>');
-      if (def.target && !selected) b.disabled = true;
-      else if (canQueue(act)) b.style.opacity = '.55';
+    MAIN.forEach(function (type) {
+      var def = D.ACTIONS[type], act = { type: type, region: selected || undefined, theme: theme };
+      var big = type === 'terrain' || type === 'medias' ? (selected ? '+' + bigGain(act) : '—') : (selected ? '🎲' : '—');
+      var b = el('button', { class: 'tile', type: 'button', 'aria-label': def.name + ', ' + costLabel(act) },
+        '<span class="tile-n">' + def.icon + ' ' + def.name + '</span><span class="tile-big">' + big + '</span><span class="tile-cost">' + costLabel(act) + '</span>');
+      if (!selected) b.disabled = true;
+      else if (canQueue(act)) b.classList.add('dim');
       b.addEventListener('click', function () { addAction(act); });
       box.appendChild(b);
     });
-    var cards = $('cards'); cards.innerHTML = '';
-    mePl().cards.forEach(function (k) {
-      var def = D.CARDS[k];
-      var b = el('button', { class: 'cardbtn', type: 'button', title: def.text }, esc(def.name) + '<small>' + esc(def.text) + '</small>');
-      if (queue.some(function (q) { return q.card === k; })) b.disabled = true;
-      b.addEventListener('click', function () {
-        if (def.target === 'region' && !selected) { toast('Choisis d’abord une région sur la carte.'); return; }
-        addAction({ type: 'card', card: k, region: def.target === 'region' ? selected : undefined });
-      });
-      cards.appendChild(b);
+    var more = el('button', { class: 'tile tile-more', type: 'button', id: 'btn-more' }, '<span class="tile-n">Plus</span><span class="tile-big">⋯</span><span class="tile-cost">autres actions</span>');
+    more.addEventListener('click', moreMenu);
+    box.appendChild(more);
+  }
+  function bigGain(act) {
+    if (act.type === 'terrain') return E.terrainCubes(g, me, act.region, act.theme);
+    var n = 0; E.mediaRegions(g, me, act.region, act.theme).forEach(function (rid) { n += E.mediaCubes(g, me, rid, act.theme); }); return n;
+  }
+  /* Les autres actions, dans une fenêtre où l'on a la place de les expliquer */
+  function moreMenu() {
+    if (g.phase !== 'actions') return;
+    var items = [];
+    ['imposer', 'contre', 'fonds', 'reforme'].forEach(function (type) {
+      var def = D.ACTIONS[type], act = { type: type, region: def.target === 'region' ? selected : undefined, theme: def.theme ? theme : undefined };
+      var err = def.target === 'region' && !selected ? 'choisis d\'abord une région' : canQueue(act);
+      items.push({ act: act, icon: def.icon, name: def.name, cost: costLabel(act), fx: effect(act), err: err });
     });
-    if (!mePl().cards.length) cards.innerHTML = '<span class="hint">Cartes spéciales utilisées.</span>';
-    var ally = E.allyOf(g, me), queued = queue.some(function (q) { return q.type === 'alliance' || q.type === 'rupture'; });
-    var ab = el('button', { class: 'cardbtn cardbtn-ally', type: 'button' }, ally ? 'Allié : ' + esc(party(ally).short) + '<small>Toucher pour rompre</small>' : 'Alliance<small>1 ★ · partis proches</small>');
-    if (queued) ab.disabled = true;
-    ab.addEventListener('click', ally ? confirmBreak : allianceMenu);
-    cards.appendChild(ab);
+    mePl().cards.forEach(function (k) {
+      var def = D.CARDS[k], act = { type: 'card', card: k, region: def.target === 'region' ? selected : undefined };
+      var err = def.target === 'region' && !selected ? 'choisis d\'abord une région' : canQueue(act);
+      items.push({ act: act, icon: '🃏', name: def.name, cost: 'carte unique', fx: esc(def.text), err: err });
+    });
+    var ally = E.allyOf(g, me);
+    items.push({ special: ally ? 'break' : 'alliance', icon: '🤝', name: ally ? 'Allié : ' + party(ally).short : 'Alliance', cost: ally ? 'rompre ?' : '1 ★',
+      fx: ally ? 'Toucher pour rompre l\'alliance' : 'S\'allier à un parti proche pour le second tour',
+      err: queue.some(function (q) { return q.type === 'alliance' || q.type === 'rupture'; }) ? 'déjà programmée' : null });
+    var html = '<div class="pick">' + items.map(function (it, i) {
+      return '<button type="button" class="pick-row' + (it.err ? ' off' : '') + '" data-i="' + i + '"><span class="pick-i">' + it.icon + '</span>' +
+        '<span class="pick-txt"><b>' + esc(it.name) + '</b><small>' + (it.err ? esc(it.err) : it.fx) + '</small></span><span class="pick-cost">' + esc(it.cost) + '</span></button>';
+    }).join('') + '</div>';
+    modal({ kicker: 'Autres actions', title: 'Plus d\'options', html: html, buttons: [{ label: 'Fermer' }],
+      onOpen: function () {
+        Array.prototype.forEach.call(document.querySelectorAll('.pick-row'), function (row) {
+          row.addEventListener('click', function () {
+            var it = items[+row.getAttribute('data-i')];
+            if (it.err) { toast(it.err.charAt(0).toUpperCase() + it.err.slice(1) + '.'); return; }
+            closeModal();
+            if (it.special === 'alliance') allianceMenu();
+            else if (it.special === 'break') confirmBreak();
+            else addAction(it.act);
+          });
+        });
+      } });
   }
   function allianceMenu() {
     var rows = g.players.filter(function (p) { return p.id !== me; }).sort(function (a, b) { return E.dist(me, a.id) - E.dist(me, b.id); });
