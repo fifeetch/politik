@@ -44,7 +44,19 @@
     </div>
     <div id="party-grid" class="party-grid"></div>
     <div id="party-detail" class="party-detail"></div>
-    <button id="btn-start" class="btn btn-ink btn-big">ENTRER EN CAMPAGNE</button>
+    <button id="btn-start" class="btn btn-ink btn-big">COMPOSER MON PROGRAMME</button>
+  </section>
+
+  <!-- v0.7 : le programme -->
+  <section id="screen-programme" class="screen">
+    <div class="prog-head"><div id="prog-cand" class="prog-cand"></div>
+      <div><span class="kicker">Ton programme · 5 mesures</span><h1 class="h1">TES PROMESSES</h1><span id="prog-sub" class="region-sub"></span></div></div>
+    <div id="prog-budget" class="prog-budget"></div>
+    <div id="prog-list" class="prog-list"></div>
+    <div class="prog-foot">
+      <button id="prog-reco" class="btn" type="button">Programme conseillé</button>
+      <button id="prog-go" class="btn btn-ink btn-big" type="button">ENTRER EN CAMPAGNE</button>
+    </div>
   </section>
 
   <!-- Jeu -->
@@ -69,6 +81,8 @@
     </div>
 
     <button id="news" class="news" type="button" aria-label="Voir l'actualité du tour"></button>
+
+    <div id="advisor" class="advisor" hidden></div>
 
     <div class="map-wrap">
       <svg id="map" class="map" viewBox="0 0 370 357" role="img" aria-label="Carte des 13 régions"></svg>
@@ -123,6 +137,7 @@
 <script src="js/map.js"></script>
 <script src="js/engine.js"></script>
 <script src="js/ai.js"></script>
+<script src="js/art.js"></script>
 <script src="js/tuto.js"></script>
 <script src="js/ui.js"></script>
 <script>

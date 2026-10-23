@@ -30,6 +30,10 @@
       if (E.cred(v, pid, t.id) === 2 && !E.isHot(v, t.id)) list.push({ type: 'imposer', theme: t.id });
     });
     list.push({ type: 'fonds' });
+    // enquêter sur un rival qui traîne des casseroles ou qui mène
+    if (v.turn < D.RULES.maxTurns) v.players.forEach(function (o) {
+      if (o.id !== pid && E.allyOf(v, pid) !== o.id) list.push({ type: 'enquete', target: o.id });
+    });
     if (!E.allyOf(v, pid)) v.players.forEach(function (o) {
       if (o.id !== pid && !E.allianceError(v, pid, o.id)) list.push({ type: 'alliance', target: o.id });
     });
@@ -87,6 +91,11 @@
         val += E.gain(v, pid, act.region, 1) * Math.min(left, 4) * 0.42;
         break; }
       case 'reforme': D.REGIONS.forEach(function (r) { if (r.profile === prof) boost(r.id, 1); }); break;
+      case 'enquete': {
+        if ((v.enq || {})[pid + act.target]) return null;
+        var ch = E.enqueteChance(v, act.target), rk = E.ranking(v).indexOf(act.target);
+        val += ch * (4.6 + (rk === 0 ? 2.4 : rk === 1 ? 1 : 0)) - (1 - ch) * D.RULES.enqueteBackfire * 2 * (0.6 + pl.cas * 0.2);
+        break; }
       case 'alliance': {
         // une alliance vaut surtout pour le second tour : plus intéressante en milieu de partie et avec un voisin direct
         var chance = E.acceptChance(v, act.target, pid);
@@ -132,6 +141,7 @@
       pl.money -= best.cost.money; pl.infl -= best.cost.infl; pl.forme -= best.cost.forme;
       if (best.act.type === 'militants') { v.bases[best.act.region] = (v.bases[best.act.region] || []).concat([pid]); pl.militants += 1; }
       if (best.act.type === 'fonds') { pl.money += pid === 'EM' ? 4 : pid === 'VP' ? 2 : 3; if (pid === 'EM') pl.infl += 1; }
+      if (best.act.type === 'enquete') { v.enq = v.enq || {}; v.enq[pid + best.act.target] = 1; }
       if (best.act.type === 'alliance') { v.alliances[pid] = best.act.target; v.alliances[best.act.target] = pid; }
       if (best.act.type === 'card') pl.cards = pl.cards.filter(function (k) { return k !== best.act.card; });
       best.eff.forEach(function (e) { add(v, e[0], e[1], e[2]); });
@@ -187,6 +197,13 @@
     });
     return v;
   }
+  function chooseReaction(g, pid) {
+    var best = 0, bv = -1e9;
+    // chaque parti a ses réflexes face aux affaires
+    var bias = { FI: { medias: 2.2 }, MN: { medias: 2.4, nier: 1 }, UG: { nier: 1.8 }, EM: { fusible: 1.2, nier: 0.8 }, SM: { excuses: 0.8 }, VP: { excuses: 1 } }[pid] || {};
+    D.REACTIONS.forEach(function (rc, i) { var x = fxValue(g, pid, rc.fx) + (bias[rc.id] || 0) + g.rng() * 1.2; if (x > bv) { bv = x; best = i; } });
+    return best;
+  }
   function chooseDilemma(g, pid) {
     var d = E.dilemmaDef(g.dilemma.id), best = 0, bv = -1e9;
     d.options.forEach(function (o, i) { var x = fxValue(g, pid, o.fx) + g.rng() * 0.8; if (x > bv) { bv = x; best = i; } });
@@ -195,6 +212,6 @@
 
   function acceptOffer(g, target, from) { return g.rng() < E.acceptChance(g, target, from); }
 
-  var API = { plan: plan, prep: prep, chooseReply: chooseReply, paySpotlight: payspotlight, acceptOffer: acceptOffer, chooseDilemma: chooseDilemma };
+  var API = { plan: plan, prep: prep, chooseReply: chooseReply, paySpotlight: payspotlight, acceptOffer: acceptOffer, chooseDilemma: chooseDilemma, chooseReaction: chooseReaction };
   if (node) module.exports = API; else root.PolitikAI = API;
 })(this);

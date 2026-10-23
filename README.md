@@ -15,7 +15,7 @@ Jeu de stratégie électorale parodique sur la carte de France, pensé pour le t
   Politik a alors sa propre icône, s'ouvre en plein écran et fonctionne sans internet.
 - Première partie : un tutoriel guidé se lance automatiquement (relançable avec « Comment jouer » sur l'écran titre).
 
-## Règles (v0.6, résumé)
+## Règles (v0.7, résumé)
 
 - **But** : remporter l'élection présidentielle après **8 tours de campagne**. Chaque région vote selon ses cubes, pondérée par sa population ; le parti qui contrôle une région y gagne un bonus de voix.
 - **Scrutin** : plus de 50 % au premier tour = élu. Sinon, second tour entre les deux premiers, avec reports de voix selon la proximité politique (alliés : 85 %).
@@ -25,6 +25,7 @@ Jeu de stratégie électorale parodique sur la carte de France, pensé pour le t
 - **Le candidat (v0.4)** : sa forme ⚡ limite les Meetings et la Télé (risque de gaffe à 0). Les militants 👥 rapportent 1 cube par tour. La dynamique ↗ récompense une progression au sondage. Parler souvent d'un thème rend crédible dessus.
 - **Dilemmes et casseroles (v0.5)** : un parti par tour fait face à un dilemme, avec parfois des conséquences différées. Les casseroles 🍳 font courir un risque de scandale. Une crise en 3 actes marque la carte.
 - **Les grands moments (v0.6)** : débat télévisé en face-à-face (choix des répliques), flash info en fin de tour, soirée électorale à 20h.
+- **Programme et affaires (v0.7)** : 5 mesures à choisir avant la campagne (crédibilité, mesure phare, budget). Des affaires tombent (casseroles, presse, enquêtes des rivaux, programme non financé) et l'on choisit sa réaction. Lulu, la directrice de campagne, donne un conseil par tour, et des fiches « Le saviez-vous ? » expliquent la vraie vie politique.
 - **Un tour** : journal du matin (revenus, militants, scandales, crise ou événement, dilemme) → 3 actions secrètes jouées par tous en même temps → débat (tours 3, 6, 8) → « Sous les projecteurs » pour le premier des sondages.
 
 ## Organisation du code
@@ -38,6 +39,7 @@ Jeu de stratégie électorale parodique sur la carte de France, pensé pour le t
 | `js/engine.js` | Les règles (sans affichage) |
 | `js/ai.js` | L'intelligence artificielle des adversaires |
 | `js/ui.js` | L'affichage et le déroulement d'une partie |
+| `js/art.js` | Les illustrations (candidats, conseillère, vignettes), dessinées en SVG |
 | `js/tuto.js` | Le tutoriel guidé du premier tour |
 | `manifest.webmanifest`, `sw.js`, `icons/` | L'application installable (icône, plein écran, jeu hors ligne). À chaque nouvelle version, changer `VERSION` dans `sw.js` |
 | `test/simulate.js` | Simule des centaines de parties pour vérifier l'équilibre |
@@ -50,18 +52,18 @@ node test/simulate.js 1000
 
 Le script affiche le taux de victoire de chaque parti (l'idéal est autour de 25 %).
 
-## Équilibre actuel (v0.6, IA contre IA, 2000 parties)
+## Équilibre actuel (v0.7, IA contre IA, 2000 parties)
 
 | Parti | Victoires (idéal 25 %) |
 | --- | --- |
 | Les Verts Pâturages | 31 % |
-| Mouvement National | 27 % |
-| La France Indignée | 26 % |
-| Socialisme Modéré | 26 % |
-| L'Union Gaulliste | 22 % |
+| Socialisme Modéré | 29 % |
+| Mouvement National | 25 % |
+| La France Indignée | 24 % |
+| L'Union Gaulliste | 21 % |
 | En Mouvement | 18 % |
 
-Les débats sont gagnés de façon équilibrée entre les partis. Les Verts et En Mouvement restent les deux points à surveiller avec de vraies parties.
+En moyenne par partie : 5 affaires, 1 à 2 enquêtes, environ 5 équipes de militants.
 
 Les idées pour la suite sont dans [ROADMAP.md](ROADMAP.md).
 

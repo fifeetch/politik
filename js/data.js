@@ -1,4 +1,4 @@
-/* Politik — données du jeu (règles v0.6 : thèmes, candidat, dilemmes, crises, débat télévisé)
+/* Politik — données du jeu (règles v0.7 : programme, affaires, candidats, conseillère)
    Toutes les valeurs chiffrées du jeu sont ici : c'est le fichier à modifier pour équilibrer. */
 (function (root) {
   var REGIONS = [
@@ -40,42 +40,132 @@
     immigration: ['Le projet de loi immigration enflamme l\'Assemblée', 'Débat tendu sur l\'accueil des réfugiés', 'Contrôles renforcés à la frontière italienne']
   };
 
+  /* ---------- v0.7 : le programme ----------
+     Chaque candidat choisit 5 mesures avant la campagne. La 1re est sa mesure phare.
+     Crédibilité sur un thème = socle du parti + 1 par mesure sur ce thème (2 au plus).
+     cost : coût en milliards d'euros (négatif = économies). choc : fait parler (+1 cube dans 2 régions… et +1 casserole). */
+  var MEASURES = [
+    { id: 'smic',            theme: 'pouvoir',     name: 'Smic à 1 600 € net',                       cost: 20 , edu: { what: 'Le Smic est le salaire minimum légal en France. Il est revalorisé au moins une fois par an.', pro: 'Plus de pouvoir d\'achat pour les bas salaires.', con: 'Un coût en plus pour les petites entreprises, qui peuvent embaucher moins.' } },
+    { id: 'energie',         theme: 'pouvoir',     name: 'Blocage des prix de l\'énergie',            cost: 25 , edu: { what: 'L\'État fixe un prix maximum pour l\'électricité ou le gaz et paie la différence aux fournisseurs.', pro: 'Protège les ménages et les entreprises des flambées de prix.', con: 'Très coûteux pour les finances publiques, et n\'incite pas à économiser l\'énergie.' } },
+    { id: 'tva',             theme: 'pouvoir',     name: 'TVA réduite sur le carburant',              cost: 15 , edu: { what: 'La TVA est un impôt payé sur presque tout ce qu\'on achète, dont le carburant.', pro: 'Baisse visible du prix à la pompe.', con: 'Moins de recettes pour l\'État, et la baisse profite aussi aux gros rouleurs.' } },
+    { id: 'cheque',          theme: 'pouvoir',     name: 'Chèque alimentation',                       cost: 6 , edu: { what: 'Une aide versée aux ménages modestes pour acheter de la nourriture.', pro: 'Cible ceux qui en ont le plus besoin.', con: 'Aide ponctuelle qui ne règle pas les causes de la hausse des prix.' } },
+    { id: 'superprofits',    theme: 'pouvoir',     name: 'Taxe sur les superprofits',                 cost: -12 , edu: { what: 'Un impôt exceptionnel sur les bénéfices jugés anormalement élevés de certaines entreprises.', pro: 'Fait contribuer les entreprises qui profitent d\'une crise.', con: 'Difficile à définir, et peut faire fuir les investisseurs.' } },
+    { id: 'reindus',         theme: 'emploi',      name: 'Grand plan de réindustrialisation',         cost: 30 , edu: { what: 'Aider les usines à s\'installer ou revenir en France : subventions, formation, énergie.', pro: 'Recrée des emplois et rend le pays moins dépendant de l\'étranger.', con: 'Très cher, et les résultats prennent des années.' } },
+    { id: 'pme',             theme: 'emploi',      name: 'Moins de charges pour les PME',             cost: 15 , edu: { what: 'Les charges sociales sont des cotisations payées sur les salaires pour financer la protection sociale.', pro: 'Les entreprises peuvent embaucher et investir plus.', con: 'Moins de recettes pour la Sécurité sociale, à compenser ailleurs.' } },
+    { id: 'semaine4',        theme: 'emploi',      name: 'Semaine de 4 jours',                        cost: 8 , edu: { what: 'Travailler sur 4 jours au lieu de 5, à temps de travail réduit ou réorganisé.', pro: 'Plus de temps libre, moins de trajets, salariés plus motivés.', con: 'Difficile à organiser dans certains métiers (hôpitaux, commerces).' } },
+    { id: 'apprentissage',   theme: 'emploi',      name: 'Apprentissage pour tous',                   cost: 4 , edu: { what: 'L\'apprentissage alterne cours et travail en entreprise, avec un salaire.', pro: 'Facilite l\'accès des jeunes à un premier emploi.', con: 'Les aides aux entreprises ont un coût, et la qualité des formations varie.' } },
+    { id: 'retraites',       theme: 'emploi',      name: 'Retraite à 65 ans',                         cost: -15, choc: true , edu: { what: 'Reculer l\'âge légal auquel on peut partir à la retraite.', pro: 'Équilibre les comptes des retraites, car on vit plus longtemps.', con: 'Pénalise ceux qui ont commencé tôt ou ont des métiers pénibles. Mesure souvent très contestée.' } },
+    { id: 'medecins',        theme: 'services',    name: '10 000 médecins de plus',                   cost: 12 , edu: { what: 'Former et installer plus de médecins, notamment dans les « déserts médicaux ».', pro: 'Réduit les délais pour se soigner.', con: 'Former un médecin prend une dizaine d\'années.' } },
+    { id: 'lignes',          theme: 'services',    name: 'Rouvrir les petites lignes de train',       cost: 10 , edu: { what: 'Rouvrir des lignes de train fermées dans les zones rurales.', pro: 'Désenclave les territoires et réduit l\'usage de la voiture.', con: 'Coûteux à remettre en état pour peu de voyageurs parfois.' } },
+    { id: 'classes',         theme: 'services',    name: 'Classes de 20 élèves maximum',              cost: 10 , edu: { what: 'Limiter le nombre d\'élèves par classe.', pro: 'Les élèves sont mieux suivis, surtout les plus fragiles.', con: 'Il faut recruter beaucoup d\'enseignants, et le métier attire peu.' } },
+    { id: 'sp20',            theme: 'services',    name: 'Un service public à 20 min de chez soi',    cost: 15 , edu: { what: 'Garantir à chacun une école, une poste, un médecin ou une gare à moins de 20 minutes.', pro: 'Lutte contre le sentiment d\'abandon des campagnes.', con: 'Maintenir des services peu fréquentés coûte cher.' } },
+    { id: 'nonremplacement', theme: 'services',    name: 'Un fonctionnaire sur deux non remplacé',    cost: -10, choc: true , edu: { what: 'Ne remplacer qu\'un fonctionnaire sur deux qui part à la retraite.', pro: 'Réduit les dépenses de l\'État.', con: 'Risque de dégrader les services publics (écoles, hôpitaux).' } },
+    { id: 'renovation',      theme: 'ecologie',    name: 'Rénover 1 million de logements',            cost: 18 , edu: { what: 'Isoler les logements pour qu\'ils consomment moins d\'énergie.', pro: 'Baisse les factures et les émissions de CO₂.', con: 'Gros coût pour l\'État et les propriétaires, et pénurie d\'artisans.' } },
+    { id: 'train1',          theme: 'ecologie',    name: 'Le train à 1 € pour les jeunes',            cost: 5 , edu: { what: 'Un billet de train à prix symbolique pour les jeunes.', pro: 'Encourage le train plutôt que la voiture.', con: 'Manque à gagner pour la SNCF, à compenser par l\'État.' } },
+    { id: 'jets',            theme: 'ecologie',    name: 'Taxe sur les jets privés',                  cost: -3 , edu: { what: 'Un impôt sur les vols en avion privé, très polluants par passager.', pro: 'Symbole de justice : les plus riches paient leur pollution.', con: 'Rapporte peu, et les vols peuvent partir de l\'étranger.' } },
+    { id: 'plastique',       theme: 'ecologie',    name: 'Fin du plastique jetable',                  cost: 2 , edu: { what: 'Interdire progressivement les emballages et objets en plastique à usage unique.', pro: 'Moins de déchets dans la nature et les océans.', con: 'Les entreprises doivent trouver des alternatives, parfois plus chères.' } },
+    { id: 'policiers',       theme: 'securite',    name: '10 000 policiers de plus',                  cost: 10 , edu: { what: 'Recruter et former davantage de policiers et gendarmes.', pro: 'Plus de présence sur le terrain.', con: 'Il faut aussi des locaux, du matériel, et des années de formation.' } },
+    { id: 'proximite',       theme: 'securite',    name: 'Retour de la police de proximité',          cost: 5 , edu: { what: 'Des policiers affectés à un quartier, qui connaissent ses habitants.', pro: 'Rétablit la confiance et prévient la délinquance.', con: 'Mobilise beaucoup d\'agents pour des résultats difficiles à mesurer.' } },
+    { id: 'planchers',       theme: 'securite',    name: 'Peines planchers',                          cost: 1 , edu: { what: 'Une peine minimale obligatoire pour certains délits, surtout en cas de récidive.', pro: 'Rend la sanction plus certaine et dissuasive.', con: 'Limite la liberté du juge d\'adapter la peine à chaque cas. Déjà essayée puis supprimée en France.' } },
+    { id: 'video',           theme: 'securite',    name: 'Caméras dans toutes les communes',          cost: 3 , edu: { what: 'Installer des caméras de surveillance sur la voie publique.', pro: 'Aide à élucider des affaires et peut dissuader.', con: 'Efficacité discutée, et questions de vie privée.' } },
+    { id: 'fraude',          theme: 'securite',    name: 'Chasse à la fraude sociale',                cost: -6 , edu: { what: 'Renforcer les contrôles sur les aides sociales versées à tort.', pro: 'Les aides vont à ceux qui y ont droit.', con: 'La fraude aux cotisations des entreprises et le non-recours aux droits sont aussi importants.' } },
+    { id: 'referendum',      theme: 'immigration', name: 'Référendum sur l\'immigration',             cost: 1 , edu: { what: 'Faire voter directement les citoyens sur la politique d\'immigration.', pro: 'Donne la parole au peuple sur un sujet sensible.', con: 'L\'article 11 de la Constitution ne cite pas l\'immigration : la possibilité même de ce référendum fait débat.' } },
+    { id: 'accueil',         theme: 'immigration', name: 'Accueil digne et intégration',              cost: 4 , edu: { what: 'Mieux accueillir les étrangers en règle : cours de français, accès au travail, logement.', pro: 'Favorise l\'intégration et l\'emploi.', con: 'Coût pour l\'État, et crainte d\'un « appel d\'air ».' } },
+    { id: 'controles',       theme: 'immigration', name: 'Contrôles renforcés aux frontières',        cost: 5 , edu: { what: 'Plus de contrôles aux frontières de la France.', pro: 'Mieux lutter contre l\'immigration illégale et les trafics.', con: 'Dans l\'espace Schengen, les contrôles aux frontières intérieures sont en principe limités et temporaires.' } },
+    { id: 'regroupement',    theme: 'immigration', name: 'Fin du regroupement familial',              cost: 0, choc: true , edu: { what: 'Le regroupement familial permet à un étranger installé légalement de faire venir sa famille.', pro: 'Réduit l\'immigration.', con: 'Ce droit est protégé par des textes européens et internationaux : le supprimer serait juridiquement très difficile.' } }
+  ];
+
+  /* ---------- v0.7 : les affaires ----------
+     Une affaire tombe quand les casseroles s'accumulent, quand Le Canard Déchaîné enquête, quand un rival sort un dossier,
+     ou quand le programme n'est pas financé. On choisit comment réagir. */
+  var AFFAIRS = [
+    { id: 'emplois',    title: 'Les emplois fictifs',        text: 'Ton conjoint aurait été payé comme assistant parlementaire sans jamais mettre les pieds à l\'Assemblée.' },
+    { id: 'appart',     title: 'L\'appartement de fonction',  text: 'Un 200 m² avec vue sur la Seine, loué une bouchée de pain par la mairie.' },
+    { id: 'voyage',     title: 'Le voyage offert',           text: 'Une semaine aux Seychelles, payée par un lobby pétrolier.' },
+    { id: 'sondages',   title: 'Les sondages espions',       text: 'Le parti aurait payé des sondages… sur la vie privée de tes rivaux.' },
+    { id: 'diplome',    title: 'Le diplôme introuvable',     text: 'Ton master d\'économie viendrait d\'une université qui n\'existe pas.' },
+    { id: 'montres',    title: 'La collection de montres',   text: 'Un journaliste compte 14 montres de luxe sur tes photos officielles.' },
+    { id: 'valises',    title: 'Les valises de billets',     text: 'Un ancien trésorier parle de valises de billets dans le coffre de ta voiture.' },
+    { id: 'suisse',     title: 'Le compte à Genève',         text: 'Un compte bancaire ouvert à ton nom en 2009 refait surface.' },
+    { id: 'diners',     title: 'Les dîners à 500 €',         text: 'Des dîners dans les plus grandes tables de Paris, aux frais du contribuable.' },
+    { id: 'tweet',      title: 'Le vieux message',           text: 'Un message que tu as publié il y a dix ans refait surface. Il a très mal vieilli.' },
+    { id: 'chauffeur',  title: 'Le chauffeur pressé',        text: 'Ta voiture officielle cumule 87 excès de vitesse.' },
+    { id: 'neveu',      title: 'Le neveu bien placé',        text: 'Ton neveu de 19 ans dirige désormais la communication du parti.' }
+  ];
+  var BUDGET_AFFAIR = { id: 'budget', title: 'Le programme non financé', text: 'Les économistes ont fait les comptes : ton programme coûte bien plus que ce que tu annonces.' };
+  /* Les 4 façons de réagir à une affaire */
+  var REACTIONS = [
+    { id: 'nier',    label: 'Nier en bloc',                hint: 'Pile ou face : ça passe… ou −3 cubes et +1 casserole', fx: [{ k: 'dice', chance: 0.5, win: [], lose: [{ k: 'strong', n: -3 }, { k: 'cas', n: 1 }] }] },
+    { id: 'excuses', label: 'S\'excuser publiquement',     hint: '−1 cube dans tes 2 meilleures régions, mais −2 casseroles : la page est tournée', fx: [{ k: 'loseTop', n: 1, count: 2 }, { k: 'cas', n: -2 }] },
+    { id: 'fusible', label: 'Sacrifier un collaborateur',  hint: '−1 cube, −1 ★, −1 casserole', fx: [{ k: 'strong', n: -1 }, { k: 'infl', n: -1 }, { k: 'cas', n: -1 }] },
+    { id: 'medias',  label: 'Accuser les médias',          hint: '1 chance sur 3 que ta base se mobilise (+1 cube) ; sinon −2 cubes et +2 casseroles', fx: [{ k: 'dice', chance: 0.34, win: [{ k: 'regions', n: 1, count: 1 }], lose: [{ k: 'strong', n: -2 }, { k: 'cas', n: 2 }] }] }
+  ];
+  /* La conseillère de campagne */
+  var ADVISOR = { name: 'Lulu', title: 'ta directrice de campagne' };
+
+
+  /* ---------- v0.7 : « Le saviez-vous ? » — comprendre la politique ---------- */
+  var LEARN = {
+    presidentielle: { title: 'L\'élection présidentielle', text: 'Le président de la République est élu au suffrage universel direct pour 5 ans (le quinquennat, adopté par référendum en 2000). Il ne peut pas faire plus de deux mandats de suite.' },
+    second_tour: { title: 'Le scrutin à deux tours', text: 'Si aucun candidat n\'obtient plus de la moitié des voix au 1er tour, les deux premiers s\'affrontent au second tour, deux semaines plus tard. Les candidats éliminés peuvent appeler à voter pour l\'un d\'eux, mais leurs électeurs ne suivent pas toujours.' },
+    parrainages: { title: 'Les 500 parrainages', text: 'Pour se présenter, un candidat doit réunir 500 signatures d\'élus (maires, parlementaires…) venant d\'au moins 30 départements. C\'est un vrai défi pour les petits partis.' },
+    comptes: { title: 'Les comptes de campagne', text: 'Les dépenses de campagne sont plafonnées et vérifiées par une commission indépendante. En cas de dépassement, l\'État ne rembourse pas les frais, et le candidat peut être sanctionné.' },
+    sondages: { title: 'Les sondages', text: 'Un sondage interroge environ mille personnes : il a une marge d\'erreur de 2 à 3 points. Leur publication est interdite la veille et le jour du vote.' },
+    vingt_heures: { title: 'Pourquoi 20h ?', text: 'Aucun résultat ne peut être publié avant la fermeture des derniers bureaux de vote, à 20h dans les grandes villes. Les « estimations » sont calculées à partir des premiers bulletins dépouillés.' },
+    temps_parole: { title: 'Le temps de parole', text: 'Pendant la campagne, une autorité indépendante (l\'Arcom) veille à ce que les médias audiovisuels donnent la parole à tous les candidats de façon équitable, puis égale à l\'approche du vote.' },
+    debat: { title: 'Le débat télévisé', text: 'Le débat d\'entre-deux-tours entre les deux finalistes est une tradition depuis 1974. Une phrase bien placée peut marquer toute une campagne.' },
+    art49_3: { title: 'Le 49.3', text: 'L\'article 49 alinéa 3 de la Constitution permet au gouvernement de faire adopter un texte sans vote des députés… sauf si ceux-ci votent une motion de censure, qui renverse alors le gouvernement. Son usage est limité depuis 2008.' },
+    censure: { title: 'La motion de censure', text: 'Les députés peuvent renverser le gouvernement en votant une motion de censure. Il faut la majorité absolue des députés, soit 289 voix.' },
+    referendum: { title: 'Le référendum', text: 'Le président peut soumettre un projet de loi directement aux citoyens (article 11 de la Constitution), mais seulement sur certains sujets : organisation des pouvoirs publics, politique économique, sociale ou environnementale.' },
+    budget: { title: 'Le budget de l\'État', text: 'Chaque année, le Parlement vote la loi de finances : les recettes et les dépenses de l\'État. Quand on dépense plus qu\'on ne gagne, c\'est le déficit, qui s\'ajoute à la dette.' },
+    affaires: { title: 'Les affaires et la justice', text: 'Une personne mise en cause reste présumée innocente tant qu\'elle n\'est pas condamnée. Mais une condamnation peut s\'accompagner d\'une peine d\'inéligibilité : interdiction de se présenter à une élection.' },
+    militants: { title: 'Les militants', text: 'Les militants font vivre une campagne sur le terrain : tractage, porte-à-porte, réunions, collage d\'affiches sur les panneaux officiels installés devant chaque bureau de vote.' },
+    agenda: { title: 'L\'agenda médiatique', text: 'Les sujets dont parlent les médias influencent ce qui préoccupe les électeurs. Les candidats essaient d\'imposer « leurs » thèmes : ceux sur lesquels ils sont jugés les plus crédibles.' },
+    alliances: { title: 'Les alliances', text: 'Entre les deux tours, des partis proches peuvent passer des accords : l\'un se retire ou appelle à voter pour l\'autre. Mais une alliance n\'efface pas les désaccords, et les électeurs restent libres.' }
+  };
+
   var PROFILES = {
     urbaine: 'Urbaine', rurale: 'Rurale', industrielle: 'Industrielle', historique: 'Historique'
   };
 
   var PARTIES = [
     { id: 'FI', pos: 1, name: 'La France Indignée', short: 'France Indignée', family: 'Gauche radicale',
+      candidate: 'Rémi Barricade', candTitle: 'le tribun de la rue', programme: ['smic', 'superprofits', 'medecins', 'train1', 'semaine4'],
       color: '#C8323C', ink: '#FFFFFF', money: 5, infl: 4, bases: ['occ', 'bfc'],
       cred: { pouvoir: 2, services: 2, ecologie: 1, emploi: 1, securite: 0, immigration: 0 },
       force: 'Réseaux sociaux : en Buzz, relance le dé si le résultat est mauvais (1 ou 2).',
       weakness: 'Un Meeting coûte 1 € de plus en région rurale.',
       cards: ['marche_pop', 'censure'] },
     { id: 'SM', pos: 3, name: 'Socialisme Modéré', short: 'Soc. Modéré', family: 'Centre gauche',
+      candidate: 'Claire Consensus', candTitle: 'la sage du parti', programme: ['classes', 'apprentissage', 'cheque', 'proximite', 'plastique'],
       color: '#E07AA0', ink: '#1B1F3B', money: 4, infl: 3, bases: ['naq', 'cvl'],
       cred: { services: 2, emploi: 1, pouvoir: 1, securite: 1, ecologie: 1, immigration: 0 },
       force: "Réseau d'élus : +1 cube en Meeting là où il a déjà 5 cubes ou plus.",
       weakness: "Peu d'argent au départ.",
       cards: ['fete_rose', 'primaire'] },
     { id: 'VP', pos: 2, name: 'Les Verts Pâturages', short: 'Verts Pâturages', family: 'Écologie',
+      candidate: 'Capucine Verdure', candTitle: 'l\'écolo à vélo', programme: ['renovation', 'train1', 'sp20', 'cheque', 'plastique'],
       color: '#3E9B5A', ink: '#FFFFFF', money: 6, infl: 3, bases: ['ara', 'cor'],
       cred: { ecologie: 2, services: 1, pouvoir: 1, emploi: 0, securite: 0, immigration: 0 },
       force: 'À la Télé : +1 cube en plus dans les régions urbaines.',
       weakness: 'Une Collecte ne rapporte que 2 €.',
       cards: ['climat', 'canicule'] },
     { id: 'EM', pos: 4, name: 'En Mouvement', short: 'En Mouvement', family: 'Centre',
+      candidate: 'Inès Disrupt', candTitle: 'la start-uppeuse', programme: ['pme', 'retraites', 'video', 'plastique', 'medecins'],
       color: '#F2A93B', ink: '#1B1F3B', money: 8, infl: 4, bases: ['pdl', 'bre'],
       cred: { emploi: 2, securite: 2, ecologie: 1, services: 1, immigration: 1, pouvoir: 0 },
       force: 'Une Collecte rapporte 4 € et 1 ★. Candidat infatigable : récupère 3 ⚡ par tour (au lieu de 2).',
       weakness: "Usure du pouvoir : au tour 5, perd 1 cube dans sa région la plus forte.",
       cards: ['art493', 'remaniement'] },
     { id: 'UG', pos: 5, name: "L'Union Gaulliste", short: 'Union Gaulliste', family: 'Droite',
+      candidate: 'Hubert de La Motte', candTitle: 'le notable', programme: ['policiers', 'pme', 'controles', 'tva', 'nonremplacement'],
       color: '#4A7FD0', ink: '#FFFFFF', money: 5, infl: 4, bases: ['ges', 'nor'],
       cred: { securite: 2, emploi: 2, immigration: 1, pouvoir: 1, services: 1, ecologie: 0 },
       force: 'Fidélité : en région historique, une attaque ne peut pas le faire descendre sous 2 cubes.',
       weakness: 'Divisions : les événements « Division » lui coûtent 2 cubes au lieu de 1.',
       cards: ['appel18', 'rassemblement'] },
     { id: 'MN', pos: 6, name: 'Mouvement National', short: 'Mvt National', family: 'Droite nationale',
+      candidate: 'Victor Rempart', candTitle: 'le bulldog', programme: ['referendum', 'planchers', 'tva', 'regroupement', 'video'],
       color: '#24325E', ink: '#FFFFFF', money: 7, infl: 3, bases: ['hdf', 'pac'],
       cred: { immigration: 2, securite: 2, pouvoir: 1, emploi: 0, ecologie: 0, services: 0 },
       force: 'À la Télé : +1 cube en plus dans les régions industrielles.',
@@ -93,6 +183,7 @@
     reforme:  { name: 'Promesse',       icon: '📜', cost: { money: 0, infl: 4 }, target: 'region', text: '+1 cube dans toutes les régions du même profil (région contrôlée)' },
     imposer:  { name: 'Faire la une',   icon: '🗞️', cost: { money: 2, infl: 2 }, target: null,     theme: true, text: 'Ton thème fera l\'actu au prochain tour (pour tout le monde !)' },
     militants:{ name: 'Militants',      icon: '👥', cost: { money: 3, infl: 0 }, target: 'region', text: 'Implante une équipe de militants : +1 cube ici au début de chaque tour (3 équipes au plus)' },
+    enquete:  { name: 'Enquêter',       icon: '🔎', cost: { money: 1, infl: 1 }, target: 'party', text: 'Fouiller le passé d\'un rival : si tu trouves quelque chose, une affaire lui tombe dessus au prochain tour' },
     alliance: { name: 'Alliance',       cost: { money: 0, infl: 1 }, target: 'party',  text: "Proposer une alliance à un parti proche (distance 2 au plus)" },
     rupture:  { name: 'Rupture',        cost: { money: 0, infl: 0 }, target: null,     text: "Rompre ton alliance : −2 ★, et ton ex-allié ne te reportera presque rien au second tour" }
   };
@@ -175,7 +266,16 @@
     scandalCubes: 2,
     crisisStart: [2, 4],             // la crise de la partie commence entre le tour 2 et le tour 4
     /* v0.6 : débat télévisé */
-    debatePrepMax: 3                 // préparation : jusqu'à 3 ★, +1 point chacune
+    debatePrepMax: 3,                // préparation : jusqu'à 3 ★, +1 point chacune
+    /* v0.7 : programme et affaires */
+    programmeSize: 5,
+    budgetCap: 40,                   // au-delà de 40 Md€, le programme n'est pas financé
+    budgetCasStep: 15,               // +1 casserole par tranche de 15 Md€ de dépassement
+    pharBonus: 1,                    // mesure phare : +1 cube en Meeting sur son thème
+    affairPerCasserole: 0.12,        // chaque casserole = 12 % de risque d'affaire par tour
+    canardChance: 0.35,              // sinon, Le Canard Déchaîné sort une affaire 35 % du temps
+    affairsMax: 2,                   // au plus 2 affaires par tour
+    enqueteBase: 0.35, enqueteCas: 0.15, enqueteBackfire: 0.3
   };
 
   /* ---------- v0.6 : le débat télévisé ----------
@@ -272,7 +372,8 @@
   ];
 
   var DATA = { REGIONS: REGIONS, PROFILES: PROFILES, THEMES: THEMES, HEADLINES: HEADLINES, PARTIES: PARTIES, ACTIONS: ACTIONS,
-               CARDS: CARDS, EVENTS: EVENTS, DILEMMAS: DILEMMAS, CRISES: CRISES, REPLIES: REPLIES, TEMPERS: TEMPERS, OBJECTIVES: OBJECTIVES, RULES: RULES };
+               CARDS: CARDS, EVENTS: EVENTS, DILEMMAS: DILEMMAS, CRISES: CRISES, REPLIES: REPLIES, TEMPERS: TEMPERS,
+               MEASURES: MEASURES, AFFAIRS: AFFAIRS, LEARN: LEARN, BUDGET_AFFAIR: BUDGET_AFFAIR, REACTIONS: REACTIONS, ADVISOR: ADVISOR, OBJECTIVES: OBJECTIVES, RULES: RULES };
   if (typeof module !== 'undefined' && module.exports) module.exports = DATA;
   else root.PolitikData = DATA;
 })(this);

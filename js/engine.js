@@ -1,4 +1,4 @@
-/* Politik — moteur de jeu (règles v0.5 : thèmes, candidat, militants, dilemmes, casseroles, crises, alliances, élection à deux tours).
+/* Politik — moteur de jeu (règles v0.7 : programme, affaires, enquêtes, thèmes, candidat, militants, dilemmes, casseroles, crises, alliances, élection à deux tours).
    Aucune dépendance à l'affichage : tout l'état de la partie est dans un objet « g ». */
 (function (root) {
   var D = (typeof module !== 'undefined' && module.exports) ? require('./data.js') : root.PolitikData;
@@ -55,10 +55,53 @@
     D.THEMES.forEach(function (t) { var v = impact(g, pid, rid, t.id); if (v > bv) { bv = v; best = t.id; } });
     return best;
   }
+  /* ---------- v0.7 : le programme ---------- */
+  var MEAS = {}; D.MEASURES.forEach(function (m) { MEAS[m.id] = m; });
+  function baseCred(pid, th) { return Math.max(0, ((PARTY[pid].cred || {})[th] || 0) - 1); }
+  /* Crédibilité qu'un programme donnerait : socle du parti + 1 par mesure sur le thème (2 au plus) */
+  function programmeCred(pid, ids) {
+    var c = {};
+    D.THEMES.forEach(function (t) { c[t.id] = baseCred(pid, t.id); });
+    (ids || []).forEach(function (id) { var m = MEAS[id]; if (m) c[m.theme] = Math.min(2, c[m.theme] + 1); });
+    return c;
+  }
+  function programmeCost(ids) { var s = 0; (ids || []).forEach(function (id) { s += MEAS[id] ? MEAS[id].cost : 0; }); return s; }
+  /* Fixe le programme d'un parti (ids[0] = mesure phare). À appeler avant le 1er tour. */
+  function setProgramme(g, pid, ids) {
+    var pl = player(g, pid);
+    pl.programme = ids.slice(0, R.programmeSize);
+    pl.phare = pl.programme[0];
+    pl.cred = programmeCred(pid, pl.programme);
+    pl.budget = programmeCost(pl.programme);
+  }
+  /* Au 1er tour : mesures choc et budget non financé produisent leurs effets */
+  function applyProgrammes(g) {
+    var out = [];
+    g.players.forEach(function (pl) {
+      if (!pl.programme) setProgramme(g, pl.id, PARTY[pl.id].programme);
+      var o = { pid: pl.id, budget: pl.budget, over: Math.max(0, pl.budget - R.budgetCap), cas: 0, choc: [] };
+      pl.programme.forEach(function (id) {
+        var m = MEAS[id]; if (!m.choc) return;
+        bestRegions(g, pl.id, 2, function (r) { return concerns(r.id, m.theme); }, 1).forEach(function (rid) { addCubes(g, rid, pl.id, 1); });
+        pl.cas += 1; o.cas += 1; o.choc.push(m.name);
+      });
+      if (o.over > 0) {
+        var c = Math.ceil(o.over / R.budgetCasStep); pl.cas += c; o.cas += c;
+        g.pending.push({ turn: 3, pid: pl.id, chance: 1, affair: 'budget' });
+      }
+      pl.cas = Math.min(R.casseroleMax, pl.cas);
+      out.push(o);
+    });
+    updateAllControl(g);
+    return out;
+  }
+  function measure(id) { return MEAS[id]; }
+
   function terrainCubes(g, pid, rid, th) {
     var n = R.terrainCubes[impact(g, pid, rid, th)];
     if (pid === 'SM' && cubes(g, rid, pid) >= 5) n += 1;
     var pl = player(g, pid);
+    if (pl && pl.phare && MEAS[pl.phare].theme === th) n += R.pharBonus;   // mesure phare
     if (pl && pl.momentum) n = Math.max(1, n + pl.momentum);   // dynamique : ±1 cube en Meeting
     return n;
   }
@@ -164,11 +207,13 @@
       seed: seed, rng: rng, turn: 0, phase: 'setup', winner: null, over: false, result: null,
       alliances: {}, betrayed: {}, offers: [], hot: [], nextHot: [], news: null,
       bases: {}, pending: [], markers: [], crisis: null, dilemma: null, dilemmas: [], lastPoll: null,
+      affairs: [], nextAffairs: [], affairDeck: [], affairIdx: 0,
       players: ids.map(function (id, i) {
         var p = PARTY[id];
         return { id: id, human: id === humanParty, money: p.money, infl: p.infl,
                  cards: p.cards.slice(), objective: objs[i], debateWins: 0,
-                 forme: R.formeStart, cas: 0, momentum: 0, cred: Object.assign({}, p.cred), talk: {}, militants: 0 };
+                 forme: R.formeStart, cas: 0, momentum: 0, cred: Object.assign({}, p.cred), talk: {}, militants: 0,
+                 programme: null, phare: null, budget: 0 };
       }),
       regions: {}, events: shuffle(D.EVENTS.map(function (e) { return e.id; }), rng),
       event: null, mods: {}, cancel: {}, log: [], history: []
@@ -180,6 +225,7 @@
     var cr = D.CRISES[Math.floor(rng() * D.CRISES.length)];
     g.crisis = { id: cr.id, start: R.crisisStart[0] + Math.floor(rng() * (R.crisisStart[1] - R.crisisStart[0] + 1)) };
     g.dilemmas = shuffle(D.DILEMMAS.map(function (d) { return d.id; }), rng);
+    g.affairDeck = shuffle(D.AFFAIRS.map(function (a) { return a.id; }), rng);
     g.lastPoll = pollMap(g);
     return g;
   }
@@ -195,7 +241,8 @@
   /* ---------- Début de tour : revenus, usure, événement ---------- */
   function startTurn(g) {
     g.turn += 1; g.mods = {}; g.cancel = {}; g.log = [];
-    var out = { income: [], usure: null, event: null, crisis: null, militants: [], later: [], scandals: [], dilemma: null };
+    var out = { income: [], usure: null, event: null, crisis: null, militants: [], later: [], affairs: [], dilemma: null, programmes: null };
+    if (g.turn === 1) out.programmes = applyProgrammes(g);
     // marqueurs expirés
     g.markers = g.markers.filter(function (m) { return m.until >= g.turn; });
     if (g.turn > 1) {
@@ -212,19 +259,28 @@
       // conséquences différées
       g.pending = g.pending.filter(function (x) {
         if (x.turn > g.turn) return true;
+        if (x.affair) { g.nextAffairs.push({ pid: x.pid, id: x.affair }); return false; }
         var hit = g.rng() < x.chance;
         out.later.push({ pid: x.pid, title: x.title, text: x.text, hit: hit, effects: hit ? applyFx(g, x.pid, x.fx) : [] });
         return false;
       });
-      // casseroles : risque de scandale
+      // v0.7 : les affaires (dossiers des rivaux, programme non financé, casseroles, Le Canard)
+      var list = g.nextAffairs.slice(); g.nextAffairs = [];
       g.players.forEach(function (pl) {
-        if (pl.cas > 0 && g.rng() < pl.cas * R.scandalPerCasserole) {
-          var rid = strongestRegion(g, pl.id, function (r) { return g.regions[r.id].controller === pl.id; }) || strongestRegion(g, pl.id);
-          var lost = rid ? -addCubes(g, rid, pl.id, -R.scandalCubes) : 0;
-          var c0 = pl.cas; pl.cas = Math.max(0, pl.cas - 3);
-          out.scandals.push({ pid: pl.id, rid: rid, lost: lost, cas: c0 });
-        }
+        if (pl.cas > 0 && g.rng() < pl.cas * R.affairPerCasserole && !list.some(function (x) { return x.pid === pl.id; })) list.push({ pid: pl.id, src: 'casseroles' });
       });
+      if (!list.length && g.rng() < R.canardChance) {
+        var tot = 0; g.players.forEach(function (p) { tot += p.cas + 1; });
+        var r = g.rng() * tot, pick = g.players[0];
+        for (var i = 0; i < g.players.length; i++) { r -= g.players[i].cas + 1; if (r <= 0) { pick = g.players[i]; break; } }
+        list.push({ pid: pick.id, src: 'canard' });
+      }
+      g.affairs = list.slice(0, R.affairsMax).map(function (x) {
+        var id = x.id || g.affairDeck[g.affairIdx++ % g.affairDeck.length];
+        var def = affairDef(id);
+        return { pid: x.pid, id: id, title: def.title, text: def.text, src: x.src || (id === 'budget' ? 'budget' : 'dossier'), from: x.from || null };
+      });
+      out.affairs = g.affairs.slice();
     }
     var em = player(g, 'EM');
     if (em && g.turn === 5) {
@@ -255,6 +311,18 @@
     g.phase = 'actions';
     return out;
   }
+  function affairDef(id) { return id === 'budget' ? D.BUDGET_AFFAIR : D.AFFAIRS.filter(function (a) { return a.id === id; })[0]; }
+  /* Un parti réagit à son affaire (index de D.REACTIONS). L'affaire fait d'office sortir 1 casserole. */
+  function resolveAffair(g, pid, idx) {
+    var k = -1; g.affairs.forEach(function (a, i) { if (a.pid === pid && k < 0) k = i; });
+    if (k < 0) return null;
+    var a = g.affairs.splice(k, 1)[0], rc = D.REACTIONS[idx] || D.REACTIONS[0], pl = player(g, pid);
+    pl.cas = Math.max(0, pl.cas - 1);
+    var fx = applyFx(g, pid, rc.fx);
+    updateAllControl(g);
+    return { pid: pid, title: a.title, reaction: rc.label, effects: fx };
+  }
+  function enqueteChance(g, target) { return Math.min(0.9, R.enqueteBase + R.enqueteCas * player(g, target).cas); }
   function dilemmaDef(id) { return D.DILEMMAS.filter(function (d) { return d.id === id; })[0]; }
   /* Applique le choix d'un parti face à son dilemme. Renvoie la liste des effets (textes). */
   function resolveDilemma(g, pid, idx) {
@@ -398,6 +466,11 @@
       if (g.turn >= R.maxTurns) return 'Trop tard : la campagne s’achève.';
     }
     if (act.type === 'alliance') return allianceError(g, pid, act.target);
+    if (act.type === 'enquete') {
+      if (!act.target || !player(g, act.target) || act.target === pid) return 'Choisis un rival.';
+      if (allyOf(g, pid) === act.target) return 'On n’enquête pas sur son allié.';
+      if (g.turn >= R.maxTurns) return 'Trop tard : le dossier ne sortira pas avant l’élection.';
+    }
     if (act.type === 'rupture' && !allyOf(g, pid)) return 'Tu n’as pas d’allié.';
     if (act.type === 'contre' && cubes(g, act.region, pid) < 1) return 'Il faut au moins 1 cube dans la région.';
     if (act.type === 'contre' && !rivalIn(g, act.region, pid)) return 'Aucun rival attaquable ici (on n’attaque pas son allié).';
@@ -538,6 +611,16 @@
         var lost = -addCubes(g, act.region, rival, -n2);
         pl.cas = Math.min(R.casseroleMax, pl.cas + 1);
         t.push(PARTY[rival].short + ' −' + lost + ' en ' + rn + ' · +1 casserole'); break; }
+      case 'enquete': {
+        var tgt = player(g, act.target), ch = enqueteChance(g, act.target);
+        if (g.rng() < ch) {
+          g.nextAffairs.push({ pid: act.target, from: pid });
+          t.push('dossier trouvé sur ' + PARTY[act.target].short + ' : l’affaire sortira demain');
+        } else if (g.rng() < R.enqueteBackfire) {
+          pl.cas = Math.min(R.casseroleMax, pl.cas + 2);
+          t.push('rien trouvé… et tes barbouzes sont démasquées : +2 casseroles');
+        } else t.push('rien trouvé sur ' + PARTY[act.target].short);
+        break; }
       case 'militants': {
         g.bases[act.region] = (g.bases[act.region] || []).concat([pid]); pl.militants += 1;
         t.push('des militants s’installent en ' + rn + ' (+1 cube par tour)'); break; }
@@ -768,6 +851,8 @@
     actionCost: actionCost, checkAction: checkAction, mediaRegions: mediaRegions, gain: gain, bestRegions: bestRegions,
     controlledPoints: controlledPoints, controlledRegions: controlledRegions, totalCubes: totalCubes, ranking: ranking,
     leader: leader, cubes: cubes, minControl: minControl, player: player, rivalIn: rivalIn, strongestRegion: strongestRegion,
+    setProgramme: setProgramme, programmeCred: programmeCred, programmeCost: programmeCost, measure: measure, MEAS: MEAS,
+    resolveAffair: resolveAffair, enqueteChance: enqueteChance, affairDef: affairDef,
     resolveDilemma: resolveDilemma, dilemmaDef: dilemmaDef, applyFx: applyFx, markerAt: markerAt, hotHere: hotHere, crisisAct: crisisAct,
     impact: impact, cred: cred, isHot: isHot, concerns: concerns, bestTheme: bestTheme, terrainCubes: terrainCubes, mediaCubes: mediaCubes,
     REG: REG, PARTY: PARTY, THEME: THEME, makeRng: makeRng
