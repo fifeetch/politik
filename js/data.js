@@ -48,50 +48,50 @@
     { id: 'FI', pos: 1, name: 'La France Indignée', short: 'France Indignée', family: 'Gauche radicale',
       color: '#C8323C', ink: '#FFFFFF', money: 5, infl: 4, bases: ['occ', 'bfc'],
       cred: { pouvoir: 2, services: 2, ecologie: 1, emploi: 1, securite: 0, immigration: 0 },
-      force: 'Réseaux sociaux : relance le dé une fois par tour si le résultat est mauvais.',
-      weakness: 'Campagne terrain +1 € en région rurale.',
+      force: 'Réseaux sociaux : en Buzz, relance le dé si le résultat est mauvais (1 ou 2).',
+      weakness: 'Un Meeting coûte 1 € de plus en région rurale.',
       cards: ['marche_pop', 'censure'] },
     { id: 'SM', pos: 3, name: 'Socialisme Modéré', short: 'Soc. Modéré', family: 'Centre gauche',
       color: '#E07AA0', ink: '#1B1F3B', money: 4, infl: 3, bases: ['naq', 'cvl'],
       cred: { services: 2, emploi: 1, pouvoir: 1, securite: 1, ecologie: 1, immigration: 0 },
-      force: "Réseau d'élus : +1 cube en campagne terrain là où il a déjà 5 cubes ou plus.",
+      force: "Réseau d'élus : +1 cube en Meeting là où il a déjà 5 cubes ou plus.",
       weakness: "Peu d'argent au départ.",
       cards: ['fete_rose', 'primaire'] },
     { id: 'VP', pos: 2, name: 'Les Verts Pâturages', short: 'Verts Pâturages', family: 'Écologie',
       color: '#3E9B5A', ink: '#FFFFFF', money: 6, infl: 3, bases: ['ara', 'cor'],
       cred: { ecologie: 2, services: 1, pouvoir: 1, emploi: 0, securite: 0, immigration: 0 },
-      force: 'Campagne médiatique : +1 cube en plus dans les régions urbaines.',
-      weakness: 'Lever des fonds ne rapporte que 2 €.',
+      force: 'À la Télé : +1 cube en plus dans les régions urbaines.',
+      weakness: 'Une Collecte ne rapporte que 2 €.',
       cards: ['climat', 'canicule'] },
     { id: 'EM', pos: 4, name: 'En Mouvement', short: 'En Mouvement', family: 'Centre',
       color: '#F2A93B', ink: '#1B1F3B', money: 8, infl: 4, bases: ['pdl', 'bre'],
       cred: { emploi: 2, securite: 2, ecologie: 1, services: 1, immigration: 1, pouvoir: 0 },
-      force: 'Lever des fonds rapporte 4 € et 1 ★.',
-      weakness: "Usure du pouvoir : aux tours 4, 6 et 8, perd 1 cube dans sa région la plus forte.",
+      force: 'Une Collecte rapporte 4 € et 1 ★.',
+      weakness: "Usure du pouvoir : aux tours 4 et 7, perd 1 cube dans sa région la plus forte.",
       cards: ['art493', 'remaniement'] },
     { id: 'UG', pos: 5, name: "L'Union Gaulliste", short: 'Union Gaulliste', family: 'Droite',
       color: '#4A7FD0', ink: '#FFFFFF', money: 5, infl: 4, bases: ['ges', 'nor'],
       cred: { securite: 2, emploi: 2, immigration: 1, pouvoir: 1, ecologie: 0, services: 0 },
-      force: 'Fidélité : en région historique, une contre-campagne ne peut pas le faire descendre sous 2 cubes.',
+      force: 'Fidélité : en région historique, une attaque ne peut pas le faire descendre sous 2 cubes.',
       weakness: 'Divisions : les événements « Division » lui coûtent 2 cubes au lieu de 1.',
       cards: ['appel18', 'rassemblement'] },
     { id: 'MN', pos: 6, name: 'Mouvement National', short: 'Mvt National', family: 'Droite nationale',
       color: '#24325E', ink: '#FFFFFF', money: 7, infl: 3, bases: ['hdf', 'pac'],
       cred: { immigration: 2, securite: 2, pouvoir: 1, emploi: 1, ecologie: 0, services: 0 },
-      force: 'Médias : +1 cube en plus dans les régions industrielles.',
+      force: 'À la Télé : +1 cube en plus dans les régions industrielles.',
       weakness: 'Peu de relais locaux : il lui faut 4 cubes (au lieu de 3) pour contrôler une région.',
       cards: ['plateau_tele', 'grand_meeting'] }
   ];
 
   /* Actions de base. cost = { money, infl } ; target : 'region' | 'party' | null ; theme : l'action porte un message (thème) */
   var ACTIONS = {
-    terrain:  { name: 'Terrain',        cost: { money: 2, infl: 0 }, target: 'region', theme: true, text: 'Autant de cubes que l\'impact du message (1 à 4)' },
-    medias:   { name: 'Médias',         cost: { money: 3, infl: 1 }, target: 'region', theme: true, text: 'Le message passe dans cette région et les 2 autres les plus concernées par le thème' },
-    reseaux:  { name: 'Réseaux',        cost: { money: 1, infl: 0 }, target: 'region', theme: true, text: 'Un dé : de −1 à +4 cubes, +1 si le thème fait l\'actu' },
-    contre:   { name: 'Contre-camp.',   cost: { money: 2, infl: 1 }, target: 'region', text: '−2 cubes au rival le plus fort de la région (il faut y avoir 1 cube)' },
-    fonds:    { name: 'Fonds',          cost: { money: 0, infl: 0 }, target: null,     text: '+3 €' },
-    reforme:  { name: 'Réforme',        cost: { money: 0, infl: 4 }, target: 'region', text: '+1 cube dans toutes les régions du même profil (région contrôlée)' },
-    imposer:  { name: 'Imposer',        cost: { money: 2, infl: 2 }, target: null,     theme: true, text: 'Ton thème fera l\'actu au prochain tour (pour tout le monde !)' },
+    terrain:  { name: 'Meeting',        icon: '📣', cost: { money: 2, infl: 0 }, target: 'region', theme: true, text: 'Autant de cubes que l\'impact du message (1 à 4)' },
+    medias:   { name: 'Télé',           icon: '📺', cost: { money: 3, infl: 1 }, target: 'region', theme: true, text: 'Le message passe dans cette région et les 2 autres les plus concernées par le thème' },
+    reseaux:  { name: 'Buzz',           icon: '📱', cost: { money: 1, infl: 0 }, target: 'region', theme: true, text: 'Un dé : de −1 à +4 cubes, +1 si le thème fait l\'actu' },
+    contre:   { name: 'Attaquer',       icon: '🥊', cost: { money: 2, infl: 1 }, target: 'region', text: '−2 cubes au rival le plus fort de la région (il faut y avoir 1 cube)' },
+    fonds:    { name: 'Collecte',       icon: '💰', cost: { money: 0, infl: 0 }, target: null,     text: '+3 €' },
+    reforme:  { name: 'Promesse',       icon: '📜', cost: { money: 0, infl: 4 }, target: 'region', text: '+1 cube dans toutes les régions du même profil (région contrôlée)' },
+    imposer:  { name: 'Faire la une',   icon: '🗞️', cost: { money: 2, infl: 2 }, target: null,     theme: true, text: 'Ton thème fera l\'actu au prochain tour (pour tout le monde !)' },
     alliance: { name: 'Alliance',       cost: { money: 0, infl: 1 }, target: 'party',  text: "Proposer une alliance à un parti proche (distance 2 au plus)" },
     rupture:  { name: 'Rupture',        cost: { money: 0, infl: 0 }, target: null,     text: "Rompre ton alliance : −2 ★, et ton ex-allié ne te reportera presque rien au second tour" }
   };
@@ -114,9 +114,9 @@
 
   var EVENTS = [
     { id: 'crise', theme: 'pouvoir',      title: 'Crise économique',         text: 'Chaque parti perd 2 €.' },
-    { id: 'greve', theme: 'services',      title: 'Grève des transports',     text: 'Ce tour, les campagnes terrain coûtent 1 € de plus.' },
+    { id: 'greve', theme: 'services',      title: 'Grève des transports',     text: 'Ce tour, les Meetings coûtent 1 € de plus.' },
     { id: 'scandale',   title: 'Scandale !',               text: 'Le parti en tête perd 2 cubes dans sa plus grande région.' },
-    { id: 'buzz',       title: 'Trend viral',              text: 'Ce tour, les actions Réseaux sont gratuites.' },
+    { id: 'buzz',       title: 'Trend viral',              text: 'Ce tour, les Buzz sont gratuits.' },
     { id: 'sondage',    title: 'Sondage surprise',         text: 'Le dernier au classement gagne 2 ★.' },
     { id: 'fete',       title: 'Fête nationale',           text: 'Tous les partis gagnent 1 ★.' },
     { id: 'division',   title: 'Guerre des chefs',         text: "Division : chaque parti perd 1 cube dans sa région la plus forte (2 pour l'Union Gaulliste)." },
@@ -158,10 +158,10 @@
     edgeMobilization: 1.35,
     betrayedTransfer: 0.05,
     /* v0.3 : thèmes */
-    terrainCubes: [1, 1, 2, 3, 4],   // cubes gagnés en Terrain selon l'impact du message (0 à 4)
-    mediaCubes:   [0, 1, 1, 1, 2],   // cubes par région en Médias selon l'impact (0 à 4)
-    mediaRegions: 3,                 // nombre de régions touchées par les Médias
-    socialHotBonus: 1                // bonus des Réseaux quand le thème fait l'actu
+    terrainCubes: [1, 1, 2, 3, 4],   // cubes gagnés en Meeting selon l'impact du message (0 à 4)
+    mediaCubes:   [0, 1, 1, 1, 2],   // cubes par région à la Télé selon l'impact (0 à 4)
+    mediaRegions: 3,                 // nombre de régions touchées par la Télé
+    socialHotBonus: 1                // bonus du Buzz quand le thème fait l'actu
   };
 
   var DATA = { REGIONS: REGIONS, PROFILES: PROFILES, THEMES: THEMES, HEADLINES: HEADLINES, PARTIES: PARTIES, ACTIONS: ACTIONS,

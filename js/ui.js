@@ -288,19 +288,30 @@
   }
   function costLabel(act) {
     var c = E.actionCost(g, me, act), parts = [];
-    if (act.type === 'fonds') return '+' + (me === 'EM' ? '4 € +1 ★' : me === 'VP' ? '2 €' : '3 €');
     if (c.money) parts.push(c.money + ' €'); if (c.infl) parts.push(c.infl + ' ★');
-    if (act.type === 'reseaux') parts.push('dé');
-    return parts.join(' + ') || 'gratuit';
+    return parts.length ? parts.join(' + ') : 'gratuit';
   }
-  /* Effet prévu d'une action, affiché sur son bouton */
-  function preview(act) {
-    if (act.type === 'terrain' && act.region) return '+' + E.terrainCubes(g, me, act.region, act.theme);
-    if (act.type === 'medias' && act.region) {
-      var tot = 0; E.mediaRegions(g, me, act.region, act.theme).forEach(function (rid) { tot += E.mediaCubes(g, me, rid, act.theme); });
-      return '+' + tot;
+  /* Ce que fait une action, en clair, sur son bouton (avec les chiffres réels du moment) */
+  var PROF_PLURAL = { urbaine: 'urbaines', rurale: 'rurales', industrielle: 'industrielles', historique: 'historiques' };
+  function effect(act) {
+    var r = act.region, n;
+    switch (act.type) {
+      case 'terrain':
+        if (!r) return 'des cubes dans 1 région';
+        n = E.terrainCubes(g, me, r, act.theme); return '<b>+' + n + ' cube' + (n > 1 ? 's' : '') + '</b> ici';
+      case 'medias':
+        if (!r) return 'des cubes dans 3 régions';
+        n = 0; E.mediaRegions(g, me, r, act.theme).forEach(function (rid) { n += E.mediaCubes(g, me, rid, act.theme); });
+        return '<b>+' + n + ' cube' + (n > 1 ? 's' : '') + '</b> · 3 régions';
+      case 'reseaux': return 'dé : <b>−1 à +' + (4 + (E.isHot(g, act.theme) ? 1 : 0)) + '</b> cubes';
+      case 'imposer': return 'ton thème <b>à la une</b>';
+      case 'contre': return 'rival en tête <b>−2 cubes</b>';
+      case 'fonds': return '<b>+' + (me === 'EM' ? '4 € +1 ★' : me === 'VP' ? '2 €' : '3 €') + '</b>';
+      case 'reforme':
+        if (!r) return '+1 cube dans des régions';
+        if (g.regions[r].controller !== me) return 'région à toi requise';
+        return '<b>+1 cube</b> rég. ' + PROF_PLURAL[E.REG[r].profile];
     }
-    if (act.type === 'reseaux' && E.isHot(g, act.theme)) return '+1';
     return '';
   }
   function renderThemes() {
@@ -319,8 +330,8 @@
     ['terrain', 'medias', 'reseaux', 'imposer', 'contre', 'fonds', 'reforme'].forEach(function (type) {
       var def = D.ACTIONS[type], act = { type: type, region: def.target === 'region' ? selected : undefined };
       if (def.theme) act.theme = theme;
-      var pv = preview(act);
-      var b = el('button', { class: 'act' + (type === 'imposer' ? ' act-impose' : ''), type: 'button', title: def.text }, '<b>' + def.name + (pv ? ' <i class="pv">' + pv + '</i>' : '') + '</b><span>' + costLabel(act) + '</span>');
+      var b = el('button', { class: 'act' + (type === 'imposer' ? ' act-impose' : ''), type: 'button', title: def.text },
+        '<span class="act-i">' + def.icon + '</span><span class="act-txt"><span class="act-top"><b class="act-n">' + def.name + '</b><span class="act-cost">' + costLabel(act) + '</span></span><span class="act-fx">' + effect(act) + '</span></span>');
       if (def.target && !selected) b.disabled = true;
       else if (canQueue(act)) b.style.opacity = '.55';
       b.addEventListener('click', function () { addAction(act); });
@@ -484,11 +495,19 @@
       '<p><b>But :</b> remporter l\'élection présidentielle à la fin des <b>8 tours de campagne</b>. Chaque région vote selon ses cubes, pondérée par sa population (ses points). Le parti qui contrôle une région y gagne un petit bonus.</p>' +
       '<p><b>Premier tour :</b> plus de 50 % des voix = élu directement. Sinon, les deux premiers vont au <b>second tour</b>, et les électeurs des autres partis se reportent selon leur proximité politique (alliés : 85 %).</p>' +
       axisHtml(me || chosen) +
-      '<p><b>Partis proches :</b> quand tu fais campagne (Terrain, Médias) là où un parti voisin sur l\'axe est présent, tu lui prends 1 électeur (distance 2 : sur un dé de 4 à 6).</p>' +
+      '<p><b>Partis proches :</b> quand tu fais un Meeting ou passes à la Télé là où un parti voisin sur l\'axe est présent, tu lui prends 1 électeur (distance 2 : sur un dé de 4 à 6).</p>' +
       '<p><b>Alliances :</b> 1 ★ et 1 action, avec un parti à distance 2 au plus. Entre alliés, pas d\'attaque ni de vol d\'électeurs. Rompre coûte 2 ★ et ruine les reports.</p>' +
       '<p><b>Chaque tour :</b> revenus (4 € + 1 € par région contrôlée, max +3 ; +2 ★), un événement, puis <b>3 actions secrètes</b> jouées par tous en même temps.</p>' +
-      '<p><b>Ton message.</b> Terrain, Médias, Réseaux et Imposer portent un <b>thème</b> (💶 🏭 🏥 🌿 🚓 🛂). Son <b>impact</b>, de 0 à 4 = ta crédibilité sur le thème (0 à 2) + 1 si la région s\'en préoccupe + 1 si le thème fait l\'actu. Le bon message au bon endroit rapporte deux fois plus.</p>' +
-      '<p><b>Actions :</b> Terrain (2 € : impact 0-1 → +1 cube, 2 → +2, 3 → +3, 4 → +4) · Médias (3 € + 1 ★ : la région choisie et les 2 autres les plus concernées par le thème ; +1 cube chacune, +2 si impact 4, rien si impact 0) · Réseaux (1 € : un dé, de −1 à +4, +1 si le thème fait l\'actu) · Imposer (2 € + 2 ★ : ton thème fera l\'actu au tour suivant, pour tout le monde) · Contre-campagne (2 € + 1 ★ : −2 cubes au rival le plus fort) · Fonds (+3 €) · Réforme (4 ★) · Alliance (1 ★). Plus 2 cartes spéciales par parti.</p>' +
+      '<p><b>Ton message.</b> Meeting, Télé, Buzz et Faire la une portent un <b>thème</b> (💶 🏭 🏥 🌿 🚓 🛂). Son <b>impact</b>, de 0 à 4 = ta crédibilité sur le thème (0 à 2) + 1 si la région s\'en préoccupe + 1 si le thème fait l\'actu. Le bon message au bon endroit rapporte deux fois plus.</p>' +
+      '<p><b>Les actions :</b></p><ul class="rules-acts">' +
+        '<li>📣 <b>Meeting</b> (2 €) : des cubes dans la région, de 1 à 4 selon l\'impact du message.</li>' +
+        '<li>📺 <b>Télé</b> (3 € + 1 ★) : ton message passe dans la région et dans les 2 autres régions les plus concernées par le thème. +1 cube dans chacune (+2 si impact 4, rien si impact 0).</li>' +
+        '<li>📱 <b>Buzz</b> (1 €) : un coup de dé, de −1 à +4 cubes. +1 si le thème fait l\'actu.</li>' +
+        '<li>🗞️ <b>Faire la une</b> (2 € + 2 ★) : ton thème fera l\'actu au tour suivant… pour tout le monde.</li>' +
+        '<li>🥊 <b>Attaquer</b> (2 € + 1 ★) : le rival le plus fort de la région perd 2 cubes (il faut y avoir 1 cube).</li>' +
+        '<li>💰 <b>Collecte</b> (gratuit) : +3 € dans la caisse.</li>' +
+        '<li>📜 <b>Promesse</b> (4 ★) : dans une région que tu tiens, +1 cube dans toutes les régions du même type.</li>' +
+        '<li>🤝 <b>Alliance</b> (1 ★) et 2 cartes spéciales par parti.</li></ul>' +
       '<p><b>Débats</b> aux tours 3, 6 et 8. <b>Sous les projecteurs :</b> le premier des sondages paie 2 ★ ou perd des cubes à chaque fin de tour.</p>' });
   }
 

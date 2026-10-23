@@ -16,7 +16,7 @@
     { target: '#themes', title: 'Ton message',
       text: 'Chaque campagne porte un <b>thème</b>. Le chiffre, c\'est son <b>impact</b> ici, de 0 à 4 :<br>ta crédibilité sur le thème (0 à 2) <b>+1</b> si la région s\'en préoccupe (bordure) <b>+1</b> s\'il fait l\'actu (🔥).<br>Le meilleur thème est déjà choisi pour toi. En pointillé sur la carte : les régions qu\'il touche.' },
     { target: '#actions', title: 'Tes actions',
-      text: 'La plus simple : <b>Terrain</b>, pour 2 €. Le petit chiffre jaune indique les cubes que tu vas gagner : plus ton message porte, plus il est grand.<br><b>Touche « Terrain »</b> pour la programmer dans cette région.', wait: 'queue' },
+      text: 'Chaque bouton dit ce que fait l\'action et ce qu\'elle coûte. La plus simple : <b>📣 Meeting</b>, pour 2 €. Les cubes annoncés dépendent de ton message.<br><b>Touche « Meeting »</b> pour la programmer dans cette région.', wait: 'queue' },
     { target: '.queue', title: '3 actions par tour',
       text: 'Ton action est programmée (le petit numéro apparaît aussi sur la carte). Tu as 3 actions par tour. Touche une action jaune pour l\'annuler.' },
     { target: '.res', title: 'Argent et influence',

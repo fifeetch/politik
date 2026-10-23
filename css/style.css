@@ -154,8 +154,9 @@ button { font-family: inherit; color: inherit; }
 
 @media (max-height: 700px) {
   .race-legend { display: none; }
-  .act { min-height: 40px; }
-  .act span { font-size: 10px; }
+  .act { min-height: 36px; }
+  .act .act-i { font-size: 15px; }
+  .act .act-fx { font-size: 10px; }
   .region-info { min-height: 0; }
 }
 
@@ -212,8 +213,16 @@ button { font-family: inherit; color: inherit; }
 .dots i { width: 6px; height: 6px; border-radius: 50%; border: 1px solid currentColor; opacity: .5; }
 .dots i.on { background: currentColor; opacity: 1; }
 
-.actions { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-.act .pv { font-style: normal; background: var(--yellow); border: 1px solid var(--ink); border-radius: 5px; padding: 0 3px; font-size: 11px; margin-left: 2px; }
+.actions { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 5px; }
+.act { min-width: 0; flex-direction: row; justify-content: flex-start; align-items: center; gap: 7px; min-height: 42px; padding: 4px 8px 4px 6px; text-align: left; line-height: 1.15; }
+.act .act-i { font-size: 18px; line-height: 1; flex-shrink: 0; }
+.act .act-txt { display: flex; flex-direction: column; min-width: 0; flex: 1; gap: 1px; }
+.act .act-top { display: flex; align-items: baseline; justify-content: space-between; gap: 4px; }
+.act .act-n { font-size: 13px; font-weight: 800; white-space: nowrap; }
+.act .act-cost { font-size: 10.5px; font-weight: 700; color: var(--muted); white-space: nowrap; }
+.act .act-fx { font-size: 11px; font-weight: 500; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.act .act-fx b { font-weight: 800; color: var(--ink); background: var(--yellow); border-radius: 3px; padding: 0 2px; }
+.rules-acts { margin: 0; padding-left: 0; list-style: none; display: flex; flex-direction: column; gap: 5px; font-size: 13px; }
 .act-impose { border-style: dashed; }
 
 .concerns { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
@@ -237,4 +246,12 @@ button { font-family: inherit; color: inherit; }
   .theme { min-height: 38px; }
   .theme-n { display: none; }
   .news { margin-top: 4px; min-height: 26px; }
+}
+
+/* petits écrans : le panneau défile au lieu de déborder */
+.screen-game .panel { max-height: 68%; overflow-y: auto; overscroll-behavior: contain; }
+.screen-game .panel > * { flex-shrink: 0; }
+@media (max-width: 380px) {
+  .act .act-i { display: none; }
+  .act { padding-left: 8px; }
 }

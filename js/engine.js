@@ -196,14 +196,14 @@
     function say(pid, t) { fx.push({ pid: pid, text: t }); }
     switch (id) {
       case 'crise': g.players.forEach(function (p) { p.money = Math.max(0, p.money - 2); }); say(null, 'Tous les partis perdent 2 €.'); break;
-      case 'greve': g.mods.terrainExtra = 1; say(null, 'Campagnes terrain : +1 € ce tour.'); break;
+      case 'greve': g.mods.terrainExtra = 1; say(null, 'Meetings : +1 € ce tour.'); break;
       case 'scandale': {
         var l = leader(g);
         if (l) { var rid = strongestRegion(g, l, function (r) { return g.regions[r.id].controller === l; }) || strongestRegion(g, l);
           addCubes(g, rid, l, -2); say(l, PARTY[l].short + ' perd 2 cubes en ' + REG[rid].name + '.'); }
         else say(null, 'Personne n’est en tête : le scandale fait pschitt.');
         break; }
-      case 'buzz': g.mods.socialFree = true; say(null, 'Actions Réseaux gratuites ce tour.'); break;
+      case 'buzz': g.mods.socialFree = true; say(null, 'Buzz gratuits ce tour.'); break;
       case 'sondage': { var p = player(g, last(g)); p.infl += 2; say(p.id, PARTY[p.id].short + ' gagne 2 ★.'); break; }
       case 'fete': g.players.forEach(function (p) { p.infl += 1; }); say(null, 'Tous les partis gagnent 1 ★.'); break;
       case 'division': case 'division2':
