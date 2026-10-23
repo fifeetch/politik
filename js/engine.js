@@ -621,29 +621,62 @@
 
   /* ---------- Débat ---------- */
   function isDebateTurn(g) { return R.debateTurns.indexOf(g.turn) >= 0; }
-  function resolveDebate(g, bids) {
-    var list = g.players.map(function (p) {
-      var b = Math.max(0, Math.min(p.infl, Math.floor(bids[p.id] || 0)));
-      p.infl -= b; return { pid: p.id, bid: b };
-    }).sort(function (a, b) { return b.bid - a.bid; });
+  /* v0.6 : le débat en face-à-face. setupDebate prépare les 6 duels (chacun contre chacun, un thème par duel). */
+  function setupDebate(g) {
+    var ids = pids(g), duels = [];
+    for (var i = 0; i < ids.length; i++) for (var j = i + 1; j < ids.length; j++) {
+      var th = g.rng() < 0.5 && g.hot && g.hot.length ? g.hot[0] : D.THEMES[Math.floor(g.rng() * D.THEMES.length)].id;
+      duels.push({ a: ids[i], b: ids[j], theme: th });
+    }
+    g.debate = { duels: duels };
+    return g.debate;
+  }
+  /* Points d'une réplique : 2 si elle bat celle d'en face, 1 si nul, 0 si battue, + bonus */
+  function replyPoints(g, me, mine, opp, theirs, theme) {
+    var R2 = D.REPLIES, pts, notes = [];
+    if (mine === 'esquive' || theirs === 'esquive' || mine === theirs) pts = 1;
+    else pts = R2[mine].beats === theirs ? 2 : 0;
+    if (mine === 'attaque' && player(g, opp).cas > 0) { pts += 1; notes.push('ressort ses casseroles'); }
+    if (mine === 'chiffres') {
+      var c = cred(g, me, theme);
+      if (c === 2) { pts += 1; notes.push('maîtrise le sujet'); }
+      if (c === 0) { pts -= 1; notes.push('s’emmêle dans les chiffres'); }
+    }
+    if (mine === 'emotion' && isHot(g, theme)) { pts += 1; notes.push('le sujet brûlant touche'); }
+    return { pts: Math.max(0, pts), notes: notes };
+  }
+  function duelResult(g, d, ra, rb) {
+    var x = replyPoints(g, d.a, ra, d.b, rb, d.theme), y = replyPoints(g, d.b, rb, d.a, ra, d.theme);
+    return { a: d.a, b: d.b, theme: d.theme, ra: ra, rb: rb, pa: x.pts, pb: y.pts, na: x.notes, nb: y.notes };
+  }
+  /* prep : { pid: ★ dépensées } · picks : pour chaque duel { ra, rb } */
+  function resolveDebate(g, prep, picks) {
+    var tot = {}, duels = [];
+    g.players.forEach(function (p) {
+      var b = Math.max(0, Math.min(p.infl, R.debatePrepMax, Math.floor((prep || {})[p.id] || 0)));
+      p.infl -= b; tot[p.id] = b;
+    });
+    var prepSpent = Object.assign({}, tot);
+    g.debate.duels.forEach(function (d, i) {
+      var r = duelResult(g, d, picks[i].ra, picks[i].rb);
+      tot[d.a] += r.pa; tot[d.b] += r.pb; duels.push(r);
+    });
+    var list = g.players.map(function (p) { return { pid: p.id, score: tot[p.id], prep: prepSpent[p.id] }; })
+      .sort(function (a, b) { return b.score - a.score; });
     var mult = g.turn === R.maxTurns ? 2 : 1;
-    var res = { bids: list, rewards: [], grand: mult === 2 };
+    var res = { ranking: list, duels: duels, rewards: [], grand: mult === 2 };
     function reward(pid, n) {
       var regs = bestRegions(g, pid, n, null, 1);
       regs.forEach(function (rid) { addCubes(g, rid, pid, mult); });
       res.rewards.push({ pid: pid, regions: regs, each: mult });
     }
-    var top = list[0].bid;
-    var firsts = list.filter(function (x) { return x.bid === top; });
-    if (top === 0) { res.none = true; }
-    else if (firsts.length === 1) {
-      player(g, firsts[0].pid).debateWins += 1; reward(firsts[0].pid, 4);
-      var second = list[1];
-      if (second && second.bid > 0) {
-        var seconds = list.filter(function (x) { return x.bid === second.bid; });
-        seconds.forEach(function (x) { reward(x.pid, 2); });
-      }
+    var top = list[0].score, firsts = list.filter(function (x) { return x.score === top; });
+    if (firsts.length === 1) {
+      player(g, firsts[0].pid).debateWins += 1; res.winner = firsts[0].pid; reward(firsts[0].pid, 4);
+      var second = list[1].score;
+      list.filter(function (x) { return x.score === second; }).forEach(function (x) { reward(x.pid, 2); });
     } else firsts.forEach(function (x) { reward(x.pid, 2); });
+    g.debate = null;
     updateAllControl(g);
     g.phase = 'spotlight';
     return res;
@@ -727,7 +760,7 @@
   }
 
   var API = {
-    createGame: createGame, startTurn: startTurn, resolveActions: resolveActions, resolveDebate: resolveDebate,
+    createGame: createGame, startTurn: startTurn, resolveActions: resolveActions, resolveDebate: resolveDebate, setupDebate: setupDebate, duelResult: duelResult, replyPoints: replyPoints,
     isDebateTurn: isDebateTurn, spotlightTarget: spotlightTarget, applySpotlight: applySpotlight, endTurn: endTurn,
     finalScores: finalScores, objectiveMet: objectiveMet, election: election, poll: poll, votes: votes,
     dist: dist, allyOf: allyOf, allianceError: allianceError, answerOffer: answerOffer, acceptChance: acceptChance,

@@ -7,7 +7,7 @@ var AI = require('../js/ai.js');
 var N = parseInt(process.argv[2] || '600', 10);
 var all = D.PARTIES.map(function (p) { return p.id; });
 var stats = {}; all.forEach(function (id) { stats[id] = { played: 0, wins: 0, pts: 0 }; });
-var dil = {}, scandals = 0, gaffes = 0, credUps = 0, mil = 0, casSum = 0;
+var debWins = {}, dil = {}, scandals = 0, gaffes = 0, credUps = 0, mil = 0, casSum = 0;
 var firstRound = 0, alliances = 0, finals = {}, turnsSum = 0, errors = 0, actionCount = {}, failed = 0, totalActs = 0;
 
 for (var i = 0; i < N; i++) {
@@ -23,7 +23,11 @@ for (var i = 0; i < N; i++) {
       g.players.forEach(function (p) { plans[p.id] = AI.plan(g, p.id); });
       var log = E.resolveActions(g, plans);
       log.forEach(function (l) { totalActs++; if (l.gaffe) gaffes++; if (l.credUp) credUps++; if (!l.ok && !l.gaffe) failed++; actionCount[l.action] = (actionCount[l.action] || 0) + 1; });
-      if (E.isDebateTurn(g)) { var bids = {}; g.players.forEach(function (p) { bids[p.id] = AI.bid(g, p.id); }); E.resolveDebate(g, bids); }
+      if (E.isDebateTurn(g)) {
+        var deb = E.setupDebate(g), pr = {}; g.players.forEach(function (p) { pr[p.id] = AI.prep(g, p.id); });
+        var picks = deb.duels.map(function (d) { return { ra: AI.chooseReply(g, d.a, d.theme, d.b), rb: AI.chooseReply(g, d.b, d.theme, d.a) }; });
+        var dr = E.resolveDebate(g, pr, picks); if (dr.winner) debWins[dr.winner] = (debWins[dr.winner] || 0) + 1;
+      }
       var t = E.spotlightTarget(g); if (t) E.applySpotlight(g, t, AI.paySpotlight(g, t));
       E.endTurn(g);
       // invariants
@@ -46,6 +50,7 @@ for (var i = 0; i < N; i++) {
 console.log('Parties : ' + N + ' · erreurs : ' + errors);
 console.log('Élu dès le 1er tour : ' + (100 * firstRound / N).toFixed(1) + ' % · alliances en fin de partie : ' + (alliances / N).toFixed(2) + ' par partie');
 console.log('Par partie : ' + (scandals / N).toFixed(2) + ' scandales · ' + (gaffes / N).toFixed(2) + ' gaffes · ' + (credUps / N).toFixed(2) + ' gains de crédibilité · ' + (mil / N).toFixed(2) + ' équipes de militants · ' + (casSum / N / 4).toFixed(2) + ' casseroles en fin de partie (par parti)');
+console.log('Débats gagnés par parti :', JSON.stringify(debWins));
 console.log('Choix aux dilemmes (option 1/2/3) :', JSON.stringify(dil));
 console.log('Actions échouées : ' + (100 * failed / totalActs).toFixed(1) + ' %');
 console.log('\nParti                 Taux de victoire (attendu 25 %)   % moyen au 1er tour');

@@ -11,7 +11,7 @@ Jeu de stratégie électorale parodique sur la carte de France, pensé pour le t
 - En local : ouvre `index.html` dans un navigateur. Aucune installation n'est nécessaire.
 - Première partie : un tutoriel guidé se lance automatiquement (relançable avec « Comment jouer » sur l'écran titre).
 
-## Règles (v0.5, résumé)
+## Règles (v0.6, résumé)
 
 - **But** : remporter l'élection présidentielle après **8 tours de campagne**. Chaque région vote selon ses cubes, pondérée par sa population ; le parti qui contrôle une région y gagne un bonus de voix.
 - **Scrutin** : plus de 50 % au premier tour = élu. Sinon, second tour entre les deux premiers, avec reports de voix selon la proximité politique (alliés : 85 %).
@@ -20,6 +20,7 @@ Jeu de stratégie électorale parodique sur la carte de France, pensé pour le t
 - **Thèmes (v0.3)** : chaque campagne porte un message (💶 🏭 🏥 🌿 🚓 🛂). Son impact, de 0 à 4 = crédibilité du parti sur le thème (0 à 2) + 1 si la région s'en préoccupe + 1 si le thème fait l'actu. Plus l'impact est fort, plus l'action rapporte de cubes. L'action **Imposer** met ton thème à la une du tour suivant.
 - **Le candidat (v0.4)** : sa forme ⚡ limite les Meetings et la Télé (risque de gaffe à 0). Les militants 👥 rapportent 1 cube par tour. La dynamique ↗ récompense une progression au sondage. Parler souvent d'un thème rend crédible dessus.
 - **Dilemmes et casseroles (v0.5)** : un parti par tour fait face à un dilemme, avec parfois des conséquences différées. Les casseroles 🍳 font courir un risque de scandale. Une crise en 3 actes marque la carte.
+- **Les grands moments (v0.6)** : débat télévisé en face-à-face (choix des répliques), flash info en fin de tour, soirée électorale à 20h.
 - **Un tour** : journal du matin (revenus, militants, scandales, crise ou événement, dilemme) → 3 actions secrètes jouées par tous en même temps → débat (tours 3, 6, 8) → « Sous les projecteurs » pour le premier des sondages.
 
 ## Organisation du code
@@ -44,18 +45,18 @@ node test/simulate.js 1000
 
 Le script affiche le taux de victoire de chaque parti (l'idéal est autour de 25 %).
 
-## Équilibre actuel (v0.5, IA contre IA, 2000 parties)
+## Équilibre actuel (v0.6, IA contre IA, 2000 parties)
 
 | Parti | Victoires (idéal 25 %) |
 | --- | --- |
-| Socialisme Modéré | 29 % |
-| Mouvement National | 28 % |
-| Les Verts Pâturages | 26 % |
+| Les Verts Pâturages | 31 % |
+| Mouvement National | 27 % |
 | La France Indignée | 26 % |
+| Socialisme Modéré | 26 % |
 | L'Union Gaulliste | 22 % |
 | En Mouvement | 18 % |
 
-Par partie, en moyenne : 2 scandales, 6 à 7 gains de crédibilité, 5 équipes de militants. En Mouvement reste un peu en dessous : à surveiller avec de vraies parties.
+Les débats sont gagnés de façon équilibrée entre les partis. Les Verts et En Mouvement restent les deux points à surveiller avec de vraies parties.
 
 Les idées pour la suite sont dans [ROADMAP.md](ROADMAP.md).
 

@@ -1,4 +1,4 @@
-/* Politik — données du jeu (règles v0.5 : thèmes, candidat, dilemmes et crises)
+/* Politik — données du jeu (règles v0.6 : thèmes, candidat, dilemmes, crises, débat télévisé)
    Toutes les valeurs chiffrées du jeu sont ici : c'est le fichier à modifier pour équilibrer. */
 (function (root) {
   var REGIONS = [
@@ -156,7 +156,7 @@
     objectiveVotes: 0.6,         // un objectif réussi rapporte bonus × 0,6 « millions » de voix
     transfer: { 1: 0.50, 2: 0.42, 3: 0.35, 4: 0.30, 5: 0.25 },  // report au 2nd tour selon la distance
     allyTransfer: 0.85,
-    edgeMobilization: 1.35,
+    edgeMobilization: 1.25,
     betrayedTransfer: 0.05,
     /* v0.3 : thèmes */
     terrainCubes: [1, 1, 2, 3, 4],   // cubes gagnés en Meeting selon l'impact du message (0 à 4)
@@ -173,7 +173,29 @@
     casseroleMax: 6,
     scandalPerCasserole: 0.08,       // chaque casserole = 8 % de risque de scandale au début du tour
     scandalCubes: 2,
-    crisisStart: [2, 4]              // la crise de la partie commence entre le tour 2 et le tour 4
+    crisisStart: [2, 4],             // la crise de la partie commence entre le tour 2 et le tour 4
+    /* v0.6 : débat télévisé */
+    debatePrepMax: 3                 // préparation : jusqu'à 3 ★, +1 point chacune
+  };
+
+  /* ---------- v0.6 : le débat télévisé ----------
+     Chaque parti affronte chacun des autres sur une question (un thème).
+     Attaque bat Émotion, Émotion bat Chiffres, Chiffres bat Attaque. Esquive = match nul.
+     Manche gagnée = 2 points, nulle = 1, perdue = 0, plus les bonus de chaque réplique. */
+  var REPLIES = {
+    attaque:  { name: 'Attaque',  icon: '🥊', beats: 'emotion',  hint: 'Bat l\'émotion. +1 si ton rival traîne des casseroles.' },
+    chiffres: { name: 'Chiffres', icon: '📊', beats: 'attaque',  hint: 'Bat l\'attaque. +1 si c\'est ton point fort, −1 si ce n\'est pas ton sujet.' },
+    emotion:  { name: 'Émotion',  icon: '❤️', beats: 'chiffres', hint: 'Bat les chiffres. +1 si le thème fait l\'actu.' },
+    esquive:  { name: 'Esquive',  icon: '🙃', beats: null,       hint: 'Match nul assuré : 1 point chacun.' }
+  };
+  /* Tempérament de chaque parti en débat : probabilité de chaque réplique (l'IA s'adapte aussi au thème) */
+  var TEMPERS = {
+    FI: { label: 'bagarreur',      w: { attaque: 5, emotion: 3, chiffres: 1, esquive: 1 } },
+    VP: { label: 'passionné',      w: { emotion: 5, chiffres: 2, attaque: 2, esquive: 1 } },
+    SM: { label: 'raisonnable',    w: { chiffres: 4, emotion: 3, esquive: 2, attaque: 1 } },
+    EM: { label: 'technocrate',    w: { chiffres: 5, esquive: 3, attaque: 1, emotion: 1 } },
+    UG: { label: 'solennel',       w: { chiffres: 3, attaque: 3, emotion: 2, esquive: 2 } },
+    MN: { label: 'tribun',         w: { attaque: 4, emotion: 4, esquive: 1, chiffres: 1 } }
   };
 
   /* ---------- v0.5 : dilemmes ----------
@@ -250,7 +272,7 @@
   ];
 
   var DATA = { REGIONS: REGIONS, PROFILES: PROFILES, THEMES: THEMES, HEADLINES: HEADLINES, PARTIES: PARTIES, ACTIONS: ACTIONS,
-               CARDS: CARDS, EVENTS: EVENTS, DILEMMAS: DILEMMAS, CRISES: CRISES, OBJECTIVES: OBJECTIVES, RULES: RULES };
+               CARDS: CARDS, EVENTS: EVENTS, DILEMMAS: DILEMMAS, CRISES: CRISES, REPLIES: REPLIES, TEMPERS: TEMPERS, OBJECTIVES: OBJECTIVES, RULES: RULES };
   if (typeof module !== 'undefined' && module.exports) module.exports = DATA;
   else root.PolitikData = DATA;
 })(this);

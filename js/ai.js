@@ -149,11 +149,22 @@
     else v.regions[rid].controller = null;
   }
 
-  function bid(g, pid) {
-    var pl = E.player(g, pid), max = pl.infl;
-    if (max <= 0) return 0;
-    var base = g.turn === D.RULES.maxTurns ? 0.75 : 0.5;
-    return Math.min(max, Math.round(max * (base + (g.rng() - 0.5) * 0.4)));
+  /* v0.6 : débat. Préparation en ★, puis choix des répliques selon le tempérament et la situation. */
+  function prep(g, pid) {
+    var pl = E.player(g, pid), max = Math.min(pl.infl, D.RULES.debatePrepMax);
+    var want = g.turn === D.RULES.maxTurns ? 3 : pl.infl >= 6 ? 2 : pl.infl >= 3 ? 1 : 0;
+    return Math.min(max, want);
+  }
+  function chooseReply(g, pid, theme, opp) {
+    var w = Object.assign({}, D.TEMPERS[pid].w);
+    var c = E.cred(g, pid, theme);
+    if (c === 2) w.chiffres += 3; if (c === 0) w.chiffres = Math.max(0, w.chiffres - 2);
+    if (E.isHot(g, theme)) w.emotion += 2;
+    if (E.player(g, opp).cas > 0) w.attaque += 2;
+    var keys = Object.keys(w), sum = 0; keys.forEach(function (k) { sum += w[k]; });
+    var r = g.rng() * sum;
+    for (var i = 0; i < keys.length; i++) { r -= w[keys[i]]; if (r <= 0) return keys[i]; }
+    return 'esquive';
   }
   function payspotlight(g, pid) { return E.player(g, pid).infl >= 4; }
 
@@ -184,6 +195,6 @@
 
   function acceptOffer(g, target, from) { return g.rng() < E.acceptChance(g, target, from); }
 
-  var API = { plan: plan, bid: bid, paySpotlight: payspotlight, acceptOffer: acceptOffer, chooseDilemma: chooseDilemma };
+  var API = { plan: plan, prep: prep, chooseReply: chooseReply, paySpotlight: payspotlight, acceptOffer: acceptOffer, chooseDilemma: chooseDilemma };
   if (node) module.exports = API; else root.PolitikAI = API;
 })(this);

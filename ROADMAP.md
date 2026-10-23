@@ -42,10 +42,14 @@
 - Militants visibles pour tous les partis, et possibilité de les déloger.
 - Dilemmes liés au thème fort de chaque parti.
 
-## v0.6 — les grands moments
-- **Débat télévisé** en mini-jeu : choix de répliques (attaque, chiffre, émotion, esquive) face au caractère de l'adversaire.
-- **Soirée électorale à 20h** : compte à rebours, la carte qui se colore région par région.
-- **Flash info** et Unes de journaux parodiques après chaque tour.
+## v0.6 — fait : les grands moments
+- **🎙️ Débat télévisé en face-à-face** (tours 3, 6, 8) : chaque parti affronte les 3 autres, une question (un thème) chacun.
+  Répliques : 🥊 Attaque bat ❤️ Émotion, ❤️ Émotion bat 📊 Chiffres, 📊 Chiffres bat 🥊 Attaque, 🙃 Esquive = nul.
+  Bonus selon la situation (casseroles du rival, point fort, actualité). Préparation : jusqu'à 3 ★ = +1 point chacune.
+  Chaque parti a un **tempérament** (bagarreur, technocrate, tribun…) que l'on peut apprendre à lire.
+- **📺 Flash info** en fin de tour : 2 à 4 gros titres (régions qui changent de main, gaffes, alliances) et le bandeau du sondage ▲▼. Le détail des actions est replié.
+- **🕗 Soirée électorale à 20h** : compte à rebours, révélation du vainqueur de haut en bas comme à la télé, carte qui se colore région par région, barres de résultats.
+- Équilibrage : électorat mobilisé des partis aux extrémités ramené de ×1,35 à ×1,25 (le nouveau débat consomme moins d'influence).
 
 ## v0.7 — rejouabilité
 - Phase des **500 parrainages** avant la campagne.
