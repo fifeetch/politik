@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1B1F3B">
+<meta name="description" content="Politik — jeu de stratégie électorale parodique sur la carte de France.">
+<title>Politik</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- Écran titre -->
+  <section id="screen-title" class="screen screen-dark active">
+    <span class="kicker kicker-yellow">Élection présidentielle</span>
+    <h1 class="logo">POLITIK</h1>
+    <p class="tagline">13 régions. 8 tours.<br>Un seul élu.</p>
+    <svg id="title-map" class="title-map" viewBox="0 0 370 357" aria-hidden="true"></svg>
+    <div class="stack">
+      <button class="btn btn-yellow btn-big" data-go="choose">NOUVELLE PARTIE</button>
+      <button class="btn btn-ghost-light" data-action="rules">Règles du jeu</button>
+    </div>
+    <p class="fineprint">Parodie politique. Toute ressemblance est volontaire,<br>toute caricature est équitable.</p>
+  </section>
+
+  <!-- Choix du parti -->
+  <section id="screen-choose" class="screen">
+    <div class="choose-head">
+      <span class="kicker">Nouvelle partie · toi contre 3 IA</span>
+      <h1 class="h1">CHOISIS TON PARTI</h1>
+    </div>
+    <div id="party-grid" class="party-grid"></div>
+    <div id="party-detail" class="party-detail"></div>
+    <button id="btn-start" class="btn btn-ink btn-big">ENTRER EN CAMPAGNE</button>
+  </section>
+
+  <!-- Jeu -->
+  <section id="screen-game" class="screen screen-game">
+    <header class="topbar">
+      <div class="turn">
+        <span id="turn-label" class="turn-label">TOUR 1 / 8</span>
+        <span id="phase-label" class="phase-label">Actions</span>
+      </div>
+      <div class="res">
+        <span class="pill" id="res-money" aria-label="Argent">€ 0</span>
+        <span class="pill" id="res-infl" aria-label="Influence">★ 0</span>
+        <button class="pill pill-btn" id="btn-menu" aria-label="Menu">•••</button>
+      </div>
+    </header>
+
+    <div class="race">
+      <div class="race-head"><span>Course à la majorité</span><span>33 pts pour être élu</span></div>
+      <div id="race-bar" class="race-bar"></div>
+      <div id="race-legend" class="race-legend"></div>
+    </div>
+
+    <div class="map-wrap">
+      <svg id="map" class="map" viewBox="0 0 370 357" role="img" aria-label="Carte des 13 régions"></svg>
+    </div>
+
+    <div class="panel">
+      <div id="region-info" class="region-info"></div>
+      <div class="queue">
+        <div id="queue-slots" class="queue-slots"></div>
+        <button id="btn-validate" class="btn btn-ink btn-validate">Valider</button>
+      </div>
+      <div id="actions" class="actions"></div>
+      <div id="cards" class="cards"></div>
+    </div>
+  </section>
+
+  <!-- Fin de partie -->
+  <section id="screen-end" class="screen screen-dark">
+    <span class="kicker kicker-yellow" id="end-kicker">Résultats</span>
+    <h1 class="logo logo-sm" id="end-title">ÉLU !</h1>
+    <p class="tagline" id="end-sub"></p>
+    <div id="end-table" class="end-table"></div>
+    <div class="stack">
+      <button class="btn btn-yellow btn-big" data-go="choose">REJOUER</button>
+      <button class="btn btn-ghost-light" data-go="title">Accueil</button>
+    </div>
+  </section>
+
+  <!-- Fenêtre modale -->
+  <div id="modal" class="modal" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div id="modal-kicker" class="kicker"></div>
+      <h2 id="modal-title" class="h2"></h2>
+      <div id="modal-body" class="modal-body"></div>
+      <div id="modal-buttons" class="modal-buttons"></div>
+    </div>
+  </div>
+  <div id="toast" class="toast" hidden></div>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/map.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/ui.js"></script>
+</body>
+</html>
