@@ -388,3 +388,7 @@ button { font-family: inherit; color: inherit; }
 .nb-bar i { display: block; height: 100%; width: 0; transition: width 1.2s ease-out; box-shadow: inset 0 0 0 1px rgba(244,240,230,.7); }
 .nb-row b { text-align: right; }
 .night-btn { width: 100%; margin-top: auto; }
+
+/* Application installable : l'écran titre défile sur les petits téléphones */
+#screen-title { overflow-y: auto; }
+#screen-title .title-map { flex-shrink: 1; min-height: 80px; }

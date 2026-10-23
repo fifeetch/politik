@@ -787,6 +787,27 @@
       '<p><b>Sous les projecteurs :</b> le premier des sondages paie 2 ★ ou perd des cubes à chaque fin de tour.</p>' });
   }
 
+  /* ---------- Installer l'application (PWA) ---------- */
+  var installEvt = null;
+  var standalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+  var ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  function showInstall(on) { $('btn-install').hidden = !on || standalone; }
+  window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); installEvt = e; showInstall(true); });
+  window.addEventListener('appinstalled', function () { installEvt = null; showInstall(false); toast('Politik est installé sur ton écran d’accueil !'); });
+  if (ios) showInstall(true);
+  $('btn-install').addEventListener('click', function () {
+    if (installEvt) {
+      installEvt.prompt();
+      installEvt.userChoice.then(function () { installEvt = null; showInstall(false); });
+      return;
+    }
+    modal({ kicker: 'Installer Politik', title: 'Sur ton écran d’accueil', html:
+      (ios ? '<div class="brief">' + line('1', 'Ouvre ce jeu dans <b>Safari</b>.') + line('2', 'Touche le bouton <b>Partager</b> (le carré avec une flèche ⬆️) en bas de l’écran.') +
+             line('3', 'Choisis <b>« Sur l’écran d’accueil »</b>, puis <b>Ajouter</b>.') + '</div>'
+           : '<div class="brief">' + line('1', 'Ouvre le menu du navigateur (⋮ en haut à droite sur Chrome).') + line('2', 'Choisis <b>« Installer l’application »</b> ou <b>« Ajouter à l’écran d’accueil »</b>.') + '</div>') +
+      '<p class="hint">Politik aura sa propre icône, s’ouvrira en plein écran et fonctionnera même sans internet.</p>' });
+  });
+
   renderTitleMap();
   renderChoose();
 })();

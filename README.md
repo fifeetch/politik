@@ -9,6 +9,10 @@ Jeu de stratégie électorale parodique sur la carte de France, pensé pour le t
 
 - En ligne : la version publiée sur GitHub Pages (lien dans la description du dépôt).
 - En local : ouvre `index.html` dans un navigateur. Aucune installation n'est nécessaire.
+- **Installer l'application sur ton téléphone** : ouvre le jeu en ligne, puis touche « 📲 Installer l'application » sur l'écran titre.
+  - Android (Chrome) : la fenêtre d'installation s'ouvre directement.
+  - iPhone (Safari) : bouton Partager ⬆️ puis « Sur l'écran d'accueil ».
+  Politik a alors sa propre icône, s'ouvre en plein écran et fonctionne sans internet.
 - Première partie : un tutoriel guidé se lance automatiquement (relançable avec « Comment jouer » sur l'écran titre).
 
 ## Règles (v0.6, résumé)
@@ -35,6 +39,7 @@ Jeu de stratégie électorale parodique sur la carte de France, pensé pour le t
 | `js/ai.js` | L'intelligence artificielle des adversaires |
 | `js/ui.js` | L'affichage et le déroulement d'une partie |
 | `js/tuto.js` | Le tutoriel guidé du premier tour |
+| `manifest.webmanifest`, `sw.js`, `icons/` | L'application installable (icône, plein écran, jeu hors ligne). À chaque nouvelle version, changer `VERSION` dans `sw.js` |
 | `test/simulate.js` | Simule des centaines de parties pour vérifier l'équilibre |
 
 Pour équilibrer le jeu, on modifie `js/data.js`, puis on lance :

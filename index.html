@@ -6,6 +6,13 @@
 <meta name="theme-color" content="#1B1F3B">
 <meta name="description" content="Politik — jeu de stratégie électorale parodique sur la carte de France.">
 <title>Politik</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/favicon.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Politik">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -24,6 +31,7 @@
       <button class="btn btn-yellow btn-big" data-go="choose">NOUVELLE PARTIE</button>
       <button class="btn btn-ghost-light" data-action="tuto">Comment jouer (tutoriel)</button>
       <button class="btn btn-ghost-light" data-action="rules">Règles du jeu</button>
+      <button class="btn btn-ghost-light" id="btn-install" type="button" hidden>📲 Installer l'application</button>
     </div>
     <p class="fineprint">Parodie politique. Toute ressemblance est volontaire,<br>toute caricature est équitable.</p>
   </section>
@@ -117,5 +125,11 @@
 <script src="js/ai.js"></script>
 <script src="js/tuto.js"></script>
 <script src="js/ui.js"></script>
+<script>
+  /* Application installable : le service worker garde le jeu sur le téléphone */
+  if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+    window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
+  }
+</script>
 </body>
 </html>
