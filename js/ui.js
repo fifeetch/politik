@@ -195,6 +195,11 @@
   }
   $('prog-reco').addEventListener('click', function () { progSel = party(chosen).programme.slice(); progFin = (party(chosen).financing || []).slice(); renderProgramme(chosen); });
   $('prog-go').addEventListener('click', function () { if (progSel.length === R.programmeSize) startGame(chosen, progSel.slice(), progFin.slice()); });
+  $('prog-skip').addEventListener('click', function () {
+    if (progSel.length !== R.programmeSize) { toast('Choisis d’abord tes 5 promesses.'); return; }
+    modal({ kicker: 'Raccourci', title: 'Gouverner directement ?', html: '<p>La campagne se joue sans toi, et tu l\'emportes de justesse au second tour. Tu commences directement par les législatives, avec le programme que tu viens de composer.</p>',
+      buttons: [{ label: '🏛️ Aller au pouvoir', primary: true, onClick: function () { skipCampaign(chosen, progSel.slice(), progFin.slice()); } }, { label: 'Annuler' }] });
+  });
   /* Qui vit dans chaque région (Insee), et ce que ton programme leur fait */
   function geoModal(ids) {
     var ap = E.segmentAppeal(ids);
@@ -245,6 +250,33 @@
     nextTurn();
   }
   function mePl() { return E.player(g, me); }
+  /* Raccourci : la campagne se joue toute seule, et tu l'emportes de justesse au second tour */
+  function skipCampaign(pid, prog, fin) {
+    g = E.createGame(pid); me = pid;
+    E.setProgramme(g, pid, prog, fin);
+    while (!g.over) {
+      var info = E.startTurn(g);
+      g.affairs.slice().forEach(function (a) { E.resolveAffair(g, a.pid, AI.chooseReaction(g, a.pid)); });
+      if (info.dilemma) E.resolveDilemma(g, info.dilemma.pid, AI.chooseDilemma(g, info.dilemma.pid));
+      var plans = {}; g.players.forEach(function (p) { plans[p.id] = AI.plan(g, p.id); });
+      E.resolveActions(g, plans);
+      g.offers = [];
+      if (E.isDebateTurn(g)) {
+        var deb = E.setupDebate(g), pr = {}; g.players.forEach(function (p) { pr[p.id] = AI.prep(g, p.id); });
+        E.resolveDebate(g, pr, deb.duels.map(function (d) { return { ra: AI.chooseReply(g, d.a, d.theme, d.b), rb: AI.chooseReply(g, d.b, d.theme, d.a) }; }));
+      }
+      var t = E.spotlightTarget(g); if (t) E.applySpotlight(g, t, AI.paySpotlight(g, t));
+      E.endTurn(g);
+    }
+    if (g.winner !== me) {
+      var rival = g.result.first.filter(function (x) { return x.pid !== me; })[0].pid;
+      g.result.direct = false;
+      g.result.second = { a: me, b: rival, pctA: 0.51, pctB: 0.49, transfers: [] };
+      g.winner = me;
+    }
+    $('btn-govern').hidden = false;
+    $('btn-govern').click();
+  }
 
   function nextTurn() {
     var info = E.startTurn(g);
