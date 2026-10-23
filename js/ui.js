@@ -8,6 +8,7 @@
   var SVGNS = 'http://www.w3.org/2000/svg';
 
   var g = null, me = null, chosen = 'VP', selected = null, queue = [];
+  var T = window.PolitikTuto, forceTuto = false, tutoGame = false;
 
   function $(id) { return document.getElementById(id); }
   function el(tag, attrs, html) {
@@ -33,6 +34,7 @@
     if (name === 'choose') renderChoose();
   }
   document.addEventListener('click', function (e) {
+    var h = e.target.closest('[data-action="tuto"]'); if (h) { forceTuto = true; go('choose'); return; }
     var t = e.target.closest('[data-go]'); if (t) go(t.getAttribute('data-go'));
     var a = e.target.closest('[data-action="rules"]'); if (a) showRules();
   });
@@ -106,7 +108,10 @@
     if (fx.length) html += '<div class="log">' + fx.map(function (f) { return '<div class="log-row">' + chip(f.pid) + '<span>' + esc(f.text) + '</span></div>'; }).join('') + '</div>';
     if (E.isDebateTurn(g)) html += '<p><b>Débat télévisé à la fin de ce tour.</b> Garde de l\'influence (★) pour miser.</p>';
     modal({ kicker: 'Tour ' + g.turn + ' / ' + R.maxTurns, title: g.turn === 1 ? 'La campagne commence' : 'Nouveau tour', html: html,
-            buttons: [{ label: 'À mes actions', primary: true, onClick: render }] });
+            buttons: [{ label: 'À mes actions', primary: true, onClick: function () {
+              render();
+              if (g.turn === 1 && (forceTuto || !T.isActive())) { var before = T.isActive(); T.maybeStart(forceTuto); tutoGame = !before && T.isActive(); forceTuto = false; }
+            } }] });
   }
 
   /* Ressources projetées après les actions déjà programmées */
@@ -133,7 +138,7 @@
   function addAction(act) {
     var err = canQueue(act);
     if (err) { toast(err); return; }
-    queue.push(act); render();
+    queue.push(act); render(); T.notify('queue');
   }
 
   /* ---------- Rendu ---------- */
@@ -160,8 +165,8 @@
     D.REGIONS.forEach(function (r) {
       var c = g.regions[r.id].controller;
       var p = svg('path', { d: M.regions[r.id].d, class: 'reg', fill: c ? party(c).color : NEUTRAL, tabindex: 0, role: 'button', 'aria-label': r.name });
-      p.addEventListener('click', function () { selected = r.id; render(); });
-      p.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selected = r.id; render(); } });
+      p.addEventListener('click', function () { selected = r.id; render(); T.notify('region'); });
+      p.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selected = r.id; render(); T.notify('region'); } });
       s.appendChild(p);
     });
     if (selected) {
@@ -259,6 +264,7 @@
   });
 
   function resolve() {
+    T.stop();
     var plans = {}; plans[me] = queue.slice();
     g.players.forEach(function (p) { if (!p.human) plans[p.id] = AI.plan(g, p.id); });
     var log = E.resolveActions(g, plans);
@@ -307,6 +313,15 @@
     if (spot && !spot.paid && spot.pid !== me) toast(party(spot.pid).short + ' sous les projecteurs : −1 cube en ' + spot.regions.map(function (x) { return SHORT[x]; }).join(', '));
     else if (spot && spot.paid && spot.pid !== me) toast(party(spot.pid).short + ' paie 2 ★ pour éviter le scandale');
     if (res.over) return endGame();
+    if (g.turn === 1 && tutoGame) {
+      tutoGame = false;
+      return modal({ kicker: 'Tutoriel', title: 'Bon à savoir', html:
+        '<p><b>Chaque tour</b> commence par tes revenus et un <b>événement</b> (crise, scandale, fête…) qui touche tous les partis.</p>' +
+        '<p><b>Aux tours 3, 6 et 8</b>, un <b>débat télévisé</b> : tu mises de l\'influence (★). Le plus gros parieur gagne des cubes, mais toutes les mises sont perdues.</p>' +
+        '<p><b>Sous les projecteurs</b> : à la fin de chaque tour, le parti en tête paie 2 ★ ou perd des cubes. Être premier trop tôt, ça se paie !</p>' +
+        '<p>Tu peux revoir les règles à tout moment avec le bouton <b>•••</b>.</p>',
+        buttons: [{ label: 'Tour suivant', primary: true, onClick: nextTurn }] });
+    }
     setTimeout(nextTurn, spot && spot.pid !== me ? 900 : 0);
   }
 

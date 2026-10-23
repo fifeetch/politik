@@ -158,3 +158,17 @@ button { font-family: inherit; color: inherit; }
   .act span { font-size: 10px; }
   .region-info { min-height: 0; }
 }
+
+/* Tutoriel */
+.tuto-dim { position: absolute; inset: 0; background: rgba(27,31,59,.6); z-index: 40; }
+.tuto-dim[hidden] { display: none; }
+.tuto-focus { position: relative; z-index: 50; border-radius: 12px; box-shadow: 0 0 0 3px var(--yellow), 0 0 0 9999px rgba(27,31,59,.6) !important; }
+.tuto-bubble { position: absolute; left: 12px; right: 12px; z-index: 60; background: var(--white); border: 2px solid var(--ink); border-radius: 16px; padding: 12px 14px 14px; box-shadow: 4px 4px 0 var(--ink); display: flex; flex-direction: column; gap: 6px; animation: up .2s ease-out; }
+.tuto-bubble.at-top { top: max(12px, env(safe-area-inset-top)); }
+.tuto-bubble.at-bottom { bottom: max(16px, env(safe-area-inset-bottom)); }
+.tuto-bubble.at-center { top: 30%; }
+.tuto-bubble p { margin: 0; font-size: 14px; line-height: 1.45; }
+.tuto-bubble .btn { align-self: flex-end; margin-top: 4px; padding: 0 18px; }
+.tuto-top { display: flex; justify-content: space-between; align-items: center; }
+.tuto-title { font-family: var(--display); font-size: 22px; line-height: 1.05; }
+.tuto-skip { background: none; border: 0; font-size: 13px; font-weight: 700; text-decoration: underline; cursor: pointer; min-height: 32px; padding: 0 4px; color: var(--muted); }

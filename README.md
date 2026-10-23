@@ -9,6 +9,7 @@ Jeu de stratégie électorale parodique sur la carte de France, pensé pour le t
 
 - En ligne : la version publiée sur GitHub Pages (lien dans la description du dépôt).
 - En local : ouvre `index.html` dans un navigateur. Aucune installation n'est nécessaire.
+- Première partie : un tutoriel guidé se lance automatiquement (relançable avec « Comment jouer » sur l'écran titre).
 
 ## Règles (v0.1, résumé)
 
@@ -28,6 +29,7 @@ Jeu de stratégie électorale parodique sur la carte de France, pensé pour le t
 | `js/engine.js` | Les règles (sans affichage) |
 | `js/ai.js` | L'intelligence artificielle des adversaires |
 | `js/ui.js` | L'affichage et le déroulement d'une partie |
+| `js/tuto.js` | Le tutoriel guidé du premier tour |
 | `test/simulate.js` | Simule des centaines de parties pour vérifier l'équilibre |
 
 Pour équilibrer le jeu, on modifie `js/data.js`, puis on lance :
