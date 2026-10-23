@@ -6,7 +6,7 @@
   var E = node ? require('./engine.js') : root.PolitikEngine;
 
   function clone(g) {
-    var c = { turn: g.turn, mods: g.mods, rng: g.rng, alliances: Object.assign({}, g.alliances), betrayed: g.betrayed, offers: [], players: g.players.map(function (p) { return Object.assign({}, p, { cards: p.cards.slice() }); }), regions: {} };
+    var c = { turn: g.turn, mods: g.mods, hot: g.hot, nextHot: g.nextHot, rng: g.rng, alliances: Object.assign({}, g.alliances), betrayed: g.betrayed, offers: [], players: g.players.map(function (p) { return Object.assign({}, p, { cards: p.cards.slice() }); }), regions: {} };
     Object.keys(g.regions).forEach(function (k) { c.regions[k] = { cubes: Object.assign({}, g.regions[k].cubes), controller: g.regions[k].controller }; });
     return c;
   }
@@ -14,15 +14,19 @@
 
   function candidates(v, pid, turn) {
     var pl = E.player(v, pid), list = [];
+    // le thème le plus porteur dans l'actu pour les Réseaux
+    var hotTh = (v.hot || []).slice().sort(function (a, b) { return E.cred(pid, b) - E.cred(pid, a); })[0];
     D.REGIONS.forEach(function (r) {
-      list.push({ type: 'terrain', region: r.id });
-      list.push({ type: 'reseaux', region: r.id });
+      var th = E.bestTheme(v, pid, r.id);
+      list.push({ type: 'terrain', region: r.id, theme: th });
+      list.push({ type: 'reseaux', region: r.id, theme: hotTh || th });
       if (E.cubes(v, r.id, pid) >= 1 && E.rivalIn(v, r.id, pid)) list.push({ type: 'contre', region: r.id });
       if (v.regions[r.id].controller === pid) list.push({ type: 'reforme', region: r.id });
     });
-    ['urbaine', 'rurale', 'industrielle', 'historique'].forEach(function (prof) {
-      var best = E.bestRegions(v, pid, 1, function (r) { return r.profile === prof; }, 1)[0];
-      if (best) list.push({ type: 'medias', region: best });
+    D.THEMES.forEach(function (t) {
+      var best = E.bestRegions(v, pid, 1, function (r) { return E.concerns(r.id, t.id); }, 1)[0];
+      if (best) list.push({ type: 'medias', region: best, theme: t.id });
+      if (E.cred(pid, t.id) === 2 && !E.isHot(v, t.id)) list.push({ type: 'imposer', theme: t.id });
     });
     list.push({ type: 'fonds' });
     if (!E.allyOf(v, pid)) v.players.forEach(function (o) {
@@ -51,16 +55,23 @@
     switch (act.type) {
       case 'terrain': {
         var pt = E.poachTarget(v, pid, act.region, true);
-        boost(act.region, (pid === 'SM' && E.cubes(v, act.region, pid) >= 5 ? 3 : 2) + (pt ? (pt.d === 1 ? 1 : 0.5) : 0));
+        boost(act.region, E.terrainCubes(v, pid, act.region, act.theme) + (pt ? (pt.d === 1 ? 1 : 0.5) : 0));
         if (pt && pt.d === 1) eff.push([act.region, pt.pid, -1]);
         break; }
-      case 'reseaux': val += 0.5 * E.gain(v, pid, act.region, 1) + 0.33 * E.gain(v, pid, act.region, 2) + 0.17 * E.gain(v, pid, act.region, 4) - 0.17 * 0.5;
-        eff.push([act.region, pid, 1]); break;
-      case 'medias': E.mediaRegions(v, pid, act.region).forEach(function (rid) {
-          var p = E.REG[rid].profile, n = 1;
-          if (pid === 'VP' && p === 'urbaine') n++;
-          if (pid === 'MN' && p === 'industrielle') n++;
-          boost(rid, n); }); break;
+      case 'reseaux': {
+        var hb = E.isHot(v, act.theme) ? D.RULES.socialHotBonus : 0;
+        val += 0.5 * E.gain(v, pid, act.region, 1 + hb) + 0.33 * E.gain(v, pid, act.region, 2 + hb) + 0.17 * E.gain(v, pid, act.region, 4 + hb) - (hb ? 0 : 0.17 * 0.5);
+        eff.push([act.region, pid, 1 + hb]); break; }
+      case 'medias': E.mediaRegions(v, pid, act.region, act.theme).forEach(function (rid) {
+          var n = E.mediaCubes(v, pid, rid, act.theme);
+          if (n) boost(rid, n); }); break;
+      case 'imposer': {
+        // le thème aidera ses actions du prochain tour… mais aussi les rivaux crédibles sur ce thème
+        if (v.turn >= D.RULES.maxTurns || (v.nextHot || []).some(function (x) { return x.theme === act.theme; })) return null;
+        var rivals = v.players.filter(function (o) { return o.id !== pid && E.cred(o.id, act.theme) === 2; }).length;
+        var weight = 0; D.REGIONS.forEach(function (r) { if (E.concerns(r.id, act.theme)) weight += r.pts; });
+        val += 2.2 + weight * 0.08 - rivals * 0.9;
+        break; }
       case 'contre': {
         var rival = E.rivalIn(v, act.region, pid), r = E.REG[act.region];
         var ctrl = v.regions[act.region].controller;

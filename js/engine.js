@@ -1,4 +1,4 @@
-/* Politik — moteur de jeu (règles v0.2 : axe politique, alliances, élection à deux tours).
+/* Politik — moteur de jeu (règles v0.3 : thèmes de campagne, axe politique, alliances, élection à deux tours).
    Aucune dépendance à l'affichage : tout l'état de la partie est dans un objet « g ». */
 (function (root) {
   var D = (typeof module !== 'undefined' && module.exports) ? require('./data.js') : root.PolitikData;
@@ -28,6 +28,43 @@
   function minControl(pid) { return pid === 'MN' ? 4 : R.minControl; }
   function dist(a, b) { return Math.abs(PARTY[a].pos - PARTY[b].pos); }
   function allyOf(g, pid) { return (g.alliances && g.alliances[pid]) || null; }
+
+  /* ---------- Thèmes (v0.3) ---------- */
+  var THEME = {}; D.THEMES.forEach(function (t) { THEME[t.id] = t; });
+  function cred(pid, th) { return (PARTY[pid].cred && PARTY[pid].cred[th]) || 0; }
+  function isHot(g, th) { return (g.hot || []).indexOf(th) >= 0; }
+  function concerns(rid, th) { return REG[rid].concerns.indexOf(th) >= 0; }
+  /* Impact d'un message de 0 à 4 : crédibilité (0-2) + préoccupation de la région (0-1) + actualité (0-1) */
+  function impact(g, pid, rid, th) {
+    return cred(pid, th) + (rid && concerns(rid, th) ? 1 : 0) + (isHot(g, th) ? 1 : 0);
+  }
+  /* Le meilleur thème d'un parti pour une région (sert aux choix par défaut et à l'IA) */
+  function bestTheme(g, pid, rid) {
+    var best = null, bv = -1;
+    D.THEMES.forEach(function (t) { var v = impact(g, pid, rid, t.id); if (v > bv) { bv = v; best = t.id; } });
+    return best;
+  }
+  function terrainCubes(g, pid, rid, th) {
+    var n = R.terrainCubes[impact(g, pid, rid, th)];
+    if (pid === 'SM' && cubes(g, rid, pid) >= 5) n += 1;
+    return n;
+  }
+  function mediaCubes(g, pid, rid, th) {
+    var n = R.mediaCubes[impact(g, pid, rid, th)], prof = REG[rid].profile;
+    if (n > 0 && pid === 'VP' && prof === 'urbaine') n++;
+    if (n > 0 && pid === 'MN' && prof === 'industrielle') n++;
+    return n;
+  }
+  /* Nouveau tour : un thème fait l'actu (celui de l'événement, sinon au hasard), plus les thèmes imposés */
+  function pickNews(g, evId) {
+    var ev = D.EVENTS.filter(function (e) { return e.id === evId; })[0];
+    var th = ev && ev.theme ? ev.theme : D.THEMES[Math.floor(g.rng() * D.THEMES.length)].id;
+    var lines = D.HEADLINES[th];
+    g.news = { theme: th, headline: lines[Math.floor(g.rng() * lines.length)], imposed: (g.nextHot || []).slice() };
+    g.hot = [th];
+    g.news.imposed.forEach(function (x) { if (g.hot.indexOf(x.theme) < 0) g.hot.push(x.theme); });
+    g.nextHot = [];
+  }
 
   function addCubes(g, rid, pid, n) {
     var c = g.regions[rid].cubes;
@@ -113,7 +150,7 @@
     var objs = shuffle(D.OBJECTIVES.map(function (o) { return o.id; }), rng);
     var g = {
       seed: seed, rng: rng, turn: 0, phase: 'setup', winner: null, over: false, result: null,
-      alliances: {}, betrayed: {}, offers: [],
+      alliances: {}, betrayed: {}, offers: [], hot: [], nextHot: [], news: null,
       players: ids.map(function (id, i) {
         var p = PARTY[id];
         return { id: id, human: id === humanParty, money: p.money, infl: p.infl,
@@ -140,12 +177,14 @@
       });
     }
     var em = player(g, 'EM');
-    if (em && g.turn >= 4 && g.turn % 2 === 0) {
+    if (em && (g.turn === 4 || g.turn === 7)) {
       var rid = strongestRegion(g, 'EM');
       if (rid) { addCubes(g, rid, 'EM', -1); out.usure = rid; g.log.push({ pid: 'EM', text: 'Usure du pouvoir : −1 cube en ' + REG[rid].name }); }
     }
     var evId = g.events[(g.turn - 1) % g.events.length];
     g.event = evId;
+    pickNews(g, evId);
+    out.news = g.news;
     out.event = { id: evId, effects: applyEvent(g, evId) };
     updateAllControl(g);
     g.phase = 'actions';
@@ -216,6 +255,8 @@
     }
     var def = D.ACTIONS[act.type];
     if (def.target === 'region' && !act.region) return 'Choisis une région.';
+    if (def.theme && !THEME[act.theme]) return 'Choisis un thème.';
+    if (act.type === 'imposer' && g.turn >= R.maxTurns) return 'Plus de tour suivant : la campagne est finie.';
     if (act.type === 'alliance') return allianceError(g, pid, act.target);
     if (act.type === 'rupture' && !allyOf(g, pid)) return 'Tu n’as pas d’allié.';
     if (act.type === 'contre' && cubes(g, act.region, pid) < 1) return 'Il faut au moins 1 cube dans la région.';
@@ -295,9 +336,9 @@
       .map(function (r) { return { id: r.id, v: gain(g, pid, r.id, k || 1) }; })
       .sort(function (a, b) { return b.v - a.v; }).slice(0, n).map(function (x) { return x.id; });
   }
-  function mediaRegions(g, pid, rid) {
-    var prof = REG[rid].profile;
-    var others = bestRegions(g, pid, 2, function (r) { return r.profile === prof; }, 1, [rid]);
+  /* Médias : la région choisie + les régions les plus intéressantes parmi celles que le thème préoccupe */
+  function mediaRegions(g, pid, rid, th) {
+    var others = bestRegions(g, pid, R.mediaRegions - 1, function (r) { return concerns(r.id, th); }, 1, [rid]);
     return [rid].concat(others);
   }
 
@@ -305,7 +346,7 @@
   function resolveOne(g, pid, act) {
     var pl = player(g, pid), P = PARTY[pid];
     var name = act.type === 'card' ? D.CARDS[act.card].name : D.ACTIONS[act.type].name;
-    var entry = { pid: pid, action: name, region: act.region || null, target: act.target || null, text: '', ok: true };
+    var entry = { pid: pid, action: name, region: act.region || null, target: act.target || null, theme: act.theme || null, text: '', ok: true };
     if (g.cancel[pid]) { g.cancel[pid] = false; entry.ok = false; entry.text = 'Annulée par le 49.3 !'; return entry; }
     var err = checkAction(g, pid, act);
     if (err) { entry.ok = false; entry.text = 'Échoue : ' + err; return entry; }
@@ -316,15 +357,15 @@
     var t = [];
     switch (act.type) {
       case 'terrain': {
-        var n = 2; if (pid === 'SM' && cubes(g, act.region, pid) >= 5) n = 3;
-        n = addCubes(g, act.region, pid, n); t.push('+' + n + ' en ' + rn);
+        var imp = impact(g, pid, act.region, act.theme);
+        var n = addCubes(g, act.region, pid, terrainCubes(g, pid, act.region, act.theme));
+        t.push('impact ' + imp + ' : +' + n + ' en ' + rn);
         var pc = poach(g, pid, act.region, true); if (pc) t.push('récupère 1 électeur de ' + PARTY[pc].short);
         break; }
       case 'medias': {
-        mediaRegions(g, pid, act.region).forEach(function (rid) {
-          var prof = REG[rid].profile, n = 1;
-          if (pid === 'VP' && prof === 'urbaine') n++;
-          if (pid === 'MN' && prof === 'industrielle') n++;
+        mediaRegions(g, pid, act.region, act.theme).forEach(function (rid) {
+          var n = mediaCubes(g, pid, rid, act.theme);
+          if (!n) { t.push('0 ' + REG[rid].name + ' (message inaudible)'); return; }
           n = addCubes(g, rid, pid, n);
           var pc2 = poach(g, pid, rid, false);
           t.push('+' + n + ' ' + REG[rid].name + (pc2 ? ' (+1 de ' + pc2 + ')' : ''));
@@ -333,6 +374,7 @@
         var d = 1 + Math.floor(g.rng() * 6);
         if (pid === 'FI' && d <= 2) { var d2 = 1 + Math.floor(g.rng() * 6); t.push('dé ' + d + ', relancé'); d = d2; }
         var m = d === 1 ? -1 : d <= 3 ? 1 : d <= 5 ? 2 : 4;
+        if (isHot(g, act.theme)) m += R.socialHotBonus;
         var got = addCubes(g, act.region, pid, m);
         t.push('dé ' + d + (d === 6 ? ' VIRAL' : d === 1 ? ' bad buzz' : '') + ' : ' + (got >= 0 ? '+' : '') + got + ' en ' + rn); break; }
       case 'contre': {
@@ -341,6 +383,9 @@
         if (rival === 'UG' && REG[act.region].profile === 'historique') n2 = Math.max(0, Math.min(2, cubes(g, act.region, 'UG') - 2));
         var lost = -addCubes(g, act.region, rival, -n2);
         t.push(PARTY[rival].short + ' −' + lost + ' en ' + rn); break; }
+      case 'imposer': {
+        if (!g.nextHot.some(function (x) { return x.theme === act.theme; })) g.nextHot.push({ theme: act.theme, pid: pid });
+        t.push(THEME[act.theme].name + ' fera l’actu au prochain tour'); break; }
       case 'fonds': {
         var f = pid === 'EM' ? 4 : pid === 'VP' ? 2 : 3; pl.money += f; if (pid === 'EM') pl.infl += 1; t.push('+' + f + ' €' + (pid === 'EM' ? ' +1 ★' : '')); break; }
       case 'reforme': {
@@ -522,7 +567,8 @@
     actionCost: actionCost, checkAction: checkAction, mediaRegions: mediaRegions, gain: gain, bestRegions: bestRegions,
     controlledPoints: controlledPoints, controlledRegions: controlledRegions, totalCubes: totalCubes, ranking: ranking,
     leader: leader, cubes: cubes, minControl: minControl, player: player, rivalIn: rivalIn, strongestRegion: strongestRegion,
-    REG: REG, PARTY: PARTY, makeRng: makeRng
+    impact: impact, cred: cred, isHot: isHot, concerns: concerns, bestTheme: bestTheme, terrainCubes: terrainCubes, mediaCubes: mediaCubes,
+    REG: REG, PARTY: PARTY, THEME: THEME, makeRng: makeRng
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;
   else root.PolitikEngine = API;

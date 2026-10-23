@@ -189,3 +189,52 @@ button { font-family: inherit; color: inherit; }
 .vote-row b { text-align: right; }
 .transfers p { margin: 4px 0; font-size: 12px; color: var(--ink-2); }
 .end-table .kicker { color: var(--muted); }
+
+/* v0.3 : thèmes de campagne */
+.news { margin: 6px 14px 0; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-height: 30px; padding: 4px 10px; background: var(--ink); color: var(--paper); border: 0; border-radius: 10px; font: 700 12px var(--body); text-align: left; cursor: pointer; }
+.news[hidden] { display: none; }
+.news-k { background: var(--yellow); color: var(--ink); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; padding: 2px 6px; border-radius: 4px; }
+.news-k::before { content: '🔥 '; }
+.news-plus { opacity: .6; }
+.map .concern { fill: none; stroke: var(--ink); stroke-width: 1.8; stroke-dasharray: 3.5 2.5; stroke-linejoin: round; pointer-events: none; }
+
+.themes { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; }
+.theme { position: relative; min-height: 46px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 3px 1px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--paper); cursor: pointer; color: var(--ink); }
+.theme-i { font-size: 15px; line-height: 1; }
+.theme-n { font-size: 9px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.theme-imp { position: absolute; top: -6px; right: -3px; min-width: 17px; height: 17px; border-radius: 9px; background: var(--white); border: 1.5px solid var(--ink); font-size: 10px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+.theme.fit { border-color: var(--ink); border-style: dashed; }
+.theme.hot { background: #FFF1B0; }
+.theme.hot::after { content: '🔥'; position: absolute; top: 2px; left: 3px; font-size: 9px; }
+.theme.on { background: var(--ink); color: var(--paper); border: 1.5px solid var(--ink); box-shadow: 2px 2px 0 var(--yellow); }
+.theme.on .theme-imp { background: var(--yellow); }
+.dots { display: inline-flex; gap: 2px; }
+.dots i { width: 6px; height: 6px; border-radius: 50%; border: 1px solid currentColor; opacity: .5; }
+.dots i.on { background: currentColor; opacity: 1; }
+
+.actions { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.act .pv { font-style: normal; background: var(--yellow); border: 1px solid var(--ink); border-radius: 5px; padding: 0 3px; font-size: 11px; margin-left: 2px; }
+.act-impose { border-style: dashed; }
+
+.concerns { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.concerns-k { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); }
+.concern-tag { font-size: 11px; font-weight: 700; border: 1.5px dashed var(--ink); border-radius: 6px; padding: 1px 5px; }
+.concern-tag.hot { background: var(--yellow); border-style: solid; }
+
+.cred { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 10px; }
+.cred-row { display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; }
+.cred-row .dots { margin-left: auto; }
+.cred-row em { font-style: normal; font-size: 9px; text-transform: uppercase; color: var(--muted); width: 36px; text-align: right; }
+.cred-0 { opacity: .55; }
+
+.paper { background: #FBF8F0; border: 2px solid var(--ink); border-radius: 4px; padding: 10px 12px; box-shadow: 4px 4px 0 var(--ink); display: flex; flex-direction: column; gap: 6px; }
+.paper-mast { font-family: var(--display); font-size: 14px; letter-spacing: 2px; border-bottom: 3px double var(--ink); padding-bottom: 4px; }
+.paper-mast span { font-family: var(--body); font-size: 10px; letter-spacing: 0; color: var(--muted); }
+.paper-head { font-family: var(--display); font-size: 25px; line-height: 1.05; }
+.paper-foot { font-size: 12px; border-top: 1px solid var(--line); padding-top: 5px; }
+
+@media (max-height: 700px) {
+  .theme { min-height: 38px; }
+  .theme-n { display: none; }
+  .news { margin-top: 4px; min-height: 26px; }
+}

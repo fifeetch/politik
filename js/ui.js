@@ -8,6 +8,7 @@
   var SVGNS = 'http://www.w3.org/2000/svg';
 
   var g = null, me = null, chosen = 'VP', selected = null, queue = [];
+  var theme = null, themePicked = false;   // v0.3 : le message (thème) choisi pour les actions
   var T = window.PolitikTuto, forceTuto = false, tutoGame = false;
 
   function $(id) { return document.getElementById(id); }
@@ -33,6 +34,18 @@
     return '<div class="axis"><span class="axis-l">gauche</span>' + cells + '<span class="axis-l">droite</span></div>';
   }
   function chanceLabel(c) { return c >= 0.7 ? 'probable' : c >= 0.45 ? 'incertain' : 'peu probable'; }
+  function th(id) { return E.THEME[id]; }
+  function credDots(n) { return '<span class="dots">' + [0, 1].map(function (i) { return '<i class="' + (i < n ? 'on' : '') + '"></i>'; }).join('') + '</span>'; }
+  function credHtml(pid) {
+    var lv = ['faible', 'moyen', 'fort'];
+    return '<div class="cred">' + D.THEMES.slice().sort(function (a, b) { return E.cred(pid, b.id) - E.cred(pid, a.id); }).map(function (t) {
+      var c = E.cred(pid, t.id);
+      return '<span class="cred-row cred-' + c + '">' + t.icon + ' ' + esc(t.name) + credDots(c) + '<em>' + lv[c] + '</em></span>';
+    }).join('') + '</div>';
+  }
+  function concernsHtml(rid) {
+    return E.REG[rid].concerns.map(function (x) { return '<span class="concern-tag' + (E.isHot(g, x) ? ' hot' : '') + '">' + th(x).icon + ' ' + esc(th(x).short) + '</span>'; }).join('');
+  }
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
 
   /* ---------- Écrans ---------- */
@@ -86,7 +99,7 @@
       grid.appendChild(b);
     });
     var p = party(chosen);
-    $('party-detail').innerHTML = axisHtml(p.id) +
+    $('party-detail').innerHTML = axisHtml(p.id) + '<div><b>Crédibilité sur les thèmes.</b> Plus tu es crédible sur un thème, plus ton message porte.</div>' + credHtml(p.id) +
       (p.pos === 1 || p.pos === 6 ? '<div><b>Électorat mobilisé.</b> Au bout de l\'axe : tes voix comptent ×' + R.edgeMobilization + ', mais les reports de second tour seront rares. Pense aux alliances !</div>' : '') +
       '<div><b>Force.</b> ' + esc(p.force) + '</div><div><b>Faiblesse.</b> ' + esc(p.weakness) +
       '</div><div><b>Bases.</b> ' + p.bases.map(function (r) { return E.REG[r].name; }).join(', ') +
@@ -96,7 +109,7 @@
 
   /* ---------- Partie ---------- */
   function startGame(pid) {
-    g = E.createGame(pid); me = pid; selected = null; queue = [];
+    g = E.createGame(pid); me = pid; selected = null; queue = []; theme = null; themePicked = false;
     go('game');
     nextTurn();
   }
@@ -104,7 +117,7 @@
 
   function nextTurn() {
     var info = E.startTurn(g);
-    queue = [];
+    queue = []; themePicked = false; theme = E.bestTheme(g, me, selected);
     render();
     var ev = D.EVENTS.filter(function (e) { return e.id === info.event.id; })[0];
     var html = '';
@@ -113,6 +126,7 @@
       html += '<p>Revenus : <b>+' + mine.money + ' €</b> et <b>+' + mine.infl + ' ★</b>.</p>';
     }
     if (info.usure) html += '<p>' + chip('EM') + ' Usure du pouvoir : En Mouvement perd 1 cube en ' + esc(E.REG[info.usure].name) + '.</p>';
+    html += newsHtml(g.news);
     html += '<div class="event-card"><span class="kicker">Événement</span><div class="h2">' + esc(ev.title) + '</div><p>' + esc(ev.text) + '</p></div>';
     var fx = info.event.effects.filter(function (f) { return f.pid; });
     if (fx.length) html += '<div class="log">' + fx.map(function (f) { return '<div class="log-row">' + chip(f.pid) + '<span>' + esc(f.text) + '</span></div>'; }).join('') + '</div>';
@@ -123,6 +137,27 @@
               if (g.turn === 1 && (forceTuto || !T.isActive())) { var before = T.isActive(); T.maybeStart(forceTuto); tutoGame = !before && T.isActive(); forceTuto = false; }
             } }] });
   }
+
+  /* La Une du tour : le thème qui fait l'actu (+ ceux imposés par les partis) */
+  function newsHtml(n) {
+    if (!n) return '';
+    var t = th(n.theme), mine = E.cred(me, n.theme);
+    var h = '<div class="paper"><div class="paper-mast">LE QUOTIDIEN NATIONAL <span>· Tour ' + g.turn + '</span></div>' +
+      '<div class="paper-head">' + esc(n.headline) + '</div>' +
+      '<div class="paper-foot">' + t.icon + ' <b>' + esc(t.name) + '</b> fait l\'actu : +1 d\'impact pour tous les messages sur ce thème.</div>';
+    n.imposed.forEach(function (x) {
+      if (x.theme === n.theme) return;
+      h += '<div class="paper-foot">' + th(x.theme).icon + ' <b>' + esc(th(x.theme).name) + '</b> s\'impose aussi dans le débat, grâce à ' + (x.pid === me ? 'toi' : esc(party(x.pid).short)) + '.</div>';
+    });
+    h += '</div><p class="hint">' + (mine === 2 ? 'Tu es très crédible sur ce thème : c\'est ton moment !' : mine === 1 ? 'Tu es moyennement crédible sur ce thème.' : 'Ce n\'est pas ton sujet… À toi de voir si tu suis l\'actu ou si tu parles d\'autre chose.') + '</p>';
+    return h;
+  }
+  function renderNews() {
+    var b = $('news'); if (!g || !g.news) { b.hidden = true; return; }
+    b.hidden = false;
+    b.innerHTML = '<span class="news-k">À la une</span>' + g.hot.map(function (x) { return '<span class="news-t">' + th(x).icon + ' ' + esc(th(x).name) + '</span>'; }).join('<span class="news-plus">+</span>');
+  }
+  $('news').addEventListener('click', function () { if (g && g.news) modal({ kicker: 'Actualité', title: 'À la une ce tour', html: newsHtml(g.news) }); });
 
   /* Ressources projetées après les actions déjà programmées */
   function projected() {
@@ -159,7 +194,7 @@
     $('phase-label').textContent = E.isDebateTurn(g) ? 'Actions · débat ce tour' : 'Actions';
     $('res-money').textContent = '€ ' + pr.money + (pr.money !== pl.money ? ' / ' + pl.money : '');
     $('res-infl').textContent = '★ ' + pr.infl + (pr.infl !== pl.infl ? ' / ' + pl.infl : '');
-    renderRace(); renderMap(); renderRegion(); renderQueue(); renderActions();
+    renderRace(); renderNews(); renderMap(); renderRegion(); renderQueue(); renderThemes(); renderActions();
   }
   function renderRace() {
     var bar = $('race-bar'), leg = $('race-legend'); bar.innerHTML = ''; leg.innerHTML = '';
@@ -176,9 +211,13 @@
     D.REGIONS.forEach(function (r) {
       var c = g.regions[r.id].controller;
       var p = svg('path', { d: M.regions[r.id].d, class: 'reg', fill: c ? party(c).color : NEUTRAL, tabindex: 0, role: 'button', 'aria-label': r.name });
-      p.addEventListener('click', function () { selected = r.id; render(); T.notify('region'); });
-      p.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selected = r.id; render(); T.notify('region'); } });
+      p.addEventListener('click', function () { selectRegion(r.id); });
+      p.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectRegion(r.id); } });
       s.appendChild(p);
+    });
+    // régions que ton message (thème) préoccupe : contour pointillé
+    if (theme) D.REGIONS.forEach(function (r) {
+      if (E.concerns(r.id, theme)) s.appendChild(svg('path', { d: M.regions[r.id].d, class: 'concern' }));
     });
     if (selected) {
       s.appendChild(svg('path', { d: M.regions[selected].d, class: 'sel' }));
@@ -201,19 +240,26 @@
       var t = svg('text', { x: x, y: y + 3, class: 'plan-num' }); t.textContent = i + 1; s.appendChild(t);
     });
   }
+  function selectRegion(rid) {
+    selected = rid;
+    if (!themePicked) theme = E.bestTheme(g, me, rid);
+    render(); T.notify('region');
+  }
   function renderRegion() {
     var box = $('region-info');
     if (!selected) {
       var o = D.OBJECTIVES.filter(function (x) { return x.id === mePl().objective; })[0];
       box.innerHTML = '<div class="region-head"><div><h2 class="region-name">Touche une région</h2><span class="region-sub">pour voir les forces en présence et agir</span></div>' +
         '<span class="tag" style="background:' + party(me).color + ';color:' + party(me).ink + '">' + esc(party(me).short) + '</span></div>' +
-        '<div class="hint">Objectif secret : <b>' + esc(o.name) + '</b> — ' + esc(o.text) + ' (+' + o.bonus + ').</div>';
+        '<div class="hint">Objectif secret : <b>' + esc(o.name) + '</b> — ' + esc(o.text) + ' (+' + o.bonus + ').</div>' +
+        '<div class="hint">En pointillé : les régions préoccupées par ton message.</div>';
       return;
     }
     var r = E.REG[selected], reg = g.regions[selected], c = reg.controller;
     var status = c ? 'contrôlée par ' + (c === me ? 'toi' : party(c).short) : 'non contrôlée';
     var html = '<div class="region-head"><div><h2 class="region-name">' + esc(r.name) + '</h2><span class="region-sub">' + D.PROFILES[r.profile] + ' · ' + r.pts + ' pts · ' + status + '</span></div>' +
-      (c === me ? '<span class="tag" style="background:' + party(me).color + ';color:' + party(me).ink + '">À toi</span>' : '<span class="tag tag-yellow">À prendre</span>') + '</div>';
+      (c === me ? '<span class="tag" style="background:' + party(me).color + ';color:' + party(me).ink + '">À toi</span>' : '<span class="tag tag-yellow">À prendre</span>') + '</div>' +
+      '<div class="concerns"><span class="concerns-k">Préoccupations</span>' + concernsHtml(selected) + '</div>';
     g.players.slice().sort(function (a, b) { return E.cubes(g, selected, b.id) - E.cubes(g, selected, a.id); }).forEach(function (p) {
       var n = E.cubes(g, selected, p.id), P = party(p.id), cubes = '';
       for (var i = 0; i < R.maxCubes; i++) cubes += '<i class="cube' + (i < n ? ' on' : '') + '"' + (i < n ? ' style="background:' + P.color + '"' : '') + '></i>';
@@ -232,7 +278,7 @@
       var a = queue[i];
       if (!a) { box.appendChild(el('div', { class: 'slot' }, 'Action ' + (i + 1))); continue; }
       var name = a.type === 'card' ? D.CARDS[a.card].name : D.ACTIONS[a.type].name;
-      var sub = a.region ? SHORT[a.region] : a.target ? a.target : '✕ retirer';
+      var sub = (a.theme ? th(a.theme).icon + ' ' : '') + (a.region ? SHORT[a.region] : a.target ? a.target : a.theme ? th(a.theme).short : '✕ retirer');
       var b = el('button', { class: 'slot full', type: 'button', 'aria-label': 'Retirer ' + name }, esc(name) + '<small>' + sub + '</small>');
       (function (idx) { b.addEventListener('click', function () { queue.splice(idx, 1); render(); }); })(i);
       box.appendChild(b);
@@ -247,11 +293,34 @@
     if (act.type === 'reseaux') parts.push('dé');
     return parts.join(' + ') || 'gratuit';
   }
+  /* Effet prévu d'une action, affiché sur son bouton */
+  function preview(act) {
+    if (act.type === 'terrain' && act.region) return '+' + E.terrainCubes(g, me, act.region, act.theme);
+    if (act.type === 'medias' && act.region) {
+      var tot = 0; E.mediaRegions(g, me, act.region, act.theme).forEach(function (rid) { tot += E.mediaCubes(g, me, rid, act.theme); });
+      return '+' + tot;
+    }
+    if (act.type === 'reseaux' && E.isHot(g, act.theme)) return '+1';
+    return '';
+  }
+  function renderThemes() {
+    var box = $('themes'); box.innerHTML = '';
+    D.THEMES.forEach(function (t) {
+      var imp = E.impact(g, me, selected, t.id), on = t.id === theme;
+      var cls = 'theme' + (on ? ' on' : '') + (E.isHot(g, t.id) ? ' hot' : '') + (selected && E.concerns(selected, t.id) ? ' fit' : '');
+      var b = el('button', { class: cls, type: 'button', role: 'radio', 'aria-checked': on, 'aria-label': t.name + (selected ? ', impact ' + imp : '') },
+        '<span class="theme-i">' + t.icon + '</span><span class="theme-n">' + esc(t.short) + '</span>' + (selected ? '<span class="theme-imp">' + imp + '</span>' : credDots(E.cred(me, t.id))));
+      b.addEventListener('click', function () { theme = t.id; themePicked = true; render(); T.notify('theme'); });
+      box.appendChild(b);
+    });
+  }
   function renderActions() {
     var box = $('actions'); box.innerHTML = '';
-    ['terrain', 'medias', 'reseaux', 'contre', 'fonds', 'reforme'].forEach(function (type) {
-      var def = D.ACTIONS[type], act = { type: type, region: def.target ? selected : undefined };
-      var b = el('button', { class: 'act', type: 'button', title: def.text }, '<b>' + def.name + '</b><span>' + costLabel(act) + '</span>');
+    ['terrain', 'medias', 'reseaux', 'imposer', 'contre', 'fonds', 'reforme'].forEach(function (type) {
+      var def = D.ACTIONS[type], act = { type: type, region: def.target === 'region' ? selected : undefined };
+      if (def.theme) act.theme = theme;
+      var pv = preview(act);
+      var b = el('button', { class: 'act' + (type === 'imposer' ? ' act-impose' : ''), type: 'button', title: def.text }, '<b>' + def.name + (pv ? ' <i class="pv">' + pv + '</i>' : '') + '</b><span>' + costLabel(act) + '</span>');
       if (def.target && !selected) b.disabled = true;
       else if (canQueue(act)) b.style.opacity = '.55';
       b.addEventListener('click', function () { addAction(act); });
@@ -309,7 +378,7 @@
     var log = E.resolveActions(g, plans);
     queue = []; render();
     var html = '<div class="log">' + log.map(function (l) {
-      return '<div class="log-row' + (l.ok ? '' : ' fail') + '">' + chip(l.pid) + '<span><b>' + esc(l.action) + '</b>' + (l.region ? ' · ' + SHORT[l.region] : '') + ' — ' + esc(l.text) + '</span></div>';
+      return '<div class="log-row' + (l.ok ? '' : ' fail') + '">' + chip(l.pid) + '<span><b>' + esc(l.action) + '</b>' + (l.theme ? ' ' + th(l.theme).icon : '') + (l.region ? ' · ' + SHORT[l.region] : '') + ' — ' + esc(l.text) + '</span></div>';
     }).join('') + '</div>';
     var after = E.isDebateTurn(g) ? debate : spotlight;
     modal({ kicker: 'Tour ' + g.turn, title: 'Résultats des actions', html: html,
@@ -407,18 +476,19 @@
   /* ---------- Menu & règles ---------- */
   $('btn-menu').addEventListener('click', function () {
     var o = D.OBJECTIVES.filter(function (x) { return x.id === mePl().objective; })[0], p = party(me);
-    modal({ kicker: 'Ton parti', title: p.name, html: '<p><b>Objectif secret :</b> ' + esc(o.name) + ' — ' + esc(o.text) + ' (+' + o.bonus + ' pts).</p><p><b>Force :</b> ' + esc(p.force) + '</p><p><b>Faiblesse :</b> ' + esc(p.weakness) + '</p>',
+    modal({ kicker: 'Ton parti', title: p.name, html: '<p><b>Objectif secret :</b> ' + esc(o.name) + ' — ' + esc(o.text) + ' (+' + o.bonus + ' pts).</p><p><b>Force :</b> ' + esc(p.force) + '</p><p><b>Faiblesse :</b> ' + esc(p.weakness) + '</p>' + credHtml(me),
             buttons: [{ label: 'Reprendre', primary: true }, { label: 'Règles du jeu', onClick: showRules }, { label: 'Abandonner la partie', onClick: function () { g = null; go('title'); } }] });
   });
   function showRules() {
-    modal({ kicker: 'Règles v0.2', title: 'Comment gagner', html:
+    modal({ kicker: 'Règles v0.3', title: 'Comment gagner', html:
       '<p><b>But :</b> remporter l\'élection présidentielle à la fin des <b>8 tours de campagne</b>. Chaque région vote selon ses cubes, pondérée par sa population (ses points). Le parti qui contrôle une région y gagne un petit bonus.</p>' +
       '<p><b>Premier tour :</b> plus de 50 % des voix = élu directement. Sinon, les deux premiers vont au <b>second tour</b>, et les électeurs des autres partis se reportent selon leur proximité politique (alliés : 85 %).</p>' +
       axisHtml(me || chosen) +
       '<p><b>Partis proches :</b> quand tu fais campagne (Terrain, Médias) là où un parti voisin sur l\'axe est présent, tu lui prends 1 électeur (distance 2 : sur un dé de 4 à 6).</p>' +
       '<p><b>Alliances :</b> 1 ★ et 1 action, avec un parti à distance 2 au plus. Entre alliés, pas d\'attaque ni de vol d\'électeurs. Rompre coûte 2 ★ et ruine les reports.</p>' +
       '<p><b>Chaque tour :</b> revenus (4 € + 1 € par région contrôlée, max +3 ; +2 ★), un événement, puis <b>3 actions secrètes</b> jouées par tous en même temps.</p>' +
-      '<p><b>Actions :</b> Terrain (2 € : +2 cubes) · Médias (3 € + 1 ★ : +1 cube dans 3 régions du même profil) · Réseaux (1 € : un dé, de −1 à +4) · Contre-campagne (2 € + 1 ★ : −2 cubes au rival le plus fort) · Fonds (+3 €) · Réforme (4 ★) · Alliance (1 ★). Plus 2 cartes spéciales par parti.</p>' +
+      '<p><b>Ton message.</b> Terrain, Médias, Réseaux et Imposer portent un <b>thème</b> (💶 🏭 🏥 🌿 🚓 🛂). Son <b>impact</b>, de 0 à 4 = ta crédibilité sur le thème (0 à 2) + 1 si la région s\'en préoccupe + 1 si le thème fait l\'actu. Le bon message au bon endroit rapporte deux fois plus.</p>' +
+      '<p><b>Actions :</b> Terrain (2 € : impact 0-1 → +1 cube, 2 → +2, 3 → +3, 4 → +4) · Médias (3 € + 1 ★ : la région choisie et les 2 autres les plus concernées par le thème ; +1 cube chacune, +2 si impact 4, rien si impact 0) · Réseaux (1 € : un dé, de −1 à +4, +1 si le thème fait l\'actu) · Imposer (2 € + 2 ★ : ton thème fera l\'actu au tour suivant, pour tout le monde) · Contre-campagne (2 € + 1 ★ : −2 cubes au rival le plus fort) · Fonds (+3 €) · Réforme (4 ★) · Alliance (1 ★). Plus 2 cartes spéciales par parti.</p>' +
       '<p><b>Débats</b> aux tours 3, 6 et 8. <b>Sous les projecteurs :</b> le premier des sondages paie 2 ★ ou perd des cubes à chaque fin de tour.</p>' });
   }
 
