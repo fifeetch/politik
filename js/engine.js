@@ -56,30 +56,77 @@
     return best;
   }
   /* ---------- v0.7 : le programme ---------- */
-  var MEAS = {}; D.MEASURES.forEach(function (m) { MEAS[m.id] = m; });
+  var MEAS = {}; D.MEASURES.concat(D.FUNDING).forEach(function (m) { MEAS[m.id] = m; });
   function baseCred(pid, th) { return Math.max(0, ((PARTY[pid].cred || {})[th] || 0) - 1); }
   /* Crédibilité qu'un programme donnerait : socle du parti + 1 par mesure sur le thème (2 au plus) */
   function programmeCred(pid, ids) {
     var c = {};
     D.THEMES.forEach(function (t) { c[t.id] = baseCred(pid, t.id); });
-    (ids || []).forEach(function (id) { var m = MEAS[id]; if (m) c[m.theme] = Math.min(2, c[m.theme] + 1); });
+    (ids || []).forEach(function (id) { var m = MEAS[id]; if (m && m.theme) c[m.theme] = Math.min(2, c[m.theme] + 1); });
     return c;
   }
   function programmeCost(ids) { var s = 0; (ids || []).forEach(function (id) { s += MEAS[id] ? MEAS[id].cost : 0; }); return s; }
   /* Fixe le programme d'un parti (ids[0] = mesure phare). À appeler avant le 1er tour. */
-  function setProgramme(g, pid, ids) {
+  function setProgramme(g, pid, ids, fin) {
     var pl = player(g, pid);
     pl.programme = ids.slice(0, R.programmeSize);
+    pl.financing = (fin || PARTY[pid].financing || []).slice(0, R.fundingMax);
     pl.phare = pl.programme[0];
     pl.cred = programmeCred(pid, pl.programme);
-    pl.budget = programmeCost(pl.programme);
+    pl.budget = programmeCost(pl.programme.concat(pl.financing));
+    pl.echoCache = null; pl.echoRank = null;
+  }
+  /* v0.8 : ce que chaque groupe de population pense d'un ensemble de mesures (somme des « fans ») */
+  function segmentAppeal(ids) {
+    var a = {}; D.SEGMENTS.forEach(function (sg) { a[sg.id] = 0; });
+    (ids || []).forEach(function (id) { var m = MEAS[id]; if (m && m.fans) Object.keys(m.fans).forEach(function (k) { a[k] += m.fans[k]; }); });
+    return a;
+  }
+  /* Écho d'un programme dans une région = attrait pour chaque groupe × part du groupe dans la région (Insee) */
+  /* Moyenne nationale de chaque groupe (pondérée par le poids des régions) */
+  var NATPOP = (function () {
+    var n = {}, w = 0; D.SEGMENTS.forEach(function (sg) { n[sg.id] = 0; });
+    D.REGIONS.forEach(function (r) { w += r.pts; D.SEGMENTS.forEach(function (sg) { n[sg.id] += r.pop[sg.id] * r.pts; }); });
+    D.SEGMENTS.forEach(function (sg) { n[sg.id] /= w; });
+    return n;
+  })();
+  /* Écho : le programme rapporte plus là où les groupes qu'il séduit sont plus nombreux que la moyenne nationale */
+  function echoOf(ids, rid) {
+    var a = segmentAppeal(ids), pop = REG[rid].pop, e = 0;
+    D.SEGMENTS.forEach(function (sg) { e += a[sg.id] * (pop[sg.id] - NATPOP[sg.id]) / R.echoScale; });
+    return e;
+  }
+  function echo(g, pid, rid) {
+    var pl = player(g, pid);
+    if (!pl || !pl.programme) return 0;
+    if (!pl.echoCache) { pl.echoCache = {}; D.REGIONS.forEach(function (r) { pl.echoCache[r.id] = echoOf(pl.programme.concat(pl.financing || []), r.id); }); }
+    return pl.echoCache[rid];
+  }
+  /* Chaque programme a ses régions de cœur (+1 cube en Meeting) et ses régions hostiles (−1) */
+  function echoRanks(g, pid) {
+    var pl = player(g, pid);
+    if (!pl || !pl.programme) return null;
+    if (!pl.echoRank) {
+      var order = D.REGIONS.slice().sort(function (a, b) { return echo(g, pid, b.id) - echo(g, pid, a.id); }).map(function (r) { return r.id; });
+      pl.echoRank = { good: order.slice(0, R.echoGoodN), bad: order.slice(-R.echoBadN) };
+    }
+    return pl.echoRank;
+  }
+  function echoBonus(g, pid, rid) {
+    var k = echoRanks(g, pid); if (!k) return 0;
+    return k.good.indexOf(rid) >= 0 ? 1 : k.bad.indexOf(rid) >= 0 ? -1 : 0;
   }
   /* Au 1er tour : mesures choc et budget non financé produisent leurs effets */
   function applyProgrammes(g) {
     var out = [];
     g.players.forEach(function (pl) {
       if (!pl.programme) setProgramme(g, pl.id, PARTY[pl.id].programme);
-      var o = { pid: pl.id, budget: pl.budget, over: Math.max(0, pl.budget - R.budgetCap), cas: 0, choc: [] };
+      pl.echoCache = null; pl.echoRank = null;
+      var o = { pid: pl.id, budget: pl.budget, over: Math.max(0, pl.budget - R.budgetCap), cas: 0, choc: [], echo: [] };
+      // le programme plaît : +1 cube dans les 3 régions où il a le plus d'écho
+      D.REGIONS.slice().sort(function (a, b) { return echo(g, pl.id, b.id) - echo(g, pl.id, a.id); }).slice(0, 3).forEach(function (r) {
+        if (echo(g, pl.id, r.id) > 0) { addCubes(g, r.id, pl.id, 1); o.echo.push(r.id); }
+      });
       pl.programme.forEach(function (id) {
         var m = MEAS[id]; if (!m.choc) return;
         bestRegions(g, pl.id, 2, function (r) { return concerns(r.id, m.theme); }, 1).forEach(function (rid) { addCubes(g, rid, pl.id, 1); });
@@ -102,7 +149,9 @@
     if (pid === 'SM' && cubes(g, rid, pid) >= 5) n += 1;
     var pl = player(g, pid);
     if (pl && pl.phare && MEAS[pl.phare].theme === th) n += R.pharBonus;   // mesure phare
+    if (pl && pl.programme) n += echoBonus(g, pid, rid);           // v0.8 : le programme plaît (ou déplaît) aux habitants
     if (pl && pl.momentum) n = Math.max(1, n + pl.momentum);   // dynamique : ±1 cube en Meeting
+    n = Math.max(1, n);
     return n;
   }
   function mediaCubes(g, pid, rid, th) {
@@ -851,7 +900,7 @@
     actionCost: actionCost, checkAction: checkAction, mediaRegions: mediaRegions, gain: gain, bestRegions: bestRegions,
     controlledPoints: controlledPoints, controlledRegions: controlledRegions, totalCubes: totalCubes, ranking: ranking,
     leader: leader, cubes: cubes, minControl: minControl, player: player, rivalIn: rivalIn, strongestRegion: strongestRegion,
-    setProgramme: setProgramme, programmeCred: programmeCred, programmeCost: programmeCost, measure: measure, MEAS: MEAS,
+    NATPOP: NATPOP, setProgramme: setProgramme, segmentAppeal: segmentAppeal, echoOf: echoOf, echo: echo, echoBonus: echoBonus, echoRanks: echoRanks, programmeCred: programmeCred, programmeCost: programmeCost, measure: measure, MEAS: MEAS,
     resolveAffair: resolveAffair, enqueteChance: enqueteChance, affairDef: affairDef,
     resolveDilemma: resolveDilemma, dilemmaDef: dilemmaDef, applyFx: applyFx, markerAt: markerAt, hotHere: hotHere, crisisAct: crisisAct,
     impact: impact, cred: cred, isHot: isHot, concerns: concerns, bestTheme: bestTheme, terrainCubes: terrainCubes, mediaCubes: mediaCubes,

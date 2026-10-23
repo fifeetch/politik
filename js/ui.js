@@ -111,7 +111,13 @@
   $('btn-start').addEventListener('click', function () { openProgramme(chosen); });
 
   /* ---------- v0.7 : composer son programme ---------- */
-  var progSel = [];
+  var progSel = [], progFin = [];
+  function fansHtml(m) {
+    if (!m.fans) return '';
+    var up = [], down = [];
+    D.SEGMENTS.forEach(function (sg) { var v = m.fans[sg.id] || 0; if (v > 0) up.push(v > 1 ? sg.icon + sg.icon : sg.icon); if (v < 0) down.push(v < -1 ? sg.icon + sg.icon : sg.icon); });
+    return (up.length ? ' · 👍 ' + up.join('') : '') + (down.length ? ' · 👎 ' + down.join('') : '');
+  }
   function fiche(m) {
     var t = th(m.theme);
     return '<p class="fiche-what">' + esc(m.edu.what) + '</p><div class="fiche-pc"><div class="fiche-pro"><b>👍 Pour</b>' + esc(m.edu.pro) + '</div><div class="fiche-con"><b>👎 Contre</b>' + esc(m.edu.con) + '</div></div>' +
@@ -119,19 +125,29 @@
   }
   function costTxt(c) { return c < 0 ? 'rapporte ' + (-c) + ' Md€' : c === 0 ? 'ne coûte rien' : 'coûte ' + c + ' Md€'; }
   function openProgramme(pid) {
-    progSel = party(pid).programme.slice();
+    progSel = party(pid).programme.slice(); progFin = (party(pid).financing || []).slice();
     go('programme'); renderProgramme(pid);
   }
   function renderProgramme(pid) {
-    var p = party(pid), cost = E.programmeCost(progSel), over = cost - R.budgetCap, cr = E.programmeCred(pid, progSel);
+    var p = party(pid), all = progSel.concat(progFin), cr = E.programmeCred(pid, progSel);
+    var dep = 0, rec = 0; all.forEach(function (id) { var c = E.measure(id).cost; if (c > 0) dep += c; else rec -= c; });
+    var reste = dep - rec, over = reste - R.budgetCap;
     $('prog-cand').innerHTML = A.portrait(pid);
     $('prog-sub').textContent = p.candidate + ' · ' + p.name;
-    var pct = Math.max(0, Math.min(100, 100 * cost / (R.budgetCap * 1.6)));
-    $('prog-budget').innerHTML = '<div class="pb-top"><b>Coût : ' + cost + ' Md€</b><span>' + progSel.length + ' / ' + R.programmeSize + ' mesures</span></div>' +
-      '<div class="pb-bar"><i class="' + (over > 0 ? 'over' : '') + '" style="width:' + pct + '%"></i><span class="pb-cap" style="left:' + (100 / 1.6) + '%"></span></div>' +
-      '<div class="pb-msg">' + (over > 0 ? '⚠️ <b>Non financé</b> (+' + over + ' Md€) : ' + Math.ceil(over / R.budgetCasStep) + ' casserole(s), et les économistes vont s\'en mêler.' : '✅ <b>Programme financé</b> (40 Md€ au plus).') +
+    var pct = Math.max(0, Math.min(100, 100 * reste / (R.budgetCap * 2)));
+    // qui aime ton programme, et où
+    var ap = E.segmentAppeal(all);
+    var order = D.REGIONS.slice().sort(function (a, b) { return E.echoOf(all, b.id) - E.echoOf(all, a.id); });
+    var good = order.slice(0, R.echoGoodN), bad = order.slice(-R.echoBadN);
+    $('prog-budget').innerHTML = '<div class="pb-lines"><span>Dépenses nouvelles</span><b>+' + dep + ' Md€</b><span>Recettes et économies</span><b class="pb-rec">−' + rec + ' Md€</b><span><b>Reste à financer</b></span><b>' + reste + ' Md€</b></div>' +
+      '<div class="pb-bar"><i class="' + (over > 0 ? 'over' : '') + '" style="width:' + pct + '%"></i><span class="pb-cap" style="left:50%"></span></div>' +
+      '<div class="pb-msg">' + (over > 0 ? '⚠️ <b>Non financé</b> (+' + over + ' Md€ au-delà de ' + R.budgetCap + ') : ' + Math.ceil(over / R.budgetCasStep) + ' casserole(s), et les économistes vont s\'en mêler.' : '✅ <b>Programme financé</b> (' + R.budgetCap + ' Md€ au plus à trouver).') +
       ' <button type="button" class="linkbtn" data-learn="budget">C\'est quoi, le budget ?</button></div>' +
-      '<div class="pb-note">Les coûts des mesures sont des ordres de grandeur pour le jeu, pas des chiffrages officiels.</div>';
+      '<div class="pb-fans">' + D.SEGMENTS.map(function (sg) { var v = ap[sg.id]; return '<span class="fan ' + (v > 0 ? 'up' : v < 0 ? 'down' : '') + '" title="' + esc(sg.full) + '">' + sg.icon + ' ' + (v > 0 ? '+' : '') + v + '</span>'; }).join('') + '</div>' +
+      '<div class="pb-geo">❤️ <b>Régions de cœur</b> : ' + good.map(function (r) { return esc(SHORT[r.id]); }).join(', ') + ' · 👎 <b>hostiles</b> : ' + bad.map(function (r) { return esc(SHORT[r.id]); }).join(', ') +
+      ' <button type="button" class="linkbtn" data-geo="1">Pourquoi ?</button></div>' +
+      '<div class="pb-note">Les montants sont des ordres de grandeur pour le jeu, pas des chiffrages officiels.</div>';
+    $('prog-budget').querySelector('[data-geo]').addEventListener('click', function () { geoModal(all); });
     var list = $('prog-list'); list.innerHTML = '';
     D.THEMES.forEach(function (t) {
       var sec = el('div', { class: 'pl-theme' }, '<div class="pl-head">' + t.icon + ' <b>' + esc(t.name) + '</b><span class="pl-cred">ta crédibilité ' + credDots(cr[t.id]) + '</span></div>');
@@ -139,7 +155,7 @@
         var i = progSel.indexOf(m.id), on = i >= 0;
         var row = el('div', { class: 'pl-row' + (on ? ' on' : '') + (i === 0 ? ' phare' : '') });
         row.innerHTML = '<button type="button" class="pl-pick" aria-pressed="' + on + '">' + (i === 0 ? '★' : on ? (i + 1) : '+') + '</button>' +
-          '<span class="pl-txt"><b>' + esc(m.name) + '</b><small>' + costTxt(m.cost) + (m.choc ? ' · 💥 choc' : '') + (p.programme.indexOf(m.id) >= 0 ? ' · conseillé' : '') + (i === 0 ? ' · <b>mesure phare</b>' : '') + '</small></span>' +
+          '<span class="pl-txt"><b>' + esc(m.name) + '</b><small>' + costTxt(m.cost) + (m.choc ? ' · 💥 choc' : '') + (p.programme.indexOf(m.id) >= 0 ? ' · conseillé' : '') + (i === 0 ? ' · <b>mesure phare</b>' : '') + fansHtml(m) + '</small></span>' +
           (on && i > 0 ? '<button type="button" class="pl-star" title="En faire ta mesure phare">☆</button>' : '') +
           '<button type="button" class="pl-info" aria-label="Le saviez-vous ?">?</button>';
         row.querySelector('.pl-pick').addEventListener('click', function () {
@@ -155,11 +171,51 @@
       });
       list.appendChild(sec);
     });
+    // financement : jusqu'à 3 mesures de recettes ou d'économies
+    var fsec = el('div', { class: 'pl-theme pl-fin' }, '<div class="pl-head">🏦 <b>Comment tu finances</b><span class="pl-cred">' + progFin.length + ' / ' + R.fundingMax + ' (facultatif)</span></div>');
+    D.FUNDING.forEach(function (m) {
+      var on = progFin.indexOf(m.id) >= 0;
+      var row = el('div', { class: 'pl-row' + (on ? ' on' : '') });
+      row.innerHTML = '<button type="button" class="pl-pick" aria-pressed="' + on + '">' + (on ? '✓' : '+') + '</button>' +
+        '<span class="pl-txt"><b>' + esc(m.name) + '</b><small>' + costTxt(m.cost) + ((p.financing || []).indexOf(m.id) >= 0 ? ' · conseillé' : '') + fansHtml(m) + '</small></span>' +
+        '<button type="button" class="pl-info" aria-label="Le saviez-vous ?">?</button>';
+      row.querySelector('.pl-pick').addEventListener('click', function () {
+        if (on) progFin.splice(progFin.indexOf(m.id), 1);
+        else if (progFin.length >= R.fundingMax) { toast('3 mesures de financement au plus.'); return; }
+        else progFin.push(m.id);
+        renderProgramme(pid);
+      });
+      row.querySelector('.pl-info').addEventListener('click', function () { modal({ kicker: 'Le saviez-vous ?', title: m.name, html: fiche(m) }); });
+      fsec.appendChild(row);
+    });
+    list.appendChild(fsec);
+    $('prog-mini').innerHTML = (over > 0 ? '⚠️' : '✅') + ' Reste à financer <b>' + reste + ' Md€</b> · ' + progSel.length + ' / ' + R.programmeSize + ' promesses · ' + progFin.length + ' / ' + R.fundingMax + ' financements';
     $('prog-go').disabled = progSel.length !== R.programmeSize;
     $('prog-go').textContent = progSel.length === R.programmeSize ? 'ENTRER EN CAMPAGNE' : 'ENCORE ' + (R.programmeSize - progSel.length) + ' MESURE' + (R.programmeSize - progSel.length > 1 ? 'S' : '');
   }
-  $('prog-reco').addEventListener('click', function () { progSel = party(chosen).programme.slice(); renderProgramme(chosen); });
-  $('prog-go').addEventListener('click', function () { if (progSel.length === R.programmeSize) startGame(chosen, progSel.slice()); });
+  $('prog-reco').addEventListener('click', function () { progSel = party(chosen).programme.slice(); progFin = (party(chosen).financing || []).slice(); renderProgramme(chosen); });
+  $('prog-go').addEventListener('click', function () { if (progSel.length === R.programmeSize) startGame(chosen, progSel.slice(), progFin.slice()); });
+  /* Qui vit dans chaque région (Insee), et ce que ton programme leur fait */
+  function geoModal(ids) {
+    var ap = E.segmentAppeal(ids);
+    var html = '<p>Chaque mesure plaît ou déplaît à certains groupes (👍 / 👎). Ton programme rapporte plus là où les groupes qu\'il séduit sont <b>plus nombreux que la moyenne</b>.</p>' +
+      '<div class="brief">' + D.SEGMENTS.map(function (sg) { var v = ap[sg.id]; return line(sg.icon, '<b>' + esc(sg.name) + '</b> : ' + (v > 0 ? 'séduits (+' + v + ')' : v < 0 ? 'mécontents (' + v + ')' : 'indifférents') + ' <span class="muted">· ' + E.NATPOP[sg.id].toFixed(0) + ' % des 15 ans ou plus en moyenne</span>'); }).join('') + '</div>' +
+      srcHtml({ src: [D.SEGMENTS_SRC] });
+    modal({ kicker: 'Ton électorat', title: 'Qui t\'aime, et où ?', html: html });
+  }
+  /* Qui vit ici ? Composition d'une région (Insee) */
+  function popModal(rid) {
+    var r = E.REG[rid], pl = g && mePl();
+    var bonus = pl ? E.echoBonus(g, me, rid) : 0, ap = pl ? E.segmentAppeal(pl.programme.concat(pl.financing || [])) : null;
+    var html = '<div class="popbars">' + D.SEGMENTS.map(function (sg) {
+      var v = r.pop[sg.id], n = E.NATPOP[sg.id], a = ap ? ap[sg.id] : 0;
+      return '<div class="popbar"><span class="pb-lbl">' + sg.icon + ' ' + esc(sg.name) + '</span><span class="pb-track"><i style="width:' + (v * 2) + '%"></i><em style="left:' + (n * 2) + '%"></em></span><b>' + v.toFixed(1).replace('.', ',') + ' %</b>' +
+        (ap ? '<span class="pb-a ' + (a > 0 ? 'up' : a < 0 ? 'down' : '') + '">' + (a > 0 ? '👍' : a < 0 ? '👎' : '·') + '</span>' : '') + '</div>';
+    }).join('') + '</div><p class="hint">Le trait rouge = la moyenne nationale. 👍 / 👎 = l\'avis de ce groupe sur ton programme.</p>' +
+      (pl ? '<p>' + (bonus > 0 ? '❤️ <b>Région de cœur</b> pour ton programme : +1 cube sur tes Meetings ici.' : bonus < 0 ? '👎 <b>Région hostile</b> à ton programme : −1 cube sur tes Meetings ici.' : 'Ton programme reçoit ici un accueil moyen.') + '</p>' : '') +
+      srcHtml({ src: [D.SEGMENTS_SRC] });
+    modal({ kicker: 'Qui vit ici ?', title: r.name, html: html });
+  }
   document.addEventListener('click', function (e) {
     var b = e.target.closest('[data-learn]'); if (!b) return;
     var L = D.LEARN[b.getAttribute('data-learn')];
@@ -182,9 +238,9 @@
   }
 
   /* ---------- Partie ---------- */
-  function startGame(pid, prog) {
+  function startGame(pid, prog, fin) {
     g = E.createGame(pid); me = pid; selected = null; queue = []; theme = null; themePicked = false; advisorHidden = false;
-    E.setProgramme(g, pid, prog || party(pid).programme);
+    E.setProgramme(g, pid, prog || party(pid).programme, fin || party(pid).financing);
     go('game');
     nextTurn();
   }
@@ -264,7 +320,10 @@
       b.push(line('💥', '<b>Affaire pour ' + esc(party(x.pid).short) + '</b> : « ' + esc(x.title) + ' ». Réaction : <b>' + esc(x.reaction) + '</b>' + (x.effects.length ? ' — ' + esc(x.effects.join(', ')) : '') + '.'));
     });
     if (info.programmes) info.programmes.forEach(function (x) {
-      if (x.pid === me) b.push(line('📋', 'Ton programme coûte <b>' + x.budget + ' Md€</b> : ' + (x.over > 0 ? 'non financé, ça va se voir…' : 'financé.') + (x.cas ? ' (+' + x.cas + ' casserole' + (x.cas > 1 ? 's' : '') + ')' : '')));
+      if (x.pid === me) {
+        b.push(line('📋', 'Il te reste <b>' + x.budget + ' Md€</b> à financer : ' + (x.over > 0 ? 'non financé, ça va se voir…' : 'programme financé.') + (x.cas ? ' (+' + x.cas + ' casserole' + (x.cas > 1 ? 's' : '') + ')' : '')));
+        if (x.echo.length) b.push(line('❤️', 'Ton programme fait mouche en ' + x.echo.map(function (r) { return SHORT[r]; }).join(', ') + ' : +1 cube dans chacune.'));
+      }
       else if (x.choc.length) b.push(line('📢', esc(party(x.pid).short) + ' fait parler avec « ' + esc(x.choc[0]) + ' ».'));
     });
     info.later.forEach(function (x) {
@@ -475,7 +534,7 @@
       : c ? '<span class="tag" style="background:' + party(c).color + ';color:' + party(c).ink + '">' + c + '</span>'
       : '<span class="tag tag-yellow">À prendre</span>';
     var html = '<div class="region-head"><div><h2 class="region-name">' + esc(r.name) + '</h2>' +
-      '<span class="region-sub">' + r.pts + ' pts · ' + D.PROFILES[r.profile] + ' · préoccupée par ' +
+      '<span class="region-sub">' + (E.echoBonus(g, me, selected) > 0 ? '❤️ ' : E.echoBonus(g, me, selected) < 0 ? '👎 ' : '') + r.pts + ' pts · ' + D.PROFILES[r.profile] + ' · préoccupée par ' +
       r.concerns.map(function (x) { return '<span class="concern-ic' + (E.isHot(g, x) ? ' hot' : '') + '" title="' + esc(th(x).name) + '">' + th(x).icon + '</span>'; }).join('') +
       '</span></div>' + tag + '</div>';
     // forces en présence : une seule ligne, seulement les partis présents (et toi)
@@ -485,10 +544,11 @@
       var n = E.cubes(g, selected, p.id), P = party(p.id);
       var mil = (g.bases[selected] || []).indexOf(p.id) >= 0 ? ' 👥' : '';
       return '<span class="force' + (p.id === me ? ' me' : '') + '"><i style="background:' + P.color + '"></i>' + (p.id === me ? 'Toi' : p.id) + ' <b>' + n + '</b>' + mil + '</span>';
-    }).join('') + '<span class="force-hint">cubes · ' + E.minControl(me) + ' pour tenir</span></div>';
+    }).join('') + '<button type="button" class="force-hint linkbtn" id="btn-pop">👥 Qui vit ici ?</button></div>';
     var mk = E.markerAt(g, selected);
     if (mk) html += '<div class="mk-line">' + mk.icon + ' ' + esc(mk.title) + ' : ici, ' + th(mk.theme).icon + ' ' + esc(th(mk.theme).name) + ' compte comme à la une.</div>';
     box.innerHTML = html;
+    var bp = $('btn-pop'); if (bp) bp.addEventListener('click', function () { popModal(selected); });
   }
   function renderQueue() {
     var box = $('queue-slots'); box.innerHTML = '';
@@ -919,7 +979,8 @@
       '<p>🎯 <b>Objectif secret :</b> ' + esc(o.name) + ' — ' + esc(o.text) + ' (+' + o.bonus + ' pts).</p>' +
       '<div class="brief"><div class="kicker">Ton programme · ' + pl.budget + ' Md€</div>' + pl.programme.map(function (id, i) {
         var m = E.measure(id); return line(i === 0 ? '★' : th(m.theme).icon, esc(m.name) + (i === 0 ? ' <span class="muted">(mesure phare : +1 cube en Meeting sur ' + esc(th(m.theme).name) + ')</span>' : ''));
-      }).join('') + '</div>' +
+      }).join('') + (pl.financing || []).map(function (id) { return line('🏦', esc(E.measure(id).name)); }).join('') +
+      line('❤️', 'Régions de cœur : ' + E.echoRanks(g, me).good.map(function (r) { return SHORT[r]; }).join(', ') + ' · 👎 hostiles : ' + E.echoRanks(g, me).bad.map(function (r) { return SHORT[r]; }).join(', ')) + '</div>' +
       '<div class="brief"><div class="kicker">Ton candidat</div>' +
       line('⚡', '<b>Forme ' + pl.forme + ' / ' + R.formeMax + '</b> — Meeting et Télé en coûtent 1. À 0, risque de gaffe. +' + (R.formeRegen + (me === 'EM' ? 1 : 0)) + ' par tour.') +
       line('🍳', '<b>' + pl.cas + ' casserole' + (pl.cas > 1 ? 's' : '') + '</b> — chacune = ' + Math.round(R.affairPerCasserole * 100) + ' % de risque d\'affaire par tour. Attaquer, enquêter, trahir, le 49.3 et certains choix en ajoutent.') +

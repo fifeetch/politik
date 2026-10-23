@@ -1,20 +1,20 @@
-/* Politik — données du jeu (règles v0.7 : programme, affaires, candidats, conseillère)
+/* Politik — données du jeu (règles v0.8 : programme financé, groupes de population)
    Toutes les valeurs chiffrées du jeu sont ici : c'est le fichier à modifier pour équilibrer. */
 (function (root) {
   var REGIONS = [
-    { id: 'idf', name: 'Île-de-France',              profile: 'urbaine',      pts: 12, concerns: ['pouvoir', 'securite'] },
-    { id: 'ara', name: 'Auvergne-Rhône-Alpes',       profile: 'urbaine',      pts: 8, concerns: ['ecologie', 'emploi'] },
-    { id: 'hdf', name: 'Hauts-de-France',            profile: 'industrielle', pts: 6, concerns: ['emploi', 'pouvoir'] },
-    { id: 'naq', name: 'Nouvelle-Aquitaine',         profile: 'rurale',       pts: 6, concerns: ['services', 'ecologie'] },
-    { id: 'occ', name: 'Occitanie',                  profile: 'rurale',       pts: 6, concerns: ['pouvoir', 'services'] },
-    { id: 'ges', name: 'Grand Est',                  profile: 'industrielle', pts: 5, concerns: ['emploi', 'immigration'] },
-    { id: 'pac', name: "Provence-Alpes-Côte d'Azur", profile: 'urbaine',      pts: 5, concerns: ['securite', 'immigration'] },
-    { id: 'pdl', name: 'Pays de la Loire',           profile: 'rurale',       pts: 4, concerns: ['ecologie', 'emploi'] },
-    { id: 'bre', name: 'Bretagne',                   profile: 'rurale',       pts: 3, concerns: ['ecologie', 'services'] },
-    { id: 'nor', name: 'Normandie',                  profile: 'historique',   pts: 3, concerns: ['emploi', 'services'] },
-    { id: 'bfc', name: 'Bourgogne-Franche-Comté',    profile: 'historique',   pts: 3, concerns: ['services', 'pouvoir'] },
-    { id: 'cvl', name: 'Centre-Val de Loire',        profile: 'historique',   pts: 3, concerns: ['services', 'securite'] },
-    { id: 'cor', name: 'Corse',                      profile: 'historique',   pts: 1, concerns: ['securite', 'pouvoir'] }
+    { id: 'idf', name: 'Île-de-France',              profile: 'urbaine',      pts: 12, concerns: ['pouvoir', 'securite'], pop: { ind: 3.3, cad: 20.0, pi: 15.5, pop: 23.7, ret: 19.7, sae: 18.0 } },
+    { id: 'ara', name: 'Auvergne-Rhône-Alpes',       profile: 'urbaine',      pts: 8, concerns: ['ecologie', 'emploi'], pop: { ind: 4.8, cad: 10.7, pi: 15.5, pop: 26.7, ret: 27.6, sae: 14.7 } },
+    { id: 'hdf', name: 'Hauts-de-France',            profile: 'industrielle', pts: 6, concerns: ['emploi', 'pouvoir'], pop: { ind: 3.2, cad: 7.9, pi: 13.9, pop: 30.1, ret: 26.6, sae: 18.2 } },
+    { id: 'naq', name: 'Nouvelle-Aquitaine',         profile: 'rurale',       pts: 6, concerns: ['services', 'ecologie'], pop: { ind: 5.3, cad: 8.2, pi: 13.6, pop: 26.8, ret: 32.8, sae: 13.3 } },
+    { id: 'occ', name: 'Occitanie',                  profile: 'rurale',       pts: 6, concerns: ['pouvoir', 'services'], pop: { ind: 5.4, cad: 9.4, pi: 13.9, pop: 24.9, ret: 30.4, sae: 16.0 } },
+    { id: 'ges', name: 'Grand Est',                  profile: 'industrielle', pts: 5, concerns: ['emploi', 'immigration'], pop: { ind: 3.7, cad: 8.0, pi: 14.2, pop: 29.9, ret: 28.5, sae: 15.6 } },
+    { id: 'pac', name: "Provence-Alpes-Côte d'Azur", profile: 'urbaine',      pts: 5, concerns: ['securite', 'immigration'], pop: { ind: 5.1, cad: 9.4, pi: 13.9, pop: 24.9, ret: 29.8, sae: 16.9 } },
+    { id: 'pdl', name: 'Pays de la Loire',           profile: 'rurale',       pts: 4, concerns: ['ecologie', 'emploi'], pop: { ind: 4.4, cad: 9.1, pi: 14.6, pop: 28.9, ret: 30.3, sae: 12.8 } },
+    { id: 'bre', name: 'Bretagne',                   profile: 'rurale',       pts: 3, concerns: ['ecologie', 'services'], pop: { ind: 4.7, cad: 8.6, pi: 14.1, pop: 27.0, ret: 32.2, sae: 13.5 } },
+    { id: 'nor', name: 'Normandie',                  profile: 'historique',   pts: 3, concerns: ['emploi', 'services'], pop: { ind: 4.2, cad: 7.2, pi: 13.7, pop: 29.2, ret: 31.3, sae: 14.5 } },
+    { id: 'bfc', name: 'Bourgogne-Franche-Comté',    profile: 'historique',   pts: 3, concerns: ['services', 'pouvoir'], pop: { ind: 4.6, cad: 7.0, pi: 13.4, pop: 29.0, ret: 32.3, sae: 13.7 } },
+    { id: 'cvl', name: 'Centre-Val de Loire',        profile: 'historique',   pts: 3, concerns: ['services', 'securite'], pop: { ind: 4.1, cad: 8.0, pi: 14.1, pop: 28.4, ret: 31.9, sae: 13.5 } },
+    { id: 'cor', name: 'Corse',                      profile: 'historique',   pts: 1, concerns: ['securite', 'pouvoir'], pop: { ind: 6.7, cad: 5.9, pi: 12.4, pop: 27.9, ret: 29.5, sae: 17.6 } }
   ];
 
   /* v0.3 — Les thèmes de campagne.
@@ -45,34 +45,60 @@
      Crédibilité sur un thème = socle du parti + 1 par mesure sur ce thème (2 au plus).
      cost : coût en milliards d'euros (négatif = économies). choc : fait parler (+1 cube dans 2 régions… et +1 casserole). */
   var MEASURES = [
-    { id: 'smic',            theme: 'pouvoir',     name: 'Smic à 1 600 € net',                       cost: 20 , edu: { what: 'Le Smic est le salaire minimum légal en France. Il est revalorisé au moins une fois par an.', pro: 'Plus de pouvoir d\'achat pour les bas salaires.', con: 'Un coût en plus pour les petites entreprises, qui peuvent embaucher moins.' } },
-    { id: 'energie',         theme: 'pouvoir',     name: 'Blocage des prix de l\'énergie',            cost: 25 , edu: { what: 'L\'État fixe un prix maximum pour l\'électricité ou le gaz et paie la différence aux fournisseurs.', pro: 'Protège les ménages et les entreprises des flambées de prix.', con: 'Très coûteux pour les finances publiques, et n\'incite pas à économiser l\'énergie.' } },
-    { id: 'tva',             theme: 'pouvoir',     name: 'TVA réduite sur le carburant',              cost: 15 , edu: { what: 'La TVA est un impôt payé sur presque tout ce qu\'on achète, dont le carburant.', pro: 'Baisse visible du prix à la pompe.', con: 'Moins de recettes pour l\'État, et la baisse profite aussi aux gros rouleurs.' } },
-    { id: 'cheque',          theme: 'pouvoir',     name: 'Chèque alimentation',                       cost: 6 , edu: { what: 'Une aide versée aux ménages modestes pour acheter de la nourriture.', pro: 'Cible ceux qui en ont le plus besoin.', con: 'Aide ponctuelle qui ne règle pas les causes de la hausse des prix.' } },
-    { id: 'superprofits',    theme: 'pouvoir',     name: 'Taxe sur les superprofits',                 cost: -12 , edu: { what: 'Un impôt exceptionnel sur les bénéfices jugés anormalement élevés de certaines entreprises.', pro: 'Fait contribuer les entreprises qui profitent d\'une crise.', con: 'Difficile à définir, et peut faire fuir les investisseurs.' } },
-    { id: 'reindus',         theme: 'emploi',      name: 'Grand plan de réindustrialisation',         cost: 30 , edu: { what: 'Aider les usines à s\'installer ou revenir en France : subventions, formation, énergie.', pro: 'Recrée des emplois et rend le pays moins dépendant de l\'étranger.', con: 'Très cher, et les résultats prennent des années.' } },
-    { id: 'pme',             theme: 'emploi',      name: 'Moins de charges pour les PME',             cost: 15 , edu: { what: 'Les charges sociales sont des cotisations payées sur les salaires pour financer la protection sociale.', pro: 'Les entreprises peuvent embaucher et investir plus.', con: 'Moins de recettes pour la Sécurité sociale, à compenser ailleurs.' } },
-    { id: 'semaine4',        theme: 'emploi',      name: 'Semaine de 4 jours',                        cost: 8 , edu: { what: 'Travailler sur 4 jours au lieu de 5, à temps de travail réduit ou réorganisé.', pro: 'Plus de temps libre, moins de trajets, salariés plus motivés.', con: 'Difficile à organiser dans certains métiers (hôpitaux, commerces).' } },
-    { id: 'apprentissage',   theme: 'emploi',      name: 'Apprentissage pour tous',                   cost: 4 , edu: { what: 'L\'apprentissage alterne cours et travail en entreprise, avec un salaire.', pro: 'Facilite l\'accès des jeunes à un premier emploi.', con: 'Les aides aux entreprises ont un coût, et la qualité des formations varie.' } },
-    { id: 'retraites',       theme: 'emploi',      name: 'Retraite à 65 ans',                         cost: -15, choc: true , edu: { what: 'Reculer l\'âge légal auquel on peut partir à la retraite.', pro: 'Équilibre les comptes des retraites, car on vit plus longtemps.', con: 'Pénalise ceux qui ont commencé tôt ou ont des métiers pénibles. Mesure souvent très contestée.' } },
-    { id: 'medecins',        theme: 'services',    name: '10 000 médecins de plus',                   cost: 12 , edu: { what: 'Former et installer plus de médecins, notamment dans les « déserts médicaux ».', pro: 'Réduit les délais pour se soigner.', con: 'Former un médecin prend une dizaine d\'années.' } },
-    { id: 'lignes',          theme: 'services',    name: 'Rouvrir les petites lignes de train',       cost: 10 , edu: { what: 'Rouvrir des lignes de train fermées dans les zones rurales.', pro: 'Désenclave les territoires et réduit l\'usage de la voiture.', con: 'Coûteux à remettre en état pour peu de voyageurs parfois.' } },
-    { id: 'classes',         theme: 'services',    name: 'Classes de 20 élèves maximum',              cost: 10 , edu: { what: 'Limiter le nombre d\'élèves par classe.', pro: 'Les élèves sont mieux suivis, surtout les plus fragiles.', con: 'Il faut recruter beaucoup d\'enseignants, et le métier attire peu.' } },
-    { id: 'sp20',            theme: 'services',    name: 'Un service public à 20 min de chez soi',    cost: 15 , edu: { what: 'Garantir à chacun une école, une poste, un médecin ou une gare à moins de 20 minutes.', pro: 'Lutte contre le sentiment d\'abandon des campagnes.', con: 'Maintenir des services peu fréquentés coûte cher.' } },
-    { id: 'nonremplacement', theme: 'services',    name: 'Un fonctionnaire sur deux non remplacé',    cost: -10, choc: true , edu: { what: 'Ne remplacer qu\'un fonctionnaire sur deux qui part à la retraite.', pro: 'Réduit les dépenses de l\'État.', con: 'Risque de dégrader les services publics (écoles, hôpitaux).' } },
-    { id: 'renovation',      theme: 'ecologie',    name: 'Rénover 1 million de logements',            cost: 18 , edu: { what: 'Isoler les logements pour qu\'ils consomment moins d\'énergie.', pro: 'Baisse les factures et les émissions de CO₂.', con: 'Gros coût pour l\'État et les propriétaires, et pénurie d\'artisans.' } },
-    { id: 'train1',          theme: 'ecologie',    name: 'Le train à 1 € pour les jeunes',            cost: 5 , edu: { what: 'Un billet de train à prix symbolique pour les jeunes.', pro: 'Encourage le train plutôt que la voiture.', con: 'Manque à gagner pour la SNCF, à compenser par l\'État.' } },
-    { id: 'jets',            theme: 'ecologie',    name: 'Taxe sur les jets privés',                  cost: -3 , edu: { what: 'Un impôt sur les vols en avion privé, très polluants par passager.', pro: 'Symbole de justice : les plus riches paient leur pollution.', con: 'Rapporte peu, et les vols peuvent partir de l\'étranger.' } },
-    { id: 'plastique',       theme: 'ecologie',    name: 'Fin du plastique jetable',                  cost: 2 , edu: { what: 'Interdire progressivement les emballages et objets en plastique à usage unique.', pro: 'Moins de déchets dans la nature et les océans.', con: 'Les entreprises doivent trouver des alternatives, parfois plus chères.' } },
-    { id: 'policiers',       theme: 'securite',    name: '10 000 policiers de plus',                  cost: 10 , edu: { what: 'Recruter et former davantage de policiers et gendarmes.', pro: 'Plus de présence sur le terrain.', con: 'Il faut aussi des locaux, du matériel, et des années de formation.' } },
-    { id: 'proximite',       theme: 'securite',    name: 'Retour de la police de proximité',          cost: 5 , edu: { what: 'Des policiers affectés à un quartier, qui connaissent ses habitants.', pro: 'Rétablit la confiance et prévient la délinquance.', con: 'Mobilise beaucoup d\'agents pour des résultats difficiles à mesurer.' } },
-    { id: 'planchers',       theme: 'securite',    name: 'Peines planchers',                          cost: 1 , edu: { what: 'Une peine minimale obligatoire pour certains délits, surtout en cas de récidive.', pro: 'Rend la sanction plus certaine et dissuasive.', con: 'Limite la liberté du juge d\'adapter la peine à chaque cas. Déjà essayée puis supprimée en France.' } },
-    { id: 'video',           theme: 'securite',    name: 'Caméras dans toutes les communes',          cost: 3 , edu: { what: 'Installer des caméras de surveillance sur la voie publique.', pro: 'Aide à élucider des affaires et peut dissuader.', con: 'Efficacité discutée, et questions de vie privée.' } },
-    { id: 'fraude',          theme: 'securite',    name: 'Chasse à la fraude sociale',                cost: -6 , edu: { what: 'Renforcer les contrôles sur les aides sociales versées à tort.', pro: 'Les aides vont à ceux qui y ont droit.', con: 'La fraude aux cotisations des entreprises et le non-recours aux droits sont aussi importants.' } },
-    { id: 'referendum',      theme: 'immigration', name: 'Référendum sur l\'immigration',             cost: 1 , edu: { what: 'Faire voter directement les citoyens sur la politique d\'immigration.', pro: 'Donne la parole au peuple sur un sujet sensible.', con: 'L\'article 11 de la Constitution ne cite pas l\'immigration : la possibilité même de ce référendum fait débat.' } },
-    { id: 'accueil',         theme: 'immigration', name: 'Accueil digne et intégration',              cost: 4 , edu: { what: 'Mieux accueillir les étrangers en règle : cours de français, accès au travail, logement.', pro: 'Favorise l\'intégration et l\'emploi.', con: 'Coût pour l\'État, et crainte d\'un « appel d\'air ».' } },
-    { id: 'controles',       theme: 'immigration', name: 'Contrôles renforcés aux frontières',        cost: 5 , edu: { what: 'Plus de contrôles aux frontières de la France.', pro: 'Mieux lutter contre l\'immigration illégale et les trafics.', con: 'Dans l\'espace Schengen, les contrôles aux frontières intérieures sont en principe limités et temporaires.' } },
-    { id: 'regroupement',    theme: 'immigration', name: 'Fin du regroupement familial',              cost: 0, choc: true , edu: { what: 'Le regroupement familial permet à un étranger installé légalement de faire venir sa famille.', pro: 'Réduit l\'immigration.', con: 'Ce droit est protégé par des textes européens et internationaux : le supprimer serait juridiquement très difficile.' } }
+    { id: 'smic',            theme: 'pouvoir',     name: 'Smic à 1 600 € net',                       cost: 20 , fans: {pop: 2, sae: 1, ind: -1}, edu: { what: 'Le Smic est le salaire minimum légal en France. Il est revalorisé au moins une fois par an.', pro: 'Plus de pouvoir d\'achat pour les bas salaires.', con: 'Un coût en plus pour les petites entreprises, qui peuvent embaucher moins.' } },
+    { id: 'energie',         theme: 'pouvoir',     name: 'Blocage des prix de l\'énergie',            cost: 25 , fans: {pop: 1, ret: 1, ind: 1, sae: 1}, edu: { what: 'L\'État fixe un prix maximum pour l\'électricité ou le gaz et paie la différence aux fournisseurs.', pro: 'Protège les ménages et les entreprises des flambées de prix.', con: 'Très coûteux pour les finances publiques, et n\'incite pas à économiser l\'énergie.' } },
+    { id: 'tva',             theme: 'pouvoir',     name: 'TVA réduite sur le carburant',              cost: 15 , fans: {pop: 1, ind: 1}, edu: { what: 'La TVA est un impôt payé sur presque tout ce qu\'on achète, dont le carburant.', pro: 'Baisse visible du prix à la pompe.', con: 'Moins de recettes pour l\'État, et la baisse profite aussi aux gros rouleurs.' } },
+    { id: 'cheque',          theme: 'pouvoir',     name: 'Chèque alimentation',                       cost: 6 , fans: {sae: 2, pop: 1}, edu: { what: 'Une aide versée aux ménages modestes pour acheter de la nourriture.', pro: 'Cible ceux qui en ont le plus besoin.', con: 'Aide ponctuelle qui ne règle pas les causes de la hausse des prix.' } },
+    { id: 'superprofits',    theme: 'pouvoir',     name: 'Taxe sur les superprofits',                 cost: -12 , fans: {pop: 1, sae: 1, cad: -1}, edu: { what: 'Un impôt exceptionnel sur les bénéfices jugés anormalement élevés de certaines entreprises.', pro: 'Fait contribuer les entreprises qui profitent d\'une crise.', con: 'Difficile à définir, et peut faire fuir les investisseurs.' } },
+    { id: 'reindus',         theme: 'emploi',      name: 'Grand plan de réindustrialisation',         cost: 30 , fans: {pop: 2, pi: 1}, edu: { what: 'Aider les usines à s\'installer ou revenir en France : subventions, formation, énergie.', pro: 'Recrée des emplois et rend le pays moins dépendant de l\'étranger.', con: 'Très cher, et les résultats prennent des années.' } },
+    { id: 'pme',             theme: 'emploi',      name: 'Moins de charges pour les PME',             cost: 15 , fans: {ind: 2, cad: 2}, edu: { what: 'Les charges sociales sont des cotisations payées sur les salaires pour financer la protection sociale.', pro: 'Les entreprises peuvent embaucher et investir plus.', con: 'Moins de recettes pour la Sécurité sociale, à compenser ailleurs.' } },
+    { id: 'semaine4',        theme: 'emploi',      name: 'Semaine de 4 jours',                        cost: 8 , fans: {pi: 1, cad: 1, pop: 1, ind: -1}, edu: { what: 'Travailler sur 4 jours au lieu de 5, à temps de travail réduit ou réorganisé.', pro: 'Plus de temps libre, moins de trajets, salariés plus motivés.', con: 'Difficile à organiser dans certains métiers (hôpitaux, commerces).' } },
+    { id: 'apprentissage',   theme: 'emploi',      name: 'Apprentissage pour tous',                   cost: 4 , fans: {sae: 2, ind: 1}, edu: { what: 'L\'apprentissage alterne cours et travail en entreprise, avec un salaire.', pro: 'Facilite l\'accès des jeunes à un premier emploi.', con: 'Les aides aux entreprises ont un coût, et la qualité des formations varie.' } },
+    { id: 'retraites',       theme: 'emploi',      name: 'Retraite à 65 ans',                         cost: -15, choc: true , fans: {ind: 1, cad: 1, pop: -2, pi: -1}, edu: { what: 'Reculer l\'âge légal auquel on peut partir à la retraite.', pro: 'Équilibre les comptes des retraites, car on vit plus longtemps.', con: 'Pénalise ceux qui ont commencé tôt ou ont des métiers pénibles. Mesure souvent très contestée.' } },
+    { id: 'medecins',        theme: 'services',    name: '10 000 médecins de plus',                   cost: 12 , fans: {ret: 2, pop: 1}, edu: { what: 'Former et installer plus de médecins, notamment dans les « déserts médicaux ».', pro: 'Réduit les délais pour se soigner.', con: 'Former un médecin prend une dizaine d\'années.' } },
+    { id: 'lignes',          theme: 'services',    name: 'Rouvrir les petites lignes de train',       cost: 10 , fans: {ret: 1, sae: 1, pop: 1}, edu: { what: 'Rouvrir des lignes de train fermées dans les zones rurales.', pro: 'Désenclave les territoires et réduit l\'usage de la voiture.', con: 'Coûteux à remettre en état pour peu de voyageurs parfois.' } },
+    { id: 'classes',         theme: 'services',    name: 'Classes de 20 élèves maximum',              cost: 10 , fans: {pi: 2, cad: 1}, edu: { what: 'Limiter le nombre d\'élèves par classe.', pro: 'Les élèves sont mieux suivis, surtout les plus fragiles.', con: 'Il faut recruter beaucoup d\'enseignants, et le métier attire peu.' } },
+    { id: 'sp20',            theme: 'services',    name: 'Un service public à 20 min de chez soi',    cost: 15 , fans: {ret: 1, pop: 1, ind: 1}, edu: { what: 'Garantir à chacun une école, une poste, un médecin ou une gare à moins de 20 minutes.', pro: 'Lutte contre le sentiment d\'abandon des campagnes.', con: 'Maintenir des services peu fréquentés coûte cher.' } },
+    { id: 'nonremplacement', theme: 'services',    name: 'Un fonctionnaire sur deux non remplacé',    cost: -10, choc: true , fans: {ind: 1, cad: 1, pi: -2, pop: -1}, edu: { what: 'Ne remplacer qu\'un fonctionnaire sur deux qui part à la retraite.', pro: 'Réduit les dépenses de l\'État.', con: 'Risque de dégrader les services publics (écoles, hôpitaux).' } },
+    { id: 'renovation',      theme: 'ecologie',    name: 'Rénover 1 million de logements',            cost: 18 , fans: {pop: 1, ind: 1, cad: 1}, edu: { what: 'Isoler les logements pour qu\'ils consomment moins d\'énergie.', pro: 'Baisse les factures et les émissions de CO₂.', con: 'Gros coût pour l\'État et les propriétaires, et pénurie d\'artisans.' } },
+    { id: 'train1',          theme: 'ecologie',    name: 'Le train à 1 € pour les jeunes',            cost: 5 , fans: {sae: 2}, edu: { what: 'Un billet de train à prix symbolique pour les jeunes.', pro: 'Encourage le train plutôt que la voiture.', con: 'Manque à gagner pour la SNCF, à compenser par l\'État.' } },
+    { id: 'jets',            theme: 'ecologie',    name: 'Taxe sur les jets privés',                  cost: -3 , fans: {pop: 1, sae: 1, cad: -1}, edu: { what: 'Un impôt sur les vols en avion privé, très polluants par passager.', pro: 'Symbole de justice : les plus riches paient leur pollution.', con: 'Rapporte peu, et les vols peuvent partir de l\'étranger.' } },
+    { id: 'plastique',       theme: 'ecologie',    name: 'Fin du plastique jetable',                  cost: 2 , fans: {cad: 1, sae: 1, ind: -1}, edu: { what: 'Interdire progressivement les emballages et objets en plastique à usage unique.', pro: 'Moins de déchets dans la nature et les océans.', con: 'Les entreprises doivent trouver des alternatives, parfois plus chères.' } },
+    { id: 'policiers',       theme: 'securite',    name: '10 000 policiers de plus',                  cost: 10 , fans: {ret: 2, pop: 1}, edu: { what: 'Recruter et former davantage de policiers et gendarmes.', pro: 'Plus de présence sur le terrain.', con: 'Il faut aussi des locaux, du matériel, et des années de formation.' } },
+    { id: 'proximite',       theme: 'securite',    name: 'Retour de la police de proximité',          cost: 5 , fans: {ret: 1, pop: 1, pi: 1}, edu: { what: 'Des policiers affectés à un quartier, qui connaissent ses habitants.', pro: 'Rétablit la confiance et prévient la délinquance.', con: 'Mobilise beaucoup d\'agents pour des résultats difficiles à mesurer.' } },
+    { id: 'planchers',       theme: 'securite',    name: 'Peines planchers',                          cost: 1 , fans: {ret: 1}, edu: { what: 'Une peine minimale obligatoire pour certains délits, surtout en cas de récidive.', pro: 'Rend la sanction plus certaine et dissuasive.', con: 'Limite la liberté du juge d\'adapter la peine à chaque cas. Déjà essayée puis supprimée en France.' } },
+    { id: 'video',           theme: 'securite',    name: 'Caméras dans toutes les communes',          cost: 3 , fans: {ret: 1, ind: 1}, edu: { what: 'Installer des caméras de surveillance sur la voie publique.', pro: 'Aide à élucider des affaires et peut dissuader.', con: 'Efficacité discutée, et questions de vie privée.' } },
+    { id: 'fraude',          theme: 'securite',    name: 'Chasse à la fraude sociale',                cost: -6 , fans: {ret: 1, ind: 1, cad: 1, sae: -2}, edu: { what: 'Renforcer les contrôles sur les aides sociales versées à tort.', pro: 'Les aides vont à ceux qui y ont droit.', con: 'La fraude aux cotisations des entreprises et le non-recours aux droits sont aussi importants.' } },
+    { id: 'referendum',      theme: 'immigration', name: 'Référendum sur l\'immigration',             cost: 1 , fans: {ret: 1, pop: 1, cad: -1}, edu: { what: 'Faire voter directement les citoyens sur la politique d\'immigration.', pro: 'Donne la parole au peuple sur un sujet sensible.', con: 'L\'article 11 de la Constitution ne cite pas l\'immigration : la possibilité même de ce référendum fait débat.' } },
+    { id: 'accueil',         theme: 'immigration', name: 'Accueil digne et intégration',              cost: 4 , fans: {pi: 1, cad: 1}, edu: { what: 'Mieux accueillir les étrangers en règle : cours de français, accès au travail, logement.', pro: 'Favorise l\'intégration et l\'emploi.', con: 'Coût pour l\'État, et crainte d\'un « appel d\'air ».' } },
+    { id: 'controles',       theme: 'immigration', name: 'Contrôles renforcés aux frontières',        cost: 5 , fans: {ret: 1, pop: 1, ind: 1}, edu: { what: 'Plus de contrôles aux frontières de la France.', pro: 'Mieux lutter contre l\'immigration illégale et les trafics.', con: 'Dans l\'espace Schengen, les contrôles aux frontières intérieures sont en principe limités et temporaires.' } },
+    { id: 'regroupement',    theme: 'immigration', name: 'Fin du regroupement familial',              cost: 0, choc: true , fans: {ret: 1, pi: -1}, edu: { what: 'Le regroupement familial permet à un étranger installé légalement de faire venir sa famille.', pro: 'Réduit l\'immigration.', con: 'Ce droit est protégé par des textes européens et internationaux : le supprimer serait juridiquement très difficile.' } }
+  ];
+
+
+  /* v0.8 : mesures de financement (recettes ou économies), 3 au plus, en plus des 5 promesses.
+     Les montants sont des ordres de grandeur pour le jeu. */
+  var FUNDING = [
+    { id: 'isf',          name: 'Rétablir un impôt sur la fortune',            cost: -4,  fans: { cad: -1, ind: -1, pop: 1 },
+      edu: { what: 'Un impôt annuel sur le patrimoine des ménages les plus riches. L\'ancien ISF a été remplacé en 2018 par un impôt sur la seule fortune immobilière.', pro: 'Fait contribuer les plus gros patrimoines.', con: 'Risque de départ de contribuables fortunés et d\'investissements à l\'étranger.' } },
+    { id: 'heritage',     name: 'Taxer davantage les gros héritages',          cost: -6,  fans: { ret: -1, ind: -1, pop: 1 },
+      edu: { what: 'Augmenter les droits de succession sur les héritages les plus importants.', pro: 'Limite la transmission des inégalités d\'une génération à l\'autre.', con: 'Impôt très impopulaire, et difficile pour la transmission des entreprises familiales.' } },
+    { id: 'niches',       name: 'Supprimer des niches fiscales',               cost: -10, fans: { cad: -2, ind: -1 },
+      edu: { what: 'Les niches fiscales sont des réductions d\'impôt accordées pour encourager certains comportements (emploi à domicile, investissements…).', pro: 'Rapporte beaucoup et simplifie l\'impôt.', con: 'Chaque niche a ses défenseurs, et certaines soutiennent des emplois.' } },
+    { id: 'fraudefisc',   name: 'Renforcer la lutte contre la fraude fiscale', cost: -5,  fans: { pop: 1, sae: 1 },
+      edu: { what: 'Plus de contrôleurs et d\'outils pour récupérer les impôts que certains ne paient pas.', pro: 'Personne ne s\'y oppose sur le principe.', con: 'Les sommes vraiment récupérées sont incertaines et prennent du temps.' } },
+    { id: 'tvaplus',      name: 'Hausse d\'un point de TVA',                   cost: -8,  fans: { pop: -2, ret: -1, sae: -1 },
+      edu: { what: 'La TVA est payée par tous sur ce qu\'ils achètent : une hausse rapporte beaucoup.', pro: 'Recette rapide et sûre, qui touche aussi les produits importés.', con: 'Pèse plus lourd, en proportion, sur les ménages modestes.' } },
+    { id: 'csg',          name: 'Hausse de la CSG des retraités aisés',        cost: -4,  fans: { ret: -2 },
+      edu: { what: 'La CSG est une contribution prélevée sur presque tous les revenus, y compris les pensions.', pro: 'Les retraités aisés ont souvent un niveau de vie élevé.', con: 'Les retraités vivent cette hausse comme une injustice après une vie de travail.' } },
+    { id: 'gelpensions',  name: 'Geler les pensions de retraite un an',        cost: -4,  fans: { ret: -2 },
+      edu: { what: 'Ne pas augmenter les pensions avec l\'inflation pendant un an.', pro: 'Économie importante et immédiate.', con: 'Les retraités perdent du pouvoir d\'achat, surtout les plus modestes.' } },
+    { id: 'gelpoint',     name: 'Geler le salaire des fonctionnaires',         cost: -3,  fans: { pi: -2 },
+      edu: { what: 'Ne pas revaloriser le « point d\'indice » qui sert à calculer le salaire des agents publics.', pro: 'Économie simple à mettre en œuvre.', con: 'Rend les métiers publics (enseignants, soignants) moins attractifs.' } },
+    { id: 'chomage',      name: 'Durcir l\'assurance chômage',                 cost: -3,  fans: { sae: -2, pop: -1, ind: 1 },
+      edu: { what: 'Réduire la durée ou le montant des allocations chômage.', pro: 'Incite à reprendre un emploi plus vite et fait des économies.', con: 'Fragilise les personnes qui perdent leur emploi.' } },
+    { id: 'trainvie',     name: 'Économies sur le train de vie de l\'État',    cost: -5,  fans: { pi: -1, ind: 1, cad: 1 },
+      edu: { what: 'Réduire les dépenses de fonctionnement : bâtiments, voitures, agences et organismes publics.', pro: 'Populaire, et montre l\'exemple.', con: 'Les vraies économies sont souvent plus faibles qu\'annoncé.' } }
   ];
 
   /* ---------- v0.7 : les affaires ----------
@@ -125,48 +151,61 @@
     alliances: { title: 'Les alliances', text: 'Entre les deux tours, des partis proches peuvent passer des accords : l\'un se retire ou appelle à voter pour l\'autre. Mais une alliance n\'efface pas les désaccords, et les électeurs restent libres.' }
   };
 
+  /* ---------- v0.8 : les groupes de population ----------
+     Part de chaque groupe parmi les 15 ans ou plus de chaque région (voir REGIONS[].pop).
+     Source : Insee, recensement de la population 2022. */
+  var SEGMENTS = [
+    { id: 'ind', icon: '🧑‍🌾', name: 'Indépendants',               full: 'Agriculteurs, artisans, commerçants et chefs d\'entreprise' },
+    { id: 'cad', icon: '💼', name: 'Cadres',                        full: 'Cadres et professions intellectuelles supérieures' },
+    { id: 'pi',  icon: '🧑‍🏫', name: 'Professions intermédiaires',  full: 'Techniciens, enseignants, infirmiers, agents de maîtrise…' },
+    { id: 'pop', icon: '🔧', name: 'Employés et ouvriers',          full: 'Employés et ouvriers' },
+    { id: 'ret', icon: '👵', name: 'Retraités',                     full: 'Retraités' },
+    { id: 'sae', icon: '🎓', name: 'Étudiants et sans emploi',      full: 'Étudiants, chômeurs et autres personnes sans activité professionnelle' }
+  ];
+  var SEGMENTS_SRC = { label: 'Population de 15 ans ou plus par groupe socioprofessionnel en 2022 (Insee)', url: 'https://www.insee.fr/fr/statistiques/2012701' };
+
   var PROFILES = {
     urbaine: 'Urbaine', rurale: 'Rurale', industrielle: 'Industrielle', historique: 'Historique'
   };
 
   var PARTIES = [
     { id: 'FI', pos: 1, name: 'La France Indignée', short: 'France Indignée', family: 'Gauche radicale',
-      candidate: 'Rémi Barricade', candTitle: 'le tribun de la rue', programme: ['smic', 'superprofits', 'medecins', 'train1', 'semaine4'],
+      candidate: 'Rémi Barricade', candTitle: 'le tribun de la rue', programme: ['smic', 'superprofits', 'medecins', 'train1', 'semaine4'], financing: ['isf', 'heritage', 'niches'],
       color: '#C8323C', ink: '#FFFFFF', money: 5, infl: 4, bases: ['occ', 'bfc'],
       cred: { pouvoir: 2, services: 2, ecologie: 1, emploi: 1, securite: 0, immigration: 0 },
       force: 'Réseaux sociaux : en Buzz, relance le dé si le résultat est mauvais (1 ou 2).',
       weakness: 'Un Meeting coûte 1 € de plus en région rurale.',
       cards: ['marche_pop', 'censure'] },
     { id: 'SM', pos: 3, name: 'Socialisme Modéré', short: 'Soc. Modéré', family: 'Centre gauche',
-      candidate: 'Claire Consensus', candTitle: 'la sage du parti', programme: ['classes', 'apprentissage', 'cheque', 'proximite', 'plastique'],
+      candidate: 'Claire Consensus', candTitle: 'la sage du parti', programme: ['classes', 'apprentissage', 'cheque', 'proximite', 'plastique'], financing: ['fraudefisc', 'niches'],
       color: '#E07AA0', ink: '#1B1F3B', money: 4, infl: 3, bases: ['naq', 'cvl'],
       cred: { services: 2, emploi: 1, pouvoir: 1, securite: 1, ecologie: 1, immigration: 0 },
       force: "Réseau d'élus : +1 cube en Meeting là où il a déjà 5 cubes ou plus.",
       weakness: "Peu d'argent au départ.",
       cards: ['fete_rose', 'primaire'] },
     { id: 'VP', pos: 2, name: 'Les Verts Pâturages', short: 'Verts Pâturages', family: 'Écologie',
-      candidate: 'Capucine Verdure', candTitle: 'l\'écolo à vélo', programme: ['renovation', 'train1', 'sp20', 'cheque', 'plastique'],
+      candidate: 'Capucine Verdure', candTitle: 'l\'écolo à vélo', programme: ['renovation', 'train1', 'sp20', 'cheque', 'plastique'], financing: ['heritage', 'isf'],
       color: '#3E9B5A', ink: '#FFFFFF', money: 6, infl: 3, bases: ['ara', 'cor'],
       cred: { ecologie: 2, services: 1, pouvoir: 1, emploi: 0, securite: 0, immigration: 0 },
       force: 'À la Télé : +1 cube en plus dans les régions urbaines.',
       weakness: 'Une Collecte ne rapporte que 2 €.',
       cards: ['climat', 'canicule'] },
     { id: 'EM', pos: 4, name: 'En Mouvement', short: 'En Mouvement', family: 'Centre',
-      candidate: 'Inès Disrupt', candTitle: 'la start-uppeuse', programme: ['pme', 'retraites', 'video', 'plastique', 'medecins'],
+      candidate: 'Inès Disrupt', candTitle: 'la start-uppeuse', programme: ['pme', 'retraites', 'video', 'plastique', 'medecins'], financing: ['trainvie'],
       color: '#F2A93B', ink: '#1B1F3B', money: 8, infl: 4, bases: ['pdl', 'bre'],
       cred: { emploi: 2, securite: 2, ecologie: 1, services: 1, immigration: 1, pouvoir: 0 },
       force: 'Une Collecte rapporte 4 € et 1 ★. Candidat infatigable : récupère 3 ⚡ par tour (au lieu de 2).',
       weakness: "Usure du pouvoir : au tour 5, perd 1 cube dans sa région la plus forte.",
       cards: ['art493', 'remaniement'] },
     { id: 'UG', pos: 5, name: "L'Union Gaulliste", short: 'Union Gaulliste', family: 'Droite',
-      candidate: 'Hubert de La Motte', candTitle: 'le notable', programme: ['policiers', 'pme', 'controles', 'tva', 'nonremplacement'],
+      candidate: 'Hubert de La Motte', candTitle: 'le notable', programme: ['policiers', 'pme', 'controles', 'tva', 'nonremplacement'], financing: ['trainvie', 'gelpoint', 'chomage'],
       color: '#4A7FD0', ink: '#FFFFFF', money: 5, infl: 4, bases: ['ges', 'nor'],
       cred: { securite: 2, emploi: 2, immigration: 1, pouvoir: 1, services: 1, ecologie: 0 },
       force: 'Fidélité : en région historique, une attaque ne peut pas le faire descendre sous 2 cubes.',
       weakness: 'Divisions : les événements « Division » lui coûtent 2 cubes au lieu de 1.',
       cards: ['appel18', 'rassemblement'] },
     { id: 'MN', pos: 6, name: 'Mouvement National', short: 'Mvt National', family: 'Droite nationale',
-      candidate: 'Victor Rempart', candTitle: 'le bulldog', programme: ['referendum', 'planchers', 'tva', 'regroupement', 'video'],
+      candidate: 'Victor Rempart', candTitle: 'le bulldog', programme: ['referendum', 'planchers', 'tva', 'regroupement', 'video'], financing: ['trainvie'],
       color: '#24325E', ink: '#FFFFFF', money: 7, infl: 3, bases: ['hdf', 'pac'],
       cred: { immigration: 2, securite: 2, pouvoir: 1, emploi: 0, ecologie: 0, services: 0 },
       force: 'À la Télé : +1 cube en plus dans les régions industrielles.',
@@ -270,7 +309,9 @@
     debatePrepMax: 3,                // préparation : jusqu'à 3 ★, +1 point chacune
     /* v0.7 : programme et affaires */
     programmeSize: 5,
-    budgetCap: 40,                   // au-delà de 40 Md€, le programme n'est pas financé
+    budgetCap: 25,                   // v0.8 : au-delà de 25 Md€ de reste à financer, le programme n'est pas financé
+    fundingMax: 3,                   // mesures de financement en plus des 5 promesses
+    echoScale: 15, echoGoodN: 4, echoBadN: 2,     // écho du programme : +1 cube en Meeting dans ses 4 régions de cœur, −1 dans ses 2 régions hostiles
     budgetCasStep: 15,               // +1 casserole par tranche de 15 Md€ de dépassement
     pharBonus: 1,                    // mesure phare : +1 cube en Meeting sur son thème
     affairPerCasserole: 0.12,        // chaque casserole = 12 % de risque d'affaire par tour
@@ -374,7 +415,7 @@
 
   var DATA = { REGIONS: REGIONS, PROFILES: PROFILES, THEMES: THEMES, HEADLINES: HEADLINES, PARTIES: PARTIES, ACTIONS: ACTIONS,
                CARDS: CARDS, EVENTS: EVENTS, DILEMMAS: DILEMMAS, CRISES: CRISES, REPLIES: REPLIES, TEMPERS: TEMPERS,
-               MEASURES: MEASURES, AFFAIRS: AFFAIRS, LEARN: LEARN, BUDGET_AFFAIR: BUDGET_AFFAIR, REACTIONS: REACTIONS, ADVISOR: ADVISOR, OBJECTIVES: OBJECTIVES, RULES: RULES };
+               MEASURES: MEASURES, FUNDING: FUNDING, SEGMENTS: SEGMENTS, SEGMENTS_SRC: SEGMENTS_SRC, AFFAIRS: AFFAIRS, LEARN: LEARN, BUDGET_AFFAIR: BUDGET_AFFAIR, REACTIONS: REACTIONS, ADVISOR: ADVISOR, OBJECTIVES: OBJECTIVES, RULES: RULES };
   if (typeof module !== 'undefined' && module.exports) module.exports = DATA;
   else root.PolitikData = DATA;
 })(this);
