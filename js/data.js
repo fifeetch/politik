@@ -1,20 +1,25 @@
-/* Politik — données du jeu (règles v0.8 : programme financé, groupes de population)
+/* Politik — données du jeu (règles v1.0 : poids réels, vote blanc, abstention, départ législatives 2024)
+   Régions : ins = millions d'inscrits, abst = abstention (%), blanc / nuls = % des votants, au 2nd tour de la présidentielle 2022
+   (Conseil constitutionnel, résultats par département). start = score de départ (% des exprimés) d'après le 1er tour des
+   législatives 2024 (ministère de l'Intérieur) ; les voix de la gauche unie sont réparties entre FI, SM et VP selon les
+   européennes 2024. La « région » cor regroupe la Corse, l'outre-mer et les Français de l'étranger ; sa composition
+   sociale est celle de la Corse et des 4 DROM (Insee 2022), pondérée par les inscrits.
    Toutes les valeurs chiffrées du jeu sont ici : c'est le fichier à modifier pour équilibrer. */
 (function (root) {
   var REGIONS = [
-    { id: 'idf', name: 'Île-de-France',              profile: 'urbaine',      pts: 12, concerns: ['pouvoir', 'securite'], pop: { ind: 3.3, cad: 20.0, pi: 15.5, pop: 23.7, ret: 19.7, sae: 18.0 } },
-    { id: 'ara', name: 'Auvergne-Rhône-Alpes',       profile: 'urbaine',      pts: 8, concerns: ['ecologie', 'emploi'], pop: { ind: 4.8, cad: 10.7, pi: 15.5, pop: 26.7, ret: 27.6, sae: 14.7 } },
-    { id: 'hdf', name: 'Hauts-de-France',            profile: 'industrielle', pts: 6, concerns: ['emploi', 'pouvoir'], pop: { ind: 3.2, cad: 7.9, pi: 13.9, pop: 30.1, ret: 26.6, sae: 18.2 } },
-    { id: 'naq', name: 'Nouvelle-Aquitaine',         profile: 'rurale',       pts: 6, concerns: ['services', 'ecologie'], pop: { ind: 5.3, cad: 8.2, pi: 13.6, pop: 26.8, ret: 32.8, sae: 13.3 } },
-    { id: 'occ', name: 'Occitanie',                  profile: 'rurale',       pts: 6, concerns: ['pouvoir', 'services'], pop: { ind: 5.4, cad: 9.4, pi: 13.9, pop: 24.9, ret: 30.4, sae: 16.0 } },
-    { id: 'ges', name: 'Grand Est',                  profile: 'industrielle', pts: 5, concerns: ['emploi', 'immigration'], pop: { ind: 3.7, cad: 8.0, pi: 14.2, pop: 29.9, ret: 28.5, sae: 15.6 } },
-    { id: 'pac', name: "Provence-Alpes-Côte d'Azur", profile: 'urbaine',      pts: 5, concerns: ['securite', 'immigration'], pop: { ind: 5.1, cad: 9.4, pi: 13.9, pop: 24.9, ret: 29.8, sae: 16.9 } },
-    { id: 'pdl', name: 'Pays de la Loire',           profile: 'rurale',       pts: 4, concerns: ['ecologie', 'emploi'], pop: { ind: 4.4, cad: 9.1, pi: 14.6, pop: 28.9, ret: 30.3, sae: 12.8 } },
-    { id: 'bre', name: 'Bretagne',                   profile: 'rurale',       pts: 3, concerns: ['ecologie', 'services'], pop: { ind: 4.7, cad: 8.6, pi: 14.1, pop: 27.0, ret: 32.2, sae: 13.5 } },
-    { id: 'nor', name: 'Normandie',                  profile: 'historique',   pts: 3, concerns: ['emploi', 'services'], pop: { ind: 4.2, cad: 7.2, pi: 13.7, pop: 29.2, ret: 31.3, sae: 14.5 } },
-    { id: 'bfc', name: 'Bourgogne-Franche-Comté',    profile: 'historique',   pts: 3, concerns: ['services', 'pouvoir'], pop: { ind: 4.6, cad: 7.0, pi: 13.4, pop: 29.0, ret: 32.3, sae: 13.7 } },
-    { id: 'cvl', name: 'Centre-Val de Loire',        profile: 'historique',   pts: 3, concerns: ['services', 'securite'], pop: { ind: 4.1, cad: 8.0, pi: 14.1, pop: 28.4, ret: 31.9, sae: 13.5 } },
-    { id: 'cor', name: 'Corse',                      profile: 'historique',   pts: 1, concerns: ['securite', 'pouvoir'], pop: { ind: 6.7, cad: 5.9, pi: 12.4, pop: 27.9, ret: 29.5, sae: 17.6 } }
+    { id: 'idf', name: 'Île-de-France', profile: 'urbaine', pts: 9.8, ins: 7.35, abst: 29.4, blanc: 6.2, nuls: 1.7, start: { FI: 18.5, SM: 15.6, VP: 7.1, EM: 25.4, UG: 10.1, MN: 20.1 }, concerns: ['pouvoir', 'securite'], pop: { ind: 3.3, cad: 20.0, pi: 15.5, pop: 23.7, ret: 19.7, sae: 18.0 } },
+    { id: 'ara', name: 'Auvergne-Rhône-Alpes', profile: 'urbaine', pts: 7.4, ins: 5.56, abst: 25.6, blanc: 6.7, nuls: 2.2, start: { FI: 10.8, SM: 13.0, VP: 5.9, EM: 19.2, UG: 15.8, MN: 33.1 }, concerns: ['ecologie', 'emploi'], pop: { ind: 4.8, cad: 10.7, pi: 15.5, pop: 26.7, ret: 27.6, sae: 14.7 } },
+    { id: 'hdf', name: 'Hauts-de-France', profile: 'industrielle', pts: 5.7, ins: 4.26, abst: 26.7, blanc: 5.2, nuls: 2.2, start: { FI: 10.8, SM: 10.3, VP: 3.5, EM: 17.2, UG: 10.6, MN: 43.8 }, concerns: ['emploi', 'pouvoir'], pop: { ind: 3.2, cad: 7.9, pi: 13.9, pop: 30.1, ret: 26.6, sae: 18.2 } },
+    { id: 'naq', name: 'Nouvelle-Aquitaine', profile: 'rurale', pts: 5.9, ins: 4.46, abst: 24.2, blanc: 7.4, nuls: 3.1, start: { FI: 9.0, SM: 17.6, VP: 6.0, EM: 24.2, UG: 6.5, MN: 34.4 }, concerns: ['services', 'ecologie'], pop: { ind: 5.3, cad: 8.2, pi: 13.6, pop: 26.8, ret: 32.8, sae: 13.3 } },
+    { id: 'occ', name: 'Occitanie', profile: 'rurale', pts: 5.8, ins: 4.32, abst: 24.8, blanc: 7.3, nuls: 3.1, start: { FI: 11.1, SM: 16.3, VP: 5.3, EM: 21.0, UG: 4.1, MN: 38.6 }, concerns: ['pouvoir', 'services'], pop: { ind: 5.4, cad: 9.4, pi: 13.9, pop: 24.9, ret: 30.4, sae: 16.0 } },
+    { id: 'ges', name: 'Grand Est', profile: 'industrielle', pts: 5.1, ins: 3.86, abst: 26.3, blanc: 5.6, nuls: 1.9, start: { FI: 8.1, SM: 9.6, VP: 4.2, EM: 20.3, UG: 14.8, MN: 38.6 }, concerns: ['emploi', 'immigration'], pop: { ind: 3.7, cad: 8.0, pi: 14.2, pop: 29.9, ret: 28.5, sae: 15.6 } },
+    { id: 'pac', name: "Provence-Alpes-Côte d'Azur", profile: 'urbaine', pts: 4.9, ins: 3.66, abst: 27.5, blanc: 5.9, nuls: 1.9, start: { FI: 10.7, SM: 10.4, VP: 5.4, EM: 19.2, UG: 7.1, MN: 44.6 }, concerns: ['securite', 'immigration'], pop: { ind: 5.1, cad: 9.4, pi: 13.9, pop: 24.9, ret: 29.8, sae: 16.9 } },
+    { id: 'pdl', name: 'Pays de la Loire', profile: 'rurale', pts: 3.8, ins: 2.83, abst: 23.6, blanc: 6.7, nuls: 2.1, start: { FI: 8.2, SM: 15.0, VP: 6.5, EM: 28.5, UG: 9.5, MN: 29.7 }, concerns: ['ecologie', 'emploi'], pop: { ind: 4.4, cad: 9.1, pi: 14.6, pop: 28.9, ret: 30.3, sae: 12.8 } },
+    { id: 'bre', name: 'Bretagne', profile: 'rurale', pts: 3.4, ins: 2.56, abst: 22.1, blanc: 7.2, nuls: 2.4, start: { FI: 8.1, SM: 16.4, VP: 6.3, EM: 30.6, UG: 6.9, MN: 27.7 }, concerns: ['ecologie', 'services'], pop: { ind: 4.7, cad: 8.6, pi: 14.1, pop: 27.0, ret: 32.2, sae: 13.5 } },
+    { id: 'nor', name: 'Normandie', profile: 'historique', pts: 3.2, ins: 2.41, abst: 24.2, blanc: 6.4, nuls: 2.0, start: { FI: 9.3, SM: 12.8, VP: 4.3, EM: 23.5, UG: 10.3, MN: 36.4 }, concerns: ['emploi', 'services'], pop: { ind: 4.2, cad: 7.2, pi: 13.7, pop: 29.2, ret: 31.3, sae: 14.5 } },
+    { id: 'bfc', name: 'Bourgogne-Franche-Comté', profile: 'historique', pts: 2.7, ins: 1.99, abst: 25.2, blanc: 6.9, nuls: 2.6, start: { FI: 8.7, SM: 11.7, VP: 4.5, EM: 20.2, UG: 12.7, MN: 39.9 }, concerns: ['services', 'pouvoir'], pop: { ind: 4.6, cad: 7.0, pi: 13.4, pop: 29.0, ret: 32.3, sae: 13.7 } },
+    { id: 'cvl', name: 'Centre-Val de Loire', profile: 'historique', pts: 2.5, ins: 1.84, abst: 25.3, blanc: 6.5, nuls: 2.4, start: { FI: 8.4, SM: 11.5, VP: 3.8, EM: 25.9, UG: 9.2, MN: 37.7 }, concerns: ['services', 'securite'], pop: { ind: 4.1, cad: 8.0, pi: 14.1, pop: 28.4, ret: 31.9, sae: 13.5 } },
+    { id: 'cor', name: 'Corse, outre-mer et Français de l\'étranger', short: 'Corse & outre-mer', profile: 'historique', pts: 4.8, ins: 3.63, abst: 54.5, blanc: 4.6, nuls: 2.9, start: { FI: 7.4, SM: 18.4, VP: 4.3, EM: 19.8, UG: 16.5, MN: 15.2 }, concerns: ['pouvoir', 'services'], pop: { ind: 4.9, cad: 5.6, pi: 12.7, pop: 29.4, ret: 21.9, sae: 25.4 } }
   ];
 
   /* v0.3 — Les thèmes de campagne.
@@ -62,11 +67,11 @@
     { id: 'nonremplacement', theme: 'services',    name: 'Un fonctionnaire sur deux non remplacé',    cost: -10, choc: true , fans: {ind: 1, cad: 1, pi: -2, pop: -1}, edu: { what: 'Ne remplacer qu\'un fonctionnaire sur deux qui part à la retraite.', pro: 'Réduit les dépenses de l\'État.', con: 'Risque de dégrader les services publics (écoles, hôpitaux).' } },
     { id: 'renovation',      theme: 'ecologie',    name: 'Rénover 1 million de logements',            cost: 18 , fans: {pop: 1, ind: 1, cad: 1}, edu: { what: 'Isoler les logements pour qu\'ils consomment moins d\'énergie.', pro: 'Baisse les factures et les émissions de CO₂.', con: 'Gros coût pour l\'État et les propriétaires, et pénurie d\'artisans.' } },
     { id: 'train1',          theme: 'ecologie',    name: 'Le train à 1 € pour les jeunes',            cost: 5 , fans: {sae: 2}, edu: { what: 'Un billet de train à prix symbolique pour les jeunes.', pro: 'Encourage le train plutôt que la voiture.', con: 'Manque à gagner pour la SNCF, à compenser par l\'État.' } },
-    { id: 'jets',            theme: 'ecologie',    name: 'Taxe sur les jets privés',                  cost: -3 , fans: {pop: 1, sae: 1, cad: -1}, edu: { what: 'Un impôt sur les vols en avion privé, très polluants par passager.', pro: 'Symbole de justice : les plus riches paient leur pollution.', con: 'Rapporte peu, et les vols peuvent partir de l\'étranger.' } },
+    { id: 'jets',            theme: 'ecologie',    name: 'Taxe sur les jets privés',                  cost: -0.2 , fans: {pop: 1, sae: 1, cad: -1}, edu: { what: 'Un impôt sur les vols en avion privé, très polluants par passager.', pro: 'Symbole de justice : les plus riches paient leur pollution.', con: 'Rapporte peu, et les vols peuvent partir de l\'étranger.' } },
     { id: 'plastique',       theme: 'ecologie',    name: 'Fin du plastique jetable',                  cost: 2 , fans: {cad: 1, sae: 1, ind: -1}, edu: { what: 'Interdire progressivement les emballages et objets en plastique à usage unique.', pro: 'Moins de déchets dans la nature et les océans.', con: 'Les entreprises doivent trouver des alternatives, parfois plus chères.' } },
-    { id: 'policiers',       theme: 'securite',    name: '10 000 policiers de plus',                  cost: 10 , fans: {ret: 2, pop: 1}, edu: { what: 'Recruter et former davantage de policiers et gendarmes.', pro: 'Plus de présence sur le terrain.', con: 'Il faut aussi des locaux, du matériel, et des années de formation.' } },
+    { id: 'policiers',       theme: 'securite',    name: '10 000 policiers de plus',                  cost: 1 , fans: {ret: 2, pop: 1}, edu: { what: 'Recruter et former davantage de policiers et gendarmes.', pro: 'Plus de présence sur le terrain.', con: 'Il faut aussi des locaux, du matériel, et des années de formation.' } },
     { id: 'proximite',       theme: 'securite',    name: 'Retour de la police de proximité',          cost: 5 , fans: {ret: 1, pop: 1, pi: 1}, edu: { what: 'Des policiers affectés à un quartier, qui connaissent ses habitants.', pro: 'Rétablit la confiance et prévient la délinquance.', con: 'Mobilise beaucoup d\'agents pour des résultats difficiles à mesurer.' } },
-    { id: 'planchers',       theme: 'securite',    name: 'Peines planchers',                          cost: 1 , fans: {ret: 1}, edu: { what: 'Une peine minimale obligatoire pour certains délits, surtout en cas de récidive.', pro: 'Rend la sanction plus certaine et dissuasive.', con: 'Limite la liberté du juge d\'adapter la peine à chaque cas. Déjà essayée puis supprimée en France.' } },
+    { id: 'planchers',       theme: 'securite',    name: 'Peines planchers',                          cost: 1 , penal: true, fans: {ret: 1}, edu: { what: 'Une peine minimale obligatoire pour certains délits, surtout en cas de récidive.', pro: 'Rend la sanction plus certaine et dissuasive.', con: 'Limite la liberté du juge d\'adapter la peine à chaque cas. Déjà essayée puis supprimée en France.' } },
     { id: 'video',           theme: 'securite',    name: 'Caméras dans toutes les communes',          cost: 3 , fans: {ret: 1, ind: 1}, edu: { what: 'Installer des caméras de surveillance sur la voie publique.', pro: 'Aide à élucider des affaires et peut dissuader.', con: 'Efficacité discutée, et questions de vie privée.' } },
     { id: 'fraude',          theme: 'securite',    name: 'Chasse à la fraude sociale',                cost: -6 , fans: {ret: 1, ind: 1, cad: 1, sae: -2}, edu: { what: 'Renforcer les contrôles sur les aides sociales versées à tort.', pro: 'Les aides vont à ceux qui y ont droit.', con: 'La fraude aux cotisations des entreprises et le non-recours aux droits sont aussi importants.' } },
     { id: 'referendum',      theme: 'immigration', name: 'Référendum sur l\'immigration',             cost: 1 , fans: {ret: 1, pop: 1, cad: -1}, edu: { what: 'Faire voter directement les citoyens sur la politique d\'immigration.', pro: 'Donne la parole au peuple sur un sujet sensible.', con: 'L\'article 11 de la Constitution ne cite pas l\'immigration : la possibilité même de ce référendum fait débat.' } },
@@ -153,6 +158,13 @@
     trois_pourcent: { title: 'La règle des 3 %', text: 'Les règles européennes demandent de garder le déficit public sous 3 % du PIB. La France fait l\'objet d\'une procédure pour déficit excessif et s\'est engagée à repasser sous 3 % en 2029.', src: [{ label: 'La situation et les perspectives des finances publiques, juin 2026 (Cour des comptes)', url: 'https://www.ccomptes.fr/fr/publications/la-situation-et-les-perspectives-des-finances-publiques-17' }, { label: 'Le nouveau cadre budgétaire européen (Direction générale du Trésor)', url: 'https://www.tresor.economie.gouv.fr/Articles/2026/04/14/le-nouveau-cadre-budgetaire-europeen-de-la-negociation-a-la-mise-en-oeuvre' }] },
     dissolution: { title: 'La dissolution', text: 'Le président peut dissoudre l\'Assemblée nationale (article 12 de la Constitution) : de nouvelles élections législatives ont alors lieu. Il ne peut pas recommencer dans l\'année qui suit.', src: [{ label: 'Constitution, article 12 (Conseil constitutionnel)', url: 'https://www.conseil-constitutionnel.fr/le-bloc-de-constitutionnalite/texte-integral-de-la-constitution-du-4-octobre-1958-en-vigueur' }] },
     cour: { title: 'La Cour des comptes', text: 'Une juridiction indépendante qui contrôle la bonne utilisation de l\'argent public. Chaque année, elle publie un rapport sur la situation des finances publiques et ses recommandations.', src: [{ label: 'La situation et les perspectives des finances publiques, juin 2026 (Cour des comptes)', url: 'https://www.ccomptes.fr/fr/publications/la-situation-et-les-perspectives-des-finances-publiques-17' }] },
+    vote_blanc: { title: 'Le vote blanc', text: 'Voter blanc, c\'est se déplacer pour dire qu\'aucun candidat ne convient. Depuis la loi du 21 février 2014, les bulletins blancs sont comptés à part et cités dans les résultats, mais ils ne comptent pas dans les suffrages exprimés : ils ne changent donc pas le score des candidats. Au 2nd tour de 2022, il y en a eu 2,2 millions, soit 6,4 % des votants.', src: [{ label: 'Comment le vote blanc est-il comptabilisé ? (Conseil constitutionnel)', url: 'https://presidentielle2022.conseil-constitutionnel.fr/le-vote/etre-electeur-et-voter/vote-blanc-comptabilise.html' }, { label: 'Loi n° 2014-172 du 21 février 2014 (Légifrance)', url: 'https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000028636783' }, { label: 'Résultats officiels du 2nd tour 2022 (Conseil constitutionnel)', url: 'https://presidentielle2022.conseil-constitutionnel.fr/les-communiques/resultats-du-second-tour.html' }] },
+    abstention: { title: 'L\'abstention', text: 'Au 2nd tour de la présidentielle 2022, 28 % des inscrits ne sont pas allés voter. Elle varie beaucoup : 22 % en Bretagne, 29 % en Île-de-France, et plus de la moitié des inscrits en outre-mer et chez les Français de l\'étranger.', src: [{ label: 'Présidentielle 2022, résultats du 2nd tour par département (Conseil constitutionnel)', url: 'https://presidentielle2022.conseil-constitutionnel.fr/documents/Resultats-departements-2etour.20220427133205.pdf' }] },
+    qui_vote: { title: 'Qui vote, qui s\'abstient ?', text: 'D\'après l\'Insee, en 2022 la moitié des cadres inscrits ont voté à tous les tours, contre un quart seulement des ouvriers. Les 65 ans et plus votent beaucoup plus que les 18-29 ans. Convaincre ceux qui votent peu est donc un énorme réservoir… mais difficile.', src: [{ label: 'Vingt ans de participation électorale, Insee Première n° 1929', url: 'https://www.insee.fr/fr/statistiques/6658143' }, { label: 'Seul un tiers des électeurs a voté à tous les tours, Insee Première n° 1928', url: 'https://www.insee.fr/fr/statistiques/6658145' }] },
+    inscription: { title: 'S\'inscrire sur les listes', text: 'Pour voter, il faut être inscrit sur les listes électorales. En 2022, 95 % des Français en âge de voter l\'étaient, d\'après l\'Insee. Les jeunes sont inscrits d\'office à 18 ans, mais après un déménagement il faut faire la démarche soi-même.', src: [{ label: '48,7 millions d\'électeurs inscrits en 2022, Insee Focus n° 264', url: 'https://www.insee.fr/fr/statistiques/6322895' }, { label: 'Je m\'inscris sur les listes électorales (ministère de l\'Intérieur)', url: 'https://www.elections.interieur.gouv.fr/mes-demarches/je-minscris-sur-listes-electorales' }] },
+    electeurs: { title: 'Habitants ou électeurs ?', text: 'Ce ne sont pas les habitants qui votent, mais les inscrits. L\'Île-de-France compte 18,8 % de la population de métropole, mais seulement 16,2 % de ses inscrits : la population compte aussi les mineurs et les étrangers, qui ne votent pas à la présidentielle. Dans le jeu, chaque région pèse son vrai nombre d\'inscrits.', src: [{ label: 'Estimation de la population au 1er janvier 2025 (Insee)', url: 'https://www.insee.fr/fr/statistiques/2012730' }, { label: 'Présidentielle 2022, résultats du 2nd tour par département (Conseil constitutionnel)', url: 'https://presidentielle2022.conseil-constitutionnel.fr/documents/Resultats-departements-2etour.20220427133205.pdf' }] },
+    outremer: { title: 'Corse, outre-mer et Français de l\'étranger', text: 'Dans le jeu, ils sont regroupés : 3,6 millions d\'inscrits, soit 7 % du corps électoral. Au 2nd tour de 2022, plus de la moitié d\'entre eux se sont abstenus (61 % chez les Français de l\'étranger). À l\'Assemblée, l\'outre-mer élit 27 députés et les Français de l\'étranger 11.', src: [{ label: 'Présidentielle 2022, résultats du 2nd tour par département (Conseil constitutionnel)', url: 'https://presidentielle2022.conseil-constitutionnel.fr/documents/Resultats-departements-2etour.20220427133205.pdf' }, { label: 'Fiche de synthèse n° 3 : l\'élection des députés (Assemblée nationale)', url: 'https://www.assemblee-nationale.fr/dyn/synthese/deputes-groupes-parlementaires/l-election-des-deputes' }] },
+    depart2024: { title: 'Le point de départ : les législatives 2024', text: 'Au début de la partie, chaque parti a dans chaque région des électeurs proportionnels à son score au 1er tour des législatives de 2024. Comme la gauche s\'y présentait unie, ses voix sont réparties entre les trois partis de gauche du jeu selon les européennes de 2024, où chacun avait sa liste. Ensuite, ton programme fait bouger ce point de départ : il gagne des électeurs là où vivent les groupes qu\'il séduit, il en perd là où vivent ceux qu\'il fâche.', src: [{ label: 'Législatives 2024, résultats définitifs du 1er tour (ministère de l\'Intérieur, data.gouv.fr)', url: 'https://www.data.gouv.fr/datasets/elections-legislatives-des-30-juin-et-7-juillet-2024-resultats-definitifs-du-1er-tour' }, { label: 'Européennes 2024, résultats définitifs (ministère de l\'Intérieur, data.gouv.fr)', url: 'https://www.data.gouv.fr/datasets/resultats-des-elections-europeennes-du-9-juin-2024' }] },
     dette: { title: 'La dette publique', text: 'Fin 2025, la dette publique atteignait 3 460 milliards d\'euros, environ 116 % du PIB, un record. Rien qu\'en intérêts, elle a coûté près de 66 milliards d\'euros en 2025, et la Cour des comptes prévoit environ 77 milliards en 2026 : ce serait le premier poste du budget de l\'État. Les règles européennes demandent de ramener le déficit sous 3 % du PIB.' , src: [{label: "La situation et les perspectives des finances publiques, juin 2026 (Cour des comptes)", url: "https://www.ccomptes.fr/fr/publications/la-situation-et-les-perspectives-des-finances-publiques-17"}, {label: "Comptes de la Nation 2025, premiers résultats (Insee)", url: "https://www.insee.fr/fr/statistiques/8956575"}] },
     alliances: { title: 'Les alliances', text: 'Entre les deux tours, des partis proches peuvent passer des accords : l\'un se retire ou appelle à voter pour l\'autre. Mais une alliance n\'efface pas les désaccords, et les électeurs restent libres.' }
   };
@@ -168,6 +180,8 @@
     { id: 'ret', icon: '👵', name: 'Retraités',                     full: 'Retraités' },
     { id: 'sae', icon: '🎓', name: 'Étudiants et sans emploi',      full: 'Étudiants, chômeurs et autres personnes sans activité professionnelle' }
   ];
+  /* v1.0 : propension à voter de chaque groupe (inspirée de l'Insee : la moitié des cadres votent à tous les tours, un quart des ouvriers) */
+  var VOTE_PROP = { cad: 1.15, ret: 1.12, pi: 1.05, ind: 1.0, pop: 0.85, sae: 0.8 };
   var SEGMENTS_SRC = { label: 'Population de 15 ans ou plus par groupe socioprofessionnel en 2022 (Insee)', url: 'https://www.insee.fr/fr/statistiques/2012701' };
 
   var PROFILES = {
@@ -228,6 +242,7 @@
     fonds:    { name: 'Collecte',       icon: '💰', cost: { money: 0, infl: 0 }, target: null,     text: '+3 €' },
     reforme:  { name: 'Promesse',       icon: '📜', cost: { money: 0, infl: 4 }, target: 'region', text: '+1 cube dans toutes les régions du même profil (région contrôlée)' },
     imposer:  { name: 'Faire la une',   icon: '🗞️', cost: { money: 2, infl: 2 }, target: null,     theme: true, text: 'Ton thème fera l\'actu au prochain tour (pour tout le monde !)' },
+    mobiliser:{ name: 'Mobiliser',      icon: '🚪', cost: { money: 2, infl: 0 }, target: 'region', text: 'Porte-à-porte : fais voter des abstentionnistes. Plus efficace si ton programme plaît aux groupes qui votent peu ici' },
     militants:{ name: 'Militants',      icon: '👥', cost: { money: 3, infl: 0 }, target: 'region', text: 'Implante une équipe de militants : +1 cube ici au début de chaque tour (3 équipes au plus)' },
     enquete:  { name: 'Enquêter',       icon: '🔎', cost: { money: 1, infl: 1 }, target: 'party', text: 'Fouiller le passé d\'un rival : si tu trouves quelque chose, une affaire lui tombe dessus au prochain tour' },
     alliance: { name: 'Alliance',       cost: { money: 0, infl: 1 }, target: 'party',  text: "Proposer une alliance à un parti proche (distance 2 au plus)" },
@@ -276,7 +291,7 @@
     { id: 'paris',      name: "Paris d'abord",          text: "Contrôler l'Île-de-France",                         bonus: 3 },
     { id: 'partout',    name: 'Présent partout',        text: 'Avoir au moins 1 cube dans les 13 régions',         bonus: 3 },
     { id: 'debat',      name: 'Maître du débat',        text: 'Gagner 2 débats',                                   bonus: 3 },
-    { id: 'corse',      name: "L'île de Beauté",        text: 'Contrôler la Corse',                                bonus: 2 }
+    { id: 'corse',      name: 'Au-delà de l\'Hexagone',   text: 'Contrôler la Corse, l\'outre-mer et les Français de l\'étranger', bonus: 3 }
   ];
 
   var RULES = {
@@ -285,6 +300,7 @@
     debateTurns: [3, 6, 8],
     incomeMoney: 4, incomePerRegion: 1, incomeRegionMax: 3, incomeInfl: 2,
     minControl: 3, maxCubes: 10, startCubes: 3,
+    startScale: 10,              // v1.0 : cubes de départ = score aux législatives 2024 (%) × 10 / 100
     spotlightCost: 2,
     /* v0.2 : axe politique, transferts, alliances, élection */
     maxAllianceDistance: 2,
@@ -293,7 +309,7 @@
     objectiveVotes: 0.6,         // un objectif réussi rapporte bonus × 0,6 « millions » de voix
     transfer: { 1: 0.50, 2: 0.42, 3: 0.35, 4: 0.30, 5: 0.25 },  // report au 2nd tour selon la distance
     allyTransfer: 0.85,
-    edgeMobilization: 1.25,
+    edgeMobilization: 1,         // v1.0 : supprimé (aucune source ne le justifie)
     betrayedTransfer: 0.05,
     /* v0.3 : thèmes */
     terrainCubes: [1, 1, 2, 3, 4],   // cubes gagnés en Meeting selon l'impact du message (0 à 4)
@@ -323,7 +339,15 @@
     affairPerCasserole: 0.12,        // chaque casserole = 12 % de risque d'affaire par tour
     canardChance: 0.35,              // sinon, Le Canard Déchaîné sort une affaire 35 % du temps
     affairsMax: 2,                   // au plus 2 affaires par tour
-    enqueteBase: 0.35, enqueteCas: 0.15, enqueteBackfire: 0.3
+    enqueteBase: 0.35, enqueteCas: 0.15, enqueteBackfire: 0.3,
+    /* v1.0 : participation et vote blanc */
+    round1Abst: 0.939,           // abstention au 1er tour = abstention du 2nd × 0,939 (26,31 % contre 28,01 % en 2022)
+    round1Blank: 0.254,          // blancs et nuls au 1er tour = ceux du 2nd × 0,254 (2,2 % contre 8,7 % des votants en 2022)
+    turnoutMax: 0.92,
+    mobTurnout: 0.006,           // chaque cube mobilisé = +0,6 point de participation dans la région
+    registerTurns: 3,            // jusqu'au tour 3 : Mobiliser inscrit aussi de nouveaux électeurs (+0,3 % d'inscrits)
+    attackBlank: 0.003, attackAbst: 0.002, affairAbst: 0.001,   // campagne négative : des électeurs écœurés
+    blankOfNonTransfer: 0.35     // au 2nd tour, part des électeurs non reportés qui votent blanc (le reste s'abstient)
   };
 
   /* ---------- v0.6 : le débat télévisé ----------
@@ -421,7 +445,7 @@
 
   var DATA = { REGIONS: REGIONS, PROFILES: PROFILES, THEMES: THEMES, HEADLINES: HEADLINES, PARTIES: PARTIES, ACTIONS: ACTIONS,
                CARDS: CARDS, EVENTS: EVENTS, DILEMMAS: DILEMMAS, CRISES: CRISES, REPLIES: REPLIES, TEMPERS: TEMPERS,
-               MEASURES: MEASURES, FUNDING: FUNDING, SEGMENTS: SEGMENTS, SEGMENTS_SRC: SEGMENTS_SRC, AFFAIRS: AFFAIRS, LEARN: LEARN, BUDGET_AFFAIR: BUDGET_AFFAIR, REACTIONS: REACTIONS, ADVISOR: ADVISOR, OBJECTIVES: OBJECTIVES, RULES: RULES };
+               MEASURES: MEASURES, FUNDING: FUNDING, SEGMENTS: SEGMENTS, VOTE_PROP: VOTE_PROP, SEGMENTS_SRC: SEGMENTS_SRC, AFFAIRS: AFFAIRS, LEARN: LEARN, BUDGET_AFFAIR: BUDGET_AFFAIR, REACTIONS: REACTIONS, ADVISOR: ADVISOR, OBJECTIVES: OBJECTIVES, RULES: RULES };
   if (typeof module !== 'undefined' && module.exports) module.exports = DATA;
   else root.PolitikData = DATA;
 })(this);

@@ -1,4 +1,4 @@
-/* Politik — moteur de jeu (règles v0.7 : programme, affaires, enquêtes, thèmes, candidat, militants, dilemmes, casseroles, crises, alliances, élection à deux tours).
+/* Politik — moteur de jeu (règles v1.0 : poids réels, vote blanc, abstention, mobilisation, programme, affaires, enquêtes, thèmes, candidat, militants, dilemmes, casseroles, crises, alliances, élection à deux tours).
    Aucune dépendance à l'affichage : tout l'état de la partie est dans un objet « g ». */
 (function (root) {
   var D = (typeof module !== 'undefined' && module.exports) ? require('./data.js') : root.PolitikData;
@@ -215,18 +215,33 @@
   /* ---------- Votes et sondages ----------
      Chaque région vote selon ses cubes, pondérée par ses points (sa population).
      Les cubes du parti qui contrôle la région comptent un peu plus (prime au sortant). */
+  /* v1.0 : électeurs d'une région (en millions) */
+  function regionVoters(g, rid) {
+    var r = REG[rid], reg = g.regions[rid] || {};
+    var ins = reg.ins != null ? reg.ins : r.ins;
+    var abst = reg.abst != null ? reg.abst : r.abst / 100 * R.round1Abst;
+    var blank = reg.blank != null ? reg.blank : (r.blanc + r.nuls) / 100 * R.round1Blank;
+    var votants = ins * (1 - abst);
+    return { ins: ins, abst: abst, blank: blank, votants: votants, blancs: votants * blank, exprimes: votants * (1 - blank) };
+  }
+  function turnoutStats(g) {
+    var t = { ins: 0, votants: 0, blancs: 0, exprimes: 0 };
+    D.REGIONS.forEach(function (r) { var x = regionVoters(g, r.id); t.ins += x.ins; t.votants += x.votants; t.blancs += x.blancs; t.exprimes += x.exprimes; });
+    t.participation = t.votants / t.ins; t.abstention = 1 - t.participation; t.blankPct = t.blancs / t.votants;
+    return t;
+  }
   function votes(g, withObjectives) {
     var v = {}; g.players.forEach(function (p) { v[p.id] = 0; });
+    var totalExp = 0;
     D.REGIONS.forEach(function (r) {
-      var reg = g.regions[r.id], T = 0, w = {};
+      var reg = g.regions[r.id], T = 0, w = {}, ex = regionVoters(g, r.id).exprimes;
+      totalExp += ex;
       g.players.forEach(function (p) { w[p.id] = cubes(g, r.id, p.id) * (reg.controller === p.id ? R.incumbentBonus : 1); T += w[p.id]; });
-      if (T > 0) g.players.forEach(function (p) { v[p.id] += r.pts * w[p.id] / T; });
+      if (T > 0) g.players.forEach(function (p) { v[p.id] += ex * w[p.id] / T; });
     });
-    // électorat très mobilisé aux deux bouts de l'axe (même règle à gauche et à droite)
-    g.players.forEach(function (p) { if (PARTY[p.id].pos === 1 || PARTY[p.id].pos === 6) v[p.id] *= R.edgeMobilization; });
     if (withObjectives) g.players.forEach(function (p) {
       var o = D.OBJECTIVES.filter(function (x) { return x.id === p.objective; })[0];
-      if (objectiveMet(g, p.id, p.objective)) v[p.id] += o.bonus * R.objectiveVotes;
+      if (objectiveMet(g, p.id, p.objective)) v[p.id] += o.bonus * R.objectiveVotes * totalExp / 65;
     });
     return v;
   }
@@ -267,8 +282,11 @@
       regions: {}, events: shuffle(D.EVENTS.map(function (e) { return e.id; }), rng),
       event: null, mods: {}, cancel: {}, log: [], history: []
     };
-    D.REGIONS.forEach(function (r) { g.regions[r.id] = { cubes: {}, controller: null }; });
-    g.players.forEach(function (pl) { PARTY[pl.id].bases.forEach(function (rid) { addCubes(g, rid, pl.id, R.startCubes); }); });
+    // v1.0 : vrais inscrits, vraie abstention et vrai vote blanc (2022) ; électeurs de départ selon les législatives 2024
+    D.REGIONS.forEach(function (r) {
+      g.regions[r.id] = { cubes: {}, controller: null, ins: r.ins, abst: r.abst / 100 * R.round1Abst, blank: (r.blanc + r.nuls) / 100 * R.round1Blank };
+      g.players.forEach(function (pl) { var n = Math.round((r.start[pl.id] || 0) * R.startScale / 100); if (n) addCubes(g, r.id, pl.id, n); });
+    });
     updateAllControl(g);
     // v0.5 : une crise en 3 actes, et un paquet de dilemmes
     var cr = D.CRISES[Math.floor(rng() * D.CRISES.length)];
@@ -367,9 +385,24 @@
     if (k < 0) return null;
     var a = g.affairs.splice(k, 1)[0], rc = D.REACTIONS[idx] || D.REACTIONS[0], pl = player(g, pid);
     pl.cas = Math.max(0, pl.cas - 1);
+    D.REGIONS.forEach(function (r) { g.regions[r.id].abst = Math.min(0.8, g.regions[r.id].abst + R.affairAbst); });   // « tous pourris »
     var fx = applyFx(g, pid, rc.fx);
     updateAllControl(g);
     return { pid: pid, title: a.title, reaction: rc.label, effects: fx };
+  }
+  /* v1.0 : combien d'abstentionnistes un parti peut-il convaincre ici ? */
+  function lowTurnoutFit(g, pid, rid) {
+    var pl = player(g, pid); if (!pl || !pl.programme) return 0;
+    var ap = segmentAppeal(pl.programme.concat(pl.financing || [])), pop = REG[rid].pop, f = 0;
+    D.SEGMENTS.forEach(function (sg) { if (ap[sg.id] > 0) f += Math.min(3, ap[sg.id]) * pop[sg.id] / 100 * Math.max(0, 1.2 - D.VOTE_PROP[sg.id]); });
+    return f;
+  }
+  function mobilizeGain(g, pid, rid) {
+    var n = 1, why = [];
+    if ((g.bases[rid] || []).indexOf(pid) >= 0) { n++; why.push('tes militants'); }
+    if (lowTurnoutFit(g, pid, rid) >= 0.18) { n++; why.push('ton programme parle à ceux qui votent peu'); }
+    if (regionVoters(g, rid).abst >= 0.35) { n++; why.push('beaucoup d\'abstentionnistes'); }
+    return { n: Math.min(3, n), why: why };
   }
   function enqueteChance(g, target) { return Math.min(0.9, R.enqueteBase + R.enqueteCas * player(g, target).cas); }
   function dilemmaDef(id) { return D.DILEMMAS.filter(function (d) { return d.id === id; })[0]; }
@@ -508,6 +541,7 @@
     if (def.target === 'region' && !act.region) return 'Choisis une région.';
     if (def.theme && !THEME[act.theme]) return 'Choisis un thème.';
     if (act.type === 'imposer' && g.turn >= R.maxTurns) return 'Plus de tour suivant : la campagne est finie.';
+    if (act.type === 'mobiliser' && regionVoters(g, act.region).abst <= 1 - R.turnoutMax) return 'Presque tout le monde vote déjà ici.';
     if (act.type === 'militants') {
       var pl0 = player(g, pid);
       if ((g.bases[act.region] || []).indexOf(pid) >= 0) return 'Tu as déjà des militants ici.';
@@ -658,8 +692,16 @@
         var n2 = 2;
         if (rival === 'UG' && REG[act.region].profile === 'historique') n2 = Math.max(0, Math.min(2, cubes(g, act.region, 'UG') - 2));
         var lost = -addCubes(g, act.region, rival, -n2);
+        g.regions[act.region].blank += R.attackBlank; g.regions[act.region].abst += R.attackAbst;   // une campagne négative écœure
         pl.cas = Math.min(R.casseroleMax, pl.cas + 1);
         t.push(PARTY[rival].short + ' −' + lost + ' en ' + rn + ' · +1 casserole'); break; }
+      case 'mobiliser': {
+        var mg = mobilizeGain(g, pid, act.region), reg0 = g.regions[act.region];
+        var gotM = addCubes(g, act.region, pid, mg.n);
+        reg0.abst = Math.max(1 - R.turnoutMax, reg0.abst - R.mobTurnout * gotM);
+        if (g.turn <= R.registerTurns) { reg0.ins *= 1.003; t.push('nouveaux inscrits'); }
+        t.push('+' + gotM + ' en ' + rn + ' (abstentionnistes convaincus' + (mg.why.length ? ' : ' + mg.why.join(', ') : '') + ')');
+        break; }
       case 'enquete': {
         var tgt = player(g, act.target), ch = enqueteChance(g, act.target);
         if (g.rng() < ch) {
@@ -866,18 +908,22 @@
     return R.transfer[dist(from, to)] || 0;
   }
   function election(g) {
-    var first = percents(votes(g, true));
-    var out = { first: first, second: null, winner: null, direct: false };
+    var first = percents(votes(g, true)), st = turnoutStats(g);
+    var out = { first: first, second: null, winner: null, direct: false, stats1: st };
     if (first[0].pct > 0.5) { out.direct = true; out.winner = first[0].pid; return out; }
-    var A = first[0], B = first[1], va = A.votes, vb = B.votes, transfers = [];
+    var A = first[0], B = first[1], va = A.votes, vb = B.votes, transfers = [], nt = 0;
+    var scale = st.exprimes / first.reduce(function (s, x) { return s + x.votes; }, 0);
     first.slice(2).forEach(function (e) {
       var ra = transferRate(g, e.pid, A.pid), rb = transferRate(g, e.pid, B.pid);
       if (ra + rb > 1) { var s = ra + rb; ra /= s; rb /= s; }
-      va += e.votes * ra; vb += e.votes * rb;
+      va += e.votes * ra; vb += e.votes * rb; nt += e.votes * (1 - ra - rb);
       transfers.push({ pid: e.pid, toA: ra, toB: rb, abst: 1 - ra - rb });
     });
     var tot = va + vb;
-    out.second = { a: A.pid, b: B.pid, pctA: va / tot, pctB: vb / tot, transfers: transfers };
+    // les électeurs qui ne se reportent sur aucun finaliste votent blanc… ou restent chez eux
+    var blancs2 = st.blancs + nt * scale * R.blankOfNonTransfer, votants2 = st.votants - nt * scale * (1 - R.blankOfNonTransfer);
+    var stats2 = { ins: st.ins, votants: votants2, blancs: blancs2, exprimes: votants2 - blancs2, participation: votants2 / st.ins, abstention: 1 - votants2 / st.ins, blankPct: blancs2 / votants2 };
+    out.second = { a: A.pid, b: B.pid, pctA: va / tot, pctB: vb / tot, transfers: transfers, stats: stats2 };
     out.winner = va >= vb ? A.pid : B.pid;
     return out;
   }
@@ -900,6 +946,7 @@
     actionCost: actionCost, checkAction: checkAction, mediaRegions: mediaRegions, gain: gain, bestRegions: bestRegions,
     controlledPoints: controlledPoints, controlledRegions: controlledRegions, totalCubes: totalCubes, ranking: ranking,
     leader: leader, cubes: cubes, minControl: minControl, player: player, rivalIn: rivalIn, strongestRegion: strongestRegion,
+    regionVoters: regionVoters, turnoutStats: turnoutStats, mobilizeGain: mobilizeGain, lowTurnoutFit: lowTurnoutFit,
     NATPOP: NATPOP, setProgramme: setProgramme, segmentAppeal: segmentAppeal, echoOf: echoOf, echo: echo, echoBonus: echoBonus, echoRanks: echoRanks, programmeCred: programmeCred, programmeCost: programmeCost, measure: measure, MEAS: MEAS,
     resolveAffair: resolveAffair, enqueteChance: enqueteChance, affairDef: affairDef,
     resolveDilemma: resolveDilemma, dilemmaDef: dilemmaDef, applyFx: applyFx, markerAt: markerAt, hotHere: hotHere, crisisAct: crisisAct,

@@ -7,7 +7,7 @@
 
   function clone(g) {
     var c = { turn: g.turn, mods: g.mods, hot: g.hot, nextHot: g.nextHot, markers: g.markers, bases: Object.assign({}, g.bases), rng: g.rng, alliances: Object.assign({}, g.alliances), betrayed: g.betrayed, offers: [], players: g.players.map(function (p) { return Object.assign({}, p, { cards: p.cards.slice() }); }), regions: {} };
-    Object.keys(g.regions).forEach(function (k) { c.regions[k] = { cubes: Object.assign({}, g.regions[k].cubes), controller: g.regions[k].controller }; });
+    Object.keys(g.regions).forEach(function (k) { var o = g.regions[k]; c.regions[k] = { cubes: Object.assign({}, o.cubes), controller: o.controller, ins: o.ins, abst: o.abst, blank: o.blank }; });
     return c;
   }
   function add(v, rid, pid, n) { var c = v.regions[rid].cubes; c[pid] = Math.max(0, Math.min(D.RULES.maxCubes, (c[pid] || 0) + n)); }
@@ -20,6 +20,7 @@
       var th = E.bestTheme(v, pid, r.id);
       list.push({ type: 'terrain', region: r.id, theme: th });
       list.push({ type: 'reseaux', region: r.id, theme: hotTh || th });
+      list.push({ type: 'mobiliser', region: r.id });
       if (E.cubes(v, r.id, pid) >= 1 && E.rivalIn(v, r.id, pid)) list.push({ type: 'contre', region: r.id });
       if (v.regions[r.id].controller === pid) list.push({ type: 'reforme', region: r.id });
       if (pl.militants < D.RULES.militantsMax && v.turn <= D.RULES.maxTurns - 3) list.push({ type: 'militants', region: r.id });
@@ -85,6 +86,7 @@
         else val += r.pts * 0.12;
         val -= 0.6 + pl.cas * 0.35;   // une attaque = une casserole de plus
         eff.push([act.region, rival, -2]); break; }
+      case 'mobiliser': boost(act.region, E.mobilizeGain(v, pid, act.region).n); val += 0.2; break;
       case 'militants': {
         // +1 cube par tour restant dans cette région
         var left = D.RULES.maxTurns - v.turn;
