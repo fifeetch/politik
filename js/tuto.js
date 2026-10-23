@@ -4,13 +4,13 @@
   var KEY = 'politik_tuto_done';
   var STEPS = [
     { target: null, title: 'Bienvenue en campagne !',
-      text: 'Ton but : contrôler des régions pour atteindre <b>33 points</b>, la majorité. La partie dure <b>8 tours</b>. Si personne n\'atteint 33, le meilleur score gagne à la fin.' },
-    { target: '.race', title: 'La course à la majorité',
-      text: 'Cette barre montre les points de chaque parti. Le trait noir, c\'est la majorité : 33 points.' },
+      text: 'Tu as <b>8 tours de campagne</b> pour gagner des électeurs dans les régions. Ensuite on vote : <b>premier tour</b>, puis <b>second tour</b> entre les deux premiers.' },
+    { target: '.race', title: 'Le sondage',
+      text: 'Les intentions de vote si l\'élection avait lieu maintenant. Le trait noir, c\'est 50 % : au-delà, tu es élu dès le premier tour.' },
     { target: '.map-wrap', title: 'La carte',
       text: 'Le chiffre d\'une région, ce sont ses points. Sa couleur indique le parti qui la contrôle (gris : personne).<br><b>Touche une région</b> pour continuer.', wait: 'region' },
     { target: '#region-info', title: 'Les forces en présence',
-      text: 'Chaque carré coloré est un <b>cube de popularité</b>. Pour contrôler une région, il faut avoir le plus de cubes, et au moins 3.' },
+      text: 'Chaque carré coloré est un <b>cube</b> = des électeurs. Avoir le plus de cubes (au moins 3) donne le <b>contrôle</b> de la région : plus d\'argent et un bonus de voix. « Proche » signale un parti voisin : tu peux lui prendre des électeurs en faisant campagne ici.' },
     { target: '#actions', title: 'Tes actions',
       text: 'La plus simple : <b>Terrain</b>, +2 cubes pour 2 €.<br><b>Touche « Terrain »</b> pour la programmer dans cette région.', wait: 'queue' },
     { target: '.queue', title: '3 actions par tour',
@@ -18,7 +18,7 @@
     { target: '.res', title: 'Argent et influence',
       text: '<b>€</b> paie les campagnes. <b>★</b> sert aux médias, aux attaques et aux débats.<br>« 5 / 7 » veut dire : il te restera 5 sur les 7 que tu as.<br>Le bouton <b>•••</b> montre ton objectif secret.' },
     { target: '#cards', title: 'Tes cartes spéciales',
-      text: 'Deux cartes puissantes, propres à ton parti. Chacune ne sert <b>qu\'une fois</b> : garde-les pour le bon moment.' },
+      text: 'Deux cartes puissantes, propres à ton parti, à usage unique. Le bouton jaune <b>Alliance</b> permet de s\'allier à un parti proche : précieux pour le second tour !' },
     { target: '#btn-validate', title: 'À toi de jouer',
       text: 'Choisis encore 2 actions, puis <b>Valider</b>. Tous les partis jouent en secret et en même temps, puis les actions sont révélées une à une.', last: true }
   ];

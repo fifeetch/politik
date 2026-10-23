@@ -1,4 +1,4 @@
-/* Politik — données du jeu (règles v0.1)
+/* Politik — données du jeu (règles v0.2)
    Toutes les valeurs chiffrées du jeu sont ici : c'est le fichier à modifier pour équilibrer. */
 (function (root) {
   var REGIONS = [
@@ -22,32 +22,32 @@
   };
 
   var PARTIES = [
-    { id: 'FI', name: 'La France Indignée', short: 'France Indignée', family: 'Gauche radicale',
+    { id: 'FI', pos: 1, name: 'La France Indignée', short: 'France Indignée', family: 'Gauche radicale',
       color: '#C8323C', ink: '#FFFFFF', money: 5, infl: 4, bases: ['occ', 'bfc'],
       force: 'Réseaux sociaux : relance le dé une fois par tour si le résultat est mauvais.',
       weakness: 'Campagne terrain +1 € en région rurale.',
       cards: ['marche_pop', 'censure'] },
-    { id: 'SM', name: 'Socialisme Modéré', short: 'Soc. Modéré', family: 'Centre gauche',
+    { id: 'SM', pos: 3, name: 'Socialisme Modéré', short: 'Soc. Modéré', family: 'Centre gauche',
       color: '#E07AA0', ink: '#1B1F3B', money: 4, infl: 3, bases: ['naq', 'cvl'],
       force: "Réseau d'élus : +1 cube en campagne terrain là où il a déjà 5 cubes ou plus.",
       weakness: "Peu d'argent au départ.",
       cards: ['fete_rose', 'primaire'] },
-    { id: 'VP', name: 'Les Verts Pâturages', short: 'Verts Pâturages', family: 'Écologie',
-      color: '#3E9B5A', ink: '#FFFFFF', money: 7, infl: 3, bases: ['ara', 'cor'],
+    { id: 'VP', pos: 2, name: 'Les Verts Pâturages', short: 'Verts Pâturages', family: 'Écologie',
+      color: '#3E9B5A', ink: '#FFFFFF', money: 6, infl: 3, bases: ['ara', 'cor'],
       force: 'Campagne médiatique : +1 cube en plus dans les régions urbaines.',
       weakness: 'Lever des fonds ne rapporte que 2 €.',
       cards: ['climat', 'canicule'] },
-    { id: 'EM', name: 'En Mouvement', short: 'En Mouvement', family: 'Centre',
-      color: '#F2A93B', ink: '#1B1F3B', money: 7, infl: 4, bases: ['pdl', 'bre'],
+    { id: 'EM', pos: 4, name: 'En Mouvement', short: 'En Mouvement', family: 'Centre',
+      color: '#F2A93B', ink: '#1B1F3B', money: 8, infl: 4, bases: ['pdl', 'bre'],
       force: 'Lever des fonds rapporte 4 € et 1 ★.',
       weakness: "Usure du pouvoir : aux tours 4, 6 et 8, perd 1 cube dans sa région la plus forte.",
       cards: ['art493', 'remaniement'] },
-    { id: 'UG', name: "L'Union Gaulliste", short: 'Union Gaulliste', family: 'Droite',
+    { id: 'UG', pos: 5, name: "L'Union Gaulliste", short: 'Union Gaulliste', family: 'Droite',
       color: '#4A7FD0', ink: '#FFFFFF', money: 5, infl: 4, bases: ['ges', 'nor'],
       force: 'Fidélité : en région historique, une contre-campagne ne peut pas le faire descendre sous 2 cubes.',
       weakness: 'Divisions : les événements « Division » lui coûtent 2 cubes au lieu de 1.',
       cards: ['appel18', 'rassemblement'] },
-    { id: 'MN', name: 'Mouvement National', short: 'Mvt National', family: 'Droite nationale',
+    { id: 'MN', pos: 6, name: 'Mouvement National', short: 'Mvt National', family: 'Droite nationale',
       color: '#24325E', ink: '#FFFFFF', money: 7, infl: 3, bases: ['hdf', 'pac'],
       force: 'Médias : +1 cube en plus dans les régions industrielles.',
       weakness: 'Peu de relais locaux : il lui faut 4 cubes (au lieu de 3) pour contrôler une région.',
@@ -61,7 +61,9 @@
     reseaux:  { name: 'Réseaux',        cost: { money: 1, infl: 0 }, target: 'region', text: 'Un dé : de −1 à +4 cubes' },
     contre:   { name: 'Contre-camp.',   cost: { money: 2, infl: 1 }, target: 'region', text: '−2 cubes au rival le plus fort de la région (il faut y avoir 1 cube)' },
     fonds:    { name: 'Fonds',          cost: { money: 0, infl: 0 }, target: null,     text: '+3 €' },
-    reforme:  { name: 'Réforme',        cost: { money: 0, infl: 4 }, target: 'region', text: '+1 cube dans toutes les régions du même profil (région contrôlée)' }
+    reforme:  { name: 'Réforme',        cost: { money: 0, infl: 4 }, target: 'region', text: '+1 cube dans toutes les régions du même profil (région contrôlée)' },
+    alliance: { name: 'Alliance',       cost: { money: 0, infl: 1 }, target: 'party',  text: "Proposer une alliance à un parti proche (distance 2 au plus)" },
+    rupture:  { name: 'Rupture',        cost: { money: 0, infl: 0 }, target: null,     text: "Rompre ton alliance : −2 ★, et ton ex-allié ne te reportera presque rien au second tour" }
   };
 
   /* Cartes spéciales : 1 utilisation par partie, prend 1 action. */
@@ -112,12 +114,19 @@
   var RULES = {
     maxTurns: 8,
     actionsPerTurn: 3,
-    majority: 33,
-    firstRoundFromTurn: 4,
     debateTurns: [3, 6, 8],
     incomeMoney: 4, incomePerRegion: 1, incomeRegionMax: 3, incomeInfl: 2,
     minControl: 3, maxCubes: 10, startCubes: 3,
-    spotlightCost: 2
+    spotlightCost: 2,
+    /* v0.2 : axe politique, transferts, alliances, élection */
+    maxAllianceDistance: 2,
+    breakCost: 2,
+    incumbentBonus: 1.25,        // prime au sortant : les cubes du parti qui contrôle une région comptent ×1,25 dans les votes
+    objectiveVotes: 0.6,         // un objectif réussi rapporte bonus × 0,6 « millions » de voix
+    transfer: { 1: 0.50, 2: 0.42, 3: 0.35, 4: 0.30, 5: 0.25 },  // report au 2nd tour selon la distance
+    allyTransfer: 0.85,
+    edgeMobilization: 1.35,
+    betrayedTransfer: 0.05
   };
 
   var DATA = { REGIONS: REGIONS, PROFILES: PROFILES, PARTIES: PARTIES, ACTIONS: ACTIONS,

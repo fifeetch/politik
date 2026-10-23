@@ -6,7 +6,7 @@
   var E = node ? require('./engine.js') : root.PolitikEngine;
 
   function clone(g) {
-    var c = { turn: g.turn, mods: g.mods, players: g.players.map(function (p) { return Object.assign({}, p, { cards: p.cards.slice() }); }), regions: {} };
+    var c = { turn: g.turn, mods: g.mods, rng: g.rng, alliances: Object.assign({}, g.alliances), betrayed: g.betrayed, offers: [], players: g.players.map(function (p) { return Object.assign({}, p, { cards: p.cards.slice() }); }), regions: {} };
     Object.keys(g.regions).forEach(function (k) { c.regions[k] = { cubes: Object.assign({}, g.regions[k].cubes), controller: g.regions[k].controller }; });
     return c;
   }
@@ -25,6 +25,9 @@
       if (best) list.push({ type: 'medias', region: best });
     });
     list.push({ type: 'fonds' });
+    if (!E.allyOf(v, pid)) v.players.forEach(function (o) {
+      if (o.id !== pid && !E.allianceError(v, pid, o.id)) list.push({ type: 'alliance', target: o.id });
+    });
     pl.cards.forEach(function (card) {
       var def = D.CARDS[card];
       if (def.target === 'region') {
@@ -46,7 +49,11 @@
     function boost(rid, n) { val += E.gain(v, pid, rid, n); eff.push([rid, pid, n]); }
     var prof = act.region ? E.REG[act.region].profile : null;
     switch (act.type) {
-      case 'terrain': boost(act.region, pid === 'SM' && E.cubes(v, act.region, pid) >= 5 ? 3 : 2); break;
+      case 'terrain': {
+        var pt = E.poachTarget(v, pid, act.region, true);
+        boost(act.region, (pid === 'SM' && E.cubes(v, act.region, pid) >= 5 ? 3 : 2) + (pt ? (pt.d === 1 ? 1 : 0.5) : 0));
+        if (pt && pt.d === 1) eff.push([act.region, pt.pid, -1]);
+        break; }
       case 'reseaux': val += 0.5 * E.gain(v, pid, act.region, 1) + 0.33 * E.gain(v, pid, act.region, 2) + 0.17 * E.gain(v, pid, act.region, 4) - 0.17 * 0.5;
         eff.push([act.region, pid, 1]); break;
       case 'medias': E.mediaRegions(v, pid, act.region).forEach(function (rid) {
@@ -62,6 +69,12 @@
         else val += r.pts * 0.12;
         eff.push([act.region, rival, -2]); break; }
       case 'reforme': D.REGIONS.forEach(function (r) { if (r.profile === prof) boost(r.id, 1); }); break;
+      case 'alliance': {
+        // une alliance vaut surtout pour le second tour : plus intéressante en milieu de partie et avec un voisin direct
+        var chance = E.acceptChance(v, act.target, pid);
+        val += chance * (E.dist(pid, act.target) === 1 ? 6 : 4.5) * (v.turn >= 3 ? 1 : 0.6);
+        if (E.PARTY[pid].pos === 1 || E.PARTY[pid].pos === 6) val *= 1.8; // aux extrémités, sans allié, le second tour est perdu d'avance
+        break; }
       case 'fonds': val += (pl.money < 3 ? 4 : pl.money < 6 ? 1.5 : 0.2) + (pid === 'EM' ? (pl.infl < 3 ? 2.5 : 1) : 0); break;
       case 'card': {
         var c = act.card;
@@ -97,6 +110,7 @@
       if (debate && best.cost.infl > 0 && pl.infl - best.cost.infl < 2 && best.v < 4) { out.push({ type: 'fonds' }); pl.money += pid === 'EM' ? 4 : pid === 'VP' ? 2 : 3; continue; }
       pl.money -= best.cost.money; pl.infl -= best.cost.infl;
       if (best.act.type === 'fonds') { pl.money += pid === 'EM' ? 4 : pid === 'VP' ? 2 : 3; if (pid === 'EM') pl.infl += 1; }
+      if (best.act.type === 'alliance') { v.alliances[pid] = best.act.target; v.alliances[best.act.target] = pid; }
       if (best.act.type === 'card') pl.cards = pl.cards.filter(function (k) { return k !== best.act.card; });
       best.eff.forEach(function (e) { add(v, e[0], e[1], e[2]); });
       Object.keys(v.regions).forEach(function (rid) { recompute(v, rid); });
@@ -121,6 +135,8 @@
   }
   function payspotlight(g, pid) { return E.player(g, pid).infl >= 4; }
 
-  var API = { plan: plan, bid: bid, paySpotlight: payspotlight };
+  function acceptOffer(g, target, from) { return g.rng() < E.acceptChance(g, target, from); }
+
+  var API = { plan: plan, bid: bid, paySpotlight: payspotlight, acceptOffer: acceptOffer };
   if (node) module.exports = API; else root.PolitikAI = API;
 })(this);

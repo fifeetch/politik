@@ -1,4 +1,4 @@
-/* Politik — moteur de jeu (règles v0.1).
+/* Politik — moteur de jeu (règles v0.2 : axe politique, alliances, élection à deux tours).
    Aucune dépendance à l'affichage : tout l'état de la partie est dans un objet « g ». */
 (function (root) {
   var D = (typeof module !== 'undefined' && module.exports) ? require('./data.js') : root.PolitikData;
@@ -26,6 +26,8 @@
   function pids(g) { return g.players.map(function (p) { return p.id; }); }
   function cubes(g, rid, pid) { return g.regions[rid].cubes[pid] || 0; }
   function minControl(pid) { return pid === 'MN' ? 4 : R.minControl; }
+  function dist(a, b) { return Math.abs(PARTY[a].pos - PARTY[b].pos); }
+  function allyOf(g, pid) { return (g.alliances && g.alliances[pid]) || null; }
 
   function addCubes(g, rid, pid, n) {
     var c = g.regions[rid].cubes;
@@ -69,15 +71,34 @@
     });
     return best;
   }
-  function ranking(g) {
-    return g.players.slice().sort(function (a, b) {
-      return controlledPoints(g, b.id) - controlledPoints(g, a.id) || totalCubes(g, b.id) - totalCubes(g, a.id);
-    }).map(function (p) { return p.id; });
+  /* ---------- Votes et sondages ----------
+     Chaque région vote selon ses cubes, pondérée par ses points (sa population).
+     Les cubes du parti qui contrôle la région comptent un peu plus (prime au sortant). */
+  function votes(g, withObjectives) {
+    var v = {}; g.players.forEach(function (p) { v[p.id] = 0; });
+    D.REGIONS.forEach(function (r) {
+      var reg = g.regions[r.id], T = 0, w = {};
+      g.players.forEach(function (p) { w[p.id] = cubes(g, r.id, p.id) * (reg.controller === p.id ? R.incumbentBonus : 1); T += w[p.id]; });
+      if (T > 0) g.players.forEach(function (p) { v[p.id] += r.pts * w[p.id] / T; });
+    });
+    // électorat très mobilisé aux deux bouts de l'axe (même règle à gauche et à droite)
+    g.players.forEach(function (p) { if (PARTY[p.id].pos === 1 || PARTY[p.id].pos === 6) v[p.id] *= R.edgeMobilization; });
+    if (withObjectives) g.players.forEach(function (p) {
+      var o = D.OBJECTIVES.filter(function (x) { return x.id === p.objective; })[0];
+      if (objectiveMet(g, p.id, p.objective)) v[p.id] += o.bonus * R.objectiveVotes;
+    });
+    return v;
   }
+  function percents(v) {
+    var s = 0; Object.keys(v).forEach(function (k) { s += v[k]; });
+    return Object.keys(v).map(function (k) { return { pid: k, votes: v[k], pct: s ? v[k] / s : 0 }; })
+      .sort(function (a, b) { return b.pct - a.pct; });
+  }
+  function poll(g) { return percents(votes(g, false)); }
+  function ranking(g) { return poll(g).map(function (x) { return x.pid; }); }
   function leader(g) {
-    var r = ranking(g);
-    var a = controlledPoints(g, r[0]), b = controlledPoints(g, r[1]);
-    return (a > 0 && a > b) ? r[0] : null;
+    var p = poll(g);
+    return p[0].pct > p[1].pct + 0.005 ? p[0].pid : null;
   }
   function last(g) { var r = ranking(g); return r[r.length - 1]; }
 
@@ -91,7 +112,8 @@
     var ids = humanParty ? [humanParty].concat(ai) : ai;
     var objs = shuffle(D.OBJECTIVES.map(function (o) { return o.id; }), rng);
     var g = {
-      seed: seed, rng: rng, turn: 0, phase: 'setup', winner: null, firstRound: false, over: false,
+      seed: seed, rng: rng, turn: 0, phase: 'setup', winner: null, over: false, result: null,
+      alliances: {}, betrayed: {}, offers: [],
       players: ids.map(function (id, i) {
         var p = PARTY[id];
         return { id: id, human: id === humanParty, money: p.money, infl: p.infl,
@@ -194,15 +216,61 @@
     }
     var def = D.ACTIONS[act.type];
     if (def.target === 'region' && !act.region) return 'Choisis une région.';
+    if (act.type === 'alliance') return allianceError(g, pid, act.target);
+    if (act.type === 'rupture' && !allyOf(g, pid)) return 'Tu n’as pas d’allié.';
     if (act.type === 'contre' && cubes(g, act.region, pid) < 1) return 'Il faut au moins 1 cube dans la région.';
-    if (act.type === 'contre' && !rivalIn(g, act.region, pid)) return 'Aucun rival dans cette région.';
+    if (act.type === 'contre' && !rivalIn(g, act.region, pid)) return 'Aucun rival attaquable ici (on n’attaque pas son allié).';
     if (act.type === 'reforme' && g.regions[act.region].controller !== pid) return 'Il faut contrôler la région.';
     return null;
   }
   function rivalIn(g, rid, pid) {
-    var best = null, bn = 0;
-    pids(g).forEach(function (o) { if (o === pid) return; var n = cubes(g, rid, o); if (n > bn) { bn = n; best = o; } });
+    var best = null, bn = 0, ally = allyOf(g, pid);
+    pids(g).forEach(function (o) { if (o === pid || o === ally) return; var n = cubes(g, rid, o); if (n > bn) { bn = n; best = o; } });
     return best;
+  }
+  function allianceError(g, pid, target) {
+    if (!target || !player(g, target) || target === pid) return 'Choisis un parti.';
+    if (dist(pid, target) > R.maxAllianceDistance) return 'Trop éloigné politiquement.';
+    if (allyOf(g, pid)) return 'Tu as déjà un allié.';
+    if (allyOf(g, target)) return PARTY[target].short + ' a déjà un allié.';
+    if (g.betrayed[pid] === target || g.betrayed[target] === pid) return 'La confiance est rompue.';
+    return null;
+  }
+  /* Probabilité qu'un parti (IA) accepte une alliance */
+  function acceptChance(g, target, from) {
+    var p = dist(target, from) === 1 ? 0.75 : 0.5, l = leader(g);
+    if (l === target) p -= 0.3;
+    if (l === from) p += 0.15;
+    return Math.max(0.05, Math.min(0.95, p));
+  }
+  function makeAlliance(g, a, b) { g.alliances[a] = b; g.alliances[b] = a; }
+  function answerOffer(g, from, to, accept) {
+    g.offers = g.offers.filter(function (o) { return !(o.from === from && o.to === to); });
+    if (!accept) return false;
+    if (allianceError(g, from, to)) return false;
+    makeAlliance(g, from, to); return true;
+  }
+  /* Récupération d'électeurs proches : à distance 1, un cube change de camp ; à distance 2, sur un dé de 4 à 6. */
+  function poachTarget(g, pid, rid, allowD2) {
+    var ally = allyOf(g, pid), best = null, bn = 0, best2 = null, bn2 = 0;
+    pids(g).forEach(function (o) {
+      if (o === pid || o === ally) return;
+      var n = cubes(g, rid, o); if (!n) return;
+      var d = dist(pid, o);
+      if (d === 1 && n > bn) { bn = n; best = o; }
+      if (d === 2 && n > bn2) { bn2 = n; best2 = o; }
+    });
+    if (best) return { pid: best, d: 1 };
+    if (allowD2 && best2) return { pid: best2, d: 2 };
+    return null;
+  }
+  function poach(g, pid, rid, allowD2) {
+    if (cubes(g, rid, pid) >= R.maxCubes) return null;
+    var t = poachTarget(g, pid, rid, allowD2);
+    if (!t) return null;
+    if (t.d === 2 && g.rng() < 0.5) return null;
+    addCubes(g, rid, t.pid, -1); addCubes(g, rid, pid, 1);
+    return t.pid;
   }
 
   /* ---------- Valeur d'un renfort (utilisée par l'IA et pour les choix automatiques) ---------- */
@@ -210,14 +278,17 @@
     var r = REG[rid], my = cubes(g, rid, pid), ctrl = g.regions[rid].controller;
     if (my >= R.maxCubes) return 0;
     k = Math.min(k, R.maxCubes - my);
-    var top = 0; pids(g).forEach(function (o) { if (o !== pid) top = Math.max(top, cubes(g, rid, o)); });
+    var top = 0, tot = 0; pids(g).forEach(function (o) { tot += cubes(g, rid, o); if (o !== pid) top = Math.max(top, cubes(g, rid, o)); });
+    var voteVal = r.pts * ((my + k) / (tot + k) - (tot ? my / tot : 0)) * 1.6;
+    var ctrlVal;
     if (ctrl === pid) {
       var margin = my - top;
-      return margin <= 1 ? r.pts * 0.35 * Math.min(k, 2) / 2 : r.pts * 0.04 * k;
+      ctrlVal = margin <= 1 ? r.pts * 0.35 * Math.min(k, 2) / 2 : r.pts * 0.04 * k;
+    } else {
+      var need = Math.max(minControl(pid) - my, top - my + 1, 1);
+      ctrlVal = k >= need ? r.pts * (ctrl ? 1.25 : 1) : r.pts * 0.55 * k / need;
     }
-    var need = Math.max(minControl(pid) - my, top - my + (ctrl ? 1 : 1), 1);
-    if (k >= need) return r.pts * (ctrl ? 1.25 : 1);
-    return r.pts * 0.55 * k / need;
+    return voteVal + ctrlVal * 0.6;
   }
   function bestRegions(g, pid, n, filter, k, exclude) {
     return D.REGIONS.filter(function (r) { return (!filter || filter(r)) && (!exclude || exclude.indexOf(r.id) < 0); })
@@ -234,7 +305,7 @@
   function resolveOne(g, pid, act) {
     var pl = player(g, pid), P = PARTY[pid];
     var name = act.type === 'card' ? D.CARDS[act.card].name : D.ACTIONS[act.type].name;
-    var entry = { pid: pid, action: name, region: act.region || null, text: '', ok: true };
+    var entry = { pid: pid, action: name, region: act.region || null, target: act.target || null, text: '', ok: true };
     if (g.cancel[pid]) { g.cancel[pid] = false; entry.ok = false; entry.text = 'Annulée par le 49.3 !'; return entry; }
     var err = checkAction(g, pid, act);
     if (err) { entry.ok = false; entry.text = 'Échoue : ' + err; return entry; }
@@ -246,13 +317,17 @@
     switch (act.type) {
       case 'terrain': {
         var n = 2; if (pid === 'SM' && cubes(g, act.region, pid) >= 5) n = 3;
-        n = addCubes(g, act.region, pid, n); t.push('+' + n + ' en ' + rn); break; }
+        n = addCubes(g, act.region, pid, n); t.push('+' + n + ' en ' + rn);
+        var pc = poach(g, pid, act.region, true); if (pc) t.push('récupère 1 électeur de ' + PARTY[pc].short);
+        break; }
       case 'medias': {
         mediaRegions(g, pid, act.region).forEach(function (rid) {
           var prof = REG[rid].profile, n = 1;
           if (pid === 'VP' && prof === 'urbaine') n++;
           if (pid === 'MN' && prof === 'industrielle') n++;
-          n = addCubes(g, rid, pid, n); t.push('+' + n + ' ' + REG[rid].name);
+          n = addCubes(g, rid, pid, n);
+          var pc2 = poach(g, pid, rid, false);
+          t.push('+' + n + ' ' + REG[rid].name + (pc2 ? ' (+1 de ' + pc2 + ')' : ''));
         }); break; }
       case 'reseaux': {
         var d = 1 + Math.floor(g.rng() * 6);
@@ -273,6 +348,17 @@
         D.REGIONS.forEach(function (r) { if (r.profile === prof2) { var x = addCubes(g, r.id, pid, 1); if (x) t.push('+1 ' + r.name); } });
         break; }
       case 'card': t = resolveCard(g, pid, act); pl.cards = pl.cards.filter(function (k) { return k !== act.card; }); break;
+      case 'alliance': {
+        var to = player(g, act.target);
+        if (to.human) { g.offers.push({ from: pid, to: act.target }); t.push('propose une alliance à ' + PARTY[act.target].short); }
+        else if (g.rng() < acceptChance(g, act.target, pid)) { makeAlliance(g, pid, act.target); t.push('ALLIANCE avec ' + PARTY[act.target].short + ' !'); }
+        else t.push(PARTY[act.target].short + ' refuse l’alliance');
+        break; }
+      case 'rupture': {
+        var ex = allyOf(g, pid);
+        delete g.alliances[pid]; delete g.alliances[ex]; g.betrayed[ex] = pid;
+        var lostI = Math.min(pl.infl, R.breakCost); pl.infl -= lostI;
+        t.push('rompt avec ' + PARTY[ex].short + ' (−' + lostI + ' ★)'); break; }
     }
     entry.text = t.join(' · ');
     updateAllControl(g);
@@ -371,14 +457,10 @@
   }
   function endTurn(g) {
     updateAllControl(g);
-    var res = { winner: null, firstRound: false, over: false };
-    if (g.turn >= R.firstRoundFromTurn) {
-      var r = ranking(g);
-      if (controlledPoints(g, r[0]) >= R.majority) { g.winner = r[0]; g.firstRound = true; g.over = true; }
-    }
-    if (!g.over && g.turn >= R.maxTurns) { g.over = true; g.winner = finalScores(g)[0].pid; }
-    g.history.push(g.players.map(function (p) { return { pid: p.id, pts: controlledPoints(g, p.id) }; }));
-    res.winner = g.winner; res.firstRound = g.firstRound; res.over = g.over;
+    var res = { winner: null, over: false };
+    g.history.push(poll(g));
+    if (g.turn >= R.maxTurns) { g.over = true; g.result = election(g); g.winner = g.result.winner; }
+    res.winner = g.winner; res.over = g.over; res.result = g.result;
     g.phase = g.over ? 'over' : 'next';
     return res;
   }
@@ -399,6 +481,28 @@
     }
     return false;
   }
+  /* ---------- Élection : premier tour puis second tour avec reports de voix ---------- */
+  function transferRate(g, from, to) {
+    if (allyOf(g, from) === to) return R.allyTransfer;
+    if (g.betrayed[from] === to) return R.betrayedTransfer;
+    return R.transfer[dist(from, to)] || 0;
+  }
+  function election(g) {
+    var first = percents(votes(g, true));
+    var out = { first: first, second: null, winner: null, direct: false };
+    if (first[0].pct > 0.5) { out.direct = true; out.winner = first[0].pid; return out; }
+    var A = first[0], B = first[1], va = A.votes, vb = B.votes, transfers = [];
+    first.slice(2).forEach(function (e) {
+      var ra = transferRate(g, e.pid, A.pid), rb = transferRate(g, e.pid, B.pid);
+      if (ra + rb > 1) { var s = ra + rb; ra /= s; rb /= s; }
+      va += e.votes * ra; vb += e.votes * rb;
+      transfers.push({ pid: e.pid, toA: ra, toB: rb, abst: 1 - ra - rb });
+    });
+    var tot = va + vb;
+    out.second = { a: A.pid, b: B.pid, pctA: va / tot, pctB: vb / tot, transfers: transfers };
+    out.winner = va >= vb ? A.pid : B.pid;
+    return out;
+  }
   function finalScores(g) {
     return g.players.map(function (p) {
       var o = D.OBJECTIVES.filter(function (x) { return x.id === p.objective; })[0];
@@ -412,7 +516,9 @@
   var API = {
     createGame: createGame, startTurn: startTurn, resolveActions: resolveActions, resolveDebate: resolveDebate,
     isDebateTurn: isDebateTurn, spotlightTarget: spotlightTarget, applySpotlight: applySpotlight, endTurn: endTurn,
-    finalScores: finalScores, objectiveMet: objectiveMet,
+    finalScores: finalScores, objectiveMet: objectiveMet, election: election, poll: poll, votes: votes,
+    dist: dist, allyOf: allyOf, allianceError: allianceError, answerOffer: answerOffer, acceptChance: acceptChance,
+    poachTarget: poachTarget, transferRate: transferRate,
     actionCost: actionCost, checkAction: checkAction, mediaRegions: mediaRegions, gain: gain, bestRegions: bestRegions,
     controlledPoints: controlledPoints, controlledRegions: controlledRegions, totalCubes: totalCubes, ranking: ranking,
     leader: leader, cubes: cubes, minControl: minControl, player: player, rivalIn: rivalIn, strongestRegion: strongestRegion,

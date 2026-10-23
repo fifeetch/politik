@@ -11,12 +11,13 @@ Jeu de stratégie électorale parodique sur la carte de France, pensé pour le t
 - En local : ouvre `index.html` dans un navigateur. Aucune installation n'est nécessaire.
 - Première partie : un tutoriel guidé se lance automatiquement (relançable avec « Comment jouer » sur l'écran titre).
 
-## Règles (v0.1, résumé)
+## Règles (v0.2, résumé)
 
-- **But** : contrôler des régions. Les 13 régions valent 65 points ; 33 points = élu au premier tour (à partir du tour 4). Sinon, après 8 tours, le meilleur score gagne (régions + objectif secret).
-- **Contrôle** : le parti qui a le plus de cubes dans une région, avec au moins 3 cubes (4 pour le Mouvement National).
-- **Un tour** : revenus → événement → 3 actions choisies en secret par tout le monde → débat (tours 3, 6, 8) → « Sous les projecteurs » pour le parti en tête.
-- **Actions** : Terrain, Médias, Réseaux (dé), Contre-campagne, Fonds, Réforme, plus 2 cartes spéciales par parti.
+- **But** : remporter l'élection présidentielle après **8 tours de campagne**. Chaque région vote selon ses cubes, pondérée par sa population ; le parti qui contrôle une région y gagne un bonus de voix.
+- **Scrutin** : plus de 50 % au premier tour = élu. Sinon, second tour entre les deux premiers, avec reports de voix selon la proximité politique (alliés : 85 %).
+- **Axe politique** : FI · VP · SM · EM · UG · MN. Faire campagne là où un parti voisin est présent lui prend des électeurs.
+- **Alliances** : avec un parti à distance 2 au plus ; pas d'attaque entre alliés ; rompre coûte 2 ★ et ruine les reports.
+- **Un tour** : revenus → événement → 3 actions secrètes jouées par tous en même temps → débat (tours 3, 6, 8) → « Sous les projecteurs » pour le premier des sondages.
 
 ## Organisation du code
 
@@ -40,16 +41,20 @@ node test/simulate.js 1000
 
 Le script affiche le taux de victoire de chaque parti (l'idéal est autour de 25 %).
 
-## Équilibre actuel (v0.1, IA contre IA, 2000 parties)
+## Équilibre actuel (v0.2, IA contre IA, 1500 parties)
 
-| Parti | Victoires |
+| Parti | Victoires (idéal 25 %) |
 | --- | --- |
-| Socialisme Modéré | 35 % |
-| Les Verts Pâturages | 27 % |
-| L'Union Gaulliste | 25 % |
-| La France Indignée | 23 % |
-| Mouvement National | 20 % |
-| En Mouvement | 17 % |
+| Les Verts Pâturages | 39 % |
+| Socialisme Modéré | 37 % |
+| L'Union Gaulliste | 26 % |
+| En Mouvement | 18 % |
+| Mouvement National | 16 % |
+| La France Indignée | 11 % |
+
+Avec le second tour, les partis du centre récupèrent plus de reports. Les partis aux deux bouts de l'axe ont un électorat plus mobilisé (×1,35) pour compenser, et doivent miser sur les alliances. À affiner avec de vraies parties.
+
+Les idées pour la suite sont dans [ROADMAP.md](ROADMAP.md).
 
 ## Crédits
 

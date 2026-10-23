@@ -25,6 +25,14 @@
   function svg(tag, attrs) { var e = document.createElementNS(SVGNS, tag); Object.keys(attrs || {}).forEach(function (k) { e.setAttribute(k, attrs[k]); }); return e; }
   function party(id) { return E.PARTY[id]; }
   function chip(pid) { var p = party(pid); return '<span class="who" style="background:' + p.color + ';color:' + p.ink + '">' + pid + '</span>'; }
+  function axisHtml(pid) {
+    var cells = D.PARTIES.slice().sort(function (a, b) { return a.pos - b.pos; }).map(function (p) {
+      var on = p.id === pid;
+      return '<span class="axis-dot' + (on ? ' on' : '') + '" style="' + (on ? 'background:' + p.color + ';color:' + p.ink : '') + '">' + p.id + '</span>';
+    }).join('');
+    return '<div class="axis"><span class="axis-l">gauche</span>' + cells + '<span class="axis-l">droite</span></div>';
+  }
+  function chanceLabel(c) { return c >= 0.7 ? 'probable' : c >= 0.45 ? 'incertain' : 'peu probable'; }
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
 
   /* ---------- Écrans ---------- */
@@ -78,7 +86,9 @@
       grid.appendChild(b);
     });
     var p = party(chosen);
-    $('party-detail').innerHTML = '<div><b>Force.</b> ' + esc(p.force) + '</div><div><b>Faiblesse.</b> ' + esc(p.weakness) +
+    $('party-detail').innerHTML = axisHtml(p.id) +
+      (p.pos === 1 || p.pos === 6 ? '<div><b>Électorat mobilisé.</b> Au bout de l\'axe : tes voix comptent ×' + R.edgeMobilization + ', mais les reports de second tour seront rares. Pense aux alliances !</div>' : '') +
+      '<div><b>Force.</b> ' + esc(p.force) + '</div><div><b>Faiblesse.</b> ' + esc(p.weakness) +
       '</div><div><b>Bases.</b> ' + p.bases.map(function (r) { return E.REG[r].name; }).join(', ') +
       '</div><div><b>Cartes.</b> ' + p.cards.map(function (c) { return D.CARDS[c].name; }).join(' · ') + '</div>';
   }
@@ -153,10 +163,11 @@
   }
   function renderRace() {
     var bar = $('race-bar'), leg = $('race-legend'); bar.innerHTML = ''; leg.innerHTML = '';
-    E.ranking(g).forEach(function (pid) {
-      var pts = E.controlledPoints(g, pid), p = party(pid);
-      bar.appendChild(el('div', { class: 'seg', style: 'width:' + (100 * pts / 65) + '%;background:' + p.color }));
-      leg.appendChild(el('span', { class: pid === me ? 'me' : '' }, '<i class="sw" style="background:' + p.color + '"></i>' + (pid === me ? 'Toi' : pid) + ' ' + pts));
+    var ally = E.allyOf(g, me);
+    E.poll(g).forEach(function (x) {
+      var pid = x.pid, pct = Math.round(100 * x.pct), p = party(pid);
+      bar.appendChild(el('div', { class: 'seg', style: 'width:' + (100 * x.pct) + '%;background:' + p.color }));
+      leg.appendChild(el('span', { class: pid === me ? 'me' : '' }, '<i class="sw" style="background:' + p.color + '"></i>' + (pid === me ? 'Toi' : pid) + ' ' + pct + ' %' + (pid === ally ? ' <em class="ally">allié</em>' : '')));
     });
     bar.appendChild(el('div', { class: 'mark' }));
   }
@@ -206,7 +217,12 @@
     g.players.slice().sort(function (a, b) { return E.cubes(g, selected, b.id) - E.cubes(g, selected, a.id); }).forEach(function (p) {
       var n = E.cubes(g, selected, p.id), P = party(p.id), cubes = '';
       for (var i = 0; i < R.maxCubes; i++) cubes += '<i class="cube' + (i < n ? ' on' : '') + '"' + (i < n ? ' style="background:' + P.color + '"' : '') + '></i>';
-      html += '<div class="cube-row"><span class="lbl">' + (p.id === me ? 'Toi' : esc(P.short)) + '</span><span class="cubes">' + cubes + '</span><span class="n">' + n + '</span></div>';
+      var rel = '';
+      if (p.id !== me) {
+        if (E.allyOf(g, me) === p.id) rel = '<em class="rel rel-ally">allié</em>';
+        else if (E.dist(me, p.id) === 1) rel = '<em class="rel">proche</em>';
+      }
+      html += '<div class="cube-row"><span class="lbl">' + (p.id === me ? 'Toi' : esc(P.short)) + rel + '</span><span class="cubes">' + cubes + '</span><span class="n">' + n + '</span></div>';
     });
     box.innerHTML = html;
   }
@@ -216,7 +232,8 @@
       var a = queue[i];
       if (!a) { box.appendChild(el('div', { class: 'slot' }, 'Action ' + (i + 1))); continue; }
       var name = a.type === 'card' ? D.CARDS[a.card].name : D.ACTIONS[a.type].name;
-      var b = el('button', { class: 'slot full', type: 'button', 'aria-label': 'Retirer ' + name }, esc(name) + (a.region ? '<small>' + SHORT[a.region] + '</small>' : '<small>✕ retirer</small>'));
+      var sub = a.region ? SHORT[a.region] : a.target ? a.target : '✕ retirer';
+      var b = el('button', { class: 'slot full', type: 'button', 'aria-label': 'Retirer ' + name }, esc(name) + '<small>' + sub + '</small>');
       (function (idx) { b.addEventListener('click', function () { queue.splice(idx, 1); render(); }); })(i);
       box.appendChild(b);
     }
@@ -252,6 +269,28 @@
       cards.appendChild(b);
     });
     if (!mePl().cards.length) cards.innerHTML = '<span class="hint">Cartes spéciales utilisées.</span>';
+    var ally = E.allyOf(g, me), queued = queue.some(function (q) { return q.type === 'alliance' || q.type === 'rupture'; });
+    var ab = el('button', { class: 'cardbtn cardbtn-ally', type: 'button' }, ally ? 'Allié : ' + esc(party(ally).short) + '<small>Toucher pour rompre</small>' : 'Alliance<small>1 ★ · partis proches</small>');
+    if (queued) ab.disabled = true;
+    ab.addEventListener('click', ally ? confirmBreak : allianceMenu);
+    cards.appendChild(ab);
+  }
+  function allianceMenu() {
+    var rows = g.players.filter(function (p) { return p.id !== me; }).sort(function (a, b) { return E.dist(me, a.id) - E.dist(me, b.id); });
+    var html = axisHtml(me) + '<p>Un allié ne peut pas t\'attaquer (ni toi l\'attaquer), vous ne vous volez pas d\'électeurs, et au second tour ses électeurs se reportent à <b>' + Math.round(R.allyTransfer * 100) + ' %</b> sur toi.</p>';
+    var buttons = [];
+    rows.forEach(function (p) {
+      var err = E.allianceError(g, me, p.id), d = E.dist(me, p.id);
+      var label = party(p.id).short + ' · distance ' + d + (err ? ' — ' + err : ' — accord ' + chanceLabel(E.acceptChance(g, p.id, me)));
+      buttons.push({ label: label, disabled: !!err, onClick: function () { addAction({ type: 'alliance', target: p.id }); } });
+    });
+    buttons.push({ label: 'Annuler' });
+    modal({ kicker: 'Coûte 1 ★ et 1 action', title: 'Proposer une alliance', html: html, buttons: buttons });
+  }
+  function confirmBreak() {
+    var ally = E.allyOf(g, me);
+    modal({ kicker: 'Rupture', title: 'Trahir ' + party(ally).short + ' ?', html: '<p>Tu perds <b>' + R.breakCost + ' ★</b>, et ses électeurs ne te reporteront presque rien au second tour (' + Math.round(R.betrayedTransfer * 100) + ' %). En échange, tu peux de nouveau l\'attaquer et lui prendre des électeurs.</p>',
+      buttons: [{ label: 'Rompre l\'alliance (1 action)', primary: true, onClick: function () { addAction({ type: 'rupture' }); } }, { label: 'Garder l\'alliance' }] });
   }
 
   /* ---------- Validation et résolution ---------- */
@@ -272,8 +311,19 @@
     var html = '<div class="log">' + log.map(function (l) {
       return '<div class="log-row' + (l.ok ? '' : ' fail') + '">' + chip(l.pid) + '<span><b>' + esc(l.action) + '</b>' + (l.region ? ' · ' + SHORT[l.region] : '') + ' — ' + esc(l.text) + '</span></div>';
     }).join('') + '</div>';
+    var after = E.isDebateTurn(g) ? debate : spotlight;
     modal({ kicker: 'Tour ' + g.turn, title: 'Résultats des actions', html: html,
-            buttons: [{ label: E.isDebateTurn(g) ? 'Place au débat' : 'Fin du tour', primary: true, onClick: E.isDebateTurn(g) ? debate : spotlight }] });
+            buttons: [{ label: E.isDebateTurn(g) ? 'Place au débat' : 'Fin du tour', primary: true, onClick: function () { handleOffers(after); } }] });
+  }
+  function handleOffers(then) {
+    var o = g.offers.filter(function (x) { return x.to === me; })[0];
+    if (!o) return then();
+    var p = party(o.from), err = E.allianceError(g, o.from, me);
+    if (err) { E.answerOffer(g, o.from, me, false); return handleOffers(then); }
+    modal({ kicker: 'Proposition', title: p.short + ' te propose une alliance', html: axisHtml(o.from) +
+      '<p>Vous ne pourrez plus vous attaquer ni vous prendre d\'électeurs. Au second tour, ses électeurs se reporteront à ' + Math.round(R.allyTransfer * 100) + ' % sur toi (et les tiens sur lui).</p>',
+      buttons: [{ label: 'Accepter', primary: true, onClick: function () { E.answerOffer(g, o.from, me, true); render(); toast('Alliance avec ' + p.short + ' !'); handleOffers(then); } },
+                { label: 'Refuser', onClick: function () { E.answerOffer(g, o.from, me, false); handleOffers(then); } }] });
   }
 
   function debate() {
@@ -302,7 +352,7 @@
     if (!t) return finishTurn(null);
     if (t === me) {
       var can = mePl().infl >= R.spotlightCost;
-      modal({ kicker: 'Sous les projecteurs', title: 'Tu es en tête !', html: '<p>Les médias fouillent ton passé. Paie <b>2 ★</b> pour étouffer l\'affaire, ou perds 1 cube dans tes 2 plus grandes régions.</p>',
+      modal({ kicker: 'Sous les projecteurs', title: 'Tu es en tête des sondages !', html: '<p>Les médias fouillent ton passé. Paie <b>2 ★</b> pour étouffer l\'affaire, ou perds 1 cube dans tes 2 plus grandes régions.</p>',
         buttons: [{ label: 'Payer 2 ★', primary: true, disabled: !can, onClick: function () { finishTurn(E.applySpotlight(g, me, true)); } },
                   { label: 'Perdre 2 cubes', onClick: function () { finishTurn(E.applySpotlight(g, me, false)); } }] });
     } else finishTurn(E.applySpotlight(g, t, AI.paySpotlight(g, t)));
@@ -325,24 +375,31 @@
     setTimeout(nextTurn, spot && spot.pid !== me ? 900 : 0);
   }
 
+  function bars(list, max) {
+    return list.map(function (x) {
+      var p = party(x.pid);
+      return '<div class="vote-row"><span class="vote-lbl">' + chip(x.pid) + (x.pid === me ? 'Toi' : esc(p.short)) + '</span>' +
+        '<span class="vote-bar"><i style="width:' + (100 * x.pct / max) + '%;background:' + p.color + '"></i></span><b>' + (100 * x.pct).toFixed(1) + ' %</b></div>';
+    }).join('');
+  }
   function endGame() {
     $('toast').hidden = true;
-    var fs = E.finalScores(g), win = g.winner;
-    $('end-kicker').textContent = g.firstRound ? 'Élu au premier tour · tour ' + g.turn : 'Résultats après 8 tours';
+    var res = g.result, win = g.winner;
+    $('end-kicker').textContent = 'Soirée électorale';
     $('end-title').textContent = win === me ? 'TU ES ÉLU !' : 'PERDU…';
-    $('end-sub').textContent = win === me ? party(me).name + ' remporte l\'élection.' : party(win).name + ' remporte l\'élection.';
-    var rows = (g.firstRound ? g.players.map(function (p) { return { pid: p.id, regions: E.controlledPoints(g, p.id), bonus: 0, total: E.controlledPoints(g, p.id), objective: null }; })
-      .sort(function (a, b) { return b.total - a.total; }) : fs);
-    var h = '<table class="score-table"><thead><tr><th>Parti</th><th class="num">Régions</th><th class="num">Objectif</th><th class="num">Total</th></tr></thead><tbody>';
-    rows.forEach(function (s) {
-      h += '<tr><td>' + chip(s.pid) + (s.pid === me ? 'Toi' : esc(party(s.pid).short)) + '</td><td class="num">' + s.regions +
-        '</td><td class="num">' + (s.objective ? (s.met ? '+' + s.bonus : '—') : '—') + '</td><td class="num"><b>' + s.total + '</b></td></tr>';
-    });
-    h += '</tbody></table>';
-    if (!g.firstRound) {
-      var mine = fs.filter(function (x) { return x.pid === me; })[0];
-      h += '<p class="hint" style="margin:8px 0 0">Ton objectif « ' + esc(mine.objective.name) + ' » : ' + (mine.met ? 'réussi !' : 'raté.') + '</p>';
+    $('end-sub').textContent = party(win).name + (res.direct ? ' l\'emporte dès le premier tour.' : ' remporte le second tour.');
+    var h = '<div class="kicker">Premier tour</div>' + bars(res.first, res.first[0].pct);
+    if (res.second) {
+      var s = res.second;
+      h += '<div class="kicker" style="margin-top:12px">Second tour</div>' +
+        bars([{ pid: s.a, pct: s.pctA }, { pid: s.b, pct: s.pctB }].sort(function (x, y) { return y.pct - x.pct; }), Math.max(s.pctA, s.pctB));
+      h += '<div class="transfers">' + s.transfers.map(function (t) {
+        return '<p>' + chip(t.pid) + 'Reports : ' + Math.round(100 * t.toA) + ' % → ' + s.a + ', ' + Math.round(100 * t.toB) + ' % → ' + s.b + ', ' + Math.round(100 * t.abst) + ' % abstention' +
+          (E.allyOf(g, t.pid) === s.a || E.allyOf(g, t.pid) === s.b ? ' <em class="ally">alliance</em>' : '') + '</p>';
+      }).join('') + '</div>';
     }
+    var mine = E.finalScores(g).filter(function (x) { return x.pid === me; })[0];
+    h += '<p class="hint" style="margin:10px 0 0">Ton objectif « ' + esc(mine.objective.name) + ' » : ' + (mine.met ? 'réussi, des voix en plus !' : 'raté.') + '</p>';
     $('end-table').innerHTML = h;
     go('end');
   }
@@ -354,13 +411,15 @@
             buttons: [{ label: 'Reprendre', primary: true }, { label: 'Règles du jeu', onClick: showRules }, { label: 'Abandonner la partie', onClick: function () { g = null; go('title'); } }] });
   });
   function showRules() {
-    modal({ kicker: 'Règles v0.1', title: 'Comment gagner', html:
-      '<p><b>But :</b> contrôler des régions. Les 13 régions valent 65 points ; <b>33 points = élu au premier tour</b> (à partir du tour 4). Sinon, après 8 tours, le meilleur score gagne (régions + objectif secret).</p>' +
-      '<p><b>Contrôle :</b> le parti qui a le plus de cubes dans une région, avec au moins 3 cubes (4 pour le Mouvement National).</p>' +
-      '<p><b>Chaque tour :</b> revenus (4 € + 1 € par région contrôlée, max +3 ; +2 ★), un événement, puis <b>3 actions choisies en secret</b> par tous les partis en même temps, résolues à tour de rôle.</p>' +
-      '<p><b>Actions :</b> Terrain (2 € : +2 cubes) · Médias (3 € + 1 ★ : +1 cube dans 3 régions du même profil) · Réseaux (1 € : un dé, de −1 à +4) · Contre-campagne (2 € + 1 ★ : −2 cubes au rival le plus fort) · Fonds (+3 €) · Réforme (4 ★ : +1 cube dans toutes les régions du profil d\'une région que tu contrôles). Chaque parti a aussi 2 cartes spéciales à usage unique.</p>' +
-      '<p><b>Débats</b> aux tours 3, 6 et 8 : on mise de l\'influence, toutes les mises sont perdues.</p>' +
-      '<p><b>Sous les projecteurs :</b> à la fin de chaque tour, le parti en tête paie 2 ★ ou perd 1 cube dans ses 2 plus grandes régions.</p>' });
+    modal({ kicker: 'Règles v0.2', title: 'Comment gagner', html:
+      '<p><b>But :</b> remporter l\'élection présidentielle à la fin des <b>8 tours de campagne</b>. Chaque région vote selon ses cubes, pondérée par sa population (ses points). Le parti qui contrôle une région y gagne un petit bonus.</p>' +
+      '<p><b>Premier tour :</b> plus de 50 % des voix = élu directement. Sinon, les deux premiers vont au <b>second tour</b>, et les électeurs des autres partis se reportent selon leur proximité politique (alliés : 85 %).</p>' +
+      axisHtml(me || chosen) +
+      '<p><b>Partis proches :</b> quand tu fais campagne (Terrain, Médias) là où un parti voisin sur l\'axe est présent, tu lui prends 1 électeur (distance 2 : sur un dé de 4 à 6).</p>' +
+      '<p><b>Alliances :</b> 1 ★ et 1 action, avec un parti à distance 2 au plus. Entre alliés, pas d\'attaque ni de vol d\'électeurs. Rompre coûte 2 ★ et ruine les reports.</p>' +
+      '<p><b>Chaque tour :</b> revenus (4 € + 1 € par région contrôlée, max +3 ; +2 ★), un événement, puis <b>3 actions secrètes</b> jouées par tous en même temps.</p>' +
+      '<p><b>Actions :</b> Terrain (2 € : +2 cubes) · Médias (3 € + 1 ★ : +1 cube dans 3 régions du même profil) · Réseaux (1 € : un dé, de −1 à +4) · Contre-campagne (2 € + 1 ★ : −2 cubes au rival le plus fort) · Fonds (+3 €) · Réforme (4 ★) · Alliance (1 ★). Plus 2 cartes spéciales par parti.</p>' +
+      '<p><b>Débats</b> aux tours 3, 6 et 8. <b>Sous les projecteurs :</b> le premier des sondages paie 2 ★ ou perd des cubes à chaque fin de tour.</p>' });
   }
 
   renderTitleMap();
