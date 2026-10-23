@@ -968,7 +968,9 @@
     }
     var mine = E.finalScores(g).filter(function (x) { return x.pid === me; })[0];
     h += '<p class="hint" style="margin:10px 0 0">Ton objectif « ' + esc(mine.objective.name) + ' » : ' + (mine.met ? 'réussi, des voix en plus !' : 'raté.') + '</p>';
+    if (win === me) h += '<p style="margin:10px 0 0"><b>Et maintenant, il faut gouverner !</b> Législatives, vote de tes lois, budget, crises : cinq ans pour tenir tes promesses.</p>';
     $('end-table').innerHTML = h;
+    $('btn-govern').hidden = win !== me;
     go('end');
   }
 
@@ -1054,6 +1056,9 @@
       '<p class="hint">Politik aura sa propre icône, s’ouvrira en plein écran et fonctionnera même sans internet.</p>' });
   });
 
+  /* Outils partagés avec la phase « Gouverner » (js/govui.js) */
+  window.PolitikUI = { modal: modal, closeModal: closeModal, toast: toast, go: go, esc: esc, line: line, srcHtml: srcHtml, chip: chip,
+    game: function () { return g; }, me: function () { return me; } };
   renderTitleMap();
   renderChoose();
 })();

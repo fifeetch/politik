@@ -487,3 +487,57 @@ button { font-family: inherit; color: inherit; }
 
 .prog-mini { font-size: 12px; text-align: center; color: var(--ink-2); }
 .toast { pointer-events: none; }
+
+/* v0.9 : gouverner */
+.gov { gap: 8px; padding-bottom: max(14px, env(safe-area-inset-bottom)); }
+.gov-top { display: flex; align-items: center; gap: 10px; }
+.gov-face { width: 58px; flex-shrink: 0; }
+.gov .h1 { font-size: 30px; }
+.gauges { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.gauge { background: var(--white); border: 1.5px solid var(--ink); border-radius: 12px; padding: 6px 8px; display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto auto; column-gap: 6px; align-items: center; }
+.gauge .g-i { grid-row: span 3; font-size: 22px; }
+.gauge .g-l { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); }
+.gauge b { font-family: var(--display); font-weight: 400; font-size: 22px; line-height: 1; }
+.gauge small { font-size: 10.5px; color: var(--ink-2); }
+.gauge.bad { background: #FFE1DC; }
+.gauge.ok { background: #E4F4E8; }
+.hemi { background: var(--white); border: 1.5px solid var(--line); border-radius: 12px; padding: 4px 6px; }
+.hemi-svg { display: block; width: 100%; max-height: 150px; }
+.hemi-svg.big { max-height: 190px; }
+.hemi-n { font: 400 15px var(--display); fill: var(--ink); }
+.hemi-l { font: 700 6px var(--body); fill: var(--muted); }
+.hemi-leg { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 10px; font-size: 11px; font-weight: 700; }
+.hemi-leg span { display: inline-flex; align-items: center; gap: 3px; }
+.hemi-leg i { width: 9px; height: 9px; border-radius: 50%; }
+.hemi-leg .me { text-decoration: underline; }
+.gov-sat { display: flex; justify-content: space-between; gap: 4px; }
+.satc { flex: 1; text-align: center; background: var(--white); border: 1.5px solid var(--line); border-radius: 10px; padding: 3px 0; font-size: 15px; }
+.gov-prog { display: flex; flex-direction: column; gap: 3px; background: var(--white); border: 1.5px solid var(--line); border-radius: 12px; padding: 6px 8px; }
+.gp-row { display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px; font-weight: 600; }
+.gp-row small { white-space: nowrap; font-size: 11px; color: var(--muted); }
+.gp-row.adopted small { color: #2E7D46; font-weight: 800; }
+.gp-row.rejected { opacity: .55; }
+.gov .advisor { margin: 0; }
+.gov #gov-next { margin-top: auto; }
+.law-head { display: flex; flex-direction: column; }
+.law-head b { font-family: var(--display); font-weight: 400; font-size: 22px; line-height: 1.1; }
+.law-head small { color: var(--muted); font-size: 12px; }
+.tally { display: flex; justify-content: space-around; gap: 6px; font-size: 13px; }
+.tally b { font-family: var(--display); font-weight: 400; font-size: 20px; }
+.t-pour { color: #2E7D46; } .t-contre { color: #B3261E; } .t-abst { color: var(--muted); }
+.verdict-bad { background: #FFE1DC; border-radius: 10px; padding: 8px 10px; }
+.refbar { position: relative; height: 26px; background: #FFE1DC; border: 1.5px solid var(--ink); border-radius: 8px; overflow: hidden; }
+.refbar i { display: block; height: 100%; background: #7BC892; }
+.refbar.no i { background: #F2A0A0; }
+.refbar span { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; }
+.refbar::after { content: ''; position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background: var(--ink); }
+.bercy { background: var(--white); border: 2px solid var(--ink); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; box-shadow: 4px 4px 0 var(--ink); }
+.bercy b { font-family: var(--display); font-weight: 400; font-size: 22px; line-height: 1.1; }
+.bercy p { margin: 0; font-size: 13.5px; }
+@media (max-height: 740px) { .gov-prog { display: none; } .hemi-svg { max-height: 110px; } }
+
+.vote-anim circle { animation: seatIn .5s ease-out both; }
+.vote-anim circle:nth-child(3n) { animation-delay: .15s; }
+.vote-anim circle:nth-child(3n+1) { animation-delay: .3s; }
+@keyframes seatIn { from { opacity: 0; transform: scale(.2); transform-box: fill-box; transform-origin: center; } to { opacity: 1; transform: none; } }
+.tally.big b { font-size: 34px; }

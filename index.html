@@ -117,9 +117,24 @@
     <p class="tagline" id="end-sub"></p>
     <div id="end-table" class="end-table"></div>
     <div class="stack">
-      <button class="btn btn-yellow btn-big" data-go="choose">REJOUER</button>
+      <button class="btn btn-yellow btn-big" id="btn-govern" type="button" hidden>🏛️ GOUVERNER LE PAYS</button>
+      <button class="btn btn-ghost-light" data-go="choose">Rejouer une campagne</button>
       <button class="btn btn-ghost-light" data-go="title">Accueil</button>
     </div>
+  </section>
+
+  <!-- v0.9 : gouverner -->
+  <section id="screen-gov" class="screen gov">
+    <header class="gov-top">
+      <div class="gov-face" id="gov-face"></div>
+      <div><span class="kicker" id="gov-kicker">Quinquennat</span><h1 class="h1" id="gov-title">ANNÉE 1 / 5</h1><span class="region-sub" id="gov-sub"></span></div>
+    </header>
+    <div class="gauges" id="gov-gauges"></div>
+    <div class="hemi" id="gov-hemi"></div>
+    <div class="gov-sat" id="gov-sat"></div>
+    <div class="gov-prog" id="gov-prog"></div>
+    <div class="advisor" id="gov-advisor"></div>
+    <button class="btn btn-ink btn-big" id="gov-next" type="button">CONTINUER</button>
   </section>
 
   <!-- Fenêtre modale -->
@@ -140,7 +155,9 @@
 <script src="js/ai.js"></script>
 <script src="js/art.js"></script>
 <script src="js/tuto.js"></script>
+<script src="js/govern.js"></script>
 <script src="js/ui.js"></script>
+<script src="js/govui.js"></script>
 <script>
   /* Application installable : le service worker garde le jeu sur le téléphone */
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {

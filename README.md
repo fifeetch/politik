@@ -15,7 +15,7 @@ Jeu de stratégie électorale parodique sur la carte de France, pensé pour le t
   Politik a alors sa propre icône, s'ouvre en plein écran et fonctionne sans internet.
 - Première partie : un tutoriel guidé se lance automatiquement (relançable avec « Comment jouer » sur l'écran titre).
 
-## Règles (v0.8, résumé)
+## Règles (v0.9, résumé)
 
 - **But** : remporter l'élection présidentielle après **8 tours de campagne**. Chaque région vote selon ses cubes, pondérée par sa population ; le parti qui contrôle une région y gagne un bonus de voix.
 - **Scrutin** : plus de 50 % au premier tour = élu. Sinon, second tour entre les deux premiers, avec reports de voix selon la proximité politique (alliés : 85 %).
@@ -27,6 +27,7 @@ Jeu de stratégie électorale parodique sur la carte de France, pensé pour le t
 - **Les grands moments (v0.6)** : débat télévisé en face-à-face (choix des répliques), flash info en fin de tour, soirée électorale à 20h.
 - **Programme et affaires (v0.7)** : 5 mesures à choisir avant la campagne (crédibilité, mesure phare, budget). Des affaires tombent (casseroles, presse, enquêtes des rivaux, programme non financé) et l'on choisit sa réaction. Lulu, la directrice de campagne, donne un conseil par tour, et des fiches « Le saviez-vous ? » expliquent la vraie vie politique.
 - **Programme financé et électorat (v0.8)** : dépenses, recettes et reste à financer ; 10 mesures de financement ; 6 groupes de population avec leur part réelle dans chaque région (Insee 2022) ; régions de cœur et régions hostiles.
+- **Gouverner (v0.9)** : une fois élu, 5 années de mandat : législatives, vote de tes lois à l'Assemblée (négociation, 49.3, motion de censure, référendum), budget en 3 arbitrages, actualité, bilan. Jauges : déficit, dette, popularité, Assemblée.
 - **Un tour** : journal du matin (revenus, militants, scandales, crise ou événement, dilemme) → 3 actions secrètes jouées par tous en même temps → débat (tours 3, 6, 8) → « Sous les projecteurs » pour le premier des sondages.
 
 ## Organisation du code
@@ -41,9 +42,12 @@ Jeu de stratégie électorale parodique sur la carte de France, pensé pour le t
 | `js/ai.js` | L'intelligence artificielle des adversaires |
 | `js/ui.js` | L'affichage et le déroulement d'une partie |
 | `js/art.js` | Les illustrations (candidats, conseillère, vignettes), dessinées en SVG |
+| `js/govern.js` | Les règles du quinquennat (législatives, votes, budget, jauges) |
+| `js/govui.js` | L'écran « Gouverner » (hémicycle, lois, budget, bilan) |
 | `js/tuto.js` | Le tutoriel guidé du premier tour |
 | `manifest.webmanifest`, `sw.js`, `icons/` | L'application installable (icône, plein écran, jeu hors ligne). À chaque nouvelle version, changer `VERSION` dans `sw.js` |
 | `test/simulate.js` | Simule des centaines de parties pour vérifier l'équilibre |
+| `test/govern-sim.js` | Simule des quinquennats pour vérifier les ordres de grandeur |
 
 Pour équilibrer le jeu, on modifie `js/data.js`, puis on lance :
 
