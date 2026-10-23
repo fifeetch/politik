@@ -103,7 +103,7 @@
     var p = party(chosen);
     $('party-detail').innerHTML = '<div class="cand-line">' + A.portrait(p.id) + '<div><b class="cand-name">' + esc(p.candidate) + '</b><span>' + esc(p.candTitle) + ' · tempérament ' + D.TEMPERS[p.id].label + '</span></div></div>' +
       axisHtml(p.id) +
-      (p.pos === 1 || p.pos === 6 ? '<div><b>Électorat mobilisé.</b> Au bout de l\'axe : tes voix comptent ×' + R.edgeMobilization + ', mais les reports de second tour seront rares. Pense aux alliances !</div>' : '') +
+      (p.pos === 1 || p.pos === 6 ? '<div><b>Au bout de l\'axe.</b> Les reports de second tour seront rares. Pense aux alliances !</div>' : '') +
       '<div><b>Force.</b> ' + esc(p.force) + '</div><div><b>Faiblesse.</b> ' + esc(p.weakness) +
       '</div><div><b>Bases.</b> ' + p.bases.map(function (r) { return E.REG[r].name; }).join(', ') +
       '</div><div><b>Cartes.</b> ' + p.cards.map(function (c) { return D.CARDS[c].name; }).join(' · ') + '</div>';
