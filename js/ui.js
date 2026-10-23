@@ -130,7 +130,8 @@
     $('prog-budget').innerHTML = '<div class="pb-top"><b>Coût : ' + cost + ' Md€</b><span>' + progSel.length + ' / ' + R.programmeSize + ' mesures</span></div>' +
       '<div class="pb-bar"><i class="' + (over > 0 ? 'over' : '') + '" style="width:' + pct + '%"></i><span class="pb-cap" style="left:' + (100 / 1.6) + '%"></span></div>' +
       '<div class="pb-msg">' + (over > 0 ? '⚠️ <b>Non financé</b> (+' + over + ' Md€) : ' + Math.ceil(over / R.budgetCasStep) + ' casserole(s), et les économistes vont s\'en mêler.' : '✅ <b>Programme financé</b> (40 Md€ au plus).') +
-      ' <button type="button" class="linkbtn" data-learn="budget">C\'est quoi, le budget ?</button></div>';
+      ' <button type="button" class="linkbtn" data-learn="budget">C\'est quoi, le budget ?</button></div>' +
+      '<div class="pb-note">Les coûts des mesures sont des ordres de grandeur pour le jeu, pas des chiffrages officiels.</div>';
     var list = $('prog-list'); list.innerHTML = '';
     D.THEMES.forEach(function (t) {
       var sec = el('div', { class: 'pl-theme' }, '<div class="pl-head">' + t.icon + ' <b>' + esc(t.name) + '</b><span class="pl-cred">ta crédibilité ' + credDots(cr[t.id]) + '</span></div>');
@@ -162,15 +163,22 @@
   document.addEventListener('click', function (e) {
     var b = e.target.closest('[data-learn]'); if (!b) return;
     var L = D.LEARN[b.getAttribute('data-learn')];
-    if (L) modal({ kicker: 'Le saviez-vous ?', title: L.title, html: '<div class="learn">' + A.advisor() + '<p>' + esc(L.text) + '</p></div>' });
+    if (L) modal({ kicker: 'Le saviez-vous ?', title: L.title, html: '<div class="learn">' + A.advisor() + '<p>' + esc(L.text) + '</p></div>' + srcHtml(L) });
   });
+  /* Sources officielles d'une fiche */
+  function srcHtml(L) {
+    if (!L.src || !L.src.length) return '';
+    return '<div class="src"><span>📎 Source' + (L.src.length > 1 ? 's' : '') + ' :</span>' + L.src.map(function (x) {
+      return '<a href="' + esc(x.url) + '" target="_blank" rel="noopener">' + esc(x.label) + '</a>';
+    }).join('') + '</div>';
+  }
   /* Fiche « Le saviez-vous ? » montrée une seule fois par partie, au bon moment */
   function learnBox(key) {
     var L = D.LEARN[key]; if (!L || !g) return '';
     g.learned = g.learned || {};
     if (g.learned[key]) return '';
     g.learned[key] = true;
-    return '<div class="learn learn-inline">' + A.advisor() + '<div><span class="kicker">Le saviez-vous ?</span><b>' + esc(L.title) + '</b><p>' + esc(L.text) + '</p></div></div>';
+    return '<div class="learn learn-inline">' + A.advisor() + '<div><span class="kicker">Le saviez-vous ?</span><b>' + esc(L.title) + '</b><p>' + esc(L.text) + '</p>' + srcHtml(L) + '</div></div>';
   }
 
   /* ---------- Partie ---------- */
@@ -271,6 +279,7 @@
     else if (g.turn === 2) h += learnBox('agenda');
     else if (g.turn === 4) h += learnBox('sondages');
     else if (g.turn === 5) h += learnBox('comptes');
+    else if (g.turn === 6) h += learnBox('dette');
     else if (g.turn === 7) h += learnBox('temps_parole');
     return h;
   }

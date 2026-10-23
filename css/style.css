@@ -457,3 +457,10 @@ button { font-family: inherit; color: inherit; }
 .night-learn .learn-inline { background: rgba(255,255,255,.08); border-color: var(--yellow); color: var(--paper); }
 .night-learn .kicker { color: var(--yellow); }
 @media (max-height: 700px) { .advisor p { font-size: 11.5px; } .adv-face { width: 30px; } }
+
+/* sources officielles des fiches */
+.src { display: flex; flex-direction: column; gap: 3px; margin-top: 6px; font-size: 11.5px; }
+.src span { font-weight: 800; color: var(--muted); }
+.src a { color: #2B3F78; text-decoration: underline; word-break: break-word; }
+.night-learn .src a { color: var(--yellow); }
+.pb-note { font-size: 10.5px; color: var(--muted); }
