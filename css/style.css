@@ -92,6 +92,14 @@ button { font-family: inherit; color: inherit; }
 .score24 small { grid-column: 1 / -1; font-size: 12.5px; color: var(--ink-2); }
 #btn-start { margin-top: auto; flex-shrink: 0; }
 
+/* Choix du mode de jeu */
+.mode-pick { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 12px; }
+.mode-btn { display: flex; flex-direction: column; gap: 2px; text-align: left; padding: 8px 10px; border-radius: 12px; border: 1.5px solid var(--rule); background: var(--sheet); cursor: pointer; }
+.mode-btn b { font-size: 15px; }
+.mode-btn small { font-size: 12px; color: var(--muted); line-height: 1.3; }
+.mode-btn.on { border-color: var(--violet); background: var(--violet-2); box-shadow: inset 0 0 0 1px var(--violet); }
+.mode-btn.on b { color: var(--violet); }
+
 /* ---------- Programme ---------- */
 #screen-programme { overflow-y: auto; padding: max(14px, env(safe-area-inset-top)) 14px 0; gap: 10px; }
 .prog-head { display: flex; align-items: center; gap: 10px; }
@@ -154,10 +162,13 @@ button { font-family: inherit; color: inherit; }
 .race-bar { position: relative; height: 14px; display: flex; overflow: hidden; background: var(--rule); border-radius: 6px; }
 .race-bar .seg { height: 100%; transition: width .4s; border-right: 1px solid var(--paper); }
 .race-bar .mark { position: absolute; left: 50%; top: -2px; bottom: -2px; width: 2px; background: var(--ink); }
-.race-legend { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; font-size: 12.5px; }
+.race-legend { display: grid; grid-template-columns: repeat(5, minmax(0, auto)); justify-content: space-between; gap: 4px; font-size: 12.5px; }
 .race-legend span { display: flex; align-items: center; gap: 4px; white-space: nowrap; overflow: hidden; }
 .race-legend .me { font-weight: 700; }
 .sw { width: 10px; height: 10px; flex-shrink: 0; display: inline-block; }
+.seg-autres { background: repeating-linear-gradient(135deg, #B9BCB2 0 3px, #D3D6CC 3px 6px); }
+.sw-autres { background: #B9BCB2; }
+.race-legend .autres { color: var(--muted); }
 .st { font-size: 12px; font-weight: 700; margin-left: 6px; white-space: nowrap; }
 .st-up { color: var(--good); } .st-down { color: var(--red); }
 .st-cas { letter-spacing: -2px; }

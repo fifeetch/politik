@@ -90,10 +90,11 @@ Quand tu gagnes la présidentielle, le bouton « 🏛️ Gouverner le pays » ou
 - Simulation (`node test/govern-sim.js 300 c`) : un mandat équilibré est réélu environ une fois sur trois ; tout dépenser ou tout économiser mène à l'échec.
 - **Nouvel univers graphique « bureau de vote »** : papier de bulletin, encre violette de tampon pour les actions, rouge pour l'actualité et les affaires. Titres en Anybody (police d'affiche), texte et chiffres en Atkinson Hyperlegible (conçue pour la lisibilité). Coup de tampon « Validé » à la fin de chaque tour. Polices livrées avec le jeu : il marche entièrement hors ligne.
 
-## v1.0.2 — fait : un point de départ lisible, les européennes 2024
-- Les scores de départ suivent désormais les **élections européennes du 9 juin 2024** (résultats définitifs du ministère de l'Intérieur), région par région, outre-mer et Français de l'étranger compris : FI = LFI, SM = PS-Place publique, VP = Les Écologistes, EM = Besoin d'Europe, UG = LR, MN = RN.
-- Pourquoi : c'est le scrutin le plus récent où chaque parti avait sa propre liste partout, à la proportionnelle. Aux législatives 2024, les partis étaient en alliances (NFP, Ensemble, RN-Ciotti) et pas présents partout. Une fiche « Le saviez-vous ? » l'explique dans le jeu.
-- Chaque région part à la couleur de la liste arrivée en tête parmi les partis de la partie ; les égalités dues à l'arrondi sont départagées par le vrai score.
+## v1.1 — fait : deux modes de jeu
+- **Réaliste** : chaque parti démarre avec la moyenne de ses scores aux législatives (1er tour) et aux européennes de 2024, région par région (résultats définitifs du ministère de l'Intérieur). Les petites listes et les partis absents de la partie comptent sous « Autres » dans les sondages (le RN part vers 31 %, comme en 2024) ; la campagne les réduit peu à peu (vote utile), et au second tour 60 % d'entre eux votent pour un finaliste. Plus de région attribuée d'office : le contrôle suit la règle normale.
+- **Égalité** : chaque parti a 2 électeurs dans chaque région, personne ne tient de région au départ. Les partis aux deux bouts de l'axe (FI, MN) ont un électorat un peu plus mobilisé (×1,18) pour compenser des reports de second tour plus faibles. Simulation (3 000 parties) : 21 à 32 % de victoires pour chaque parti.
+- Fiche « Pourquoi ces chiffres ? » au choix du parti et dans les règles. Le mode choisi est retenu pour les parties suivantes.
+- À surveiller : en Réaliste, Socialisme Modéré et En Mouvement gagnent un peu plus souvent (33 %), Les Verts Pâturages moins (16 %), ce qui suit leur poids de départ.
 
 ## Plus tard — rejouabilité
 - Phase des **500 parrainages** avant la campagne.

@@ -236,19 +236,30 @@
     D.REGIONS.forEach(function (r) {
       var reg = g.regions[r.id], T = 0, w = {}, ex = regionVoters(g, r.id).exprimes;
       totalExp += ex;
+      var o = othersShare(g, r.id);
+      v._autres = (v._autres || 0) + ex * o;
       g.players.forEach(function (p) { w[p.id] = cubes(g, r.id, p.id) * (reg.controller === p.id ? R.incumbentBonus : 1); T += w[p.id]; });
-      if (T > 0) g.players.forEach(function (p) { v[p.id] += ex * w[p.id] / T; });
+      if (T > 0) g.players.forEach(function (p) { v[p.id] += ex * (1 - o) * w[p.id] / T; });
     });
     // électorat très mobilisé aux deux bouts de l'axe (même règle à gauche et à droite)
+    // Mode Égalité : au second tour, les partis des bouts de l'axe reçoivent moins de reports ; pour que chacun ait
+    // les mêmes chances, leur électorat est un peu plus mobilisé (même règle à gauche et à droite)
+    if (g.mode === 'egal') g.players.forEach(function (p) { var pos = PARTY[p.id].pos; if (pos === 1 || pos === 6) v[p.id] *= R.egalEdgeBoost; });
     if (withObjectives) g.players.forEach(function (p) {
       var o = D.OBJECTIVES.filter(function (x) { return x.id === p.objective; })[0];
       if (objectiveMet(g, p.id, p.objective)) v[p.id] += o.bonus * R.objectiveVotes * totalExp / 65;
     });
     return v;
   }
+  /* Mode Réaliste : la part des « autres » (petites listes, partis absents de la partie). La campagne les écrase peu à peu :
+     les électeurs se rangent derrière les grands candidats (vote utile). */
+  function othersShare(g, rid) {
+    var o = (g.regions[rid] && g.regions[rid].others) || 0;
+    return o * Math.pow(R.othersKeep, Math.max(0, g.turn - 1));
+  }
   function percents(v) {
     var s = 0; Object.keys(v).forEach(function (k) { s += v[k]; });
-    return Object.keys(v).map(function (k) { return { pid: k, votes: v[k], pct: s ? v[k] / s : 0 }; })
+    return Object.keys(v).filter(function (k) { return k !== '_autres'; }).map(function (k) { return { pid: k, votes: v[k], pct: s ? v[k] / s : 0 }; })
       .sort(function (a, b) { return b.pct - a.pct; });
   }
   function poll(g) { return percents(votes(g, false)); }
@@ -269,7 +280,7 @@
     var ids = humanParty ? [humanParty].concat(ai) : ai;
     var objs = shuffle(D.OBJECTIVES.map(function (o) { return o.id; }), rng);
     var g = {
-      seed: seed, rng: rng, turn: 0, phase: 'setup', winner: null, over: false, result: null,
+      seed: seed, rng: rng, mode: opts.mode === 'egal' ? 'egal' : 'reel', turn: 0, phase: 'setup', winner: null, over: false, result: null,
       alliances: {}, betrayed: {}, offers: [], hot: [], nextHot: [], news: null,
       bases: {}, pending: [], markers: [], crisis: null, dilemma: null, dilemmas: [], lastPoll: null,
       affairs: [], nextAffairs: [], affairDeck: [], affairIdx: 0,
@@ -284,22 +295,23 @@
       event: null, mods: {}, cancel: {}, log: [], history: []
     };
     // v1.0 : chaque région démarre avec ses vrais inscrits, sa vraie abstention et son vrai vote blanc (2022),
-    // et chaque parti avec des électeurs proportionnels à son score aux européennes 2024
+    // et chaque parti avec des électeurs proportionnels à son score de départ (mode Réaliste) ou à égalité (mode Égalité)
     D.REGIONS.forEach(function (r) {
       g.regions[r.id] = { cubes: {}, controller: null, ins: r.ins, abst: r.abst / 100 * R.round1Abst, blank: (r.blanc + r.nuls) / 100 * R.round1Blank };
+      if (g.mode === 'egal') {
+        // Mode Égalité : tout le monde part avec les mêmes électeurs partout, personne ne tient de région
+        g.players.forEach(function (pl) { addCubes(g, r.id, pl.id, R.equalStart); });
+        g.regions[r.id].others = 0;
+        return;
+      }
+      // Mode Réaliste : la moyenne des législatives et des européennes 2024 (voir data.js). Le contrôle des régions
+      // suit ensuite la règle normale (au moins 3 électeurs, 4 pour le Mouvement National, et être devant)
       g.players.forEach(function (pl) { var n = Math.round((r.start[pl.id] || 0) * R.startScale / 100); if (n) addCubes(g, r.id, pl.id, n); });
-      // La région part à son vainqueur des européennes 2024 parmi les partis de la partie. Si l'arrondi en cubes
-      // le met à égalité ou sous le seuil de contrôle, il reçoit juste ce qu'il faut (3 cubes au plus) pour la tenir.
-      var top = pids(g).slice().sort(function (a, b) { return (r.start[b] || 0) - (r.start[a] || 0); })[0];
-      var others = 0; pids(g).forEach(function (id) { if (id !== top) others = Math.max(others, cubes(g, r.id, id)); });
-      var need = Math.max(others + 1, minControl(top)) - cubes(g, r.id, top);
-      if (need > 0 && need <= 3) addCubes(g, r.id, top, need);
-      g.regions[r.id].lead2024 = top;
+      // les électeurs des partis absents de la partie et des autres listes : « autres », qui pèsent dans les sondages
+      var sum = 0; pids(g).forEach(function (id) { sum += r.start[id] || 0; });
+      g.regions[r.id].others = Math.max(0, 100 - sum) / 100;
     });
     updateAllControl(g);
-    D.REGIONS.forEach(function (r) { var reg = g.regions[r.id], L = reg.lead2024; delete reg.lead2024;
-      if (!reg.controller && L) { var best = 0; pids(g).forEach(function (id) { best = Math.max(best, cubes(g, r.id, id)); });
-        if (cubes(g, r.id, L) === best && best >= minControl(L)) reg.controller = L; } });
     // v0.5 : une crise en 3 actes, et un paquet de dilemmes
     var cr = D.CRISES[Math.floor(rng() * D.CRISES.length)];
     g.crisis = { id: cr.id, start: R.crisisStart[0] + Math.floor(rng() * (R.crisisStart[1] - R.crisisStart[0] + 1)) };
@@ -924,7 +936,13 @@
     var out = { first: first, second: null, winner: null, direct: false, stats1: st };
     if (first[0].pct > 0.5) { out.direct = true; out.winner = first[0].pid; return out; }
     var A = first[0], B = first[1], va = A.votes, vb = B.votes, transfers = [], nt = 0;
-    var scale = st.exprimes / first.reduce(function (s, x) { return s + x.votes; }, 0);   // les voix des 4 partis du jeu → électeurs réels
+    var vAll = votes(g, true), au = vAll._autres || 0;
+    if (au > 0) {   // les électeurs des autres listes se partagent entre les finalistes… ou restent chez eux
+      var sa = A.votes / (A.votes + B.votes), ta = R.othersTransfer * sa, tb = R.othersTransfer * (1 - sa);
+      va += au * ta; vb += au * tb; nt += au * (1 - ta - tb);
+      out.othersTransfer = { toA: ta, toB: tb, abst: 1 - ta - tb, pct: au / first.reduce(function (s, x) { return s + x.votes; }, au) };
+    }
+    var scale = st.exprimes / first.reduce(function (s, x) { return s + x.votes; }, au);   // les voix des 4 partis du jeu → électeurs réels
     first.slice(2).forEach(function (e) {
       var ra = transferRate(g, e.pid, A.pid), rb = transferRate(g, e.pid, B.pid);
       if (ra + rb > 1) { var s = ra + rb; ra /= s; rb /= s; }
@@ -958,7 +976,7 @@
     actionCost: actionCost, checkAction: checkAction, mediaRegions: mediaRegions, gain: gain, bestRegions: bestRegions,
     controlledPoints: controlledPoints, controlledRegions: controlledRegions, totalCubes: totalCubes, ranking: ranking,
     leader: leader, cubes: cubes, minControl: minControl, player: player, rivalIn: rivalIn, strongestRegion: strongestRegion,
-    regionVoters: regionVoters, turnoutStats: turnoutStats, mobilizeGain: mobilizeGain, lowTurnoutFit: lowTurnoutFit,
+    regionVoters: regionVoters, othersShare: othersShare, turnoutStats: turnoutStats, mobilizeGain: mobilizeGain, lowTurnoutFit: lowTurnoutFit,
     NATPOP: NATPOP, setProgramme: setProgramme, segmentAppeal: segmentAppeal, echoOf: echoOf, echo: echo, echoBonus: echoBonus, echoRanks: echoRanks, programmeCred: programmeCred, programmeCost: programmeCost, measure: measure, MEAS: MEAS,
     resolveAffair: resolveAffair, enqueteChance: enqueteChance, affairDef: affairDef,
     resolveDilemma: resolveDilemma, dilemmaDef: dilemmaDef, applyFx: applyFx, markerAt: markerAt, hotHere: hotHere, crisisAct: crisisAct,

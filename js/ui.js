@@ -8,6 +8,8 @@
   var SVGNS = 'http://www.w3.org/2000/svg';
 
   var g = null, me = null, chosen = 'VP', selected = null, queue = [];
+  var gameMode = 'reel';   // v1.1 : 'reel' (Réaliste, départ 2024) ou 'egal' (Égalité des chances)
+  try { if (localStorage.getItem('politik_mode') === 'egal') gameMode = 'egal'; } catch (e) {}
   var theme = null, themePicked = false;   // v0.3 : le message (thème) choisi pour les actions
   var advisorHidden = false;               // v0.7 : la conseillère, masquée pour ce tour
   var T = window.PolitikTuto, forceTuto = false, tutoGame = false;
@@ -86,7 +88,7 @@
   /* Financé, partiellement financé, non financé (selon le reste à financer) */
   function fundingState(over) { return over <= 0 ? 'ok' : over <= R.budgetCasStep ? 'partial' : 'no'; }
   var FUND_LABEL = { ok: 'Programme financé', partial: 'Partiellement financé', no: 'Non financé' };
-  /* Score national du parti aux européennes 2024, pondéré par les suffrages exprimés de chaque région */
+  /* Score national de départ du parti (moyenne législatives + européennes 2024), pondéré par les suffrages exprimés de chaque région */
   function score2024(pid) {
     var s = 0, w = 0;
     D.REGIONS.forEach(function (r) { var ex = r.ins * (1 - r.abst / 100) * (1 - (r.blanc + r.nuls) / 100); s += ex * r.start[pid] / 100; w += ex; });
@@ -105,6 +107,12 @@
 
   /* ---------- Choix du parti ---------- */
   function renderChoose() {
+    $('mode-pick').innerHTML = [['reel', 'Réaliste', 'Départ avec les vrais scores de 2024'], ['egal', 'Égalité', 'Tout le monde part avec les mêmes chances']].map(function (m) {
+      return '<button type="button" class="mode-btn' + (gameMode === m[0] ? ' on' : '') + '" data-mode="' + m[0] + '" aria-pressed="' + (gameMode === m[0]) + '"><b>' + m[1] + '</b><small>' + m[2] + '</small></button>';
+    }).join('');
+    Array.prototype.forEach.call(document.querySelectorAll('[data-mode]'), function (b) {
+      b.addEventListener('click', function () { gameMode = b.getAttribute('data-mode'); try { localStorage.setItem('politik_mode', gameMode); } catch (e) {} renderChoose(); });
+    });
     var grid = $('party-grid'); grid.innerHTML = '';
     D.PARTIES.forEach(function (p) {
       var b = el('button', { class: 'party-card' + (p.id === chosen ? ' on' : ''), type: 'button', 'aria-pressed': p.id === chosen, style: 'border-left-color:' + p.color });
@@ -116,7 +124,8 @@
     });
     var p = party(chosen);
     $('party-detail').innerHTML = '<div class="cand-line">' + A.portrait(p.id) + '<div><b class="cand-name">' + esc(p.candidate) + '</b><span>' + esc(p.candTitle) + ' · tempérament ' + D.TEMPERS[p.id].label + '</span></div></div>' +
-      '<div class="score24"><span>Européennes 2024</span><b>' + pctFr(score2024(p.id), 1) + ' %</b><small>ton point de départ, région par région' + (p.id === 'MN' ? ' : le Mouvement National part en tête partout, comme en juin 2024' : '') + '. <button type="button" class="linkbtn" data-learn="depart2024">Pourquoi les européennes ?</button></small></div>' +
+      (gameMode === 'reel' ? '<div class="score24"><span>Score de départ</span><b>' + pctFr(score2024(p.id), 1) + ' %</b><small>moyenne des législatives et des européennes 2024, région par région. <button type="button" class="linkbtn" data-learn="depart2024">Pourquoi ce chiffre ?</button></small></div>'
+        : '<div class="score24"><span>Mode Égalité</span><b>2</b><small>électeurs dans chaque région pour chaque parti : personne ne part en tête.</small></div>') +
       axisHtml(p.id) +
       (p.pos === 1 || p.pos === 6 ? '<div><b>Au bout de l\'axe.</b> Les reports de second tour seront rares. Pense aux alliances !</div>' : '') +
       '<div><b>Force.</b> ' + esc(p.force) + '</div><div><b>Faiblesse.</b> ' + esc(p.weakness) +
@@ -262,7 +271,7 @@
 
   /* ---------- Partie ---------- */
   function startGame(pid, prog, fin) {
-    g = E.createGame(pid); me = pid; selected = null; queue = []; theme = null; themePicked = false; advisorHidden = false;
+    g = E.createGame(pid, { mode: gameMode }); me = pid; selected = null; queue = []; theme = null; themePicked = false; advisorHidden = false;
     E.setProgramme(g, pid, prog || party(pid).programme, fin || party(pid).financing);
     go('game');
     nextTurn();
@@ -270,7 +279,7 @@
   function mePl() { return E.player(g, me); }
   /* Raccourci : la campagne se joue toute seule, et tu l'emportes de justesse au second tour */
   function skipCampaign(pid, prog, fin) {
-    g = E.createGame(pid); me = pid;
+    g = E.createGame(pid, { mode: gameMode }); me = pid;
     E.setProgramme(g, pid, prog, fin);
     while (!g.over) {
       var info = E.startTurn(g);
@@ -523,6 +532,11 @@
       bar.appendChild(el('div', { class: 'seg', style: 'width:' + (100 * x.pct) + '%;background:' + p.color }));
       leg.appendChild(el('span', { class: pid === me ? 'me' : '' }, '<i class="sw" style="background:' + p.color + '"></i>' + (pid === me ? 'Toi' : pid) + ' ' + pct + ' %' + (pid === ally ? ' <em class="ally">allié</em>' : '')));
     });
+    var au = 1 - E.poll(g).reduce(function (s, x) { return s + x.pct; }, 0);
+    if (au > 0.005) {
+      bar.appendChild(el('div', { class: 'seg seg-autres', style: 'width:' + (100 * au) + '%' }));
+      leg.appendChild(el('span', { class: 'autres' }, '<i class="sw sw-autres"></i>Autres ' + Math.round(100 * au) + ' %'));
+    }
     bar.appendChild(el('div', { class: 'mark' }));
   }
   var mapMode = 'ctrl';
@@ -1049,7 +1063,7 @@
       h += '<div class="transfers">' + s.transfers.map(function (t) {
         return '<p>' + chip(t.pid) + 'Reports : ' + Math.round(100 * t.toA) + ' % → ' + s.a + ', ' + Math.round(100 * t.toB) + ' % → ' + s.b + ', ' + Math.round(100 * t.abst) + ' % blanc ou abstention' +
           (E.allyOf(g, t.pid) === s.a || E.allyOf(g, t.pid) === s.b ? ' <em class="ally">alliance</em>' : '') + '</p>';
-      }).join('') + '</div>';
+      }).join('') + (res.othersTransfer ? '<p><span class="who" style="background:#C6C9BF">…</span>Autres listes : ' + Math.round(100 * res.othersTransfer.toA) + ' % → ' + s.a + ', ' + Math.round(100 * res.othersTransfer.toB) + ' % → ' + s.b + ', ' + Math.round(100 * res.othersTransfer.abst) + ' % blanc ou abstention</p>' : '') + '</div>';
     }
     var mine = E.finalScores(g).filter(function (x) { return x.pid === me; })[0];
     h += '<p class="hint" style="margin:10px 0 0">Ton objectif « ' + esc(mine.objective.name) + ' » : ' + (mine.met ? 'réussi, des voix en plus !' : 'raté.') + '</p>';
@@ -1093,7 +1107,7 @@
   function showRules() {
     modal({ kicker: 'Règles v1.0', title: 'Comment gagner', html:
       '<p><b>But :</b> remporter l\'élection présidentielle à la fin des <b>8 tours de campagne</b>. Chaque région vote selon ses cubes. Elle pèse ses <b>vrais électeurs</b> : ses inscrits (le chiffre sur la carte, en millions), moins ceux qui s\'abstiennent, moins ceux qui votent blanc ou nul. Le parti qui contrôle une région y gagne un petit bonus.</p>' +
-      '<p><b>Le point de départ :</b> chaque parti démarre avec le score de sa liste aux élections européennes du 9 juin 2024, région par région, et chaque région part à la couleur de la liste arrivée en tête parmi les partis de ta partie. Pourquoi les européennes ? C\'est le scrutin le plus récent où chaque parti avait sa propre liste partout, à la proportionnelle. Aux législatives qui ont suivi, les partis étaient en alliances et pas partout candidats, on ne peut donc pas y lire le score de chacun. Le Mouvement National part en tête dans toutes les régions, comme en juin 2024. <button type="button" class="linkbtn" data-learn="depart2024">En savoir plus</button></p>' +
+      '<p><b>Deux modes de jeu.</b> <b>Réaliste</b> : chaque parti démarre avec la moyenne de ses scores aux législatives et aux européennes de 2024, région par région ; les petites listes et les partis absents de ta partie comptent sous « Autres » dans les sondages, et la campagne les réduit peu à peu. <b>Égalité</b> : chaque parti a 2 électeurs dans chaque région, personne ne tient de région au départ, et tout le monde a les mêmes chances. <button type="button" class="linkbtn" data-learn="depart2024">Pourquoi ces chiffres ?</button></p>' +
       '<p><b>L\'abstention :</b> environ un quart des inscrits ne votent pas, et beaucoup plus en outre-mer. Le bouton <b>Abstention</b> au-dessus de la carte la montre. 🚪 <b>Mobiliser</b> fait voter des abstentionnistes ; attaquer ou multiplier les affaires en dégoûte d\'autres.</p>' +
       '<p><b>Premier tour :</b> plus de 50 % des suffrages exprimés (les blancs ne comptent pas) = élu directement. Sinon, les deux premiers vont au <b>second tour</b>. Les électeurs des autres partis se reportent selon leur proximité politique (alliés : 85 %) ; les autres votent blanc ou restent chez eux.</p>' +
       axisHtml(me || chosen) +

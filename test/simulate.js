@@ -13,7 +13,7 @@ var firstRound = 0, alliances = 0, finals = {}, turnsSum = 0, errors = 0, action
 for (var i = 0; i < N; i++) {
   var rng = E.makeRng(1000 + i);
   var parties = all.slice().sort(function () { return rng() - 0.5; }).slice(0, 4);
-  var g = E.createGame(null, { seed: 5000 + i, aiParties: parties });
+  var g = E.createGame(null, { seed: 5000 + i, aiParties: parties, mode: process.env.MODE });
   try {
     while (!g.over) {
       var info = E.startTurn(g);

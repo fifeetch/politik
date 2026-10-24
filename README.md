@@ -17,7 +17,7 @@ Jeu de stratégie électorale parodique sur la carte de France, pensé pour le t
 
 ## Règles (v1.0, résumé)
 
-- **But** : remporter l'élection présidentielle après **8 tours de campagne**. Chaque région vote selon ses cubes et pèse ses vrais électeurs : ses inscrits, moins les abstentionnistes et les votes blancs ou nuls. Le départ suit les élections européennes de 2024 (le dernier scrutin où chaque parti avait sa propre liste partout). Le parti qui contrôle une région y gagne un bonus de voix.
+- **But** : remporter l'élection présidentielle après **8 tours de campagne**. Chaque région vote selon ses cubes et pèse ses vrais électeurs : ses inscrits, moins les abstentionnistes et les votes blancs ou nuls. Deux modes : **Réaliste** (départ à la moyenne des législatives et des européennes 2024) et **Égalité** (tout le monde part avec les mêmes chances). Le parti qui contrôle une région y gagne un bonus de voix.
 - **Scrutin** : plus de 50 % au premier tour = élu. Sinon, second tour entre les deux premiers, avec reports de voix selon la proximité politique (alliés : 85 %).
 - **Axe politique** : FI · VP · SM · EM · UG · MN. Faire campagne là où un parti voisin est présent lui prend des électeurs.
 - **Alliances** : avec un parti à distance 2 au plus ; pas d'attaque entre alliés ; rompre coûte 2 ★ et ruine les reports.
@@ -28,7 +28,7 @@ Jeu de stratégie électorale parodique sur la carte de France, pensé pour le t
 - **Programme et affaires (v0.7)** : 5 mesures à choisir avant la campagne (crédibilité, mesure phare, budget). Des affaires tombent (casseroles, presse, enquêtes des rivaux, programme non financé) et l'on choisit sa réaction. Lulu, la directrice de campagne, donne un conseil par tour, et des fiches « Le saviez-vous ? » expliquent la vraie vie politique.
 - **Programme financé et électorat (v0.8)** : dépenses, recettes et reste à financer ; 10 mesures de financement ; 6 groupes de population avec leur part réelle dans chaque région (Insee 2022) ; régions de cœur et régions hostiles.
 - **Gouverner (v0.9)** : une fois élu, 5 années de mandat : législatives, vote de tes lois à l'Assemblée (négociation, 49.3, motion de censure, référendum), budget en 3 arbitrages, actualité, bilan. Jauges : déficit, dette, popularité, Assemblée.
-- **Électeurs réels (v1.0)** : inscrits, abstention et votes blancs de chaque région (présidentielle 2022), départ aux européennes 2024, action 🚪 Mobiliser pour faire voter des abstentionnistes, calque « Abstention » sur la carte, participation à la soirée électorale. Gouverner : charge de la dette, recettes du programme au premier budget, dépenses ponctuelles, dissolution au choix dès l'année 2, sièges selon les inscrits.
+- **Électeurs réels (v1.0)** : inscrits, abstention et votes blancs de chaque région (présidentielle 2022), deux modes de départ (Réaliste, Égalité), action 🚪 Mobiliser pour faire voter des abstentionnistes, calque « Abstention » sur la carte, participation à la soirée électorale. Gouverner : charge de la dette, recettes du programme au premier budget, dépenses ponctuelles, dissolution au choix dès l'année 2, sièges selon les inscrits.
 - **Un tour** : journal du matin (revenus, militants, scandales, crise ou événement, dilemme) → 3 actions secrètes jouées par tous en même temps → débat (tours 3, 6, 8) → « Sous les projecteurs » pour le premier des sondages.
 
 ## Organisation du code
