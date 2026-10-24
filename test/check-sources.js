@@ -121,6 +121,11 @@ function report() {
   var md = lines.join('\n') + '\n';
   console.log(md);
   if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, md);
+  if (process.env.GITHUB_ACTIONS) { // une alerte lisible directement dans l'onglet Actions
+    var plain = function (t) { return t.replace(/\*\*/g, '').replace(/%/g, '%25').replace(/\n/g, ' '); };
+    errors.forEach(function (e) { console.log('::error title=Source à corriger::' + plain(e)); });
+    warnings.forEach(function (w) { console.log('::warning title=Source à regarder::' + plain(w)); });
+  }
   process.exit(errors.length ? 1 : 0);
 }
 
