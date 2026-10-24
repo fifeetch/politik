@@ -4,7 +4,7 @@
   var R = D.RULES;
   var SHORT = { idf: 'IDF', ara: 'ARA', hdf: 'HDF', naq: 'N-AQ', occ: 'OCC', ges: 'G-EST', pac: 'PACA',
                 pdl: 'PDL', bre: 'BRE', nor: 'NOR', bfc: 'BFC', cvl: 'CVL', cor: 'CORSE' };
-  var NEUTRAL = '#EEE5CF';
+  var NEUTRAL = '#D9DCD3';
   var SVGNS = 'http://www.w3.org/2000/svg';
 
   var g = null, me = null, chosen = 'VP', selected = null, queue = [];
@@ -601,18 +601,20 @@
     var tag = c === me ? '<span class="stamp">À toi</span>'
       : c ? '<span class="tag" style="background:' + party(c).color + ';color:' + party(c).ink + '">' + c + '</span>'
       : '<span class="tag tag-yellow">À prendre</span>';
-    var html = '<div class="region-head"><div><h2 class="region-name">' + esc(r.name) + '</h2>' +
-      '<span class="region-sub">' + (E.echoBonus(g, me, selected) > 0 ? '❤️ ' : E.echoBonus(g, me, selected) < 0 ? '👎 ' : '') + mio(E.regionVoters(g, selected).ins) + ' M d\'inscrits, ' + pctFr(E.regionVoters(g, selected).abst) + ' % d\'abstention</span>' +
-      '<span class="region-sub concerns-line">Ses soucis : ' + r.concerns.map(function (x) { return '<span class="concern-ic' + (E.isHot(g, x) ? ' hot' : '') + '">' + th(x).icon + ' ' + esc(th(x).short) + '</span>'; }).join(' ') +
-      '</span></div>' + tag + '</div>';
-    // forces en présence : une seule ligne, seulement les partis présents (et toi)
+    var v = E.regionVoters(g, selected), echo = E.echoBonus(g, me, selected);
+    var html = '<div class="region-head"><h2 class="region-name">' + esc(r.name) + '</h2>' + tag + '</div>' +
+      '<div class="chips"><span class="chip"><b>' + mio(v.ins) + ' M</b> inscrits</span><span class="chip"><b>' + pctFr(v.abst) + ' %</b> abstention</span>' +
+      (echo > 0 ? '<span class="chip chip-good">❤️ Région de cœur</span>' : echo < 0 ? '<span class="chip chip-bad">👎 Hostile</span>' : '') + '</div>' +
+      '<div class="chips"><span class="chips-k">Soucis</span>' + r.concerns.map(function (x) { return '<span class="chip chip-theme' + (E.isHot(g, x) ? ' hot' : '') + '">' + th(x).icon + ' ' + esc(th(x).short) + (E.isHot(g, x) ? ' 🔥' : '') + '</span>'; }).join('') + '<button type="button" class="linkbtn chips-end" id="btn-pop">Qui vit ici ?</button></div>';
+    // forces en présence : une barre empilée, du plus fort au plus faible
     var rows = g.players.filter(function (p) { return p.id === me || E.cubes(g, selected, p.id) > 0; })
       .sort(function (a, b) { return E.cubes(g, selected, b.id) - E.cubes(g, selected, a.id); });
-    html += '<div class="forces">' + rows.map(function (p) {
+    var tot = 0; rows.forEach(function (p) { tot += E.cubes(g, selected, p.id); });
+    html += '<div class="forces-wrap"><div class="forces-bar">' + rows.filter(function (p) { return E.cubes(g, selected, p.id) > 0; }).map(function (p) {
       var n = E.cubes(g, selected, p.id), P = party(p.id);
-      var mil = (g.bases[selected] || []).indexOf(p.id) >= 0 ? ' 👥' : '';
-      return '<span class="force' + (p.id === me ? ' me' : '') + '"><i style="background:' + P.color + '"></i>' + (p.id === me ? 'Toi' : p.id) + ' <b>' + n + '</b>' + mil + '</span>';
-    }).join('') + '<button type="button" class="force-hint linkbtn" id="btn-pop">Qui vit ici ?</button></div>';
+      return '<span class="fseg' + (p.id === me ? ' me' : '') + '" style="flex:' + n + ';background:' + P.color + ';color:' + P.ink + '">' + (p.id === me ? 'Toi' : p.id) + ' ' + n + '</span>';
+    }).join('') + (tot ? '' : '<span class="fseg empty">Personne ici</span>') + '</div>' +
+      ((g.bases[selected] || []).indexOf(me) >= 0 ? '<div class="forces-foot">👥 Tes militants sont implantés ici : +1 électeur par tour.</div>' : '') + '</div>';
     var mk = E.markerAt(g, selected);
     if (mk) html += '<div class="mk-line">' + mk.icon + ' ' + esc(mk.title) + ' : ici, ' + th(mk.theme).icon + ' ' + esc(th(mk.theme).name) + ' compte comme à la une.</div>';
     box.innerHTML = html;
@@ -705,14 +707,14 @@
       var def = D.ACTIONS[type], act = { type: type, region: selected || undefined, theme: def.theme ? theme : undefined };
       var big = selected ? '+' + bigGain(act) : '—';
       var b = el('button', { class: 'tile', type: 'button', 'aria-label': def.name + ', ' + costLabel(act) },
-        '<span class="tile-n">' + def.name + '</span><span class="tile-big">' + big + '</span>' +
+        '<span class="tile-n">' + def.name + '</span><span class="tile-mid"><span class="tile-i">' + def.icon + '</span><span class="tile-big">' + big + '</span></span>' +
         (selected && tiring(act) && !canQueue(act) ? '<span class="tile-cost tile-warn">⚠️ risque de gaffe</span>' : '<span class="tile-cost">' + costLabel(act, true) + '</span>'));
       if (!selected) b.disabled = true;
       else if (canQueue(act)) b.classList.add('dim');
       b.addEventListener('click', function () { addAction(act); });
       box.appendChild(b);
     });
-    var more = el('button', { class: 'tile tile-more', type: 'button', id: 'btn-more' }, '<span class="tile-n">Plus</span><span class="tile-big">⋯</span><span class="tile-cost">7 actions</span>');
+    var more = el('button', { class: 'tile tile-more', type: 'button', id: 'btn-more' }, '<span class="tile-n">Plus</span><span class="tile-mid"><span class="tile-big">⋯</span></span><span class="tile-cost">7 actions</span>');
     more.addEventListener('click', moreMenu);
     box.appendChild(more);
   }

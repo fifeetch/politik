@@ -36,7 +36,7 @@ Jeu de stratégie électorale parodique sur la carte de France, pensé pour le t
 | Fichier | Rôle |
 | --- | --- |
 | `index.html` | Les écrans du jeu |
-| `css/style.css` | Le style « bureau de vote » : papier de bulletin, panneau kraft, encre violette de tampon |
+| `css/style.css` | Le style « bureau de vote » : papier de bulletin, encre violette de tampon |
 | `fonts/` | Les polices Anybody et Atkinson Hyperlegible (licence SIL OFL), livrées avec le jeu pour qu'il marche hors ligne |
 | `js/data.js` | **Tous les chiffres du jeu** : régions, partis, actions, cartes, événements, objectifs |
 | `js/map.js` | Les contours des 13 régions |
