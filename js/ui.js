@@ -4,7 +4,7 @@
   var R = D.RULES;
   var SHORT = { idf: 'IDF', ara: 'ARA', hdf: 'HDF', naq: 'N-AQ', occ: 'OCC', ges: 'G-EST', pac: 'PACA',
                 pdl: 'PDL', bre: 'BRE', nor: 'NOR', bfc: 'BFC', cvl: 'CVL', cor: 'CORSE' };
-  var NEUTRAL = '#DDD7C8';
+  var NEUTRAL = '#EEE5CF';
   var SVGNS = 'http://www.w3.org/2000/svg';
 
   var g = null, me = null, chosen = 'VP', selected = null, queue = [];
@@ -81,11 +81,25 @@
   var toastTimer;
   function toast(msg) { var t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.hidden = true; }, 2200); }
 
+  function mio(x) { return x.toFixed(1).replace('.', ','); }
+  function pctFr(x, d) { return (100 * x).toFixed(d == null ? 0 : d).replace('.', ','); }
+  /* Financé, partiellement financé, non financé (selon le reste à financer) */
+  function fundingState(over) { return over <= 0 ? 'ok' : over <= R.budgetCasStep ? 'partial' : 'no'; }
+  var FUND_LABEL = { ok: 'Programme financé', partial: 'Partiellement financé', no: 'Non financé' };
+  /* Score national du parti aux législatives 2024 (1er tour), pondéré par les suffrages exprimés de chaque région */
+  function score2024(pid) {
+    var s = 0, w = 0;
+    D.REGIONS.forEach(function (r) { var ex = r.ins * (1 - r.abst / 100) * (1 - (r.blanc + r.nuls) / 100); var t = 0; Object.keys(r.start).forEach(function (k) { t += r.start[k]; }); s += ex * r.start[pid] / t; w += ex; });
+    return s / w;
+  }
+
   /* ---------- Écran titre : carte décorative ---------- */
   function renderTitleMap() {
-    var s = $('title-map'), cols = D.PARTIES.map(function (p) { return p.color; }).concat(['#F5D547']), i = 0;
+    // la carte de l'affiche : chaque région à la couleur de son vainqueur de 2024
+    var s = $('title-map');
     D.REGIONS.forEach(function (r) {
-      s.appendChild(svg('path', { d: M.regions[r.id].d, fill: cols[i++ % cols.length], stroke: '#1B1F3B', 'stroke-width': 2.2, 'stroke-linejoin': 'round' }));
+      var best = Object.keys(r.start).sort(function (a, b) { return r.start[b] - r.start[a]; })[0];
+      s.appendChild(svg('path', { d: M.regions[r.id].d, fill: party(best).color, stroke: '#FAFAF6', 'stroke-width': 1.6, 'stroke-linejoin': 'round' }));
     });
   }
 
@@ -93,7 +107,7 @@
   function renderChoose() {
     var grid = $('party-grid'); grid.innerHTML = '';
     D.PARTIES.forEach(function (p) {
-      var b = el('button', { class: 'party-card' + (p.id === chosen ? ' on' : ''), type: 'button', 'aria-pressed': p.id === chosen });
+      var b = el('button', { class: 'party-card' + (p.id === chosen ? ' on' : ''), type: 'button', 'aria-pressed': p.id === chosen, style: 'border-left-color:' + p.color });
       b.innerHTML = '<div class="party-band" style="background:' + p.color + ';color:' + p.ink + '"><span class="party-ini">' + p.id +
         '</span><span class="party-fam">' + esc(p.family) + '</span></div><div class="party-face">' + A.portrait(p.id) + '</div><div class="party-body"><span class="party-name">' + esc(p.name) +
         '</span><span class="party-res">' + esc(p.candidate) + '</span></div>';
@@ -102,6 +116,7 @@
     });
     var p = party(chosen);
     $('party-detail').innerHTML = '<div class="cand-line">' + A.portrait(p.id) + '<div><b class="cand-name">' + esc(p.candidate) + '</b><span>' + esc(p.candTitle) + ' · tempérament ' + D.TEMPERS[p.id].label + '</span></div></div>' +
+      '<div class="score24"><span>Législatives 2024</span><b>' + pctFr(score2024(p.id), 1) + ' %</b><small>ton point de départ, région par région' + (p.id === 'MN' ? ' : le Mouvement National part en tête, comme en 2024' : '') + '</small></div>' +
       axisHtml(p.id) +
       (p.pos === 1 || p.pos === 6 ? '<div><b>Au bout de l\'axe.</b> Les reports de second tour seront rares. Pense aux alliances !</div>' : '') +
       '<div><b>Force.</b> ' + esc(p.force) + '</div><div><b>Faiblesse.</b> ' + esc(p.weakness) +
@@ -141,7 +156,7 @@
     var good = order.slice(0, R.echoGoodN), bad = order.slice(-R.echoBadN);
     $('prog-budget').innerHTML = '<div class="pb-lines"><span>Dépenses nouvelles</span><b>+' + dep + ' Md€</b><span>Recettes et économies</span><b class="pb-rec">−' + rec + ' Md€</b><span><b>Reste à financer</b></span><b>' + reste + ' Md€</b></div>' +
       '<div class="pb-bar"><i class="' + (over > 0 ? 'over' : '') + '" style="width:' + pct + '%"></i><span class="pb-cap" style="left:50%"></span></div>' +
-      '<div class="pb-msg">' + (over > 0 ? '⚠️ <b>Non financé</b> (+' + over + ' Md€ au-delà de ' + R.budgetCap + ') : ' + Math.ceil(over / R.budgetCasStep) + ' casserole(s), et les économistes vont s\'en mêler.' : '✅ <b>Programme financé</b> (' + R.budgetCap + ' Md€ au plus à trouver).') +
+      '<div class="pb-msg fund-' + fundingState(over) + '"><b>' + FUND_LABEL[fundingState(over)] + '</b> · ' + (over > 0 ? over + ' Md€ au-delà des ' + R.budgetCap + ' Md€ tolérés : ' + Math.ceil(over / R.budgetCasStep) + ' casserole' + (Math.ceil(over / R.budgetCasStep) > 1 ? 's' : '') + ', et les économistes vont s\'en mêler.' : 'il reste moins de ' + R.budgetCap + ' Md€ à trouver.') +
       ' <button type="button" class="linkbtn" data-learn="budget">C\'est quoi, le budget ?</button></div>' +
       '<div class="pb-fans">' + D.SEGMENTS.map(function (sg) { var v = ap[sg.id]; return '<span class="fan ' + (v > 0 ? 'up' : v < 0 ? 'down' : '') + '" title="' + esc(sg.full) + '">' + sg.icon + ' ' + (v > 0 ? '+' : '') + v + '</span>'; }).join('') + '</div>' +
       '<div class="pb-geo">❤️ <b>Régions de cœur</b> : ' + good.map(function (r) { return esc(SHORT[r.id]); }).join(', ') + ' · 👎 <b>hostiles</b> : ' + bad.map(function (r) { return esc(SHORT[r.id]); }).join(', ') +
@@ -189,9 +204,9 @@
       fsec.appendChild(row);
     });
     list.appendChild(fsec);
-    $('prog-mini').innerHTML = (over > 0 ? '⚠️' : '✅') + ' Reste à financer <b>' + reste + ' Md€</b> · ' + progSel.length + ' / ' + R.programmeSize + ' promesses · ' + progFin.length + ' / ' + R.fundingMax + ' financements';
+    $('prog-mini').innerHTML = '<span class="fund-dot fund-' + fundingState(over) + '"></span>' + FUND_LABEL[fundingState(over)] + ' : <b>' + reste + ' Md€</b> à financer · ' + progSel.length + ' / ' + R.programmeSize + ' promesses · ' + progFin.length + ' / ' + R.fundingMax + ' financements';
     $('prog-go').disabled = progSel.length !== R.programmeSize;
-    $('prog-go').textContent = progSel.length === R.programmeSize ? 'ENTRER EN CAMPAGNE' : 'ENCORE ' + (R.programmeSize - progSel.length) + ' MESURE' + (R.programmeSize - progSel.length > 1 ? 'S' : '');
+    $('prog-go').textContent = progSel.length === R.programmeSize ? 'Entrer en campagne' : 'Encore ' + (R.programmeSize - progSel.length) + ' mesure' + (R.programmeSize - progSel.length > 1 ? 's' : '') + ' à choisir';
   }
   $('prog-reco').addEventListener('click', function () { progSel = party(chosen).programme.slice(); progFin = (party(chosen).financing || []).slice(); renderProgramme(chosen); });
   $('prog-go').addEventListener('click', function () { if (progSel.length === R.programmeSize) startGame(chosen, progSel.slice(), progFin.slice()); });
@@ -212,13 +227,16 @@
   function popModal(rid) {
     var r = E.REG[rid], pl = g && mePl();
     var bonus = pl ? E.echoBonus(g, me, rid) : 0, ap = pl ? E.segmentAppeal(pl.programme.concat(pl.financing || [])) : null;
-    var html = '<div class="popbars">' + D.SEGMENTS.map(function (sg) {
+    var v = g ? E.regionVoters(g, rid) : { ins: r.ins, abst: r.abst / 100 * R.round1Abst, blank: (r.blanc + r.nuls) / 100 * R.round1Blank };
+    var html = '<div class="voters"><div><b>' + mio(v.ins) + ' M</b><span>inscrits</span></div><div><b>' + pctFr(v.abst) + ' %</b><span>s\'abstiennent</span></div><div><b>' + pctFr(v.blank, 1) + ' %</b><span>votent blanc ou nul</span></div></div>' +
+      (rid === 'cor' ? '<p class="hint">Corse, outre-mer et Français de l\'étranger, regroupés.</p>' : '') +
+      '<div class="popbars">' + D.SEGMENTS.map(function (sg) {
       var v = r.pop[sg.id], n = E.NATPOP[sg.id], a = ap ? ap[sg.id] : 0;
       return '<div class="popbar"><span class="pb-lbl">' + sg.icon + ' ' + esc(sg.name) + '</span><span class="pb-track"><i style="width:' + (v * 2) + '%"></i><em style="left:' + (n * 2) + '%"></em></span><b>' + v.toFixed(1).replace('.', ',') + ' %</b>' +
         (ap ? '<span class="pb-a ' + (a > 0 ? 'up' : a < 0 ? 'down' : '') + '">' + (a > 0 ? '👍' : a < 0 ? '👎' : '·') + '</span>' : '') + '</div>';
     }).join('') + '</div><p class="hint">Le trait rouge = la moyenne nationale. 👍 / 👎 = l\'avis de ce groupe sur ton programme.</p>' +
       (pl ? '<p>' + (bonus > 0 ? '❤️ <b>Région de cœur</b> pour ton programme : +1 cube sur tes Meetings ici.' : bonus < 0 ? '👎 <b>Région hostile</b> à ton programme : −1 cube sur tes Meetings ici.' : 'Ton programme reçoit ici un accueil moyen.') + '</p>' : '') +
-      srcHtml({ src: [D.SEGMENTS_SRC] });
+      learnBox(rid === 'cor' ? 'outremer' : 'abstention') + srcHtml({ src: [D.SEGMENTS_SRC] });
     modal({ kicker: 'Qui vit ici ?', title: r.name, html: html });
   }
   document.addEventListener('click', function (e) {
@@ -353,7 +371,7 @@
     });
     if (info.programmes) info.programmes.forEach(function (x) {
       if (x.pid === me) {
-        b.push(line('📋', 'Il te reste <b>' + x.budget + ' Md€</b> à financer : ' + (x.over > 0 ? 'non financé, ça va se voir…' : 'programme financé.') + (x.cas ? ' (+' + x.cas + ' casserole' + (x.cas > 1 ? 's' : '') + ')' : '')));
+        b.push(line('📋', 'Il te reste <b>' + x.budget + ' Md€</b> à financer : ' + FUND_LABEL[fundingState(x.over)].toLowerCase() + (x.over > 0 ? ', ça va se voir…' : '.') + (x.cas ? ' (+' + x.cas + ' casserole' + (x.cas > 1 ? 's' : '') + ')' : '')));
         if (x.echo.length) b.push(line('❤️', 'Ton programme fait mouche en ' + x.echo.map(function (r) { return SHORT[r]; }).join(', ') + ' : +1 cube dans chacune.'));
       }
       else if (x.choc.length) b.push(line('📢', esc(party(x.pid).short) + ' fait parler avec « ' + esc(x.choc[0]) + ' ».'));
@@ -380,7 +398,7 @@
     if (g.turn === 1) return 'Bienvenue ! Parle de ta mesure phare (' + th(ph.theme).icon + ' ' + th(ph.theme).short + ') : touche une région qui s\'en soucie, puis 📣 Meeting.';
     if (E.isDebateTurn(g) && pl.infl < 2) return 'Débat télévisé ce soir 🎙️ et tu n\'as presque plus d\'influence ★. Évite la Télé ce tour-ci pour garder de quoi te préparer.';
     if (E.isDebateTurn(g)) return 'Débat télévisé ce soir 🎙️ ! Garde 2 ou 3 ★ pour la préparation : chaque ★ vaut 1 point.';
-    if (pl.forme <= 1) return 'Ton candidat est épuisé (⚡ ' + pl.forme + '). Évite Meeting et Télé : un 📱 Buzz ou une 💰 Collecte ne le fatiguent pas.';
+    if (pl.forme <= 1) return 'Ton candidat est épuisé (⚡ ' + pl.forme + '). Évite Meeting et Télé : 🚪 Mobiliser ou une 💰 Collecte ne le fatiguent pas.';
     if (pl.cas >= 3) return 'Ça sent le roussi : ' + pl.cas + ' casseroles 🍳. Une affaire peut tomber à tout moment. Évite d\'attaquer ou d\'enquêter ce tour-ci.';
     var mineHot = hot.filter(function (t) { return pl.programme.some(function (id) { return E.measure(id).theme === t; }); })[0];
     if (mineHot) {
@@ -392,15 +410,17 @@
       if (c === me || my === 0) return false;
       var top = 0; g.players.forEach(function (p) { if (p.id !== me) top = Math.max(top, E.cubes(g, r.id, p.id)); });
       return top - my <= 1;
-    }).sort(function (a, b) { return b.pts - a.pts; })[0];
-    if (close) return 'Tu es tout près de prendre ' + close.name + ' (' + close.pts + ' pts) : un Meeting bien ciblé peut suffire.';
+    }).sort(function (a, b) { return b.ins - a.ins; })[0];
+    if (close) return 'Tu es tout près de prendre ' + close.name + ' (' + mio(close.ins) + ' millions d\'inscrits) : un Meeting bien ciblé peut suffire.';
     if (pl.money < 3) return 'Les caisses sont vides. Une 💰 Collecte (menu Plus) renfloue le parti.';
     if (pl.militants === 0 && g.turn <= 4) return 'Pense aux 👥 militants (menu Plus) : implantés tôt, ils te rapportent des électeurs à chaque tour.';
     var lead = E.ranking(g)[0];
     if (lead !== me && E.player(g, lead).cas > 0 && E.allyOf(g, me) !== lead) return party(lead).short + ' est en tête et traîne des casseroles : une 🔎 enquête (menu Plus) pourrait le faire trébucher.';
     var o = D.OBJECTIVES.filter(function (x) { return x.id === pl.objective; })[0];
     if (!E.objectiveMet(g, me, pl.objective)) return 'N\'oublie pas ton objectif secret : ' + o.text.charAt(0).toLowerCase() + o.text.slice(1) + '. Il rapporte des voix en plus.';
-    return 'Vise les régions qui pèsent lourd : le chiffre sur la carte, c\'est leur nombre de points.';
+    var low = D.REGIONS.slice().sort(function (a, b) { return E.lowTurnoutFit(g, me, b.id) - E.lowTurnoutFit(g, me, a.id); })[0];
+    if (g.turn <= R.registerTurns + 2 && E.lowTurnoutFit(g, me, low.id) >= 0.18) return 'En ' + low.name + ', ton programme parle à ceux qui votent peu : 🚪 Mobiliser y fait voter des abstentionnistes.';
+    return 'Vise les régions qui pèsent lourd : le chiffre sur la carte, c\'est leur nombre d\'inscrits, en millions.';
   }
   function renderAdvisor() {
     var box = $('advisor');
@@ -482,8 +502,8 @@
   function render() {
     if (!g) return;
     var pl = mePl(), pr = projected();
-    $('turn-label').textContent = 'TOUR ' + g.turn + ' / ' + R.maxTurns;
-    $('phase-label').textContent = E.isDebateTurn(g) ? 'Actions · débat ce tour' : 'Actions';
+    $('turn-label').textContent = 'Tour ' + g.turn + ' sur ' + R.maxTurns;
+    $('phase-label').textContent = E.isDebateTurn(g) ? 'Débat télévisé ce soir' : '3 actions à jouer';
     function pill(id, sym, now, before) { $(id).innerHTML = sym + ' ' + now + (now !== before ? '<small>/' + before + '</small>' : ''); }
     pill('res-money', '€', pr.money, pl.money); pill('res-infl', '★', pr.infl, pl.infl); pill('res-forme', '⚡', pr.forme, pl.forme);
     $('res-forme').classList.toggle('low', pr.forme <= 0);
@@ -492,7 +512,7 @@
     if (pl.momentum > 0) st.push('<span class="st st-up">↗ En dynamique</span>');
     if (pl.momentum < 0) st.push('<span class="st st-down">↘ Passage à vide</span>');
     if (pl.cas > 0) st.push('<span class="st st-cas" title="Casseroles">' + new Array(pl.cas + 1).join('🍳') + '</span>');
-    $('race-status').innerHTML = st.length ? st.join('') : '50 % = élu direct';
+    $('race-status').innerHTML = st.length ? st.join('') : '50 % : élu dès le 1er tour';
     renderRace(); renderNews(); renderAdvisor(); renderMap(); renderRegion(); renderQueue(); renderMessage(); renderActions();
   }
   function renderRace() {
@@ -505,11 +525,20 @@
     });
     bar.appendChild(el('div', { class: 'mark' }));
   }
+  var mapMode = 'ctrl';
+  /* Calque « Abstention » : du plus clair (on vote) au plus foncé (on s'abstient) */
+  function abstFill(a) { var t = Math.max(0, Math.min(1, (a - 0.18) / 0.34)); var c0 = [236, 230, 214], c1 = [44, 38, 92]; return 'rgb(' + c0.map(function (v, i) { return Math.round(v + (c1[i] - v) * t); }).join(',') + ')'; }
   function renderMap() {
     var s = $('map'); s.innerHTML = '';
+    var abstMode = mapMode === 'abst';
+    $('map-wrap').classList.toggle('mode-abst', abstMode);
+    // l'encart : Corse, outre-mer et Français de l'étranger
+    s.appendChild(svg('rect', { x: 326, y: 292, width: 42, height: 63, rx: 3, class: 'inset' }));
+    var il = svg('text', { x: 347, y: 289, class: 'inset-l' }); il.textContent = '+ outre-mer'; s.appendChild(il);
     D.REGIONS.forEach(function (r) {
       var c = g.regions[r.id].controller;
-      var p = svg('path', { d: M.regions[r.id].d, class: 'reg', fill: c ? party(c).color : NEUTRAL, tabindex: 0, role: 'button', 'aria-label': r.name });
+      var fill = abstMode ? abstFill(E.regionVoters(g, r.id).abst) : c ? party(c).color : NEUTRAL;
+      var p = svg('path', { d: M.regions[r.id].d, class: 'reg', fill: fill, tabindex: 0, role: 'button', 'aria-label': r.name });
       p.addEventListener('click', function () { selectRegion(r.id); });
       p.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectRegion(r.id); } });
       s.appendChild(p);
@@ -520,9 +549,9 @@
     }
     D.REGIONS.forEach(function (r) {
       var m = M.regions[r.id], gb = svg('g', { class: 'badge' });
-      var rr = r.pts >= 10 ? 10 : r.id === 'cor' ? 8 : 9;
-      gb.appendChild(svg('circle', { cx: m.x, cy: m.y, r: rr }));
-      var t = svg('text', { x: m.x, y: m.y + 3.5 }); t.textContent = r.pts; gb.appendChild(t);
+      var label = abstMode ? pctFr(E.regionVoters(g, r.id).abst) + '%' : mio(r.ins);
+      gb.appendChild(svg('rect', { x: m.x - 11, y: m.y - 7, width: 22, height: 13, rx: 6.5 }));
+      var t = svg('text', { x: m.x, y: m.y + 3 }); t.textContent = label; gb.appendChild(t);
       s.appendChild(gb);
     });
     // crises : icônes posées sur la carte
@@ -548,6 +577,13 @@
       var t = svg('text', { x: x, y: y + 3, class: 'plan-num' }); t.textContent = i + 1; s.appendChild(t);
     });
   }
+  Array.prototype.forEach.call(document.querySelectorAll('[data-mapmode]'), function (b) {
+    b.addEventListener('click', function () {
+      mapMode = b.getAttribute('data-mapmode');
+      Array.prototype.forEach.call(document.querySelectorAll('[data-mapmode]'), function (x) { x.setAttribute('aria-pressed', x === b); });
+      if (g) renderMap();
+    });
+  });
   function selectRegion(rid) {
     selected = rid;
     if (!themePicked) theme = E.bestTheme(g, me, rid);
@@ -562,12 +598,12 @@
       return;
     }
     var r = E.REG[selected], reg = g.regions[selected], c = reg.controller;
-    var tag = c === me ? '<span class="tag" style="background:' + party(me).color + ';color:' + party(me).ink + '">À toi</span>'
+    var tag = c === me ? '<span class="stamp">À toi</span>'
       : c ? '<span class="tag" style="background:' + party(c).color + ';color:' + party(c).ink + '">' + c + '</span>'
       : '<span class="tag tag-yellow">À prendre</span>';
     var html = '<div class="region-head"><div><h2 class="region-name">' + esc(r.name) + '</h2>' +
-      '<span class="region-sub">' + (E.echoBonus(g, me, selected) > 0 ? '❤️ ' : E.echoBonus(g, me, selected) < 0 ? '👎 ' : '') + r.pts + ' pts · ' + D.PROFILES[r.profile] + ' · préoccupée par ' +
-      r.concerns.map(function (x) { return '<span class="concern-ic' + (E.isHot(g, x) ? ' hot' : '') + '" title="' + esc(th(x).name) + '">' + th(x).icon + '</span>'; }).join('') +
+      '<span class="region-sub">' + (E.echoBonus(g, me, selected) > 0 ? '❤️ ' : E.echoBonus(g, me, selected) < 0 ? '👎 ' : '') + mio(E.regionVoters(g, selected).ins) + ' M d\'inscrits, ' + pctFr(E.regionVoters(g, selected).abst) + ' % d\'abstention</span>' +
+      '<span class="region-sub concerns-line">Ses soucis : ' + r.concerns.map(function (x) { return '<span class="concern-ic' + (E.isHot(g, x) ? ' hot' : '') + '">' + th(x).icon + ' ' + esc(th(x).short) + '</span>'; }).join(' ') +
       '</span></div>' + tag + '</div>';
     // forces en présence : une seule ligne, seulement les partis présents (et toi)
     var rows = g.players.filter(function (p) { return p.id === me || E.cubes(g, selected, p.id) > 0; })
@@ -576,7 +612,7 @@
       var n = E.cubes(g, selected, p.id), P = party(p.id);
       var mil = (g.bases[selected] || []).indexOf(p.id) >= 0 ? ' 👥' : '';
       return '<span class="force' + (p.id === me ? ' me' : '') + '"><i style="background:' + P.color + '"></i>' + (p.id === me ? 'Toi' : p.id) + ' <b>' + n + '</b>' + mil + '</span>';
-    }).join('') + '<button type="button" class="force-hint linkbtn" id="btn-pop">👥 Qui vit ici ?</button></div>';
+    }).join('') + '<button type="button" class="force-hint linkbtn" id="btn-pop">Qui vit ici ?</button></div>';
     var mk = E.markerAt(g, selected);
     if (mk) html += '<div class="mk-line">' + mk.icon + ' ' + esc(mk.title) + ' : ici, ' + th(mk.theme).icon + ' ' + esc(th(mk.theme).name) + ' compte comme à la une.</div>';
     box.innerHTML = html;
@@ -593,7 +629,7 @@
       (function (idx) { b.addEventListener('click', function () { queue.splice(idx, 1); render(); }); })(i);
       box.appendChild(b);
     }
-    $('btn-validate').textContent = queue.length < R.actionsPerTurn ? 'Valider (' + queue.length + '/3)' : 'Valider';
+    $('btn-validate').textContent = queue.length < R.actionsPerTurn ? 'Valider ' + queue.length + '/3' : 'Valider';
     $('btn-validate').disabled = g.phase !== 'actions';
   }
   function costLabel(act, compact) {
@@ -618,6 +654,9 @@
         if (!r) return 'des cubes dans 3 régions';
         n = 0; E.mediaRegions(g, me, r, act.theme).forEach(function (rid) { n += E.mediaCubes(g, me, rid, act.theme); });
         return '<b>+' + n + ' cube' + (n > 1 ? 's' : '') + '</b> · 3 régions';
+      case 'mobiliser':
+        if (!r) return 'fais voter des abstentionnistes';
+        n = E.mobilizeGain(g, me, r); return '<b>+' + n.n + ' cube' + (n.n > 1 ? 's' : '') + '</b> · des abstentionnistes vont voter';
       case 'reseaux': return 'dé : <b>−1 à +' + (4 + (E.isHot(g, act.theme) ? 1 : 0)) + '</b> cubes';
       case 'imposer': return 'ton thème <b>à la une</b>';
       case 'contre': return 'rival en tête <b>−2 cubes</b> · +1 🍳';
@@ -659,25 +698,26 @@
         });
       } });
   });
-  var MAIN = ['terrain', 'medias', 'reseaux'];
+  var MAIN = ['terrain', 'medias', 'mobiliser'];
   function renderActions() {
     var box = $('actions'); box.innerHTML = '';
     MAIN.forEach(function (type) {
-      var def = D.ACTIONS[type], act = { type: type, region: selected || undefined, theme: theme };
-      var big = type === 'terrain' || type === 'medias' ? (selected ? '+' + bigGain(act) : '—') : (selected ? '🎲' : '—');
+      var def = D.ACTIONS[type], act = { type: type, region: selected || undefined, theme: def.theme ? theme : undefined };
+      var big = selected ? '+' + bigGain(act) : '—';
       var b = el('button', { class: 'tile', type: 'button', 'aria-label': def.name + ', ' + costLabel(act) },
-        '<span class="tile-n">' + def.icon + ' ' + def.name + '</span><span class="tile-big">' + big + '</span>' +
+        '<span class="tile-n">' + def.name + '</span><span class="tile-big">' + big + '</span>' +
         (selected && tiring(act) && !canQueue(act) ? '<span class="tile-cost tile-warn">⚠️ risque de gaffe</span>' : '<span class="tile-cost">' + costLabel(act, true) + '</span>'));
       if (!selected) b.disabled = true;
       else if (canQueue(act)) b.classList.add('dim');
       b.addEventListener('click', function () { addAction(act); });
       box.appendChild(b);
     });
-    var more = el('button', { class: 'tile tile-more', type: 'button', id: 'btn-more' }, '<span class="tile-n">Plus</span><span class="tile-big">⋯</span><span class="tile-cost">autres actions</span>');
+    var more = el('button', { class: 'tile tile-more', type: 'button', id: 'btn-more' }, '<span class="tile-n">Plus</span><span class="tile-big">⋯</span><span class="tile-cost">7 actions</span>');
     more.addEventListener('click', moreMenu);
     box.appendChild(more);
   }
   function bigGain(act) {
+    if (act.type === 'mobiliser') return E.mobilizeGain(g, me, act.region).n;
     if (act.type === 'terrain') return E.terrainCubes(g, me, act.region, act.theme);
     var n = 0; E.mediaRegions(g, me, act.region, act.theme).forEach(function (rid) { n += E.mediaCubes(g, me, rid, act.theme); }); return n;
   }
@@ -685,7 +725,7 @@
   function moreMenu() {
     if (g.phase !== 'actions') return;
     var items = [];
-    ['militants', 'imposer', 'contre', 'fonds', 'reforme'].forEach(function (type) {
+    ['reseaux', 'militants', 'imposer', 'contre', 'fonds', 'reforme'].forEach(function (type) {
       var def = D.ACTIONS[type], act = { type: type, region: def.target === 'region' ? selected : undefined, theme: def.theme ? theme : undefined };
       var err = def.target === 'region' && !selected ? 'choisis d\'abord une région' : canQueue(act);
       items.push({ act: act, icon: def.icon, name: def.name, cost: costLabel(act), fx: effect(act), err: err });
@@ -758,7 +798,15 @@
     } else resolve();
   });
 
+  /* Le coup de tampon : il répond au clic, puis on passe à la suite */
+  function stampThen(fn) {
+    var q = document.querySelector('.queue'), reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var st = el('span', { class: 'stamp stamp-hit', 'aria-hidden': 'true' }, 'Validé');
+    q.appendChild(st);
+    setTimeout(function () { st.remove(); fn(); }, reduce ? 150 : 520);
+  }
   function resolve() {
+    if (!resolve.busy) { resolve.busy = true; return stampThen(function () { resolve(); resolve.busy = false; }); }
     T.stop();
     // photo avant les actions, pour le flash info
     var before = {}, ctrl0 = {}, allies0 = Object.assign({}, g.alliances);
@@ -797,7 +845,7 @@
     var h = '<div class="flash"><div class="flash-band"><span class="flash-live">● Direct</span><span class="flash-ch">INFO-CONTINU</span><span class="flash-tag">FLASH INFO</span></div><div class="flash-body">';
     h += heads.length ? heads.slice(0, 4).map(function (x) { return '<p>' + x.t + '</p>'; }).join('') : '<p>Calme plat : aucune région ne change de main ce soir.</p>';
     h += '</div><div class="flash-ticker">' + E.poll(g).map(function (x) {
-      var d = (x.pct - (before[x.pid] || 0)) * 100, arr = d >= 0.5 ? '<i class="up">▲' + d.toFixed(1) + '</i>' : d <= -0.5 ? '<i class="down">▼' + (-d).toFixed(1) + '</i>' : '<i>=</i>';
+      var d = (x.pct - (before[x.pid] || 0)) * 100, arr = d >= 0.5 ? '<i class="up">▲' + d.toFixed(1).replace('.', ',') + '</i>' : d <= -0.5 ? '<i class="down">▼' + (-d).toFixed(1).replace('.', ',') + '</i>' : '<i>=</i>';
       return '<span class="' + (x.pid === me ? 'me' : '') + '">' + (x.pid === me ? 'Toi' : x.pid) + ' ' + Math.round(x.pct * 100) + ' % ' + arr + '</span>';
     }).join('') + '</div></div>';
     return h;
@@ -934,7 +982,7 @@
     var mapEl = $('night-map'); mapEl.innerHTML = '';
     var paths = {};
     D.REGIONS.forEach(function (r) {
-      var p = svg('path', { d: M.regions[r.id].d, fill: '#3B4170', stroke: '#F4F0E6', 'stroke-width': 1.2, 'stroke-linejoin': 'round', class: 'night-reg' });
+      var p = svg('path', { d: M.regions[r.id].d, fill: '#3A3560', stroke: '#1D1A33', 'stroke-width': 1.2, 'stroke-linejoin': 'round', class: 'night-reg' });
       mapEl.appendChild(p); paths[r.id] = p;
     });
     $('night-stage').innerHTML = '<p class="night-wait">Les derniers bureaux de vote ferment…</p>';
@@ -962,7 +1010,9 @@
     }
     function showBars() {
       var list = res.second ? [{ pid: res.second.a, pct: res.second.pctA }, { pid: res.second.b, pct: res.second.pctB }].sort(function (x, y) { return y.pct - x.pct; }) : res.first;
-      $('night-bars').innerHTML = '<div class="kicker kicker-yellow">' + (res.second ? 'Second tour' : 'Premier tour') + '</div>' + list.map(function (x) {
+      var stt = res.second ? res.second.stats : res.stats1;
+      $('night-bars').innerHTML = '<div class="kicker kicker-yellow">' + (res.second ? 'Second tour' : 'Premier tour') + '</div>' +
+        (stt ? '<div class="night-turnout"><span>Participation <b>' + pctFr(stt.participation, 1) + ' %</b></span><span>Blancs et nuls <b>' + pctFr(stt.blankPct, 1) + ' %</b> des votants</span></div>' : '') + list.map(function (x) {
         var p = party(x.pid);
         return '<div class="nb-row"><span class="nb-lbl">' + (x.pid === me ? 'Toi' : esc(p.short)) + '</span><span class="nb-bar"><i style="background:' + p.color + '" data-w="' + (100 * x.pct) + '"></i></span><b>' + (100 * x.pct).toFixed(1).replace('.', ',') + ' %</b></div>';
       }).join('');
@@ -986,15 +1036,16 @@
     $('toast').hidden = true;
     var res = g.result, win = g.winner;
     $('end-kicker').textContent = 'Soirée électorale';
-    $('end-title').textContent = win === me ? 'TU ES ÉLU !' : 'PERDU…';
+    $('end-title').textContent = win === me ? 'Tu es élu !' : 'Perdu…';
     $('end-sub').textContent = party(win).name + (res.direct ? ' l\'emporte dès le premier tour.' : ' remporte le second tour.');
-    var h = '<div class="kicker">Premier tour</div>' + bars(res.first, res.first[0].pct);
+    function turnoutLine(st) { return st ? '<p class="turnout">Participation ' + pctFr(st.participation, 1) + ' % · ' + mio(st.votants) + ' millions de votants, dont ' + pctFr(st.blankPct, 1) + ' % de blancs et nuls</p>' : ''; }
+    var h = '<div class="kicker">Premier tour</div>' + turnoutLine(res.stats1) + bars(res.first, res.first[0].pct);
     if (res.second) {
       var s = res.second;
-      h += '<div class="kicker" style="margin-top:12px">Second tour</div>' +
+      h += '<div class="kicker" style="margin-top:12px">Second tour</div>' + turnoutLine(s.stats) +
         bars([{ pid: s.a, pct: s.pctA }, { pid: s.b, pct: s.pctB }].sort(function (x, y) { return y.pct - x.pct; }), Math.max(s.pctA, s.pctB));
       h += '<div class="transfers">' + s.transfers.map(function (t) {
-        return '<p>' + chip(t.pid) + 'Reports : ' + Math.round(100 * t.toA) + ' % → ' + s.a + ', ' + Math.round(100 * t.toB) + ' % → ' + s.b + ', ' + Math.round(100 * t.abst) + ' % abstention' +
+        return '<p>' + chip(t.pid) + 'Reports : ' + Math.round(100 * t.toA) + ' % → ' + s.a + ', ' + Math.round(100 * t.toB) + ' % → ' + s.b + ', ' + Math.round(100 * t.abst) + ' % blanc ou abstention' +
           (E.allyOf(g, t.pid) === s.a || E.allyOf(g, t.pid) === s.b ? ' <em class="ally">alliance</em>' : '') + '</p>';
       }).join('') + '</div>';
     }
@@ -1038,9 +1089,11 @@
       } });
   }
   function showRules() {
-    modal({ kicker: 'Règles v0.7', title: 'Comment gagner', html:
-      '<p><b>But :</b> remporter l\'élection présidentielle à la fin des <b>8 tours de campagne</b>. Chaque région vote selon ses cubes, pondérée par sa population (ses points). Le parti qui contrôle une région y gagne un petit bonus.</p>' +
-      '<p><b>Premier tour :</b> plus de 50 % des voix = élu directement. Sinon, les deux premiers vont au <b>second tour</b>, et les électeurs des autres partis se reportent selon leur proximité politique (alliés : 85 %).</p>' +
+    modal({ kicker: 'Règles v1.0', title: 'Comment gagner', html:
+      '<p><b>But :</b> remporter l\'élection présidentielle à la fin des <b>8 tours de campagne</b>. Chaque région vote selon ses cubes. Elle pèse ses <b>vrais électeurs</b> : ses inscrits (le chiffre sur la carte, en millions), moins ceux qui s\'abstiennent, moins ceux qui votent blanc ou nul. Le parti qui contrôle une région y gagne un petit bonus.</p>' +
+      '<p><b>Le point de départ :</b> les cubes de départ suivent les résultats des législatives de 2024, région par région. Le Mouvement National part donc en tête, comme en 2024.</p>' +
+      '<p><b>L\'abstention :</b> environ un quart des inscrits ne votent pas, et beaucoup plus en outre-mer. Le bouton <b>Abstention</b> au-dessus de la carte la montre. 🚪 <b>Mobiliser</b> fait voter des abstentionnistes ; attaquer ou multiplier les affaires en dégoûte d\'autres.</p>' +
+      '<p><b>Premier tour :</b> plus de 50 % des suffrages exprimés (les blancs ne comptent pas) = élu directement. Sinon, les deux premiers vont au <b>second tour</b>. Les électeurs des autres partis se reportent selon leur proximité politique (alliés : 85 %) ; les autres votent blanc ou restent chez eux.</p>' +
       axisHtml(me || chosen) +
       '<p><b>Partis proches :</b> quand tu fais un Meeting ou passes à la Télé là où un parti voisin sur l\'axe est présent, tu lui prends 1 électeur (distance 2 : sur un dé de 4 à 6).</p>' +
       '<p><b>Alliances :</b> 1 ★ et 1 action, avec un parti à distance 2 au plus. Entre alliés, pas d\'attaque ni de vol d\'électeurs. Rompre coûte 2 ★ et ruine les reports.</p>' +
@@ -1049,7 +1102,8 @@
       '<p><b>Les actions :</b></p><ul class="rules-acts">' +
         '<li>📣 <b>Meeting</b> (2 €) : des cubes dans la région, de 1 à 4 selon l\'impact du message.</li>' +
         '<li>📺 <b>Télé</b> (3 € + 1 ★) : ton message passe dans la région et dans les 2 autres régions les plus concernées par le thème. +1 cube dans chacune (+2 si impact 4, rien si impact 0).</li>' +
-        '<li>📱 <b>Buzz</b> (1 €) : un coup de dé, de −1 à +4 cubes. +1 si le thème fait l\'actu.</li>' +
+        '<li>🚪 <b>Mobiliser</b> (2 €) : du porte-à-porte pour faire voter des abstentionnistes. 1 cube, +1 avec tes militants, +1 si ton programme parle à ceux qui votent peu ici, +1 si la région s\'abstient beaucoup (3 au plus). Jusqu\'au tour 3, tu fais aussi inscrire de nouveaux électeurs.</li>' +
+        '<li>📱 <b>Buzz</b> (1 €, menu Plus) : un coup de dé, de −1 à +4 cubes. +1 si le thème fait l\'actu.</li>' +
         '<li>🗞️ <b>Faire la une</b> (2 € + 2 ★) : ton thème fera l\'actu au tour suivant… pour tout le monde.</li>' +
         '<li>🥊 <b>Attaquer</b> (2 € + 1 ★) : le rival le plus fort de la région perd 2 cubes (il faut y avoir 1 cube).</li>' +
         '<li>💰 <b>Collecte</b> (gratuit) : +3 € dans la caisse.</li>' +
@@ -1059,7 +1113,7 @@
       '<p><b>⚡ La forme du candidat</b> (4 au plus, +2 par tour). Meeting et Télé coûtent 1 ⚡. Si une action la fait tomber à 0, le candidat épuisé peut faire une <b>gaffe</b> (4 chances sur 10) : aucun cube et une casserole.</p>' +
       '<p><b>↗ La dynamique.</b> Si tu gagnes 1,5 point au sondage en un tour, tes Meetings rapportent 1 cube de plus au tour suivant. Si tu en perds 1,5, 1 de moins.</p>' +
       '<p><b>Crédibilité qui évolue.</b> Après 3 actions sur un même thème, ta crédibilité dessus augmente (2 au plus).</p>' +
-      '<p><b>📋 Ton programme.</b> Avant la campagne, choisis 5 mesures. Chacune te rend plus crédible sur son thème. La 1re est ta <b>mesure phare</b> : +1 cube sur tes Meetings qui en parlent. Au-delà de 40 Md€, le programme n\'est pas financé : casseroles, et une affaire au tour 3. Les mesures 💥 choc font parler (+1 cube dans 2 régions) mais ajoutent une casserole.</p>' +
+      '<p><b>📋 Ton programme.</b> Avant la campagne, choisis 5 mesures. Chacune te rend plus crédible sur son thème. La 1re est ta <b>mesure phare</b> : +1 cube sur tes Meetings qui en parlent. Il te reste au plus ' + R.budgetCap + ' Md€ à financer : au-delà, le programme est partiellement financé (1 casserole par tranche de ' + R.budgetCasStep + ' Md€) ou non financé, et une affaire tombe au tour 3. Les mesures 💥 choc font parler (+1 cube dans 2 régions) mais ajoutent une casserole.</p>' +
       '<p><b>💥 Les affaires.</b> Chaque casserole 🍳 donne 12 % de risque d\'affaire par tour. Le Canard Déchaîné en sort aussi de temps en temps, et un rival peut <b>🔎 enquêter</b> sur toi. Quand une affaire tombe, tu choisis ta réaction : nier, t\'excuser, sacrifier un collaborateur ou accuser les médias.</p>' +
       '<p><b>🤔 Les dilemmes.</b> Chaque tour, un parti (à tour de rôle) doit faire un choix. Certains choix ont des <b>conséquences différées</b> qui peuvent ressortir quelques tours plus tard.</p>' +
       '<p><b>Les crises.</b> Chaque partie connaît une crise en 3 actes (krach, grève, été brûlant, désindustrialisation). Les régions touchées sont marquées sur la carte : leur thème y compte comme à la une.</p>' +

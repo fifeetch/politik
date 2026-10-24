@@ -1,4 +1,4 @@
-/* Politik — v0.9 : l'écran « Gouverner » (le quinquennat). S'appuie sur js/govern.js pour les règles. */
+/* Politik — v1.0 : l'écran « Gouverner » (le quinquennat). S'appuie sur js/govern.js pour les règles. */
 (function () {
   var D = window.PolitikData, E = window.PolitikEngine, G = window.PolitikGov, A = window.PolitikArt, U = window.PolitikUI;
   var modal = U.modal, closeModal = U.closeModal, toast = U.toast, esc = U.esc, line = U.line, srcHtml = U.srcHtml;
@@ -33,7 +33,7 @@
       var st = stances ? stances[id] : null, n = seats[id], f = st && st.frondeurs ? st.frondeurs : 0;
       for (var k = 0; k < n; k++) {
         var c = party(id).color, op = 1;
-        if (st) { var s2 = k < f ? 'abst' : st.stance; op = s2 === 'pour' ? 1 : s2 === 'abst' ? 0.25 : 0.55; if (s2 === 'contre') c = '#1B1F3B'; }
+        if (st) { var s2 = k < f ? 'abst' : st.stance; op = s2 === 'pour' ? 1 : s2 === 'abst' ? 0.22 : 1; if (s2 === 'contre') c = '#23203A'; }
         colors.push({ c: c, op: op });
       }
     });
@@ -56,7 +56,7 @@
     var P = party(me), pop = G.popularity(gv), tgt = G.C.target(gv.year), bloc = G.blocSeats(gv);
     $('gov-face').innerHTML = A.portrait(me);
     $('gov-kicker').textContent = 'Quinquennat de ' + P.candidate;
-    $('gov-title').textContent = gv.over ? 'FIN DU MANDAT' : 'ANNÉE ' + gv.year + ' / ' + G.C.years;
+    $('gov-title').textContent = gv.over ? 'Fin du mandat' : 'Année ' + gv.year + ' sur ' + G.C.years;
     $('gov-sub').textContent = gv.over ? '' : STEP_LABEL[current()];
     function gauge(icon, label, val, sub, cls) { return '<div class="gauge ' + (cls || '') + '"><span class="g-i">' + icon + '</span><span class="g-l">' + label + '</span><b>' + val + '</b><small>' + sub + '</small></div>'; }
     $('gov-gauges').innerHTML =
@@ -74,7 +74,8 @@
       return '<div class="gp-row ' + m.status + '"><span>' + esc(M.name) + '</span><small>' + st + '</small></div>';
     }).join('');
     $('gov-advisor').innerHTML = '<span class="adv-face">' + A.advisor() + '</span><p><b>Lulu :</b> ' + esc(advice()) + '</p>';
-    $('gov-next').textContent = gv.over ? 'VOIR LE BILAN DU MANDAT' : '▶ ' + STEP_LABEL[current()].toUpperCase();
+    $('gov-dissolve').hidden = !(G.canDissolve(gv) && current() === 'loi');
+    $('gov-next').textContent = gv.over ? 'Voir le bilan du mandat' : STEP_LABEL[current()];
   }
   function advice() {
     var pop = G.popularity(gv), tgt = G.C.target(gv.year), pend = gv.measures.filter(function (m) { return m.status === 'pending'; }).length;
@@ -105,6 +106,21 @@
     if (s === 'evenement') return showEvent();
     if (s === 'budget') return budget();
     if (s === 'bilan') return yearEnd();
+  });
+  /* ---------- Dissoudre l'Assemblée (article 12) ---------- */
+  $('gov-dissolve').addEventListener('click', function () {
+    if (!gv || !G.canDissolve(gv)) return;
+    var pop = G.popularity(gv);
+    modal({ kicker: 'Article 12 de la Constitution', title: 'Dissoudre l\'Assemblée ?', html:
+      '<p>Tu renvoies les députés devant les électeurs. Les nouvelles législatives se joueront sur ta popularité du moment : <b>' + pop + ' %</b>.</p>' +
+      '<div class="brief">' + line(pop >= 45 ? '✅' : '⚠️', pop >= 45 ? 'Avec une telle popularité, ton camp devrait gagner des sièges.' : 'Sous 45 % de popularité, ton camp risque de perdre des sièges.') +
+      line('🔁', 'Une seule dissolution par mandat.') + '</div>' + learn('dissolution'),
+      buttons: [{ label: 'Dissoudre', primary: true, onClick: function () {
+        var r = G.dissolve(gv, g); render();
+        modal({ kicker: 'Législatives anticipées', title: r.after >= r.before ? 'Pari gagné' : 'Pari perdu', html: hemicycle(gv.seats, null, true) + legend(gv.seats) +
+          '<p>Ton camp passe de <b>' + r.before + '</b> à <b>' + r.after + ' députés</b>. Majorité ' + G.majorityType(gv) + '.</p>',
+          buttons: [{ label: 'Continuer', primary: true, onClick: render }] });
+      } }, { label: 'Garder cette Assemblée', onClick: closeModal }] });
   });
   function next() { step = step + 1; if (step >= STEPS.length) { step = 0; } render(); }
 
@@ -153,7 +169,7 @@
       if (cands.length) buttons.push({ label: '🤝 Négocier avec un groupe (mesure amendée)', onClick: function () { negotiate(mid, cands); } });
     }
     if (!gv.used493y) buttons.push({ label: '⚡ 49.3 : adopter sans vote', onClick: function () { use493(mid, negotiated); } });
-    if (M.cost >= 0 && M.theme) buttons.push({ label: '🗳️ Référendum : demander aux Français', onClick: function () { doReferendum(mid); } });
+    if (G.canReferendum(mid)) buttons.push({ label: '🗳️ Référendum : demander aux Français', onClick: function () { doReferendum(mid); } });
     modal({ kicker: 'À l\'Assemblée nationale', title: 'Le vote de ta loi', html: html, buttons: buttons });
   }
   function negotiate(mid, cands) {
@@ -189,9 +205,9 @@
       hemicycle(gv.seats, st, true) + '<div class="tally"><span class="t-contre">Pour la censure <b>' + c.pour + '</b></span><span>Il en faut <b>289</b></span></div>' + learn('art49_3') + learn('censure');
     if (c.passed) {
       G.reject(gv, mid);
-      var what = G.governmentFalls(gv, g);
-      html += '<p class="verdict-bad">💥 <b>La censure est votée.</b> Le gouvernement est renversé et ta loi est rejetée. Tu nommes un nouveau Premier ministre.</p>';
-      if (what === 'dissolution') html += '<p class="verdict-bad">Deuxième gouvernement renversé : tu <b>dissous l\'Assemblée</b>. Nouvelles législatives… avec ta popularité actuelle.</p>' + hemicycle(gv.seats, null, true) + legend(gv.seats) + learn('dissolution');
+      G.governmentFalls(gv);
+      html += '<p class="verdict-bad">💥 <b>La censure est votée.</b> Le gouvernement est renversé et ta loi est rejetée. Tu nommes un nouveau Premier ministre.</p>' +
+        (G.canDissolve(gv) ? '<p class="hint">Tu peux aussi dissoudre l\'Assemblée depuis l\'écran principal.</p>' : '');
     } else {
       G.adopt(gv, mid, !!negotiated); gv.survived = true;
       html += '<p>😅 <b>La censure échoue</b> (' + c.pour + ' voix sur 289 nécessaires). « ' + esc(M.name) + ' » est adoptée sans vote. Mais l\'opinion n\'aime pas trop : −2 de popularité.</p>' + effectsHtml(M, negotiated ? 0.5 : 1);
@@ -212,7 +228,7 @@
   /* ---------- Été : l'événement ---------- */
   function optHtml(o) {
     var p = [];
-    if (o.def) p.push('déficit ' + (o.def > 0 ? '+' : '−') + fr(Math.abs(o.def), 2) + ' pt');
+    if (o.def) p.push('déficit ' + (o.def > 0 ? '+' : '−') + fr(Math.abs(o.def), 2) + ' pt' + (o.once ? ', une seule année' : ''));
     if (o.debt) p.push('dette +' + o.debt + ' pts');
     if (o.pop) p.push('popularité ' + (o.pop > 0 ? '+' : '') + o.pop);
     Object.keys(o.sat || {}).forEach(function (s) { p.push(seg(s).icon + ' ' + (o.sat[s] > 0 ? '+' : '') + o.sat[s]); });
@@ -234,10 +250,23 @@
   /* ---------- Automne : le budget ---------- */
   function budget() {
     var cards = G.drawCards(gv), i = 0, def0 = gv.deficit;
-    (function oneCard() {
+    if (gv.year === 1 && !gv.financingDone) {
+      var fin = G.applyFinancing(gv); render();
+      if (fin.length) {
+        var tot = fin.reduce(function (a, m) { return a + m.cost; }, 0);
+        modal({ kicker: 'Automne · Ton premier budget', title: 'Les recettes de ton programme', html:
+          '<p>Les financements promis pendant la campagne entrent dans ce premier budget.</p><div class="brief">' +
+          fin.map(function (m) { return line('💶', esc(m.name) + ' : <b>' + (m.cost < 0 ? 'rapporte ' + fr(-m.cost, 0) : 'coûte ' + fr(m.cost, 0)) + ' Md€</b>'); }).join('') +
+          line('📉', 'Déficit ' + (tot < 0 ? '−' : '+') + fr(Math.abs(tot) / G.C.mdPerPoint, 2) + ' point de PIB') + '</div>',
+          buttons: [{ label: 'Passer aux arbitrages', primary: true, onClick: function () { oneCard(); } }] });
+        return;
+      }
+    }
+    oneCard();
+    function oneCard() {
       if (i >= cards.length) return budgetVote(def0);
       var c = cards[i];
-      var html = (i === 0 ? learn('budget') : '') + '<div class="bercy"><span class="kicker">Note de Bercy · ' + (i + 1) + ' / 3</span><b>' + esc(c.title) + '</b><p>' + esc(c.text) + '</p></div><div class="pick">' +
+      var html = (i === 0 ? learn('budget') : '') + '<div class="bercy"><span class="kicker">Note de Bercy ' + (i + 1) + ' sur ' + cards.length + '</span><b>' + esc(c.title) + '</b><p>' + esc(c.text) + '</p></div><div class="pick">' +
         c.opts.map(function (o, k) { return '<button type="button" class="pick-row" data-o="' + k + '"><span class="pick-txt"><b>' + esc(o.label) + '</b><small>' + optHtml(o) + '</small></span></button>'; }).join('') + '</div>';
       modal({ kicker: 'Automne · Le projet de loi de finances', title: 'Les arbitrages', html: html, buttons: [],
         onOpen: function () {
@@ -245,7 +274,7 @@
             b.addEventListener('click', function () { G.applyOpt(gv, c.opts[+b.getAttribute('data-o')]); closeModal(); render(); i++; oneCard(); });
           });
         } });
-    })();
+    }
   }
   function budgetVote(def0) {
     var tgt = G.C.target(gv.year), v = G.vote(gv, null), favorable = gv.deficit <= tgt + 0.2;
@@ -269,12 +298,12 @@
       gv.used493 = true;
       var c = G.censure(gv);
       if (c.passed) {
-        var what = G.governmentFalls(gv, g); gv.deficit += 0.1;
-        done('💥 La motion de censure est votée (' + c.pour + ' voix) : le gouvernement tombe. Le budget est finalement adopté par une loi spéciale, plus tard et plus cher (+0,1 pt de déficit).' + (what === 'dissolution' ? ' Et tu dissous l\'Assemblée : nouvelles législatives !' : ''), true);
+        G.governmentFalls(gv); gv.deficit += 0.1;
+        done('💥 La motion de censure est votée (' + c.pour + ' voix) : le gouvernement tombe. Le budget est finalement adopté par une loi spéciale, plus tard et plus cher (+0,1 pt de déficit).', true);
       } else { gv.survived = true; done('😅 Le 49.3 passe : la censure ne recueille que ' + c.pour + ' voix. Budget adopté sans vote.'); }
     }
     function done(txt, bad) {
-      modal({ kicker: 'Le budget', title: bad ? 'Crise politique' : 'Budget adopté', html: '<p' + (bad ? ' class="verdict-bad"' : '') + '>' + txt + '</p>' + (gv.dissolved && bad ? hemicycle(gv.seats, null, true) + legend(gv.seats) + learn('dissolution') : ''),
+      modal({ kicker: 'Le budget', title: bad ? 'Crise politique' : 'Budget adopté', html: '<p' + (bad ? ' class="verdict-bad"' : '') + '>' + txt + '</p>',
         buttons: [{ label: 'Continuer', primary: true, onClick: next }] });
     }
   }

@@ -80,75 +80,15 @@ Quand tu gagnes la présidentielle, le bouton « 🏛️ Gouverner le pays » ou
 - 7 nouvelles fiches sourcées (législatives, vote des lois, Haut Conseil des finances publiques, règle des 3 %, dissolution, Cour des comptes).
 - Simulation : `node test/govern-sim.js 300` vérifie les ordres de grandeur (déficit, dette, popularité, verdicts).
 
-## Idées en réserve
-- Militants visibles pour tous les partis, et possibilité de les déloger.
-- Dilemmes liés au thème fort de chaque parti.
-
-## v0.6 — fait : les grands moments
-- **🎙️ Débat télévisé en face-à-face** (tours 3, 6, 8) : chaque parti affronte les 3 autres, une question (un thème) chacun.
-  Répliques : 🥊 Attaque bat ❤️ Émotion, ❤️ Émotion bat 📊 Chiffres, 📊 Chiffres bat 🥊 Attaque, 🙃 Esquive = nul.
-  Bonus selon la situation (casseroles du rival, point fort, actualité). Préparation : jusqu'à 3 ★ = +1 point chacune.
-  Chaque parti a un **tempérament** (bagarreur, technocrate, tribun…) que l'on peut apprendre à lire.
-- **📺 Flash info** en fin de tour : 2 à 4 gros titres (régions qui changent de main, gaffes, alliances) et le bandeau du sondage ▲▼. Le détail des actions est replié.
-- **🕗 Soirée électorale à 20h** : compte à rebours, révélation du vainqueur de haut en bas comme à la télé, carte qui se colore région par région, barres de résultats.
-- Équilibrage : électorat mobilisé des partis aux extrémités ramené de ×1,35 à ×1,25 (le nouveau débat consomme moins d'influence).
-
-## v0.7 — fait : une campagne incarnée et qui apprend la politique
-- **📋 Le programme** : avant la campagne, chaque candidat choisit 5 mesures parmi 28 (Smic à 1 600 €, 10 000 médecins, peines planchers, rénovation des logements…).
-  Chaque mesure rend crédible sur son thème. La 1re est la **mesure phare** (+1 cube en Meeting sur son thème).
-  Budget : au-delà de 40 Md€, le programme n'est pas financé (casseroles + affaire au tour 3). Les **mesures choc** font parler mais ajoutent une casserole.
-- **💥 Les affaires** : 12 affaires (emplois fictifs, compte à Genève, montres de luxe…), déclenchées par les casseroles, par Le Canard Déchaîné, par une **🔎 enquête** d'un rival ou par un programme non financé. On choisit sa réaction : nier, s'excuser, sacrifier un collaborateur, accuser les médias. Environ 5 affaires par partie.
-- **🖍️ Illustrations style dessin de presse** : 6 candidats inventés (Rémi Barricade, Capucine Verdure, Claire Consensus, Inès Disrupt, Hubert de La Motte, Victor Rempart), la conseillère Lulu, et des vignettes pour le journal.
-- **👩‍💼 Lulu, la directrice de campagne** : un conseil clair à chaque tour, selon la situation.
-- **📚 Comprendre la politique** : chaque mesure a sa fiche (c'est quoi, un argument pour, un argument contre) ; 16 fiches sur les institutions (second tour, 500 parrainages, 49.3, motion de censure, référendum, budget, sondages, 20h…), montrées au bon moment et rassemblées dans une bibliothèque.
-
-## v0.8 — fait : un programme financé, qui parle à des gens
-- **Recettes et dépenses** : l'écran du programme détaille les dépenses nouvelles, les recettes et économies, et le reste à financer (25 Md€ au plus).
-- **10 mesures de financement** (impôt sur la fortune, héritages, niches fiscales, fraude fiscale, TVA, CSG des retraités aisés, gel des pensions, gel du point d'indice, assurance chômage, train de vie de l'État), 3 au plus, chacune avec sa fiche pour / contre.
-- **6 groupes de population** (indépendants, cadres, professions intermédiaires, employés et ouvriers, retraités, étudiants et sans emploi), avec leur vraie part dans chaque région (Insee, recensement 2022).
-- Chaque mesure plaît 👍 ou déplaît 👎 à certains groupes. Le programme a ses **4 régions de cœur** (+1 cube en Meeting, +1 cube au départ dans les 3 meilleures) et ses **2 régions hostiles** (−1 cube en Meeting).
-- « 👥 Qui vit ici ? » : la composition de chaque région comparée à la moyenne nationale.
-
-## v0.9 — en cours : gouverner le pays
-Législatives, vote des lois à l'Assemblée (négocier, 49.3, motion de censure), budget en cartes, jauges simples (déficit, dette, popularité, soutien à l'Assemblée), bilan du quinquennat.
-
-## Idées en réserve
-- Militants visibles pour tous les partis, et possibilité de les déloger.
-- Dilemmes liés au thème fort de chaque parti.
-
-## v0.6 — fait : les grands moments
-- **🎙️ Débat télévisé en face-à-face** (tours 3, 6, 8) : chaque parti affronte les 3 autres, une question (un thème) chacun.
-  Répliques : 🥊 Attaque bat ❤️ Émotion, ❤️ Émotion bat 📊 Chiffres, 📊 Chiffres bat 🥊 Attaque, 🙃 Esquive = nul.
-  Bonus selon la situation (casseroles du rival, point fort, actualité). Préparation : jusqu'à 3 ★ = +1 point chacune.
-  Chaque parti a un **tempérament** (bagarreur, technocrate, tribun…) que l'on peut apprendre à lire.
-- **📺 Flash info** en fin de tour : 2 à 4 gros titres (régions qui changent de main, gaffes, alliances) et le bandeau du sondage ▲▼. Le détail des actions est replié.
-- **🕗 Soirée électorale à 20h** : compte à rebours, révélation du vainqueur de haut en bas comme à la télé, carte qui se colore région par région, barres de résultats.
-- Équilibrage : électorat mobilisé des partis aux extrémités ramené de ×1,35 à ×1,25 (le nouveau débat consomme moins d'influence).
-
-## v0.7 — fait : une campagne incarnée et qui apprend la politique
-- **📋 Le programme** : avant la campagne, chaque candidat choisit 5 mesures parmi 28 (Smic à 1 600 €, 10 000 médecins, peines planchers, rénovation des logements…).
-  Chaque mesure rend crédible sur son thème. La 1re est la **mesure phare** (+1 cube en Meeting sur son thème).
-  Budget : au-delà de 40 Md€, le programme n'est pas financé (casseroles + affaire au tour 3). Les **mesures choc** font parler mais ajoutent une casserole.
-- **💥 Les affaires** : 12 affaires (emplois fictifs, compte à Genève, montres de luxe…), déclenchées par les casseroles, par Le Canard Déchaîné, par une **🔎 enquête** d'un rival ou par un programme non financé. On choisit sa réaction : nier, s'excuser, sacrifier un collaborateur, accuser les médias. Environ 5 affaires par partie.
-- **🖍️ Illustrations style dessin de presse** : 6 candidats inventés (Rémi Barricade, Capucine Verdure, Claire Consensus, Inès Disrupt, Hubert de La Motte, Victor Rempart), la conseillère Lulu, et des vignettes pour le journal.
-- **👩‍💼 Lulu, la directrice de campagne** : un conseil clair à chaque tour, selon la situation.
-- **📚 Comprendre la politique** : chaque mesure a sa fiche (c'est quoi, un argument pour, un argument contre) ; 16 fiches sur les institutions (second tour, 500 parrainages, 49.3, motion de censure, référendum, budget, sondages, 20h…), montrées au bon moment et rassemblées dans une bibliothèque.
-
-## v0.8 — à cadrer : gouverner le pays
-Une fois élu, une seconde phase : former un gouvernement, faire voter son programme à l'Assemblée, tenir le budget, gérer la rue et la popularité.
-
-## Idées en réserve
-- Militants visibles pour tous les partis, et possibilité de les déloger.
-- Dilemmes liés au thème fort de chaque parti.
-
-## v0.6 — fait : les grands moments
-- **🎙️ Débat télévisé en face-à-face** (tours 3, 6, 8) : chaque parti affronte les 3 autres, une question (un thème) chacun.
-  Répliques : 🥊 Attaque bat ❤️ Émotion, ❤️ Émotion bat 📊 Chiffres, 📊 Chiffres bat 🥊 Attaque, 🙃 Esquive = nul.
-  Bonus selon la situation (casseroles du rival, point fort, actualité). Préparation : jusqu'à 3 ★ = +1 point chacune.
-  Chaque parti a un **tempérament** (bagarreur, technocrate, tribun…) que l'on peut apprendre à lire.
-- **📺 Flash info** en fin de tour : 2 à 4 gros titres (régions qui changent de main, gaffes, alliances) et le bandeau du sondage ▲▼. Le détail des actions est replié.
-- **🕗 Soirée électorale à 20h** : compte à rebours, révélation du vainqueur de haut en bas comme à la télé, carte qui se colore région par région, barres de résultats.
-- Équilibrage : électorat mobilisé des partis aux extrémités ramené de ×1,35 à ×1,25 (le nouveau débat consomme moins d'influence).
+## v1.0 — fait : de vrais électeurs, et un nouvel habit
+- **Électeurs réels** : chaque région pèse ses inscrits (présidentielle 2022), moins l'abstention et les votes blancs ou nuls. Corse, outre-mer et Français de l'étranger regroupés dans un encart.
+- **Départ aux législatives 2024** : les cubes de départ suivent les résultats de 2024, région par région (le Mouvement National part en tête). Le score 2024 s'affiche au choix du parti.
+- **🚪 Mobiliser** remplace Buzz parmi les actions principales : du porte-à-porte pour faire voter des abstentionnistes (et inscrire de nouveaux électeurs jusqu'au tour 3). Buzz passe dans le menu Plus.
+- **Calque Abstention** sur la carte ; « Qui vit ici ? » montre inscrits, abstention et blancs ; participation et blancs à la soirée électorale ; au second tour, les électeurs non reportés votent blanc ou s'abstiennent.
+- **Programme** : financé, partiellement financé ou non financé (25 Md€ tolérés).
+- **Gouverner, plus réaliste** : la charge de la dette alourdit le déficit de 0,2 point par an ; les recettes du programme entrent au premier budget ; dépenses ponctuelles (remise à la pompe, plans d'aide) qui s'arrêtent l'année suivante ; chaque automne, la « tenue des dépenses » ; nouvelles notes de Bercy (année blanche, surtaxe sur les grandes entreprises, franchises médicales) ; pas de référendum sur une mesure pénale (article 11) ; dissolution au choix dès l'année 2 (article 12) ; sièges répartis selon les inscrits.
+- Simulation (`node test/govern-sim.js 300 c`) : un mandat équilibré est réélu environ une fois sur trois ; tout dépenser ou tout économiser mène à l'échec.
+- **Nouvel univers graphique « bureau de vote »** : papier de bulletin, carte posée sur un panneau kraft, encre violette de tampon pour les actions, rouge pour l'actualité et les affaires. Titres en Anybody (police d'affiche), texte et chiffres en Atkinson Hyperlegible (conçue pour la lisibilité). Coup de tampon « Validé » à la fin de chaque tour. Polices livrées avec le jeu : il marche entièrement hors ligne.
 
 ## Plus tard — rejouabilité
 - Phase des **500 parrainages** avant la campagne.

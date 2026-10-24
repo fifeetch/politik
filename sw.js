@@ -1,11 +1,12 @@
 /* Politik — service worker : rend le jeu installable et jouable sans internet.
    À chaque nouvelle version du jeu, changer VERSION pour que les téléphones se mettent à jour. */
-var VERSION = 'politik-v0.9.1';
+var VERSION = 'politik-v1.0.0';
 var FILES = [
   './', 'index.html', 'manifest.webmanifest', 'css/style.css',
   'js/data.js', 'js/map.js', 'js/art.js', 'js/engine.js', 'js/ai.js', 'js/govern.js', 'js/tuto.js', 'js/ui.js', 'js/govui.js',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-192.png', 'icons/icon-maskable-512.png',
-  'icons/apple-touch-icon.png', 'icons/favicon.png'
+  'icons/apple-touch-icon.png', 'icons/favicon.png',
+  'fonts/anybody.woff2', 'fonts/atkinson-400.woff2', 'fonts/atkinson-400-italic.woff2', 'fonts/atkinson-700.woff2'
 ];
 
 self.addEventListener('install', function (e) {
@@ -20,15 +21,7 @@ self.addEventListener('fetch', function (e) {
   var req = e.request;
   if (req.method !== 'GET') return;
   var url = new URL(req.url);
-  // polices Google : on les garde en cache dès qu'elles ont été chargées une fois
-  if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
-    e.respondWith(caches.open(VERSION + '-fonts').then(function (c) {
-      return c.match(req).then(function (hit) {
-        return hit || fetch(req).then(function (res) { c.put(req, res.clone()); return res; });
-      });
-    }));
-    return;
-  }
+  // les polices sont livrées avec le jeu (dossier fonts/) : plus besoin d'internet pour elles
   if (url.origin !== location.origin) return;
   // fichiers du jeu : le réseau d'abord (pour avoir la dernière version), le cache si on est hors ligne
   e.respondWith(fetch(req).then(function (res) {

@@ -1,4 +1,4 @@
-/* Politik — v0.9 : gouverner le pays (le quinquennat, en 5 années).
+/* Politik — v1.0 : gouverner le pays (le quinquennat, en 5 années).
    Moteur sans affichage : tout l'état est dans un objet « gv ».
    Ordres de grandeur réels : déficit public de 5,1 % du PIB en 2025 (Insee), dette proche de 118 % du PIB en 2026,
    objectif européen de revenir sous 3 % (Cour des comptes, juin 2026). 1 point de PIB ≈ 30 milliards d'euros. */
@@ -10,9 +10,9 @@
   var C = {
     years: 5, seats: 577, majority: 289,
     deficit0: 5.0, debt0: 118, mdPerPoint: 30,
-    debtDrift: 3.0,            // la croissance du PIB « allège » la dette d'environ 3 points par an
-    interest: 0.02,            // chaque point de dette au-delà de 118 % alourdit le déficit de 0,02 point (les intérêts)
-    growth: 0.25,              // la croissance réduit un peu le déficit chaque année
+    debtDrift: 2.2,            // la croissance nominale du PIB « allège » le ratio de dette d'environ 2,2 points par an
+    debtCharge: 0.2,           // la charge de la dette s'alourdit d'environ 0,2 point de PIB par an (les taux remontent)
+    interest: 0,               // (déjà compris dans debtCharge : on ne compte pas les intérêts deux fois)
     marketPenalty: 4,          // déficit bien au-dessus de la trajectoire : les taux grimpent, la popularité baisse
     target: function (year) { return Math.max(3, 5.0 - 0.45 * year); },   // trajectoire vers 3 %
     amendFactor: 0.5,          // une mesure amendée garde la moitié de ses effets
@@ -23,9 +23,9 @@
   /* ---------- Les cartes budgétaires de Bercy (l'automne) ---------- */
   var BUDGET_CARDS = [
     { id: 'point', title: 'Le point d\'indice', text: 'Les syndicats de fonctionnaires réclament une hausse des salaires.', opts: [
-      { label: 'Augmenter de 1,5 %', def: 0.12, sat: { pi: 7 } }, { label: 'Geler', def: -0.15, sat: { pi: -7 } }] },
+      { label: 'Augmenter de 1,5 %', def: 0.11, sat: { pi: 7 } }, { label: 'Geler', def: 0, sat: { pi: -7 } }] },
     { id: 'pensions', title: 'Les pensions de retraite', text: 'L\'inflation a rogné les pensions. Faut-il les revaloriser entièrement ?', opts: [
-      { label: 'Revaloriser comme l\'inflation', def: 0.05, sat: { ret: 3 } }, { label: 'Revaloriser un peu moins', def: -0.25, sat: { ret: -8 } }] },
+      { label: 'Revaloriser comme l\'inflation', def: 0, sat: { ret: 3 } }, { label: 'Revaloriser un peu moins', def: -0.1, sat: { ret: -8 } }] },
     { id: 'collectivites', title: 'Les communes et départements', text: 'Les maires réclament plus de dotations pour leurs écoles et leurs routes.', opts: [
       { label: 'Augmenter les dotations', def: 0.08, sat: { ind: 3, ret: 2 } }, { label: 'Leur demander des économies', def: -0.2, sat: { pop: -3, ret: -2 } }] },
     { id: 'defense', title: 'La défense', text: 'Le contexte international pousse à investir dans l\'armée.', opts: [
@@ -33,7 +33,7 @@
     { id: 'niche_emploi', title: 'Le crédit d\'impôt pour l\'emploi à domicile', text: 'Une niche fiscale coûteuse, très utilisée par les ménages aisés et les retraités.', opts: [
       { label: 'La raboter', def: -0.15, sat: { cad: -5, ret: -3 } }, { label: 'La garder', def: 0, sat: {} }] },
     { id: 'pompe', title: 'Le prix à la pompe', text: 'Le carburant flambe. Les automobilistes des campagnes n\'en peuvent plus.', opts: [
-      { label: 'Remise à la pompe', def: 0.15, sat: { pop: 4, ind: 3 } }, { label: 'Refuser', def: 0, sat: { pop: -5, ind: -3 } }] },
+      { label: 'Remise à la pompe (cette année)', def: 0.15, once: true, sat: { pop: 4, ind: 3 } }, { label: 'Refuser', def: 0, sat: { pop: -5, ind: -3 } }] },
     { id: 'hopital', title: 'L\'hôpital', text: 'Les urgences ferment la nuit faute de personnel.', opts: [
       { label: 'Plan d\'urgence', def: 0.1, sat: { ret: 4, pi: 4 } }, { label: 'Réorganiser à budget constant', def: 0, sat: { pi: -5, ret: -3 } }] },
     { id: 'renovation', title: 'Les aides à la rénovation', text: 'Les aides pour isoler les logements coûtent cher, mais font vivre les artisans.', opts: [
@@ -49,13 +49,24 @@
     { id: 'chomage', title: 'L\'assurance chômage', text: 'Bercy propose de réduire la durée d\'indemnisation.', opts: [
       { label: 'Réduire', def: -0.2, sat: { sae: -7, pop: -2 } }, { label: 'Ne rien changer', def: 0, sat: {} }] },
     { id: 'agriculture', title: 'Les agriculteurs', text: 'Les tracteurs bloquent les routes : ils dénoncent les normes et les prix trop bas.', opts: [
-      { label: 'Plan d\'aide', def: 0.05, sat: { ind: 5 } }, { label: 'Tenir bon', def: 0, sat: { ind: -7 } }] }
+      { label: 'Plan d\'aide (cette année)', def: 0.05, once: true, sat: { ind: 5 } }, { label: 'Tenir bon', def: 0, sat: { ind: -7 } }] },
+    { id: 'annee_blanche', title: 'L\'année blanche', text: 'Bercy propose de geler pendant un an les prestations sociales, les pensions et les tranches de l\'impôt sur le revenu, sans les indexer sur l\'inflation.', opts: [
+      { label: 'Faire l\'année blanche', def: -0.2, sat: { ret: -4, pop: -3, pi: -2 } }, { label: 'Indexer comme d\'habitude', def: 0, sat: {} }] },
+    { id: 'surtaxe_is', title: 'La surtaxe sur les grandes entreprises', text: 'Une contribution exceptionnelle sur les bénéfices des entreprises qui font plus d\'un milliard d\'euros de chiffre d\'affaires.', opts: [
+      { label: 'La voter (cette année)', def: -0.25, once: true, sat: { cad: -3, pop: 2 } }, { label: 'Ne pas taxer', def: 0, sat: { pop: -1 } }] },
+    { id: 'franchises', title: 'Les franchises médicales', text: 'Doubler le reste à charge sur les boîtes de médicaments et les consultations ?', opts: [
+      { label: 'Les doubler', def: -0.03, sat: { ret: -4, pop: -2, sae: -1 } }, { label: 'Ne pas y toucher', def: 0, sat: {} }] }
   ];
+
+  /* La carte qui revient chaque automne : la tenue des dépenses. C'est le vrai levier d'un budget :
+     faire progresser les dépenses moins vite que l'inflation, ministère par ministère. */
+  var NORM_CARD = { id: 'norme', title: 'La tenue des dépenses', text: 'Chaque ministère réclame plus de moyens. Bercy propose que les dépenses de l\'État progressent moins vite que les prix cette année.', opts: [
+    { label: 'Serrer les dépenses', def: -0.3, sat: { pi: -2, ret: -1, sae: -1 } }, { label: 'Les laisser suivre les prix', def: 0, sat: {} }] };
 
   /* ---------- Les événements du quinquennat ---------- */
   var EVENTS = [
     { id: 'canicule', title: 'Été caniculaire', text: 'Sécheresse, incendies, coupures d\'eau : le pays suffoque.', opts: [
-      { label: 'Plan d\'urgence climatique', def: 0.05, pop: 3, sat: { sae: 3 } }, { label: 'Laisser les préfets gérer', def: 0, pop: -4 }] },
+      { label: 'Plan d\'urgence climatique', def: 0.05, once: true, pop: 3, sat: { sae: 3 } }, { label: 'Laisser les préfets gérer', def: 0, pop: -4 }] },
     { id: 'marches', title: 'Les marchés s\'inquiètent', text: 'Les taux d\'intérêt de la dette française grimpent. Les agences de notation menacent.', opts: [
       { label: 'Plan d\'économies d\'urgence', def: -0.15, pop: -4, sat: { pi: -3, ret: -3 } }, { label: 'Rassurer sans rien changer', def: 0, debt: 2, pop: 0 }] },
     { id: 'ministre', title: 'L\'affaire du ministre', text: 'Un de tes ministres est accusé d\'avoir menti sur son patrimoine.', opts: [
@@ -65,7 +76,7 @@
     { id: 'gilets', title: 'Colère des automobilistes', text: 'Des ronds-points occupés dans tout le pays contre le prix du carburant.', opts: [
       { label: 'Geler les taxes sur le carburant', def: 0.05, pop: 4, sat: { pop: 6 } }, { label: 'Fermeté', pop: -6, sat: { pop: -8, ind: -4 } }] },
     { id: 'tracteurs', title: 'Les tracteurs sur le périph', text: 'Les agriculteurs encerclent Paris.', opts: [
-      { label: 'Négocier un plan', def: 0.03, sat: { ind: 7 } }, { label: 'Laisser passer l\'orage', sat: { ind: -8 }, pop: -2 }] },
+      { label: 'Négocier un plan', def: 0.03, once: true, sat: { ind: 7 } }, { label: 'Laisser passer l\'orage', sat: { ind: -8 }, pop: -2 }] },
     { id: 'cour', title: 'Le rapport de la Cour des comptes', text: 'La Cour des comptes juge ta trajectoire budgétaire « peu crédible ».', opts: [
       { label: 'Annoncer un tour de vis', def: -0.1, pop: -3 }, { label: 'Contester les chiffres', pop: -1, debt: 1 }] },
     { id: 'innovation', title: 'Une gigafactory s\'installe', text: 'Un industriel veut construire une usine géante de batteries… si l\'État aide.', opts: [
@@ -85,13 +96,12 @@
       measures: pl.programme.map(function (id) { return { id: id, status: 'pending', amended: false }; }),
       financing: (pl.financing || []).slice(),
       seats: {}, used493: false, censures: 0, dissolved: false, fell: 0, log: [], history: [],
+      oneOff: 0, financingDone: false, dissolvedYear: 0,
       cardsDeck: shuffle(BUDGET_CARDS.map(function (c) { return c.id; }), g.rng),
       eventsDeck: shuffle(EVENTS.map(function (e) { return e.id; }), g.rng),
       achievements: {}
     };
     gv.popBonus = Math.round((pct * 100 - popularity(gv)) * 0.6) + C.honeymoon;
-    // les mesures de financement s'appliquent dès le premier budget
-    gv.financing.forEach(function (id) { var m = E.measure(id); gv.deficit += m.cost / C.mdPerPoint; addSat(gv, m.fans, 1); });
     legislatives(gv, g);
     return gv;
   }
@@ -110,10 +120,10 @@
   function legislatives(gv, g, popShift) {
     var ids = g.players.map(function (p) { return p.id; }), seats = {}, total = 0;
     ids.forEach(function (id) { seats[id] = 0; });
-    var ptsSum = 0; D.REGIONS.forEach(function (r) { ptsSum += r.pts; });
+    var insSum = 0; D.REGIONS.forEach(function (r) { insSum += r.ins; });   // les sièges suivent le nombre d'inscrits
     var alloc = [];
     D.REGIONS.forEach(function (r) {
-      var n = Math.round(C.seats * r.pts / ptsSum), w = {}, s = 0;
+      var n = Math.round(C.seats * r.ins / insSum), w = {}, s = 0;
       ids.forEach(function (id) {
         var c = E.cubes(g, r.id, id) + 0.5;
         if (id === gv.pid) c *= popShift ? popShift : 1.0;    // l'élan présidentiel (ou le désaveu)
@@ -187,6 +197,9 @@
     var censured = mid === 'referendum' && gv.rng() < 0.5;
     return { yes: Math.round(yes * 10) / 10, passed: !censured && yes > 50, censured: censured };
   }
+  /* Article 11 : le référendum porte sur l'organisation des pouvoirs publics ou la politique économique, sociale
+     ou environnementale. Le droit pénal en est exclu, et une mesure qui rapporte de l'argent (un impôt) aussi dans le jeu. */
+  function canReferendum(mid) { var m = E.measure(mid); return !!m.theme && !m.penal && m.cost >= 0; }
   /* Une mesure du programme est adoptée (amendée ou non) */
   function adopt(gv, mid, amended) {
     var m = E.measure(mid), k = amended ? C.amendFactor : 1;
@@ -200,27 +213,34 @@
     it.status = 'rejected';
     gv.popBonus -= 2;
   }
-  /* Le gouvernement est renversé : nouveau gouvernement, et à la deuxième fois, dissolution */
-  function governmentFalls(gv, g) {
-    gv.fell += 1; gv.popBonus -= 4;
-    if (gv.fell >= 2 && !gv.dissolved) {
-      gv.dissolved = true;
-      var shift = clamp(popularity(gv) / 45, 0.6, 1.4);
-      legislatives(gv, g, shift);
-      return 'dissolution';
-    }
-    return 'nouveau';
+  /* Le gouvernement est renversé : le président nomme un nouveau Premier ministre */
+  function governmentFalls(gv) { gv.fell += 1; gv.popBonus -= 4; return 'nouveau'; }
+  /* Article 12 : le président peut dissoudre l'Assemblée, mais pas dans l'année qui suit des législatives.
+     Dans le jeu : à partir de l'année 2, et une seule fois par mandat. */
+  function canDissolve(gv) { return !gv.over && gv.year >= 2 && !gv.dissolved; }
+  function dissolve(gv, g) {
+    var before = blocSeats(gv);
+    gv.dissolved = true; gv.dissolvedYear = gv.year;
+    legislatives(gv, g, clamp(popularity(gv) / 45, 0.6, 1.4));      // on revote… avec la popularité du moment
+    return { before: before, after: blocSeats(gv) };
+  }
+  /* Les recettes du programme (impôts, économies) entrent dans le premier budget, à l'automne de l'année 1 */
+  function applyFinancing(gv) {
+    if (gv.financingDone) return [];
+    gv.financingDone = true;
+    return gv.financing.map(function (id) { var m = E.measure(id); gv.deficit += m.cost / C.mdPerPoint; addSat(gv, m.fans, 1); return m; });
   }
 
   /* ---------- L'automne budgétaire ---------- */
   function drawCards(gv) {
-    var out = [];
+    var out = [NORM_CARD];
     for (var i = 0; i < 3; i++) out.push(card(gv.cardsDeck[((gv.year - 1) * 3 + i) % gv.cardsDeck.length]));
     return out;
   }
-  function card(id) { return BUDGET_CARDS.filter(function (c) { return c.id === id; })[0]; }
+  function card(id) { if (id === 'norme') return NORM_CARD; return BUDGET_CARDS.filter(function (c) { return c.id === id; })[0]; }
   function applyOpt(gv, o) {
     if (o.def) gv.deficit += o.def;
+    if (o.def && o.once) gv.oneOff += o.def;        // une dépense (ou recette) ponctuelle : elle disparaît l'année suivante
     if (o.sat) addSat(gv, o.sat, 1);
     if (o.pop) gv.popBonus += o.pop;
     if (o.debt) gv.debt += o.debt;
@@ -230,7 +250,7 @@
   /* ---------- Fin d'année : intérêts, dette, Bruxelles ---------- */
   function endYear(gv) {
     var out = { year: gv.year };
-    gv.deficit += Math.max(0, gv.debt - C.debt0) * C.interest - C.growth;   // la charge de la dette, moins l'effet de la croissance
+    gv.deficit += C.debtCharge + Math.max(0, gv.debt - C.debt0) * C.interest;   // la charge de la dette
     gv.deficit = Math.round(gv.deficit * 100) / 100;
     gv.debt = Math.round((gv.debt + gv.deficit - C.debtDrift) * 10) / 10;
     out.target = C.target(gv.year);
@@ -242,6 +262,7 @@
     gv.popBonus -= 2;                                                  // l'usure du pouvoir
     out.deficit = gv.deficit; out.debt = gv.debt; out.pop = popularity(gv);
     gv.history.push({ year: gv.year, deficit: gv.deficit, debt: gv.debt, pop: out.pop });
+    gv.deficit = Math.round((gv.deficit - gv.oneOff) * 100) / 100; gv.oneOff = 0;   // les mesures ponctuelles s'arrêtent
     gv.year += 1;
     if (gv.year > C.years) gv.over = true;
     return out;
@@ -265,6 +286,6 @@
 
   var API = { C: C, BUDGET_CARDS: BUDGET_CARDS, EVENTS: EVENTS, create: create, popularity: popularity, legislatives: legislatives, blocSeats: blocSeats,
     majorityType: majorityType, stance: stance, vote: vote, frondeurs: frondeurs, censure: censure, referendum: referendum, adopt: adopt, reject: reject,
-    governmentFalls: governmentFalls, drawCards: drawCards, applyOpt: applyOpt, drawEvent: drawEvent, endYear: endYear, verdict: verdict, addSat: addSat };
+    governmentFalls: governmentFalls, canDissolve: canDissolve, dissolve: dissolve, applyFinancing: applyFinancing, canReferendum: canReferendum, drawCards: drawCards, applyOpt: applyOpt, drawEvent: drawEvent, endYear: endYear, verdict: verdict, addSat: addSat };
   if (node) module.exports = API; else root.PolitikGov = API;
 })(this);

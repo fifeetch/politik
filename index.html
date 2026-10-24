@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#1B1F3B">
+<meta name="theme-color" content="#BF9F6C">
 <meta name="description" content="Politik — jeu de stratégie électorale parodique sur la carte de France.">
 <title>Politik</title>
 <link rel="manifest" href="manifest.webmanifest">
@@ -13,22 +13,22 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Politik">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="preload" href="fonts/anybody.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 <div id="app">
 
   <!-- Écran titre -->
-  <section id="screen-title" class="screen screen-dark active">
-    <span class="kicker kicker-yellow">Élection présidentielle</span>
-    <h1 class="logo">POLITIK</h1>
-    <p class="tagline">8 tours de campagne. 2 tours de scrutin.<br>Un seul élu.</p>
-    <svg id="title-map" class="title-map" viewBox="0 0 370 357" aria-hidden="true"></svg>
+  <section id="screen-title" class="screen active">
+    <div class="poster">
+      <span class="poster-k">Élection présidentielle</span>
+      <h1 class="logo">Politik</h1>
+      <svg id="title-map" class="title-map" viewBox="0 0 370 357" aria-hidden="true"></svg>
+      <p class="tagline">8 tours de campagne, 2 tours de scrutin, un seul élu. Puis cinq ans pour gouverner.</p>
+    </div>
     <div class="stack">
-      <button class="btn btn-yellow btn-big" data-go="choose">NOUVELLE PARTIE</button>
+      <button class="btn btn-yellow btn-big" data-go="choose">Nouvelle partie</button>
       <button class="btn btn-ghost-light" data-action="tuto">Comment jouer (tutoriel)</button>
       <button class="btn btn-ghost-light" data-action="rules">Règles du jeu</button>
       <button class="btn btn-ghost-light" id="btn-install" type="button" hidden>📲 Installer l'application</button>
@@ -39,25 +39,25 @@
   <!-- Choix du parti -->
   <section id="screen-choose" class="screen">
     <div class="choose-head">
-      <span class="kicker">Nouvelle partie · toi contre 3 IA</span>
-      <h1 class="h1">CHOISIS TON PARTI</h1>
+      <span class="kicker">Toi contre 3 partis menés par l'ordinateur</span>
+      <h1 class="h1">Choisis ton parti</h1>
     </div>
     <div id="party-grid" class="party-grid"></div>
     <div id="party-detail" class="party-detail"></div>
-    <button id="btn-start" class="btn btn-ink btn-big">COMPOSER MON PROGRAMME</button>
+    <button id="btn-start" class="btn btn-ink btn-big">Composer mon programme</button>
   </section>
 
   <!-- v0.7 : le programme -->
   <section id="screen-programme" class="screen">
     <div class="prog-head"><div id="prog-cand" class="prog-cand"></div>
-      <div><span class="kicker">Ton programme · 5 mesures</span><h1 class="h1">TES PROMESSES</h1><span id="prog-sub" class="region-sub"></span></div></div>
+      <div><span class="kicker">Ton programme, en 5 mesures</span><h1 class="h1">Tes promesses</h1><span id="prog-sub" class="region-sub"></span></div></div>
     <div id="prog-budget" class="prog-budget"></div>
     <div id="prog-list" class="prog-list"></div>
     <div class="prog-foot">
       <div id="prog-mini" class="prog-mini"></div>
       <button id="prog-reco" class="btn" type="button">Programme conseillé</button>
-      <button id="prog-go" class="btn btn-ink btn-big" type="button">ENTRER EN CAMPAGNE</button>
-      <button id="prog-skip" class="btn" type="button">⏩ Passer la campagne : gouverner directement</button>
+      <button id="prog-go" class="btn btn-ink btn-big" type="button">Entrer en campagne</button>
+      <button id="prog-skip" class="btn" type="button">Passer la campagne et gouverner directement</button>
     </div>
   </section>
 
@@ -77,7 +77,7 @@
     </header>
 
     <div class="race">
-      <div class="race-head"><span>Sondage · 1er tour</span><span id="race-status">50 % = élu direct</span></div>
+      <div class="race-head"><span>Sondage · 1er tour</span><span id="race-status">50 % : élu dès le 1er tour</span></div>
       <div id="race-bar" class="race-bar"></div>
       <div id="race-legend" class="race-legend"></div>
     </div>
@@ -86,7 +86,8 @@
 
     <div id="advisor" class="advisor" hidden></div>
 
-    <div class="map-wrap">
+    <div class="map-wrap" id="map-wrap">
+      <div class="map-mode" role="group" aria-label="Ce que montre la carte"><button type="button" data-mapmode="ctrl" aria-pressed="true">Contrôle</button><button type="button" data-mapmode="abst" aria-pressed="false">Abstention</button></div>
       <svg id="map" class="map" viewBox="0 0 370 357" role="img" aria-label="Carte des 13 régions"></svg>
     </div>
 
@@ -103,7 +104,7 @@
 
   <!-- v0.6 : soirée électorale -->
   <section id="screen-night" class="screen night">
-    <div class="night-top"><span class="night-live">● EN DIRECT</span><span class="night-ch">INFO-CONTINU · SOIRÉE ÉLECTORALE</span></div>
+    <div class="night-top"><span class="night-live">● EN DIRECT</span><span class="night-ch">Info-Continu, soirée électorale</span></div>
     <div id="night-clock" class="night-clock">19:59:55</div>
     <div id="night-stage" class="night-stage"></div>
     <svg id="night-map" class="night-map" viewBox="0 0 370 357" aria-hidden="true"></svg>
@@ -114,11 +115,11 @@
   <!-- Fin de partie -->
   <section id="screen-end" class="screen screen-dark">
     <span class="kicker kicker-yellow" id="end-kicker">Résultats</span>
-    <h1 class="logo logo-sm" id="end-title">ÉLU !</h1>
+    <h1 class="logo logo-sm" id="end-title">Élu !</h1>
     <p class="tagline" id="end-sub"></p>
     <div id="end-table" class="end-table"></div>
     <div class="stack">
-      <button class="btn btn-yellow btn-big" id="btn-govern" type="button" hidden>🏛️ GOUVERNER LE PAYS</button>
+      <button class="btn btn-yellow btn-big" id="btn-govern" type="button" hidden>Gouverner le pays</button>
       <button class="btn btn-ghost-light" data-go="choose">Rejouer une campagne</button>
       <button class="btn btn-ghost-light" data-go="title">Accueil</button>
     </div>
@@ -128,14 +129,15 @@
   <section id="screen-gov" class="screen gov">
     <header class="gov-top">
       <div class="gov-face" id="gov-face"></div>
-      <div><span class="kicker" id="gov-kicker">Quinquennat</span><h1 class="h1" id="gov-title">ANNÉE 1 / 5</h1><span class="region-sub" id="gov-sub"></span></div>
+      <div><span class="kicker" id="gov-kicker">Quinquennat</span><h1 class="h1" id="gov-title">Année 1 sur 5</h1><span class="region-sub" id="gov-sub"></span></div>
     </header>
     <div class="gauges" id="gov-gauges"></div>
     <div class="hemi" id="gov-hemi"></div>
     <div class="gov-sat" id="gov-sat"></div>
     <div class="gov-prog" id="gov-prog"></div>
     <div class="advisor" id="gov-advisor"></div>
-    <button class="btn btn-ink btn-big" id="gov-next" type="button">CONTINUER</button>
+    <button class="btn btn-ink btn-big" id="gov-next" type="button">Continuer</button>
+    <button class="btn btn-ghost" id="gov-dissolve" type="button" hidden>Dissoudre l'Assemblée</button>
   </section>
 
   <!-- Fenêtre modale -->
