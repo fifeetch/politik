@@ -50,6 +50,8 @@ Jeu de stratégie électorale parodique sur la carte de France, pensé pour le t
 | `manifest.webmanifest`, `sw.js`, `icons/` | L'application installable (icône, plein écran, jeu hors ligne). À chaque nouvelle version, changer `VERSION` dans `sw.js` |
 | `test/simulate.js` | Simule des centaines de parties pour vérifier l'équilibre |
 | `test/govern-sim.js` | Simule des quinquennats pour vérifier les ordres de grandeur |
+| `test/check-sources.js` | Vérifie les sources : chaque mesure et chaque fiche renvoie vers un site de l'État, et les liens marchent |
+| `.github/workflows/sources.yml` | Le robot GitHub qui lance cette vérification à chaque modification et chaque lundi |
 
 Pour équilibrer le jeu, on modifie `js/data.js`, puis on lance :
 
@@ -58,6 +60,18 @@ node test/simulate.js 1000
 ```
 
 Le script affiche le taux de victoire de chaque parti (l'idéal est autour de 25 %).
+
+## Les sources
+
+Les faits et chiffres du jeu s'appuient sur des **sources d'État** (Service-Public.fr, Vie-publique.fr, Légifrance, Insee, Cour des comptes, Conseil constitutionnel, ministères…).
+Les lignes « En vrai, pour 2027 » (qui défend une mesure proche) viennent du comparateur pédagogique [Comprendre la Politique](https://www.comprendrelapolitique.fr/programme-2027.html), utilisé comme **référence non officielle** : la date du relevé est affichée dans le jeu.
+
+```
+node test/check-sources.js            # contrôle rapide
+node test/check-sources.js --online   # ouvre aussi chaque lien officiel
+```
+
+Sur GitHub, le robot « Sources officielles » (onglet Actions) fait ce contrôle tout seul et prévient par e-mail si une source casse, n'est plus officielle, ou si le relevé 2027 a plus de 60 jours.
 
 ## Équilibre actuel (v0.7, IA contre IA, 2000 parties)
 

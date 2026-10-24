@@ -444,6 +444,10 @@ button { font-family: inherit; color: inherit; }
 .fiche-pc { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .fiche-pro, .fiche-con { padding: 8px; font-size: 13px; line-height: 1.4; display: flex; flex-direction: column; gap: 3px; border-top: 3px solid; background: var(--sheet); }
 .fiche-pro { border-color: var(--good); } .fiche-con { border-color: var(--red); }
+.fiche-vrai { margin-top: 8px; padding: 8px 10px; background: var(--sheet); border-left: 3px solid var(--violet); font-size: 13.5px; line-height: 1.45; display: flex; flex-direction: column; gap: 3px; }
+.fiche-vrai p { margin: 0; }
+.fiche-vrai small { font-size: 11.5px; color: var(--muted); }
+.fiche-vrai a { color: var(--violet); }
 .learn { display: flex; gap: 10px; align-items: flex-start; }
 .learn .art { width: 50px; flex-shrink: 0; }
 .learn p { margin: 0; font-size: 14.5px; line-height: 1.5; }

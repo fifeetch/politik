@@ -145,7 +145,19 @@
   function fiche(m) {
     var t = th(m.theme);
     return '<p class="fiche-what">' + esc(m.edu.what) + '</p><div class="fiche-pc"><div class="fiche-pro"><b>👍 Pour</b>' + esc(m.edu.pro) + '</div><div class="fiche-con"><b>👎 Contre</b>' + esc(m.edu.con) + '</div></div>' +
-      '<p class="hint">' + t.icon + ' ' + esc(t.name) + ' · ' + costTxt(m.cost) + (m.choc ? ' · 💥 mesure choc' : '') + '</p>';
+      '<p class="hint">' + t.icon + ' ' + esc(t.name) + ' · ' + costTxt(m.cost) + (m.choc ? ' · 💥 mesure choc' : '') + '</p>' +
+      enVrai(m) + srcHtml(m);
+  }
+  /* v1.2 : qui défend une mesure proche pour 2027 (comparateur pédagogique, non officiel) */
+  function enVrai(m) {
+    if (!m.vrai) return '';
+    var R = D.REFERENCE_2027;
+    return '<div class="fiche-vrai"><b>🗳️ En vrai, pour 2027</b><p>' + esc(m.vrai) + '</p>' +
+      (R ? '<small>D\'après le comparateur <a href="' + esc(R.url) + '" target="_blank" rel="noopener">Comprendre la Politique</a> (site pédagogique, non officiel), relevé le ' + frDate(R.checked) + '.</small>' : '') + '</div>';
+  }
+  function frDate(iso) {
+    var M = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+    var d = iso.split('-'); return (+d[2]) + ' ' + M[+d[1] - 1] + ' ' + d[0];
   }
   function costTxt(c) { return c < 0 ? 'rapporte ' + (-c) + ' Md€' : c === 0 ? 'ne coûte rien' : 'coûte ' + c + ' Md€'; }
   function openProgramme(pid) {

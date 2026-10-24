@@ -1,0 +1,24 @@
+# Vérifie automatiquement les sources officielles du jeu.
+# Se lance à chaque modification envoyée sur GitHub, chaque lundi matin, et à la demande (onglet Actions).
+# Si une source est cassée ou n'est plus officielle, GitHub envoie un e-mail et le rapport s'affiche dans l'onglet Actions.
+name: Sources officielles
+
+on:
+  push:
+    paths: ['js/**', 'test/check-sources.js', '.github/workflows/sources.yml']
+  schedule:
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+
+jobs:
+  verifier:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Contrôle des fiches (hors ligne)
+        run: node test/check-sources.js
+      - name: Ouverture de chaque lien officiel
+        run: node test/check-sources.js --online

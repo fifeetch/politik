@@ -96,6 +96,16 @@ Quand tu gagnes la présidentielle, le bouton « 🏛️ Gouverner le pays » ou
 - Fiche « Pourquoi ces chiffres ? » au choix du parti et dans les règles. Le mode choisi est retenu pour les parties suivantes.
 - À surveiller : en Réaliste, Socialisme Modéré et En Mouvement gagnent un peu plus souvent (33 %), Les Verts Pâturages moins (16 %), ce qui suit leur poids de départ.
 
+## v1.2 — fait : des sources d'État, vérifiées automatiquement
+- **Chaque mesure** du programme (28) et **chaque financement** (10) a sa **source officielle** dans sa fiche (Service-Public.fr, Cour des comptes, Conseil constitutionnel, ministères, Sénat…). Chaque lien a été ouvert et contrôlé à la main.
+- **Fiches mises à jour avec les chiffres officiels de 2026** : Smic à 1 478 € net (juin 2026), suspension de la réforme des retraites jusqu'en 2028, contribution exceptionnelle des grandes entreprises prolongée en 2026, gel des pensions 2026 retiré, point d'indice à 4,92 €, 77 Md€ de baisses de charges, 92 Md€ de niches fiscales, 17 Md€ réclamés par le contrôle fiscal, taxe sur les jets depuis mars 2025, fin du plastique jetable d'ici 2040, peines planchers supprimées en 2014, Pass Rail testé en 2024…
+- **🗳️ En vrai, pour 2027** : chaque fiche dit quels partis défendent une mesure proche, d'après le comparateur Comprendre la Politique (référence pédagogique, non officielle, date du relevé affichée).
+- **Vérification automatique** (`test/check-sources.js` + robot GitHub « Sources officielles ») : chaque fiche a une source, sur un site de l'État ou d'une institution publique ; chaque lien répond et parle toujours du sujet ; le relevé 2027 a moins de 60 jours. À chaque modification et chaque lundi ; e-mail en cas de problème.
+
+## Idées pour la suite (à partir du comparateur 2027)
+- Nouvelles mesures très débattues : âge de la retraite (60, 62, 64 ou 65 ans), droit du sol, aide médicale d'État, encadrement des loyers, nouveaux réacteurs nucléaires, éoliennes, référendum d'initiative citoyenne, proportionnelle, places de prison.
+- Thèmes absents du jeu : logement, énergie, Europe, institutions, agriculture.
+
 ## Plus tard — rejouabilité
 - Phase des **500 parrainages** avant la campagne.
 - IA avec des personnalités (populiste, prudente, opportuniste).
