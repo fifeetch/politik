@@ -1714,4 +1714,12 @@
     game: function () { return g; }, me: function () { return me; } };
   renderTitleMap();
   renderChoose();
+  /* v1.9 : l'écran d'ouverture du studio disparaît tout seul (ou d'un toucher) */
+  (function () {
+    var sp = $('splash'); if (!sp) return;
+    var done = false;
+    function hide() { if (done) return; done = true; sp.classList.add('out'); setTimeout(function () { sp.remove(); }, 600); }
+    sp.addEventListener('click', hide);
+    setTimeout(hide, FX.reduced ? 1200 : 2900);
+  })();
 })();

@@ -795,3 +795,23 @@ button { font-family: inherit; color: inherit; }
 .parti-body p { margin: 0; line-height: 1.45; }
 .parti-btns { margin-top: 6px; }
 @media (max-width: 380px) { .poll-row { grid-template-columns: 20px 108px minmax(0, 1fr) 38px; font-size: 13px; } }
+
+/* v1.9 : écran d'ouverture Free Green Studio */
+.splash { position: absolute; inset: 0; z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; background: #1D1A33; color: #ECEEE7; cursor: pointer; transition: opacity .5s ease; }
+.splash.out { opacity: 0; pointer-events: none; }
+.splash-logo { width: 132px; height: 132px; }
+.splash .sl-ring { stroke-dasharray: 340; stroke-dashoffset: 340; animation: slRing 1s ease-out .1s forwards; }
+.splash .sl-leaf { transform-origin: 60px 98px; transform: scale(0); animation: slGrow .7s cubic-bezier(.3,1.5,.5,1) .5s forwards; }
+.splash .sl-f { stroke-dasharray: 120; stroke-dashoffset: 120; animation: slDraw .6s ease-out 1.05s forwards; }
+.splash .sl-dot { opacity: 0; animation: slPop .4s ease-out 1.5s forwards; }
+.splash-name { display: flex; align-items: baseline; gap: 8px; font-family: var(--display); font-stretch: 120%; font-size: 30px; letter-spacing: .5px; opacity: 0; transform: translateY(8px); animation: slText .6s ease-out 1.2s forwards; }
+.splash-name span { font-weight: 500; }
+.splash-name b { font-weight: 900; color: #6FCB88; }
+.splash-sub { font-size: 15px; color: #C8C2EA; letter-spacing: 3px; text-transform: uppercase; opacity: 0; animation: slText .6s ease-out 1.6s forwards; }
+@keyframes slRing { to { stroke-dashoffset: 0; } }
+@keyframes slGrow { to { transform: scale(1); } }
+@keyframes slDraw { to { stroke-dashoffset: 0; } }
+@keyframes slPop { 0% { opacity: 0; transform: scale(.2); } 70% { opacity: 1; transform: scale(1.3); } 100% { opacity: 1; transform: none; } }
+@keyframes slText { to { opacity: 1; transform: none; } }
+.splash .sl-dot { transform-box: fill-box; transform-origin: center; }
+@media (prefers-reduced-motion: reduce) { .splash *, .splash-name, .splash-sub { animation: none !important; opacity: 1 !important; transform: none !important; stroke-dashoffset: 0 !important; } }
