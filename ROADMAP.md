@@ -90,6 +90,12 @@ Quand tu gagnes la présidentielle, le bouton « 🏛️ Gouverner le pays » ou
 - Simulation (`node test/govern-sim.js 300 c`) : un mandat équilibré est réélu environ une fois sur trois ; tout dépenser ou tout économiser mène à l'échec.
 - **Nouvel univers graphique « bureau de vote »** : papier de bulletin, encre violette de tampon pour les actions, rouge pour l'actualité et les affaires. Titres en Anybody (police d'affiche), texte et chiffres en Atkinson Hyperlegible (conçue pour la lisibilité). Coup de tampon « Validé » à la fin de chaque tour. Polices livrées avec le jeu : il marche entièrement hors ligne.
 
+## v1.0.2 — fait : une carte de départ fidèle à 2024
+- Chaque région part à la couleur de son vrai vainqueur du 1er tour des législatives 2024, quels que soient les 4 partis de la partie (vérifié sur les 15 compositions possibles).
+- La gauche unie (liste commune en 2024) compte comme un seul bloc : là où elle était en tête, la région part au plus fort de ses partis présents. Les électeurs d'un parti de gauche absent rejoignent en partie (60 %) ses partenaires.
+- Les égalités dues à l'arrondi en cubes sont départagées par le vrai score de 2024.
+- À surveiller : Socialisme Modéré gagne plus souvent en simulation (39 % contre 29 %).
+
 ## Plus tard — rejouabilité
 - Phase des **500 parrainages** avant la campagne.
 - IA avec des personnalités (populiste, prudente, opportuniste).

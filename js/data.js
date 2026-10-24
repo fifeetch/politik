@@ -299,6 +299,7 @@
     debateTurns: [3, 6, 8],
     incomeMoney: 4, incomePerRegion: 1, incomeRegionMax: 3, incomeInfl: 2,
     minControl: 3, maxCubes: 10, startCubes: 3,
+    leftUnion: 0.6,              // v1.0.2 : part des voix d'un parti de gauche absent qui va aux partis de gauche présents
     startScale: 10,              // v1.0 : cubes de départ = score aux législatives 2024 (%) × 10 / 100
     spotlightCost: 2,
     /* v0.2 : axe politique, transferts, alliances, élection */

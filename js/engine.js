@@ -179,6 +179,22 @@
   }
 
   /* ---------- Contrôle des régions ---------- */
+  /* v1.0.2 : scores de départ d'une région avec les seuls partis de la partie.
+     FI, SM et VP ont fait liste commune en 2024 : les voix d'un parti de gauche absent de la partie vont aux partis
+     de gauche présents. Les autres partis ont fait campagne séparément : leurs voix ne sont pas redistribuées. */
+  var LEFT = { FI: 1, SM: 1, VP: 1 };
+  function startScores(g, r) {
+    var ids = pids(g), sc = {};
+    ids.forEach(function (id) { sc[id] = r.start[id] || 0; });
+    Object.keys(r.start).forEach(function (a) {
+      if (sc[a] != null && ids.indexOf(a) >= 0) return;
+      var v = r.start[a], left = ids.filter(function (id) { return LEFT[a] && LEFT[id]; }), w = {}, W = 0;
+      if (left.length) left.forEach(function (id) { w[id] = 1; W += 1; });   // à parts égales entre les partis de gauche présents
+
+      if (W) Object.keys(w).forEach(function (id) { sc[id] += R.leftUnion * v * w[id] / W; });
+    });
+    return sc;
+  }
   function updateControl(g, rid) {
     var reg = g.regions[rid];
     var best = -1, leaders = [];
@@ -287,9 +303,30 @@
     // et chaque parti avec des électeurs proportionnels à son score aux législatives 2024
     D.REGIONS.forEach(function (r) {
       g.regions[r.id] = { cubes: {}, controller: null, ins: r.ins, abst: r.abst / 100 * R.round1Abst, blank: (r.blanc + r.nuls) / 100 * R.round1Blank };
-      g.players.forEach(function (pl) { var n = Math.round((r.start[pl.id] || 0) * R.startScale / 100); if (n) addCubes(g, r.id, pl.id, n); });
+      var sc = startScores(g, r);
+      g.players.forEach(function (pl) { var n = Math.round(sc[pl.id] * R.startScale / 100); if (n) addCubes(g, r.id, pl.id, n); });
+      // la région part à la couleur de son vrai vainqueur de 2024. La gauche unie compte comme un seul bloc :
+      // si elle est arrivée en tête, la région va au plus fort de ses partis présents (il pourra la perdre ensuite)
+      var blocs = {};
+      pids(g).forEach(function (id) { var b = LEFT[id] ? 'NFP' : id; blocs[b] = blocs[b] || { score: 0, cubes: 0, top: null }; blocs[b].score += sc[id]; blocs[b].cubes += cubes(g, r.id, id);
+        if (!blocs[b].top || sc[id] > sc[blocs[b].top]) blocs[b].top = id; });
+      // le vrai vainqueur de 2024 dans la région (la gauche unie comptée ensemble), s'il est dans la partie
+      var real = { NFP: (r.start.FI || 0) + (r.start.SM || 0) + (r.start.VP || 0), EM: r.start.EM || 0, UG: r.start.UG || 0, MN: r.start.MN || 0 };
+      var win = Object.keys(real).sort(function (a, b) { return real[b] - real[a]; }).filter(function (b) { return blocs[b]; })[0]
+        || Object.keys(blocs).sort(function (a, b) { return blocs[b].score - blocs[a].score; })[0], B = blocs[win];
+      // Le vainqueur de 2024 (pour la gauche unie : le plus fort de ses partis présents) est le sortant.
+      // Si l'arrondi en cubes le met à égalité ou sous le seuil de contrôle, il reçoit juste ce qu'il faut pour tenir la région.
+      var others = 0; pids(g).forEach(function (id) { if (id !== B.top) others = Math.max(others, cubes(g, r.id, id)); });
+      var need = Math.max(others + 1, minControl(B.top)) - cubes(g, r.id, B.top);
+      if (need > 0 && need <= 3) addCubes(g, r.id, B.top, need);
+      g.regions[r.id].controller = null;
+      g.regions[r.id].lead2024 = B.top;
     });
     updateAllControl(g);
+    // égalité de cubes : la région va au parti du bloc arrivé en tête en 2024
+    D.REGIONS.forEach(function (r) { var reg = g.regions[r.id], L = reg.lead2024; delete reg.lead2024;
+      if (!reg.controller && L) { var best = 0; pids(g).forEach(function (id) { best = Math.max(best, cubes(g, r.id, id)); });
+        if (cubes(g, r.id, L) === best && best >= minControl(L)) reg.controller = L; } });
     // v0.5 : une crise en 3 actes, et un paquet de dilemmes
     var cr = D.CRISES[Math.floor(rng() * D.CRISES.length)];
     g.crisis = { id: cr.id, start: R.crisisStart[0] + Math.floor(rng() * (R.crisisStart[1] - R.crisisStart[0] + 1)) };
@@ -948,7 +985,7 @@
     actionCost: actionCost, checkAction: checkAction, mediaRegions: mediaRegions, gain: gain, bestRegions: bestRegions,
     controlledPoints: controlledPoints, controlledRegions: controlledRegions, totalCubes: totalCubes, ranking: ranking,
     leader: leader, cubes: cubes, minControl: minControl, player: player, rivalIn: rivalIn, strongestRegion: strongestRegion,
-    regionVoters: regionVoters, turnoutStats: turnoutStats, mobilizeGain: mobilizeGain, lowTurnoutFit: lowTurnoutFit,
+    regionVoters: regionVoters, startScores: startScores, turnoutStats: turnoutStats, mobilizeGain: mobilizeGain, lowTurnoutFit: lowTurnoutFit,
     NATPOP: NATPOP, setProgramme: setProgramme, segmentAppeal: segmentAppeal, echoOf: echoOf, echo: echo, echoBonus: echoBonus, echoRanks: echoRanks, programmeCred: programmeCred, programmeCost: programmeCost, measure: measure, MEAS: MEAS,
     resolveAffair: resolveAffair, enqueteChance: enqueteChance, affairDef: affairDef,
     resolveDilemma: resolveDilemma, dilemmaDef: dilemmaDef, applyFx: applyFx, markerAt: markerAt, hotHere: hotHere, crisisAct: crisisAct,
