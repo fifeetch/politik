@@ -15,8 +15,11 @@
              chaque région garde son profil de 2024 et suit la tendance nationale des sondages. */
   var POLLS = {
     date: 'octobre 2026',
-    // EM = Philippe (Horizons) + Attal (Renaissance) quand il est testé ; UG = Retailleau (LR) ; VP = Tondelier (Les Écologistes)
-    avg: { MN: 35.1, FI: 16.3, SM: 12.8, EM: 15.8, UG: 5.9, VP: 3.0 },
+    // v1.7 : moyenne de 58 sondages au 22 octobre 2026 (sondage-presidentielle.fr), un candidat par famille :
+    // MN = Le Pen, FI = Mélenchon, HZ = Philippe (Horizons), SM = Glucksmann, EM = Attal (Renaissance), UG = Retailleau,
+    // RQ = Zemmour, VP = Tondelier, PC = Roussel, DL = Dupont-Aignan, LO = Arthaud. MD : le MoDem n'a pas de candidat testé.
+    // Philippe et Attal sont rarement testés ensemble : le total dépasse 100 %, il est ramené à 100 % dans le moteur.
+    avg: { MN: 35.1, FI: 16.5, HZ: 14.9, SM: 12.5, EM: 9.0, UG: 7.8, RQ: 4.1, VP: 3.0, PC: 2.0, DL: 2.0, LO: 0.7, MD: 0 },
     list: [
       { who: 'Harris Interactive', when: '23 octobre', MN: 33, FI: 17, SM: 12, EM: 15, UG: 4, VP: 2 },
       { who: 'OpinionWay pour CNews', when: '21-22 octobre', MN: 36, FI: 16, SM: 13, EM: 16, UG: 6, VP: 1 },
@@ -27,7 +30,7 @@
     ],
     src: [
       { label: 'Tableau des sondages présidentielle 2027 (EPOC Info, site non officiel)', url: 'https://www.epocinfo.fr/ep2027.php' },
-      { label: 'Moyenne des sondages présidentielle 2027 (sondage-presidentielle.fr, site non officiel)', url: 'https://sondage-presidentielle.fr/en' },
+      { label: 'Moyenne des sondages présidentielle 2027 au 22 octobre 2026 (sondage-presidentielle.fr, site non officiel)', url: 'https://sondage-presidentielle.fr/en' },
       { label: 'Sondage OpinionWay pour CNews, 21-22 octobre 2026 (Europe 1, presse)', url: 'https://www.europe1.fr/politique/sondage-presidentielle-2027-apres-le-17-octobre-marine-le-pen-consolide-son-avance-au-premier-tour-david-lisnard-devance-gabriel-attal-1174275' },
       { label: 'Notices des sondages publiés (Commission des sondages)', url: 'https://www.commission-des-sondages.fr/notices/' }
     ]
@@ -57,6 +60,36 @@
      Impact d'un message = crédibilité du parti sur le thème (0, 1 ou 2)
                          + 1 si la région en fait une de ses 2 préoccupations
                          + 1 si le thème fait l'actualité ce tour. */
+  /* v1.7 : scores de départ des 6 nouveaux partis. Simplification assumée (le détail régional officiel n'est pas repris) :
+     score national × profil régional d'un parti proche.
+     - Moyenne 2024 (européennes du 9 juin + 1er tour des législatives du 30 juin) : Grande Nostalgie ≈ (5,47 + 0,75) / 2 = 3,1 ;
+       Parti Camarade ≈ 2,2 (2,36 aux européennes, part estimée dans le Nouveau Front populaire aux législatives) ;
+       Lutte Prolétaire ≈ 0,7 (0,49 aux européennes, ≈ 1 aux législatives) ; Toujours Debout ≈ 0,2 (pas de liste aux européennes).
+       Juste Milieu et Cap au Large : la liste et la coalition présidentielles (« En Mouvement ») sont partagées selon les députés
+       élus en 2024 : environ 60 % En Mouvement, 21 % Juste Milieu, 19 % Cap au Large.
+     - Présidentielle 2022 : Zemmour 7,07 ; Roussel 2,28 ; Dupont-Aignan 2,06 ; Arthaud 0,56 (résultats officiels) ;
+       Juste Milieu et Cap au Large n'avaient pas de candidat (ils soutenaient le président sortant).
+     Profils : Grande Nostalgie et Toujours Debout comme le Mouvement National, Parti Camarade et Lutte Prolétaire
+     comme la France Indignée. Ces départs sont des ordres de grandeur de jeu. */
+  (function extendStarts() {
+    var e24 = { RQ: [3.1, 'MN'], PC: [2.2, 'FI'], LO: [0.7, 'FI'], DL: [0.2, 'MN'] };
+    var p22 = { RQ: [7.07, 'MN'], PC: [2.28, 'FI'], LO: [0.56, 'FI'], DL: [2.06, 'MN'] };
+    function nat(key, pid) {
+      var n = 0, w = 0;
+      REGIONS.forEach(function (r) { var ex = r.ins * (1 - r.abst / 100) * (1 - (r.blanc + r.nuls) / 100); w += ex; n += ex * (r[key][pid] || 0); });
+      return n / w;
+    }
+    var natE = {}, natP = {};
+    ['MN', 'FI'].forEach(function (p) { natE[p] = nat('start', p); natP[p] = nat('start22', p); });
+    REGIONS.forEach(function (r) {
+      Object.keys(e24).forEach(function (p) { var x = e24[p]; r.start[p] = Math.round(10 * r.start[x[1]] * x[0] / natE[x[1]]) / 10; });
+      Object.keys(p22).forEach(function (p) { var x = p22[p]; r.start22[p] = Math.round(10 * r.start22[x[1]] * x[0] / natP[x[1]]) / 10; });
+      var em = r.start.EM;
+      r.start.EM = Math.round(10 * em * 0.60) / 10; r.start.MD = Math.round(10 * em * 0.21) / 10; r.start.HZ = Math.round(10 * em * 0.19) / 10;
+      r.start22.MD = 0; r.start22.HZ = 0;
+    });
+  })();
+
   var THEMES = [
     { id: 'pouvoir',     name: "Pouvoir d'achat",    short: 'Achat',       icon: '💶' },
     { id: 'emploi',      name: 'Emploi & industrie', short: 'Emploi',      icon: '🏭' },
@@ -355,7 +388,50 @@
       cred: { immigration: 2, securite: 2, pouvoir: 1, emploi: 0, ecologie: 0, services: 0 },
       force: 'À la Télé : +1 cube en plus dans les régions industrielles.',
       weakness: 'Peu de relais locaux : il lui faut 4 cubes (au lieu de 3) pour contrôler une région.',
-      cards: ['plateau_tele', 'grand_meeting'] }
+      cards: ['plateau_tele', 'grand_meeting'] },
+    /* v1.7 : six partis de plus (12 au total). Positions sur l'axe : de 0,3 (extrême gauche) à 6,7 (droite identitaire). */
+    { id: 'LO', pos: 0.3, name: 'Lutte Prolétaire', short: 'Lutte Prolétaire', family: 'Extrême gauche',
+      candidate: 'Ginette Lagrève', candTitle: 'l\'ouvrière éternelle', programme: ['smic', 'superprofits', 'semaine4', 'sp20', 'accueil'], financing: ['isf', 'heritage', 'fraudefisc'],
+      color: '#7B1F2E', ink: '#FFFFFF', money: 3, infl: 3, bases: ['hdf', 'idf'],
+      cred: { pouvoir: 2, emploi: 2, services: 1, ecologie: 0, securite: 0, immigration: 0 },
+      force: 'Militantisme : une équipe de militants coûte 2 € (au lieu de 3).',
+      weakness: 'Pas de relais médiatiques : la Télé coûte 1 € de plus.',
+      cards: ['marche_pop', 'censure'] },
+    { id: 'PC', pos: 1.5, name: 'Le Parti Camarade', short: 'Parti Camarade', family: 'Communistes',
+      candidate: 'Marcel Faucille', candTitle: 'le camarade bon vivant', programme: ['reindus', 'smic', 'energie', 'lignes', 'superprofits'], financing: ['isf', 'heritage'],
+      color: '#E2572B', ink: '#FFFFFF', money: 4, infl: 3, bases: ['hdf', 'idf'],
+      cred: { emploi: 2, pouvoir: 2, services: 1, securite: 1, ecologie: 0, immigration: 0 },
+      force: 'Bastions ouvriers : Mobiliser rapporte 1 cube de plus en région industrielle.',
+      weakness: 'Une Collecte ne rapporte que 2 €.',
+      cards: ['marche_pop', 'grand_meeting'] },
+    { id: 'MD', pos: 3.6, name: 'Le Juste Milieu', short: 'Juste Milieu', family: 'Centre',
+      candidate: 'Modeste Entredeux', candTitle: 'le roi du compromis', programme: ['classes', 'apprentissage', 'proximite', 'renovation', 'pme'], financing: ['niches', 'fraudefisc'],
+      color: '#9C6ADE', ink: '#FFFFFF', money: 5, infl: 3, bases: ['naq', 'pdl'],
+      cred: { services: 2, emploi: 1, ecologie: 1, securite: 1, pouvoir: 1, immigration: 0 },
+      force: 'Faiseur de rois : entre les deux tours, ses accords ont 15 points de chances en plus.',
+      weakness: 'Une Collecte ne rapporte que 2 €.',
+      cards: ['primaire', 'remaniement'] },
+    { id: 'HZ', pos: 4.4, name: 'Cap au Large', short: 'Cap au Large', family: 'Centre droit',
+      candidate: 'Gaspard Longue-Vue', candTitle: 'le maire qui voit loin', programme: ['retraites', 'pme', 'nonremplacement', 'policiers', 'fraude'], financing: ['trainvie', 'chomage', 'gelpoint'],
+      color: '#2BA6B8', ink: '#1B1F3B', money: 7, infl: 4, bases: ['nor', 'ara'],
+      cred: { emploi: 2, securite: 2, services: 1, immigration: 1, pouvoir: 0, ecologie: 0 },
+      force: 'Bâtisseur : une Promesse coûte 3 ★ (au lieu de 4).',
+      weakness: 'Parti jeune, peu implanté : il lui faut 4 cubes (au lieu de 3) pour contrôler une région.',
+      cards: ['rassemblement', 'remaniement'] },
+    { id: 'DL', pos: 5.6, name: 'Toujours Debout', short: 'Toujours Debout', family: 'Souverainistes',
+      candidate: 'Aymeric Clocher', candTitle: 'le gaulois réfractaire', programme: ['tva', 'controles', 'lignes', 'planchers', 'energie'], financing: ['trainvie', 'fraudefisc'],
+      color: '#7A8FA6', ink: '#FFFFFF', money: 3, infl: 2, bases: ['idf', 'bfc'],
+      cred: { immigration: 2, pouvoir: 1, securite: 1, emploi: 1, services: 1, ecologie: 0 },
+      force: 'La France des clochers : un Meeting rapporte 1 cube de plus en région rurale.',
+      weakness: 'Petit budget : la Télé coûte 1 € de plus.',
+      cards: ['appel18', 'plateau_tele'] },
+    { id: 'RQ', pos: 6.7, name: 'La Grande Nostalgie', short: 'Grande Nostalgie', family: 'Droite identitaire',
+      candidate: 'Charles Naphtaline', candTitle: 'le polémiste', programme: ['regroupement', 'controles', 'referendum', 'planchers', 'fraude'], financing: ['trainvie', 'chomage'],
+      color: '#3B3B3B', ink: '#FFFFFF', money: 6, infl: 3, bases: ['pac', 'idf'],
+      cred: { immigration: 2, securite: 2, pouvoir: 0, emploi: 0, services: 0, ecologie: 0 },
+      force: 'Polémiques : un Buzz sur l\'immigration rapporte 1 cube de plus.',
+      weakness: 'Repoussoir : entre les deux tours, ses accords ont 15 points de chances en moins.',
+      cards: ['grand_meeting', 'plateau_tele'] }
   ];
 
   /* Actions de base. cost = { money, infl } ; target : 'region' | 'party' | null ; theme : l'action porte un message (thème) */
@@ -515,7 +591,13 @@
     SM: { label: 'raisonnable',    w: { chiffres: 4, emotion: 3, esquive: 2, attaque: 1 } },
     EM: { label: 'technocrate',    w: { chiffres: 5, esquive: 3, attaque: 1, emotion: 1 } },
     UG: { label: 'solennel',       w: { chiffres: 3, attaque: 3, emotion: 2, esquive: 2 } },
-    MN: { label: 'tribun',         w: { attaque: 4, emotion: 4, esquive: 1, chiffres: 1 } }
+    MN: { label: 'tribun',         w: { attaque: 4, emotion: 4, esquive: 1, chiffres: 1 } },
+    LO: { label: 'militant',       w: { attaque: 4, emotion: 3, chiffres: 2, esquive: 1 } },
+    PC: { label: 'gouailleur',     w: { emotion: 4, attaque: 3, chiffres: 2, esquive: 1 } },
+    MD: { label: 'conciliant',     w: { esquive: 4, chiffres: 3, emotion: 2, attaque: 1 } },
+    HZ: { label: 'pragmatique',    w: { chiffres: 5, esquive: 2, emotion: 2, attaque: 1 } },
+    DL: { label: 'gaulois',        w: { attaque: 4, emotion: 3, esquive: 2, chiffres: 1 } },
+    RQ: { label: 'polémiste',      w: { attaque: 5, emotion: 3, chiffres: 1, esquive: 1 } }
   };
 
   /* ---------- v0.5 : dilemmes ----------

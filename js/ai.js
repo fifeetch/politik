@@ -32,8 +32,9 @@
     });
     list.push({ type: 'fonds' });
     // enquêter sur un rival qui traîne des casseroles ou qui mène
-    if (v.turn < D.RULES.maxTurns) v.players.forEach(function (o) {
-      if (o.id !== pid && E.allyOf(v, pid) !== o.id) list.push({ type: 'enquete', target: o.id });
+    // v1.7 : avec 12 partis, on n'enquête que sur les 3 premiers des sondages (sinon chacun enquête sur tout le monde)
+    if (v.turn < D.RULES.maxTurns) E.ranking(v).filter(function (id) { return id !== pid; }).slice(0, 3).forEach(function (id) {
+      list.push({ type: 'enquete', target: id });
     });
     // v1.6 : plus d'alliance pendant la campagne du 1er tour (elles se négocient entre les deux tours)
     pl.cards.forEach(function (card) {
@@ -100,9 +101,8 @@
         // une alliance vaut surtout pour le second tour : plus intéressante en milieu de partie et avec un voisin direct
         var chance = E.acceptChance(v, act.target, pid);
         val += chance * (E.dist(pid, act.target) === 1 ? 6 : 4.5) * (v.turn >= 3 ? 1 : 0.6);
-        if (E.PARTY[pid].pos === 1 || E.PARTY[pid].pos === 6) val *= 1.8; // aux extrémités, sans allié, le second tour est perdu d'avance
         break; }
-      case 'fonds': val += (pl.money < 3 ? 4 : pl.money < 6 ? 1.5 : 0.2) + (pid === 'EM' ? (pl.infl < 3 ? 2.5 : 1) : 0); break;
+      case 'fonds': val += (pl.money < 3 ? 4 : pl.money < 6 ? 1.5 : 0.2) + (E.fundsGain(pid).infl ? (pl.infl < 3 ? 2.5 : 1) : 0); break;
       case 'card': {
         var c = act.card;
         if (c === 'marche_pop' || c === 'climat') boost(act.region, 3);
@@ -137,10 +137,10 @@
       if (!best) { out.push({ type: 'fonds' }); continue; }
       var pl = E.player(v, pid);
       // garde un peu d'influence pour le débat
-      if (debate && best.cost.infl > 0 && pl.infl - best.cost.infl < 2 && best.v < 4) { out.push({ type: 'fonds' }); pl.money += pid === 'EM' ? 4 : pid === 'VP' ? 2 : 3; continue; }
+      if (debate && best.cost.infl > 0 && pl.infl - best.cost.infl < 2 && best.v < 4) { out.push({ type: 'fonds' }); pl.money += E.fundsGain(pid).money; continue; }
       pl.money -= best.cost.money; pl.infl -= best.cost.infl; pl.forme -= best.cost.forme;
       if (best.act.type === 'militants') { v.bases[best.act.region] = (v.bases[best.act.region] || []).concat([pid]); pl.militants += 1; }
-      if (best.act.type === 'fonds') { pl.money += pid === 'EM' ? 4 : pid === 'VP' ? 2 : 3; if (pid === 'EM') pl.infl += 1; }
+      if (best.act.type === 'fonds') { pl.money += E.fundsGain(pid).money; pl.infl += E.fundsGain(pid).infl; }
       if (best.act.type === 'enquete') { v.enq = v.enq || {}; v.enq[pid + best.act.target] = 1; }
       if (best.act.type === 'alliance') { v.alliances[pid] = best.act.target; v.alliances[best.act.target] = pid; }
       if (best.act.type === 'card') pl.cards = pl.cards.filter(function (k) { return k !== best.act.card; });

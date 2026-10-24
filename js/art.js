@@ -138,6 +138,88 @@
       '<path d="M34,64 Q36,78 46,82 M86,64 Q84,78 74,82" fill="none" stroke="' + INK + '" stroke-width="1.2" opacity=".5"/>');
   };
 
+  /* v1.7 — Lutte Prolétaire : Ginette Lagrève, l'ouvrière éternelle. Carré court, foulard rouge, poing levé */
+  P.LO = function () {
+    var sk = '#F1C7A3';
+    return frame('#E8A0A8',
+      '<path d="M30,72 Q26,28 60,24 Q94,28 90,72 L80,72 L80,46 L40,46 L40,72 Z" fill="#6B4A3A"' + o() + '/>' +
+      body('#5A5A66', '#F4F0E6', '<path d="M42,88 Q60,98 78,88 L74,100 Q60,104 46,100 Z" fill="#B5121B"' + o(2) + '/><path d="M60,98 L54,112 L62,110 Z" fill="#B5121B"' + o(1.6) + '/>') +
+      neck(sk) + ears(sk, 56, 22) +
+      '<path d="M39,54 Q38,28 60,27 Q82,28 81,54 Q81,79 60,81 Q39,79 39,54 Z" fill="' + sk + '"' + o() + '/>' +
+      '<path d="M37,50 Q36,26 60,25 Q84,26 83,50 Q76,34 60,36 Q44,34 37,50 Z" fill="#6B4A3A"' + o(2.2) + '/>' +
+      brows(43, 2.5, 3.2) + eyes(51, { r: 3.4 }) +
+      '<path d="M59,55 Q57,61 61,62" fill="none"' + o(2) + '/>' +
+      '<path d="M50,70 L70,70" fill="none"' + o(2.8) + '/>' +
+      '<path d="M98,60 L98,46 Q98,40 104,40 L110,40 Q116,40 116,46 L116,60 Z" fill="' + sk + '"' + o() + '/><path d="M103,40 L103,48 M108,40 L108,48 M113,40 L113,48" fill="none"' + o(1.6) + '/>' +
+      '<path d="M100,62 L98,124 L116,124 L114,62 Z" fill="#5A5A66"' + o() + '/>');
+  };
+  /* Le Parti Camarade : Marcel Faucille, le camarade bon vivant. Béret rouge, grosse moustache, joues rondes */
+  P.PC = function () {
+    var sk = '#EDB892';
+    return frame('#F5B49A',
+      body('#3A3A46', '#FFFFFF', '<path d="M56,90 L64,90 L66,110 L60,116 L54,110 Z" fill="#E2572B"' + o(1.6) + '/>') +
+      neck(sk) + ears(sk, 56, 25) +
+      '<path d="M35,56 Q34,30 60,28 Q86,30 85,56 Q85,82 60,84 Q35,82 35,56 Z" fill="' + sk + '"' + o() + '/>' +
+      '<path d="M30,34 Q34,14 62,14 Q92,16 90,34 Q76,28 60,30 Q42,30 30,34 Z" fill="#C8323C"' + o() + '/><path d="M60,14 l2,-6" fill="none"' + o(2.4) + '/>' +
+      brows(42, -1, 3.6, '#5A4032') + eyes(49, { r: 3.4 }) +
+      '<path d="M58,52 Q55,62 61,63" fill="none"' + o(2.2) + '/>' +
+      '<path d="M42,66 Q50,58 60,64 Q70,58 78,66 Q70,71 60,68 Q50,71 42,66 Z" fill="#5A4032"' + o(2) + '/>' +
+      '<path d="M52,74 Q60,79 68,74" fill="none"' + o(2.4) + '/>' + blush(64));
+  };
+  /* Le Juste Milieu : Modeste Entredeux, le roi du compromis. Crâne lisse, couronne de cheveux, demi-lunettes, sourire prudent */
+  P.MD = function () {
+    var sk = '#F3CDAE';
+    return frame('#D4C2F2',
+      body('#3F3560', '#FFFFFF', '<path d="M56,90 L64,90 L66,110 L60,116 L54,110 Z" fill="#9C6ADE"' + o(1.6) + '/>') +
+      neck(sk) + ears(sk, 54, 23) +
+      '<path d="M38,54 Q37,24 60,23 Q83,24 82,54 Q82,80 60,82 Q38,80 38,54 Z" fill="' + sk + '"' + o() + '/>' +
+      '<path d="M37,52 Q35,38 40,34 L42,48 Z M83,52 Q85,38 80,34 L78,48 Z" fill="#9A8F84"' + o(2) + '/>' +
+      brows(44, 0, 2.6, '#7A6F64') + eyes(52, { r: 3, py: 1 }) +
+      '<path d="M44,54 L56,54 L55,59 L45,59 Z M64,54 L76,54 L75,59 L65,59 Z" fill="none"' + o(2.2) + '/><path d="M56,55 L64,55" fill="none"' + o(2) + '/>' +
+      '<path d="M59,58 Q57,64 61,65" fill="none"' + o(2) + '/>' +
+      '<path d="M52,71 Q60,74 68,71" fill="none"' + o(2.4) + '/>' + blush(65) +
+      '<path d="M22,58 L30,58 M90,58 L98,58" fill="none" stroke="#9C6ADE" stroke-width="2.4" stroke-linecap="round"/>');
+  };
+  /* Cap au Large : Gaspard Longue-Vue, le maire qui voit loin. Cheveux courts, une longue-vue à la main */
+  P.HZ = function () {
+    var sk = '#EFC4A0';
+    return frame('#A9DDE5',
+      body('#24465A', '#FFFFFF', '<path d="M56,90 L64,90 L66,110 L60,116 L54,110 Z" fill="#2BA6B8"' + o(1.6) + '/>') +
+      neck(sk) + ears(sk, 54, 21) +
+      '<path d="M40,52 Q39,22 60,21 Q81,22 80,52 Q80,80 60,83 Q40,80 40,52 Z" fill="' + sk + '"' + o() + '/>' +
+      '<path d="M39,44 Q38,18 60,18 Q82,18 81,44 Q78,28 66,30 Q54,26 39,44 Z" fill="#4A3A30"' + o(2.2) + '/>' +
+      brows(42, -0.5, 2.8, '#4A3A30') + eyes(50, { r: 3.4, px: 1 }) +
+      '<path d="M59,54 Q57,61 61,62" fill="none"' + o(2) + '/>' +
+      '<path d="M51,70 Q60,75 69,70" fill="none"' + o(2.4) + '/>' +
+      '<path d="M78,92 L102,70 L107,75 L84,98 Z" fill="#C9A24A"' + o(2) + '/><path d="M90,82 L95,87" fill="none"' + o(1.6) + '/><ellipse cx="104.5" cy="72.5" rx="2.6" ry="4.6" transform="rotate(45 104.5 72.5)" fill="#DCEFF2"' + o(1.6) + '/>');
+  };
+  /* Toujours Debout : Aymeric Clocher, le gaulois réfractaire. Moustache tombante, sourcils froncés, cocarde */
+  P.DL = function () {
+    var sk = '#EDBE98';
+    return frame('#C9D3DF',
+      body('#4F5F78', '#FFFFFF', '<circle cx="84" cy="100" r="5" fill="#4A7FD0"' + o(1.4) + '/><circle cx="84" cy="100" r="3.2" fill="#fff"/><circle cx="84" cy="100" r="1.6" fill="#C8323C"/>') +
+      neck(sk) + ears(sk, 54, 23) +
+      '<path d="M38,54 Q37,26 60,25 Q83,26 82,54 Q82,80 60,82 Q38,80 38,54 Z" fill="' + sk + '"' + o() + '/>' +
+      '<path d="M37,46 Q36,22 60,21 Q84,22 83,46 Q80,32 70,30 L66,36 L60,30 L54,36 L50,30 Q40,32 37,46 Z" fill="#B88A4A"' + o(2.2) + '/>' +
+      brows(43, 3, 3.8, '#8A6234') + eyes(51, { r: 3.2 }) +
+      '<path d="M58,54 Q56,62 61,63" fill="none"' + o(2.2) + '/>' +
+      '<path d="M60,66 Q50,64 44,72 Q42,80 46,84 Q50,74 60,71 Q70,74 74,84 Q78,80 76,72 Q70,64 60,66 Z" fill="#B88A4A"' + o(2) + '/>');
+  };
+  /* La Grande Nostalgie : Charles Naphtaline, le polémiste. Cheveux gominés, petites lunettes, nœud papillon, une mite s'envole */
+  P.RQ = function () {
+    var sk = '#EAC3A0';
+    return frame('#D9C9A8',
+      body('#3B3B3B', '#F4F0E6', '<path d="M52,90 L60,94 L68,90 L68,98 L60,94 L52,98 Z" fill="#7A1F2E"' + o(1.4) + '/>') +
+      neck(sk) + ears(sk, 54, 22) +
+      '<path d="M39,54 Q38,26 60,25 Q82,26 81,54 Q81,80 60,82 Q39,80 39,54 Z" fill="' + sk + '"' + o() + '/>' +
+      '<path d="M38,46 Q36,20 60,20 Q84,20 82,46 Q82,34 74,30 Q60,26 44,32 Q38,36 38,46 Z" fill="#2A2420"' + o(2.2) + '/><path d="M46,30 Q60,26 76,30" fill="none" stroke="#5A5048" stroke-width="1.4"/>' +
+      brows(43, 2, 3, '#2A2420') + eyes(51, { r: 3 }) +
+      '<circle cx="51" cy="51" r="5.5" fill="none"' + o(2) + '/><circle cx="69" cy="51" r="5.5" fill="none"' + o(2) + '/><path d="M56.5,51 L63.5,51" fill="none"' + o(2) + '/>' +
+      '<path d="M59,56 Q57,63 61,64" fill="none"' + o(2) + '/>' +
+      '<path d="M51,71 Q60,68 69,71" fill="none"' + o(2.6) + '/>' +
+      '<path d="M98,30 q-6,-6 -10,0 q6,4 10,0 q6,-6 10,0 q-6,4 -10,0 Z" fill="#E6DCC4"' + o(1.4) + '/><path d="M98,26 L98,34" fill="none"' + o(1.6) + '/>');
+  };
+
   /* Lulu, ta directrice de campagne : grosses lunettes, chignon et crayon, café à la main */
   function advisor() {
     var sk = '#F3C9A8';

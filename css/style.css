@@ -186,7 +186,7 @@ button { font-family: inherit; color: inherit; }
 .race-bar { position: relative; height: 14px; display: flex; overflow: hidden; background: var(--rule); border-radius: 6px; }
 .race-bar .seg { height: 100%; transition: width .4s; border-right: 1px solid var(--paper); }
 .race-bar .mark { position: absolute; left: 50%; top: -2px; bottom: -2px; width: 2px; background: var(--ink); }
-.race-legend { display: grid; grid-template-columns: repeat(5, minmax(0, auto)); justify-content: space-between; gap: 4px; font-size: 12.5px; }
+.race-legend { display: grid; grid-template-columns: repeat(4, minmax(0, auto)); justify-content: space-between; gap: 4px; font-size: 12.5px; }
 .race-legend > span { display: flex; align-items: center; gap: 4px; white-space: nowrap; overflow: hidden; }
 .race-legend .num { flex-shrink: 0; }
 .race-legend .me { font-weight: 700; }

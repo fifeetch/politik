@@ -25,8 +25,11 @@
   function player(g, pid) { for (var i = 0; i < g.players.length; i++) if (g.players[i].id === pid) return g.players[i]; return null; }
   function pids(g) { return g.players.map(function (p) { return p.id; }); }
   function cubes(g, rid, pid) { return g.regions[rid].cubes[pid] || 0; }
-  function minControl(pid) { return pid === 'MN' ? 4 : R.minControl; }
-  function dist(a, b) { return Math.abs(PARTY[a].pos - PARTY[b].pos); }
+  function minControl(pid) { return pid === 'MN' || pid === 'HZ' ? 4 : R.minControl; }
+  /* Distance sur l'axe gauche-droite, de 1 (voisins) à 5 (opposés). v1.7 : positions décimales (12 partis), arrondies. */
+  function dist(a, b) { if (a === b) return 0; return Math.min(5, Math.max(1, Math.round(Math.abs(PARTY[a].pos - PARTY[b].pos)))); }
+  /* Ce que rapporte une Collecte : 3 € en général, 4 € et 1 ★ pour En Mouvement, 2 € pour les petits partis */
+  function fundsGain(pid) { return pid === 'EM' ? { money: 4, infl: 1 } : pid === 'VP' || pid === 'PC' || pid === 'MD' ? { money: 2, infl: 0 } : { money: 3, infl: 0 }; }
   function allyOf(g, pid) { return (g.alliances && g.alliances[pid]) || null; }
 
   /* ---------- Thèmes (v0.3) ---------- */
@@ -148,6 +151,7 @@
   function terrainBreakdown(g, pid, rid, th) {
     var imp = impact(g, pid, rid, th), parts = [{ k: 'base', label: 'impact ' + imp, n: R.terrainCubes[imp] }];
     if (pid === 'SM' && cubes(g, rid, pid) >= 5) parts.push({ k: 'parti', label: 'implantation', n: 1 });
+    if (pid === 'DL' && REG[rid].profile === 'rurale') parts.push({ k: 'parti', label: 'France des clochers', n: 1 });
     var pl = player(g, pid);
     if (pl && pl.phare && MEAS[pl.phare].theme === th) parts.push({ k: 'phare', label: 'mesure phare', n: R.pharBonus });
     var e = pl && pl.programme ? echoBonus(g, pid, rid) : 0;   // v0.8 : le programme plaît (ou déplaît) aux habitants
@@ -265,9 +269,10 @@
     Object.keys(n).forEach(function (p) { n[p] /= w; });
     return n;
   })();
+  var POLL_SCALE = (function () { var t = 0; Object.keys(D.POLLS.avg).forEach(function (k) { t += D.POLLS.avg[k]; }); return t > 100 ? 100 / t : 1; })();
   function baseScore(base, r, pid) {
     if (base === 'p2022') return (r.start22 && r.start22[pid]) || 0;
-    if (base === 'sond') return (r.start[pid] || 0) * D.POLLS.avg[pid] / NAT24[pid];   // profil 2024 × tendance nationale des sondages
+    if (base === 'sond') return NAT24[pid] ? (r.start[pid] || 0) * (D.POLLS.avg[pid] || 0) / NAT24[pid] * POLL_SCALE : 0;   // profil 2024 × tendance nationale des sondages
     return r.start[pid] || 0;
   }
   /* Mode Réaliste : la part des « autres » (petites listes, partis absents de la partie). La campagne les écrase peu à peu :
@@ -306,7 +311,7 @@
       players: ids.map(function (id, i) {
         var p = PARTY[id];
         return { id: id, human: id === humanParty, money: p.money, infl: p.infl,
-                 cards: p.cards.slice(), objective: objs[i], debateWins: 0,
+                 cards: p.cards.slice(), objective: objs[i % objs.length], debateWins: 0,
                  forme: R.formeStart, cas: 0, momentum: 0, cred: Object.assign({}, p.cred), talk: {}, militants: 0,
                  programme: null, phare: null, budget: 0 };
       }),
@@ -460,7 +465,9 @@
     if ((g.bases[rid] || []).indexOf(pid) >= 0) { n++; why.push('tes militants'); }
     if (lowTurnoutFit(g, pid, rid) >= 0.18) { n++; why.push('ton programme parle à ceux qui votent peu'); }
     if (regionVoters(g, rid).abst >= 0.35) { n++; why.push('beaucoup d\'abstentionnistes'); }
-    return { n: Math.min(3, n), why: why };
+    var cap = 3;
+    if (pid === 'PC' && REG[rid].profile === 'industrielle') { n++; cap = 4; why.push('bastion ouvrier'); }
+    return { n: Math.min(cap, n), why: why };
   }
   function enqueteChance(g, target) { return Math.min(0.9, R.enqueteBase + R.enqueteCas * player(g, target).cas); }
   function dilemmaDef(id) { return D.DILEMMAS.filter(function (d) { return d.id === id; })[0]; }
@@ -582,6 +589,9 @@
       c.money += g.mods.terrainExtra || 0;
       if (pid === 'FI' && act.region && REG[act.region].profile === 'rurale') c.money += 1;
     }
+    if (act.type === 'medias' && (pid === 'LO' || pid === 'DL')) c.money += 1;   // v1.7 : petits partis, peu de relais médiatiques
+    if (act.type === 'militants' && pid === 'LO') c.money -= 1;
+    if (act.type === 'reforme' && pid === 'HZ') c.infl -= 1;
     if (act.type === 'reseaux' && g.mods.socialFree) c.money = 0;
     // (réduction MN retirée v0.1)
     return c;
@@ -735,6 +745,7 @@
         if (pid === 'FI' && d <= 2) { var d2 = 1 + Math.floor(g.rng() * 6); t.push('dé ' + d + ', relancé'); d = d2; }
         var m = d === 1 ? -1 : d <= 3 ? 1 : d <= 5 ? 2 : 4;
         if (isHot(g, act.theme)) m += R.socialHotBonus;
+        if (pid === 'RQ' && act.theme === 'immigration') m += 1;   // v1.7 : polémiques
         var got = addCubes(g, act.region, pid, m);
         t.push('dé ' + d + (d === 6 ? ' VIRAL' : d === 1 ? ' bad buzz' : '') + ' : ' + (got >= 0 ? '+' : '') + got + ' en ' + rn); break; }
       case 'contre': {
@@ -769,7 +780,7 @@
         if (!g.nextHot.some(function (x) { return x.theme === act.theme; })) g.nextHot.push({ theme: act.theme, pid: pid });
         t.push(THEME[act.theme].name + ' fera l’actu au prochain tour'); break; }
       case 'fonds': {
-        var f = pid === 'EM' ? 4 : pid === 'VP' ? 2 : 3; pl.money += f; if (pid === 'EM') pl.infl += 1; t.push('+' + f + ' €' + (pid === 'EM' ? ' +1 ★' : '')); break; }
+        var fg = fundsGain(pid), f = fg.money; pl.money += f; pl.infl += fg.infl; t.push('+' + f + ' €' + (pid === 'EM' ? ' +1 ★' : '')); break; }
       case 'reforme': {
         var prof2 = REG[act.region].profile;
         D.REGIONS.forEach(function (r) { if (r.profile === prof2) { var x = addCubes(g, r.id, pid, 1); if (x) t.push('+1 ' + r.name); } });
@@ -1006,6 +1017,9 @@
     var b = g.between; if (!b || b.deals[e]) return 0;
     var pe = player(g, e), ch = R2.accept[dist(f, e)] || 0;
     if (mid === pe.phare) ch *= R2.phareBoost;
+    if (f === 'MD' || e === 'MD') ch += 0.15;   // v1.7 : faiseur de rois
+    if (f === 'RQ' || e === 'RQ') ch -= 0.15;   // v1.7 : repoussoir
+    ch = Math.max(0, ch);
     ch *= Math.pow(R2.retry, b.tried[f + e] || 0);
     return Math.min(0.95, ch);
   }
@@ -1211,7 +1225,7 @@
     createGame: createGame, startTurn: startTurn, resolveActions: resolveActions, resolveDebate: resolveDebate, setupDebate: setupDebate, duelResult: duelResult, replyPoints: replyPoints,
     isDebateTurn: isDebateTurn, spotlightTarget: spotlightTarget, applySpotlight: applySpotlight, endTurn: endTurn,
     finalScores: finalScores, firstRound: firstRound, openBetween: openBetween, betweenAct: betweenAct, betweenError: betweenError, answerCounter: answerCounter, answerBetweenOffer: answerBetweenOffer, setConsigne: setConsigne, concessionsFor: concessionsFor, dealChance: dealChance, aiBetweenStep: aiBetweenStep, aiConsigne: aiConsigne, transfersFor: transfersFor, projectSecond: projectSecond, closeBetween: closeBetween, autoBetween: autoBetween, objectiveMet: objectiveMet, objectiveProgress: objectiveProgress, objectiveShare: objectiveShare, terrainBreakdown: terrainBreakdown, turnOrder: turnOrder, election: election, poll: poll, votes: votes,
-    dist: dist, allyOf: allyOf, allianceError: allianceError, answerOffer: answerOffer, acceptChance: acceptChance,
+    dist: dist, fundsGain: fundsGain, allyOf: allyOf, allianceError: allianceError, answerOffer: answerOffer, acceptChance: acceptChance,
     poachTarget: poachTarget, transferRate: transferRate,
     actionCost: actionCost, checkAction: checkAction, mediaRegions: mediaRegions, gain: gain, bestRegions: bestRegions,
     controlledPoints: controlledPoints, controlledRegions: controlledRegions, totalCubes: totalCubes, ranking: ranking,

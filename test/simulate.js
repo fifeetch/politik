@@ -5,7 +5,7 @@ var E = require('../js/engine.js');
 var AI = require('../js/ai.js');
 
 var N = parseInt(process.argv[2] || '600', 10);
-var NP = parseInt(process.env.PLAYERS || '6', 10);   // v1.6 : nombre de partis en lice (6 = tous)
+var NP = parseInt(process.env.PLAYERS || String(D.PARTIES.length), 10);   // nombre de partis en lice (par défaut : tous)
 var quals = {}, dealsN = 0, dealsDist = {}, consignes = {};
 var all = D.PARTIES.map(function (p) { return p.id; });
 var stats = {}; all.forEach(function (id) { stats[id] = { played: 0, wins: 0, pts: 0 }; });

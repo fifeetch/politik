@@ -185,7 +185,7 @@
       (gameMode === 'reel' ? '<div class="score24"><span>Score de départ</span><b>' + pctFr(natScore(gameBase, p.id) / 100, 1) + ' %</b><small>' + esc(D.BASES[gameBase].text) + ' <button type="button" class="linkbtn" data-learn="' + D.BASES[gameBase].learn + '">Pourquoi ce chiffre ?</button></small></div>'
         : '<div class="score24"><span>Mode Égalité</span><b>2</b><small>électeurs dans chaque région pour chaque parti : personne ne part en tête.</small></div>') +
       axisHtml(p.id) +
-      (p.pos === 1 || p.pos === 6 ? '<div><b>Au bout de l\'axe.</b> Au second tour, les reports de voix seront plus durs à obtenir : il faudra bien négocier entre les deux tours.</div>' : '') +
+ ((p.pos <= 1 || p.pos >= 6) ? '<div><b>Au bout de l\'axe.</b> Au second tour, les reports de voix seront plus durs à obtenir : il faudra bien négocier entre les deux tours.</div>' : '') +
       '<div><b>Force.</b> ' + esc(p.force) + '</div><div><b>Faiblesse.</b> ' + esc(p.weakness) +
       '</div><div><b>Bases.</b> ' + p.bases.map(function (r) { return E.REG[r].name; }).join(', ') +
       '</div><div><b>Cartes.</b> ' + p.cards.map(function (c) { return D.CARDS[c].name; }).join(' · ') + '</div>';
@@ -607,7 +607,7 @@
     var pl = mePl(), m = pl.money, f = pl.infl, fo = pl.forme;
     queue.forEach(function (a) {
       var c = E.actionCost(g, me, a); m -= c.money; f -= c.infl; fo -= c.forme;
-      if (a.type === 'fonds') { m += me === 'EM' ? 4 : me === 'VP' ? 2 : 3; if (me === 'EM') f += 1; }
+      if (a.type === 'fonds') { m += E.fundsGain(me).money; f += E.fundsGain(me).infl; }
       if (a.type === 'card' && a.card === 'primaire') f += 3;
       if (a.type === 'card' && a.card === 'rassemblement') { m += 3; f += 1; }
     });
@@ -683,10 +683,17 @@
     if (instant) requestAnimationFrame(function () { bar.classList.remove('instant'); });
     leg.innerHTML = '';
     var shown = {};
+    // v1.7 : 12 partis. La légende montre les 5 premiers, toi, et regroupe le reste (la barre, elle, montre tout le monde)
+    var top = poll.slice(0, 5).map(function (x) { return x.pid; });
+    if (top.indexOf(me) < 0) top.push(me);
+    var rest = poll.filter(function (x) { return top.indexOf(x.pid) < 0; });
+    rows.forEach(function (x) { if (top.indexOf(x.pid) < 0 && x.pid !== '_autres') shown[x.pid] = x.pct; });
+    var restPct = rest.reduce(function (t, x) { return t + x.pct; }, 0) + au;
+    rows = poll.filter(function (x) { return top.indexOf(x.pid) >= 0; }).concat(restPct > 0.005 ? [{ pid: '_autres', pct: restPct, n: rest.length }] : []);
     rows.forEach(function (x) {
       var old = raceShown[x.pid], now = Math.round(100 * x.pct), was = old == null ? null : Math.round(100 * old);
       var trend = !instant && was != null && was !== now ? (now > was ? 'up' : 'down') : '';
-      var name = x.pid === '_autres' ? 'Autres' : x.pid === me ? 'Toi' : x.pid;
+      var name = x.pid === '_autres' ? (x.n ? x.n + ' autres' : 'Autres') : x.pid === me ? 'Toi' : x.pid;
       var sw = x.pid === '_autres' ? '<i class="sw sw-autres"></i>' : '<i class="sw" style="background:' + party(x.pid).color + '"></i>';
       var span = el('span', { class: x.pid === '_autres' ? 'autres' : x.pid === me ? 'me' : '' },
         sw + name + ' <span class="num">' + (trend ? was : now) + '</span> %' + (trend ? '<b class="trend ' + trend + '">' + (trend === 'up' ? '▲' : '▼') + '</b>' : '') + (x.pid === ally ? ' <em class="ally">allié</em>' : ''));
@@ -882,7 +889,7 @@
       case 'imposer': return 'ton thème <b>à la une</b>';
       case 'contre': return 'rival en tête <b>−2 cubes</b> · +1 🍳';
       case 'militants': return '<b>+1 cube</b> ici à chaque tour · ' + (R.militantsMax - mePl().militants) + ' équipe' + (R.militantsMax - mePl().militants > 1 ? 's' : '') + ' dispo';
-      case 'fonds': return '<b>+' + (me === 'EM' ? '4 € +1 ★' : me === 'VP' ? '2 €' : '3 €') + '</b>';
+      case 'fonds': return '<b>+' + E.fundsGain(me).money + ' €' + (E.fundsGain(me).infl ? ' +' + E.fundsGain(me).infl + ' ★' : '') + '</b>';
       case 'reforme':
         if (!r) return '+1 cube dans des régions';
         if (g.regions[r].controller !== me) return 'région à toi requise';

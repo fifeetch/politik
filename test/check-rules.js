@@ -155,10 +155,11 @@ section('Partis en lice et débats');
   var g = E.createGame('VP', { seed: 11 });
   ok(g.players.length === D.PARTIES.length, 'partie standard : les ' + D.PARTIES.length + ' partis en lice (' + g.players.length + ')');
   var g6 = E.createGame('VP', { seed: 11, mode: 'egal' });
-  E.poll(g6).forEach(function (x) { ok(Math.abs(x.pct - 1 / 6) < 1e-9, 'Simulation à 6 : ' + x.pid + ' = 1/6'); });
+  var N = D.PARTIES.length;
+  E.poll(g6).forEach(function (x) { ok(Math.abs(x.pct - 1 / N) < 1e-9, 'Simulation à ' + N + ' : ' + x.pid + ' = 1/' + N); });
   ok(E.checkAction(g, 'VP', { type: 'alliance', target: 'SM' }) !== null, 'alliance refusée pendant la campagne du 1er tour');
   ok(E.checkAction(g, 'VP', { type: 'rupture' }) !== null, 'rupture refusée pendant la campagne du 1er tour');
-  [4, 5, 6].forEach(function (n) {
+  [4, 5, 6, 7, 12].forEach(function (n) {
     var ids = D.PARTIES.map(function (p) { return p.id; }).slice(0, n);
     var gd = E.createGame(null, { seed: n, aiParties: ids }); gd.turn = 3;
     var deb = E.setupDebate(gd), per = {}, pairs = {};
@@ -178,6 +179,32 @@ section('Partis en lice et débats');
     E.endTurn(g);
   }
   ok(seen === 0, 'l\'ordinateur ne programme aucune alliance pendant la campagne (' + seen + ')');
+})();
+
+/* ---------- 8 bis. v1.7 : les 12 partis et leurs règles ---------- */
+section('12 partis');
+(function () {
+  ok(D.PARTIES.length === 12, '12 partis');
+  D.PARTIES.forEach(function (p) {
+    ok(D.TEMPERS[p.id], p.id + ' : tempérament de débat');
+    ok(p.programme.length === 5 && p.programme.every(function (m) { return E.MEAS[m]; }), p.id + ' : programme de 5 mesures valides');
+    ok((p.financing || []).every(function (m) { return E.MEAS[m]; }), p.id + ' : financements valides');
+    ok(p.cards.every(function (k) { return D.CARDS[k]; }), p.id + ' : cartes valides');
+    ok(D.REGIONS.every(function (r) { return typeof r.start[p.id] === 'number' && typeof r.start22[p.id] === 'number'; }), p.id + ' : scores de départ dans les 13 régions');
+  });
+  var ids = D.PARTIES.map(function (p) { return p.id; });
+  ids.forEach(function (a) { ids.forEach(function (b) { var d = E.dist(a, b); ok(a === b ? d === 0 : d >= 1 && d <= 5, 'distance ' + a + '-' + b + ' entre 1 et 5'); }); });
+  var g = E.createGame('LO', { mode: 'egal' }), rur = 'naq', ind = 'hdf';
+  ok(E.actionCost(g, 'LO', { type: 'militants', region: rur }).money === 2, 'LO : militants à 2 €');
+  ok(E.actionCost(g, 'LO', { type: 'medias', region: rur, theme: 'emploi' }).money === 4 && E.actionCost(g, 'DL', { type: 'medias', region: rur, theme: 'emploi' }).money === 4, 'LO et DL : Télé à 4 €');
+  ok(E.actionCost(g, 'HZ', { type: 'reforme', region: rur }).infl === 3, 'HZ : Promesse à 3 ★');
+  ok(E.minControl('HZ') === 4, 'HZ : 4 cubes pour contrôler');
+  ok(E.fundsGain('PC').money === 2 && E.fundsGain('MD').money === 2, 'PC et MD : Collecte à 2 €');
+  ok(E.mobilizeGain(g, 'PC', ind).n === E.mobilizeGain(g, 'SM', ind).n + 1 || E.mobilizeGain(g, 'PC', ind).n === 4, 'PC : Mobiliser +1 en région industrielle');
+  ok(E.terrainCubes(g, 'DL', rur, 'emploi') === E.terrainCubes(g, 'UG', rur, 'emploi') - (E.cred(g, 'UG', 'emploi') - E.cred(g, 'DL', 'emploi') ? 0 : 0) || E.terrainBreakdown(g, 'DL', rur, 'emploi').parts.some(function (x) { return x.label === 'France des clochers'; }), 'DL : +1 en Meeting rural');
+  var ge = E.createGame('VP', { mode: 'egal', seed: 2 }); ge.turn = 8; ge.round1 = { first: ge.players.map(function (p) { return { pid: p.id, votes: 1, pct: 1 / 12 }; }), finalists: ['SM', 'UG'] }; ge.between = { deals: {}, tried: {} };
+  ok(E.dealChance(ge, 'SM', 'MD', E.PARTY.MD.programme[1]) > E.dealChance(ge, 'SM', 'VP', E.PARTY.VP.programme[1]), 'MD : accords plus faciles');
+  ok(E.dealChance(ge, 'UG', 'RQ', E.PARTY.RQ.programme[1]) < (D.RULES.round2.accept[E.dist('UG', 'RQ')]), 'RQ : accords plus difficiles');
 })();
 
 /* ---------- 9. v1.6 : l'entre-deux-tours ---------- */
