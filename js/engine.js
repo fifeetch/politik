@@ -295,7 +295,7 @@
     var seed = opts.seed != null ? opts.seed : Math.floor(Math.random() * 1e9);
     var rng = makeRng(seed);
     var others = D.PARTIES.map(function (p) { return p.id; }).filter(function (id) { return id !== humanParty; });
-    var ai = opts.aiParties || shuffle(others, rng).slice(0, 3);
+    var ai = opts.aiParties || shuffle(others, rng).slice(0, R.rivals);
     var ids = humanParty ? [humanParty].concat(ai) : ai;
     var objs = shuffle(D.OBJECTIVES.map(function (o) { return o.id; }), rng);
     var g = {
@@ -340,6 +340,11 @@
       for (var k = 0; k < spare.length; k++) {
         if (!objectiveMet(g, pl.id, spare[k])) { var old = pl.objective; pl.objective = spare[k]; spare[k] = old; return; }
       }
+      // plus d'objectif libre (6 partis pour 8 objectifs) : on échange avec un autre parti, si ça arrange les deux
+      g.players.some(function (o2) {
+        if (o2 === pl || objectiveMet(g, pl.id, o2.objective) || objectiveMet(g, o2.id, pl.objective)) return false;
+        var t = pl.objective; pl.objective = o2.objective; o2.objective = t; return true;
+      });
     });
     // v0.5 : une crise en 3 actes, et un paquet de dilemmes
     var cr = D.CRISES[Math.floor(rng() * D.CRISES.length)];
@@ -601,7 +606,7 @@
       if (pl0.militants >= R.militantsMax) return 'Toutes tes équipes de militants sont déjà sur le terrain.';
       if (g.turn >= R.maxTurns) return 'Trop tard : la campagne s’achève.';
     }
-    if (act.type === 'alliance') return allianceError(g, pid, act.target);
+    if (act.type === 'alliance' || act.type === 'rupture') return 'Les alliances se négocient entre les deux tours.';
     if (act.type === 'enquete') {
       if (!act.target || !player(g, act.target) || act.target === pid) return 'Choisis un rival.';
       if (allyOf(g, pid) === act.target) return 'On n’enquête pas sur son allié.';
@@ -849,11 +854,20 @@
   /* ---------- Débat ---------- */
   function isDebateTurn(g) { return R.debateTurns.indexOf(g.turn) >= 0; }
   /* v0.6 : le débat en face-à-face. setupDebate prépare les 6 duels (chacun contre chacun, un thème par duel). */
+  /* v1.6 : quel que soit le nombre de partis, chacun affronte au plus 3 adversaires (méthode du tournoi « tous contre tous »,
+     arrêtée après 3 rondes). À 4 partis, cela fait les 6 duels habituels ; à 6, 9 duels au lieu de 15. */
   function setupDebate(g) {
-    var ids = pids(g), duels = [];
-    for (var i = 0; i < ids.length; i++) for (var j = i + 1; j < ids.length; j++) {
-      var th = g.rng() < 0.5 && g.hot && g.hot.length ? g.hot[0] : D.THEMES[Math.floor(g.rng() * D.THEMES.length)].id;
-      duels.push({ a: ids[i], b: ids[j], theme: th });
+    var ids = shuffle(pids(g), g.rng), duels = [];
+    if (ids.length % 2) ids.push(null);   // nombre impair : un parti se repose à chaque ronde
+    var n = ids.length, rounds = Math.min(R.debateDuels, n - 1);
+    for (var r = 0; r < rounds; r++) {
+      for (var i = 0; i < n / 2; i++) {
+        var a = ids[i], b = ids[n - 1 - i];
+        if (!a || !b) continue;
+        var th = g.rng() < 0.5 && g.hot && g.hot.length ? g.hot[0] : D.THEMES[Math.floor(g.rng() * D.THEMES.length)].id;
+        duels.push({ a: a, b: b, theme: th });
+      }
+      ids.splice(1, 0, ids.pop());   // rotation : le premier reste en place, les autres tournent
     }
     g.debate = { duels: duels };
     return g.debate;
@@ -932,9 +946,15 @@
       pl.momentum = d >= R.momentumStep ? 1 : d <= -R.momentumStep ? -1 : 0;
     });
     g.lastPoll = now;
-    if (g.turn >= R.maxTurns) { g.over = true; g.result = election(g); g.winner = g.result.winner; }
+    g.phase = 'next';
+    if (g.turn >= R.maxTurns) {
+      // v1.6 : le 1er tour est voté et figé. Majorité absolue : c'est fini. Sinon : l'entre-deux-tours commence.
+      var r1 = firstRound(g);
+      g.round1 = r1;
+      if (r1.direct) { g.over = true; g.result = { first: r1.first, stats1: r1.stats1, direct: true, second: null, winner: r1.first[0].pid }; g.winner = g.result.winner; g.phase = 'over'; }
+      else { g.between = openBetween(g); g.phase = 'between'; res.between = true; }
+    }
     res.winner = g.winner; res.over = g.over; res.result = g.result;
-    g.phase = g.over ? 'over' : 'next';
     return res;
   }
 
@@ -959,38 +979,224 @@
   function objectiveMet(g, pid, oid) { var p = objectiveProgress(g, pid, oid); return p.done >= p.need; }
   /* Part des suffrages exprimés ajoutée par un objectif réussi (≈ 2,8 % pour un bonus de 3, 3,7 % pour 4) */
   function objectiveShare(o) { return o.bonus * R.objectiveVotes / 65; }
-  /* ---------- Élection : premier tour puis second tour avec reports de voix ---------- */
-  function transferRate(g, from, to) {
-    if (allyOf(g, from) === to) return R.allyTransfer;
-    if (g.betrayed[from] === to) return R.betrayedTransfer;
-    return R.transfer[dist(from, to)] || 0;
+  /* ---------- v1.6 : l'élection en deux temps ---------- */
+  var R2 = R.round2;
+  /* Premier tour : figé une fois pour toutes (résultats, deux qualifiés) */
+  function firstRound(g) {
+    var v = votes(g, true), first = percents(v), st = turnoutStats(g);
+    return { first: first, stats1: st, autres: v._autres || 0, direct: first[0].pct > 0.5, finalists: [first[0].pid, first[1].pid] };
   }
-  function election(g) {
-    var first = percents(votes(g, true)), st = turnoutStats(g);
-    var out = { first: first, second: null, winner: null, direct: false, stats1: st };
-    if (first[0].pct > 0.5) { out.direct = true; out.winner = first[0].pid; return out; }
-    var A = first[0], B = first[1], va = A.votes, vb = B.votes, transfers = [], nt = 0;
-    var vAll = votes(g, true), au = vAll._autres || 0;
-    if (au > 0) {   // les électeurs des autres listes se partagent entre les finalistes… ou restent chez eux
-      var sa = A.votes / (A.votes + B.votes), ta = R.othersTransfer * sa, tb = R.othersTransfer * (1 - sa);
-      va += au * ta; vb += au * tb; nt += au * (1 - ta - tb);
-      out.othersTransfer = { toA: ta, toB: tb, abst: 1 - ta - tb, pct: au / first.reduce(function (s, x) { return s + x.votes; }, au) };
+  function openBetween(g) {
+    var r1 = g.round1, b = { a: r1.finalists[0], b: r1.finalists[1], elim: r1.first.slice(2).map(function (x) { return x.pid; }),
+      left: {}, deals: {}, consignes: {}, tried: {}, boost: {}, offers: [], counter: null, log: [], plan: {}, closed: false };
+    [b.a, b.b].forEach(function (f) { b.left[f] = R2.actions; b.boost[f] = { mob: 0, ras: 0 }; player(g, f).deals = []; });
+    b.elim.forEach(function (e) { b.consignes[e] = null; });
+    // chaque finaliste mené par l'ordinateur prépare ses actions maintenant, sans connaître les décisions à venir des autres
+    [b.a, b.b].forEach(function (f) { if (!player(g, f).human) b.plan[f] = aiBetweenPlan(g, b, f); });
+    return b;
+  }
+  function side(b, f) { return f === b.a ? 'A' : 'B'; }
+  function votesOf(g, pid) { var x = g.round1.first.filter(function (y) { return y.pid === pid; })[0]; return x ? x.votes : 0; }
+  /* Les concessions possibles : les mesures du programme du parti éliminé que le finaliste n'a pas encore (sa mesure phare d'abord) */
+  function concessionsFor(g, f, e) {
+    var pf = player(g, f), pe = player(g, e), have = (pf.programme || []).concat((pf.deals || []).map(function (d) { return d.measure; }));
+    return (pe.programme || PARTY[e].programme).filter(function (m) { return have.indexOf(m) < 0; });
+  }
+  function dealChance(g, f, e, mid) {
+    var b = g.between; if (!b || b.deals[e]) return 0;
+    var pe = player(g, e), ch = R2.accept[dist(f, e)] || 0;
+    if (mid === pe.phare) ch *= R2.phareBoost;
+    ch *= Math.pow(R2.retry, b.tried[f + e] || 0);
+    return Math.min(0.95, ch);
+  }
+  function makeDeal(g, f, e, mid) {
+    var b = g.between;
+    b.deals[e] = { with: f, measure: mid };
+    b.consignes[e] = side(b, f);
+    player(g, f).deals.push({ with: e, measure: mid });
+    b.offers = b.offers.filter(function (o) { return o.to !== e; });
+    b.log.push({ type: 'deal', f: f, e: e, measure: mid, text: PARTY[e].short + ' appelle à voter ' + PARTY[f].short + ', qui reprend « ' + MEAS[mid].name + ' ».' });
+  }
+  function betweenError(g, f, act) {
+    var b = g.between;
+    if (!b || b.closed) return 'L’entre-deux-tours est terminé.';
+    if (f !== b.a && f !== b.b) return 'Seuls les deux finalistes agissent.';
+    if (b.left[f] <= 0) return 'Plus d’action disponible.';
+    if (act.type === 'negocier') {
+      if (b.elim.indexOf(act.target) < 0) return 'Ce parti n’est pas éliminé.';
+      if (b.deals[act.target]) return PARTY[act.target].short + ' a déjà conclu un accord avec ' + PARTY[b.deals[act.target].with].short + '.';
+      if (b.offers.some(function (o) { return o.from === f && o.to === act.target; })) return 'Ton offre attend déjà sa réponse.';
+      if (concessionsFor(g, f, act.target).indexOf(act.measure) < 0) return 'Cette concession n’est pas possible.';
     }
-    var scale = st.exprimes / first.reduce(function (s, x) { return s + x.votes; }, au);   // les voix des 4 partis du jeu → électeurs réels
-    first.slice(2).forEach(function (e) {
-      var ra = transferRate(g, e.pid, A.pid), rb = transferRate(g, e.pid, B.pid);
-      if (ra + rb > 1) { var s = ra + rb; ra /= s; rb /= s; }
-      va += e.votes * ra; vb += e.votes * rb; nt += e.votes * (1 - ra - rb);
-      transfers.push({ pid: e.pid, toA: ra, toB: rb, abst: 1 - ra - rb });
-    });
-    var tot = va + vb;
-    // les électeurs qui ne se reportent sur aucun des deux finalistes votent blanc… ou restent chez eux
-    var blancs2 = st.blancs + nt * scale * R.blankOfNonTransfer, votants2 = st.votants - nt * scale * (1 - R.blankOfNonTransfer);
-    var stats2 = { ins: st.ins, votants: votants2, blancs: blancs2, exprimes: votants2 - blancs2, participation: votants2 / st.ins, abstention: 1 - votants2 / st.ins, blankPct: blancs2 / votants2 };
-    out.second = { a: A.pid, b: B.pid, pctA: va / tot, pctB: vb / tot, transfers: transfers, stats: stats2 };
-    out.winner = va >= vb ? A.pid : B.pid;
-    return out;
+    if ((act.type === 'mobiliser' || act.type === 'rassembler') && b.boost[f][act.type === 'mobiliser' ? 'mob' : 'ras'] >= R2.maxUses) return 'Déjà fait deux fois.';
+    return null;
   }
+  /* Une action d'entre-deux-tours. Résultat : accept / counter / refuse / pending (le joueur éliminé répondra) / done */
+  function betweenAct(g, f, act) {
+    var b = g.between, err = betweenError(g, f, act);
+    if (err) return { ok: false, text: err };
+    b.left[f] -= 1;
+    if (act.type === 'mobiliser') { b.boost[f].mob++; b.log.push({ type: 'mob', f: f, text: PARTY[f].short + ' part chercher les abstentionnistes.' }); return { ok: true, outcome: 'done' }; }
+    if (act.type === 'rassembler') { b.boost[f].ras++; b.log.push({ type: 'ras', f: f, text: PARTY[f].short + ' lance un appel au rassemblement.' }); return { ok: true, outcome: 'done' }; }
+    var e = act.target, pe = player(g, e);
+    b.tried[f + e] = (b.tried[f + e] || 0);
+    if (pe.human) {
+      b.offers.push({ from: f, to: e, measure: act.measure });
+      b.log.push({ type: 'offer', f: f, e: e, text: PARTY[f].short + ' te fait une offre.' });
+      return { ok: true, outcome: 'pending' };
+    }
+    var ch = dealChance(g, f, e, act.measure);
+    b.tried[f + e] += 1;
+    if (g.rng() < ch) { makeDeal(g, f, e, act.measure); return { ok: true, outcome: 'accept', chance: ch }; }
+    if (act.measure !== pe.phare && pe.phare && concessionsFor(g, f, e).indexOf(pe.phare) >= 0 && g.rng() < R2.counterChance) {
+      b.counter = { f: f, e: e, measure: pe.phare };
+      b.log.push({ type: 'counter', f: f, e: e, text: PARTY[e].short + ' demande plutôt « ' + MEAS[pe.phare].name + ' ».' });
+      return { ok: true, outcome: 'counter', measure: pe.phare, chance: ch };
+    }
+    b.log.push({ type: 'refuse', f: f, e: e, text: PARTY[e].short + ' refuse l’offre de ' + PARTY[f].short + '.' });
+    return { ok: true, outcome: 'refuse', chance: ch };
+  }
+  /* Le finaliste répond à une contre-offre (sans dépenser d'action) */
+  function answerCounter(g, accept) {
+    var b = g.between, c = b && b.counter; if (!c) return false;
+    b.counter = null;
+    if (accept && !b.deals[c.e]) { makeDeal(g, c.f, c.e, c.measure); return true; }
+    b.log.push({ type: 'refuse', f: c.f, e: c.e, text: PARTY[c.f].short + ' refuse la contre-offre de ' + PARTY[c.e].short + '.' });
+    return false;
+  }
+  /* Le joueur éliminé répond à une offre : accept / refuse / counter (il réclame sa mesure phare) */
+  function answerBetweenOffer(g, f, decision) {
+    var b = g.between, e = b.offers.filter(function (o) { return o.from === f; })[0];
+    if (!e) return { ok: false };
+    var pid = e.to, pe = player(g, pid);
+    if (decision === 'accept') { makeDeal(g, f, pid, e.measure); return { ok: true, outcome: 'accept' }; }
+    b.offers = b.offers.filter(function (o) { return o !== e; });
+    if (decision === 'counter' && pe.phare && pe.phare !== e.measure && concessionsFor(g, f, pid).indexOf(pe.phare) >= 0) {
+      // le finaliste (ordinateur) accepte si tes électeurs pèsent assez lourd pour lui
+      var weight = votesOf(g, pid) / (votesOf(g, b.a) + votesOf(g, b.b));
+      if (g.rng() < Math.min(0.9, 0.35 + 2 * weight)) { makeDeal(g, f, pid, pe.phare); return { ok: true, outcome: 'accept', measure: pe.phare }; }
+      b.log.push({ type: 'refuse', f: f, e: pid, text: PARTY[f].short + ' refuse ta contre-offre.' });
+      return { ok: true, outcome: 'refuse' };
+    }
+    b.log.push({ type: 'refuse', f: pid, e: f, text: 'Tu refuses l’offre de ' + PARTY[f].short + '.' });
+    return { ok: true, outcome: 'refuse' };
+  }
+  /* Consigne de vote d'un parti éliminé : 'A', 'B' ou 'none'. Un accord fixe la consigne. */
+  function setConsigne(g, e, c) {
+    var b = g.between; if (!b || b.deals[e] || b.elim.indexOf(e) < 0) return false;
+    b.consignes[e] = c; return true;
+  }
+  function aiConsigne(g, b, e) {
+    if (b.deals[e]) return side(b, b.deals[e].with);
+    var dA = dist(e, b.a), dB = dist(e, b.b);
+    if (Math.min(dA, dB) >= 3 || dA === dB) return 'none';
+    return dA < dB ? 'A' : 'B';
+  }
+  /* Ce que vaut un accord avec e pour le finaliste f (en voix), pour l'ordinateur */
+  function dealValue(g, b, f, e) {
+    var d = dist(f, e), now = aiConsigne(g, b, e), mine = side(b, f);
+    var gain = (now === mine ? 0 : R2.endorse[d] || 0) + R2.dealBonus - (d >= 3 ? R2.farDealLoss * votesOf(g, f) / Math.max(1e-9, votesOf(g, e)) : 0);
+    return votesOf(g, e) * gain;
+  }
+  function aiBetweenPlan(g, b, f) {
+    var targets = b.elim.map(function (e) {
+      var pe = player(g, e), mid = concessionsFor(g, f, e)[0];
+      return { e: e, mid: mid, score: mid ? dealValue(g, b, f, e) * (R2.accept[dist(f, e)] || 0) : -1 };
+    }).filter(function (t) { return t.score > 0; }).sort(function (x, y) { return y.score - x.score; });
+    var plan = targets.slice(0, 2).map(function (t) { return { type: 'negocier', target: t.e, measure: t.mid }; });
+    while (plan.length < R2.actions) plan.push({ type: plan.length % 2 ? 'mobiliser' : 'rassembler' });
+    return plan;
+  }
+  /* L'ordinateur joue la prochaine action de son plan (en s'adaptant si la cible n'est plus libre) */
+  function aiBetweenStep(g, f) {
+    var b = g.between; if (!b || b.left[f] <= 0) return null;
+    var plan = b.plan[f] || (b.plan[f] = aiBetweenPlan(g, b, f)), act = plan.shift();
+    if (act && act.type === 'negocier') {
+      var mid = concessionsFor(g, f, act.target).filter(function (m) { return m === player(g, act.target).phare; })[0] || concessionsFor(g, f, act.target)[0];
+      act = mid ? { type: 'negocier', target: act.target, measure: mid } : null;
+    }
+    if (!act || betweenError(g, f, act)) act = betweenError(g, f, { type: 'mobiliser' }) ? { type: 'rassembler' } : { type: 'mobiliser' };
+    if (betweenError(g, f, act)) { b.left[f] = 0; return null; }
+    var r = betweenAct(g, f, act);
+    if (r.outcome === 'counter') answerCounter(g, true);
+    return r;
+  }
+  /* Les reports d'un parti éliminé vers les deux finalistes, et pourquoi. expected : estimation (consignes pas encore données) */
+  function transfersFor(g, e, expected) {
+    var b = g.between, A = b.a, B = b.b, dA = dist(e, A), dB = dist(e, B), why = [];
+    var ra = R.transfer[dA] || 0, rb = R.transfer[dB] || 0;
+    why.push('proximité : ' + Math.round(100 * ra) + ' % vers ' + PARTY[A].short + ', ' + Math.round(100 * rb) + ' % vers ' + PARTY[B].short);
+    var c = b.consignes[e] || (expected ? (player(g, e).human ? 'none' : aiConsigne(g, b, e)) : 'none'), deal = b.deals[e] || null;
+    if (c === 'A' || c === 'B') {
+      var to = c === 'A' ? A : B, plus = R2.endorse[dist(e, to)] || 0;
+      if (c === 'A') { ra += plus; rb = Math.max(0, rb - plus / 2); } else { rb += plus; ra = Math.max(0, ra - plus / 2); }
+      why.push('consigne : voter ' + PARTY[to].short + ' (+' + Math.round(100 * plus) + ' pts)');
+      if (deal) { if (c === 'A') ra += R2.dealBonus; else rb += R2.dealBonus; why.push('accord avec concession (+' + Math.round(100 * R2.dealBonus) + ' pts)'); }
+    } else { ra *= R2.noneFactor; rb *= R2.noneFactor; why.push('ne soutient personne (reports ×' + String(R2.noneFactor).replace('.', ',') + ')'); }
+    if (b.boost[A].ras) { ra += R2.rassemble * b.boost[A].ras; why.push('appel au rassemblement de ' + PARTY[A].short); }
+    if (b.boost[B].ras) { rb += R2.rassemble * b.boost[B].ras; why.push('appel au rassemblement de ' + PARTY[B].short); }
+    if (ra + rb > R2.maxTransfer) { var k = R2.maxTransfer / (ra + rb); ra *= k; rb *= k; }
+    var rest = 1 - ra - rb, blank = rest * R.blankOfNonTransfer;
+    return { pid: e, toA: ra, toB: rb, blank: blank, abst: rest - blank, consigne: c, deal: deal, why: why };
+  }
+  /* Le calcul du second tour (expected = estimation sans rien modifier) */
+  function secondCalc(g, expected) {
+    var b = g.between, r1 = g.round1, st = r1.stats1, A = b.a, B = b.b;
+    var T1 = r1.first.reduce(function (s, x) { return s + x.votes; }, r1.autres);
+    var va = votesOf(g, A), vb = votesOf(g, B), blankV = 0, abstV = 0, notes = [];
+    // accords lointains : une partie de ses propres électeurs n'apprécie pas
+    [A, B].forEach(function (f) {
+      var far = (player(g, f).deals || []).filter(function (d) { return dist(f, d.with) >= 3; }).length;
+      if (!far) return;
+      var lost = votesOf(g, f) * R2.farDealLoss * far;
+      if (f === A) va -= lost; else vb -= lost;
+      abstV += lost; notes.push({ pid: f, text: Math.round(100 * R2.farDealLoss * far) + ' % de ses électeurs n’ont pas aimé ses accords avec des partis éloignés' });
+    });
+    var mobA = b.boost[A].mob * R2.mobilize * T1, mobB = b.boost[B].mob * R2.mobilize * T1;
+    va += mobA; vb += mobB;
+    var transfers = b.elim.map(function (e) {
+      var t = transfersFor(g, e, expected), ve = votesOf(g, e);
+      va += ve * t.toA; vb += ve * t.toB; blankV += ve * t.blank; abstV += ve * t.abst;
+      t.pct = ve / T1;
+      return t;
+    });
+    var othersTransfer = null;
+    if (r1.autres > 0) {
+      var sa = votesOf(g, A) / (votesOf(g, A) + votesOf(g, B)), ta = R.othersTransfer * sa, tb = R.othersTransfer * (1 - sa), rest = 1 - ta - tb;
+      va += r1.autres * ta; vb += r1.autres * tb; blankV += r1.autres * rest * R.blankOfNonTransfer; abstV += r1.autres * rest * (1 - R.blankOfNonTransfer);
+      othersTransfer = { toA: ta, toB: tb, blank: rest * R.blankOfNonTransfer, abst: rest * (1 - R.blankOfNonTransfer), abstTotal: rest, pct: r1.autres / T1 };
+    }
+    var scale = st.exprimes / T1, tot = va + vb;
+    var votants2 = st.votants - abstV * scale + (mobA + mobB) * scale, blancs2 = st.blancs + blankV * scale;
+    var stats = { ins: st.ins, votants: votants2, blancs: blancs2, exprimes: votants2 - blancs2, participation: votants2 / st.ins, abstention: 1 - votants2 / st.ins, blankPct: blancs2 / votants2 };
+    return { a: A, b: B, pctA: va / tot, pctB: vb / tot, transfers: transfers, othersTransfer: othersTransfer, stats: stats,
+             mob: { a: b.boost[A].mob, b: b.boost[B].mob }, notes: notes, expected: !!expected };
+  }
+  function projectSecond(g) { return secondCalc(g, true); }
+  /* Clôture : l'ordinateur termine ses actions, les éliminés donnent leur consigne, puis on vote */
+  function closeBetween(g) {
+    var b = g.between; if (!b || b.closed) return g.result;
+    for (var k = 0; k < R2.actions * 2; k++) [b.a, b.b].forEach(function (f) { if (!player(g, f).human) aiBetweenStep(g, f); });
+    b.offers = []; b.counter = null;
+    b.elim.forEach(function (e) { if (!b.consignes[e]) b.consignes[e] = player(g, e).human ? 'none' : aiConsigne(g, b, e); });
+    b.closed = true;
+    var r1 = g.round1, second = secondCalc(g, false);
+    g.result = { first: r1.first, stats1: r1.stats1, direct: false, second: second, othersTransfer: second.othersTransfer, deals: b.deals, winner: second.pctA >= second.pctB ? b.a : b.b };
+    g.winner = g.result.winner; g.over = true; g.phase = 'over';
+    return g.result;
+  }
+  /* Pour les simulations : tout le monde est mené par l'ordinateur */
+  function autoBetween(g) {
+    var b = g.between;
+    for (var k = 0; k < R2.actions; k++) [b.a, b.b].forEach(function (f) { aiBetweenStep(g, f); });
+    return closeBetween(g);
+  }
+  /* Ancienne fonction (tests) : 1er tour seul, ou élection complète sans joueur */
+  function election(g) {
+    var r1 = firstRound(g);
+    return { first: r1.first, stats1: r1.stats1, direct: r1.direct, finalists: r1.finalists };
+  }
+  function transferRate(g, from, to) { return R.transfer[dist(from, to)] || 0; }
   function finalScores(g) {
     return g.players.map(function (p) {
       var o = D.OBJECTIVES.filter(function (x) { return x.id === p.objective; })[0];
@@ -1004,7 +1210,7 @@
   var API = {
     createGame: createGame, startTurn: startTurn, resolveActions: resolveActions, resolveDebate: resolveDebate, setupDebate: setupDebate, duelResult: duelResult, replyPoints: replyPoints,
     isDebateTurn: isDebateTurn, spotlightTarget: spotlightTarget, applySpotlight: applySpotlight, endTurn: endTurn,
-    finalScores: finalScores, objectiveMet: objectiveMet, objectiveProgress: objectiveProgress, objectiveShare: objectiveShare, terrainBreakdown: terrainBreakdown, turnOrder: turnOrder, election: election, poll: poll, votes: votes,
+    finalScores: finalScores, firstRound: firstRound, openBetween: openBetween, betweenAct: betweenAct, betweenError: betweenError, answerCounter: answerCounter, answerBetweenOffer: answerBetweenOffer, setConsigne: setConsigne, concessionsFor: concessionsFor, dealChance: dealChance, aiBetweenStep: aiBetweenStep, aiConsigne: aiConsigne, transfersFor: transfersFor, projectSecond: projectSecond, closeBetween: closeBetween, autoBetween: autoBetween, objectiveMet: objectiveMet, objectiveProgress: objectiveProgress, objectiveShare: objectiveShare, terrainBreakdown: terrainBreakdown, turnOrder: turnOrder, election: election, poll: poll, votes: votes,
     dist: dist, allyOf: allyOf, allianceError: allianceError, answerOffer: answerOffer, acceptChance: acceptChance,
     poachTarget: poachTarget, transferRate: transferRate,
     actionCost: actionCost, checkAction: checkAction, mediaRegions: mediaRegions, gain: gain, bestRegions: bestRegions,

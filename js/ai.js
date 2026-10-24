@@ -35,9 +35,7 @@
     if (v.turn < D.RULES.maxTurns) v.players.forEach(function (o) {
       if (o.id !== pid && E.allyOf(v, pid) !== o.id) list.push({ type: 'enquete', target: o.id });
     });
-    if (!E.allyOf(v, pid)) v.players.forEach(function (o) {
-      if (o.id !== pid && !E.allianceError(v, pid, o.id)) list.push({ type: 'alliance', target: o.id });
-    });
+    // v1.6 : plus d'alliance pendant la campagne du 1er tour (elles se négocient entre les deux tours)
     pl.cards.forEach(function (card) {
       var def = D.CARDS[card];
       if (def.target === 'region') {

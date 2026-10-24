@@ -704,3 +704,26 @@ button { font-family: inherit; color: inherit; }
 .calc-line { font-size: 13px; line-height: 1.4; color: var(--ink-2); background: var(--violet-2); border-radius: 8px; padding: 5px 8px; }
 .calc-warn { color: var(--red); font-weight: 700; }
 .flash-body p.flash-order { font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--rule); padding-top: 6px; animation: none; }
+
+/* v1.6 : entre les deux tours */
+.between { gap: 10px; background: var(--paper); }
+.btw-head { display: flex; flex-direction: column; gap: 2px; }
+.btw-card { background: var(--sheet); border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+.btw-card p { margin: 0; font-size: 14px; line-height: 1.4; }
+.btw-card .vote-row.qual { font-weight: 700; }
+.btw-me { border: 1.5px solid var(--ink); box-shadow: 0 3px 0 var(--ink); }
+.duel-bar { position: relative; display: flex; height: 34px; border-radius: 8px; overflow: hidden; font-weight: 700; font-size: 13px; }
+.duel-bar span { display: flex; align-items: center; padding: 0 8px; white-space: nowrap; overflow: hidden; transition: width .6s; }
+.duel-bar span:last-of-type { justify-content: flex-end; }
+.duel-bar .mark { position: absolute; left: 50%; top: -2px; bottom: -2px; width: 2px; background: var(--ink); }
+.elim-row { display: flex; flex-direction: column; gap: 4px; text-align: left; background: transparent; border: 0; border-top: 1px solid var(--rule); padding: 7px 0 4px; cursor: pointer; font: inherit; }
+.elim-top { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 14px; }
+.elim-st { margin-left: auto; font-size: 12.5px; color: var(--ink-2); }
+.elim-row small { font-size: 12px; color: var(--muted); }
+.split { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--rule); }
+.split i { display: block; height: 100%; }
+.split .split-rest { background: repeating-linear-gradient(135deg, #B9BCB2 0 3px, #D3D6CC 3px 6px); }
+.offer { border: 1.5px dashed var(--violet); border-radius: 10px; padding: 8px; display: flex; flex-direction: column; gap: 6px; background: var(--violet-2); }
+.offer-btns, .consigne { display: flex; flex-wrap: wrap; gap: 6px; }
+.offer-btns .btn, .consigne .btn { flex: 1 1 auto; min-height: 40px; font-size: 14px; padding: 0 10px; }
+.btw-feed p { font-size: 13px; }

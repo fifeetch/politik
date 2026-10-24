@@ -149,5 +149,100 @@ section('Ordre de résolution');
   ok(log.map(function (l) { return l.pid; }).join() === order.concat(order).join(), 'résolution : action 1 de chacun dans l\'ordre annoncé, puis action 2');
 })();
 
+/* ---------- 8. v1.6 : plus de partis, pas d'alliance avant le 1er tour ---------- */
+section('Partis en lice et débats');
+(function () {
+  var g = E.createGame('VP', { seed: 11 });
+  ok(g.players.length === D.PARTIES.length, 'partie standard : les ' + D.PARTIES.length + ' partis en lice (' + g.players.length + ')');
+  var g6 = E.createGame('VP', { seed: 11, mode: 'egal' });
+  E.poll(g6).forEach(function (x) { ok(Math.abs(x.pct - 1 / 6) < 1e-9, 'Simulation à 6 : ' + x.pid + ' = 1/6'); });
+  ok(E.checkAction(g, 'VP', { type: 'alliance', target: 'SM' }) !== null, 'alliance refusée pendant la campagne du 1er tour');
+  ok(E.checkAction(g, 'VP', { type: 'rupture' }) !== null, 'rupture refusée pendant la campagne du 1er tour');
+  [4, 5, 6].forEach(function (n) {
+    var ids = D.PARTIES.map(function (p) { return p.id; }).slice(0, n);
+    var gd = E.createGame(null, { seed: n, aiParties: ids }); gd.turn = 3;
+    var deb = E.setupDebate(gd), per = {}, pairs = {};
+    deb.duels.forEach(function (d) { per[d.a] = (per[d.a] || 0) + 1; per[d.b] = (per[d.b] || 0) + 1; var k = [d.a, d.b].sort().join(); ok(!pairs[k], 'débat à ' + n + ' : pas de duel en double'); pairs[k] = 1; });
+    ids.forEach(function (id) { ok((per[id] || 0) <= 3 && (per[id] || 0) >= Math.min(3, n - 1) - (n % 2), 'débat à ' + n + ' : ' + id + ' fait ' + (per[id] || 0) + ' duels'); });
+  });
+})();
+(function () {   // une partie entière jouée par l'ordinateur : aucune alliance programmée
+  var AI = require('../js/ai.js'), g = E.createGame(null, { seed: 21, aiParties: D.PARTIES.map(function (p) { return p.id; }) }), seen = 0;
+  while (g.phase !== 'between' && !g.over) {
+    E.startTurn(g); g.affairs.slice().forEach(function (a) { E.resolveAffair(g, a.pid, AI.chooseReaction(g, a.pid)); });
+    if (g.dilemma) E.resolveDilemma(g, g.dilemma.pid, AI.chooseDilemma(g, g.dilemma.pid));
+    var plans = {}; g.players.forEach(function (p) { plans[p.id] = AI.plan(g, p.id); p.money = Math.max(p.money, 0); });
+    g.players.forEach(function (p) { plans[p.id].forEach(function (a) { if (a.type === 'alliance' || a.type === 'rupture') seen++; }); });
+    E.resolveActions(g, plans);
+    if (E.isDebateTurn(g)) { var deb = E.setupDebate(g); E.resolveDebate(g, {}, deb.duels.map(function (d) { return { ra: 'chiffres', rb: 'emotion' }; })); }
+    E.endTurn(g);
+  }
+  ok(seen === 0, 'l\'ordinateur ne programme aucune alliance pendant la campagne (' + seen + ')');
+})();
+
+/* ---------- 9. v1.6 : l'entre-deux-tours ---------- */
+section('Entre-deux-tours');
+function toBetween(human, seed, humanLast) {
+  var g = E.createGame(human, { seed: seed || 5, mode: 'egal' });
+  // un 1er tour net : A et B devant, les autres derrière
+  var order = g.players.map(function (p) { return p.id; });
+  if (humanLast) order.push(order.shift());
+  D.REGIONS.forEach(function (r) { order.forEach(function (pid, i) { g.regions[r.id].cubes[pid] = Math.max(1, 6 - i); }); });
+  g.turn = D.RULES.maxTurns; var et = E.endTurn(g);
+  return { g: g, et: et };
+}
+(function () {
+  var t = toBetween('VP'), g = t.g, b = g.between;
+  ok(t.et.between && g.phase === 'between' && !g.over && !g.result, 'pas de majorité : l\'entre-deux-tours s\'ouvre, rien n\'est encore voté');
+  var finals = g.round1.finalists.join();
+  D.REGIONS.forEach(function (r) { g.regions[r.id].cubes[b.elim[0]] = 10; });
+  ok(g.round1.finalists.join() === finals && b.a + ',' + b.b === finals, 'les qualifiés sont figés une fois le 1er tour voté');
+  ok(b.elim.length === g.players.length - 2, 'tous les autres partis sont éliminés et peuvent négocier');
+  // un accord accepté (tirage forcé) : consigne, concession, report en hausse
+  var f = b.a, e = b.elim.filter(function (x) { return !E.player(g, x).human; })[0];
+  var before = E.transfersFor(g, e, false), mid = E.concessionsFor(g, f, e)[0];
+  var rng = g.rng; g.rng = function () { return 0; };
+  var r = E.betweenAct(g, f, { type: 'negocier', target: e, measure: mid });
+  g.rng = rng;
+  ok(r.outcome === 'accept' && b.deals[e] && b.deals[e].measure === mid, 'offre avec concession acceptée');
+  ok(E.player(g, f).deals.some(function (d) { return d.with === e && d.measure === mid; }), 'la concession est gardée pour le mandat');
+  var after = E.transfersFor(g, e, false);
+  ok(after.toA > before.toA, 'l\'accord augmente les reports vers ' + f + ' (' + Math.round(100 * before.toA) + ' → ' + Math.round(100 * after.toA) + ' %)');
+  ok(after.toA < 1 && after.toA + after.toB + after.blank + after.abst > 0.999 && after.toA + after.toB + after.blank + after.abst < 1.001, 'un report n\'est jamais intégral et totalise 100 %');
+  ok(E.betweenError(g, b.b, { type: 'negocier', target: e, measure: E.concessionsFor(g, b.b, e)[0] }) !== null, 'un parti déjà engagé refuse les autres offres');
+  ok(!E.setConsigne(g, e, 'B'), 'un accord fixe la consigne');
+  // un refus (tirage forcé)
+  var e2 = b.elim.filter(function (x) { return x !== e && !E.player(g, x).human; })[0];
+  g.rng = function () { return 0.99; };
+  var r2 = E.betweenAct(g, b.b, { type: 'negocier', target: e2, measure: E.concessionsFor(g, b.b, e2)[0] });
+  g.rng = rng;
+  ok(r2.outcome === 'refuse' && !b.deals[e2], 'un parti peut refuser');
+  ok(b.left[f] === D.RULES.round2.actions - 1 && b.left[b.b] === D.RULES.round2.actions - 1, 'chaque action coûte 1 action sur ' + D.RULES.round2.actions);
+  // estimation sans effet, puis clôture
+  var snap = JSON.stringify(b.consignes), proj = E.projectSecond(g);
+  ok(JSON.stringify(b.consignes) === snap && !g.result, 'l\'estimation ne change rien');
+  ok(Math.abs(proj.pctA + proj.pctB - 1) < 1e-9, 'estimation : les deux finalistes font 100 % des exprimés');
+  var res = E.closeBetween(g);
+  ok(g.over && res.second && (res.winner === b.a || res.winner === b.b), 'le second tour est voté à la clôture seulement');
+  ok(b.elim.every(function (x) { return b.consignes[x]; }), 'chaque éliminé a donné sa consigne');
+  var st = res.second.stats; ok(st.votants <= st.ins && st.exprimes > 0 && st.blancs >= 0, 'participation et blancs cohérents (' + (100 * st.participation).toFixed(1) + ' %)');
+  ok(E.betweenAct(g, f, { type: 'mobiliser' }).ok === false, 'plus d\'action après la clôture');
+})();
+(function () {   // le joueur éliminé : il reçoit une offre, peut la refuser ou l'accepter, et choisit sa consigne
+  var t = toBetween('MN', 9, true), g = t.g, b = g.between;
+  ok(b.elim.indexOf('MN') >= 0, 'test : le joueur (MN) est éliminé');
+  var f = b.a, mid = E.concessionsFor(g, f, 'MN')[0];
+  var r = E.betweenAct(g, f, { type: 'negocier', target: 'MN', measure: mid });
+  ok(r.outcome === 'pending' && b.offers.length === 1, 'l\'offre au joueur éliminé attend sa réponse');
+  ok(E.answerBetweenOffer(g, f, 'accept').outcome === 'accept' && b.deals.MN, 'le joueur éliminé accepte : accord conclu');
+  ok(!E.setConsigne(g, 'MN', 'B'), 'sa consigne suit alors l\'accord');
+})();
+(function () {   // victoire directe : pas d'entre-deux-tours
+  var g = E.createGame('VP', { seed: 3, mode: 'egal' });
+  D.REGIONS.forEach(function (r) { g.players.forEach(function (p) { g.regions[r.id].cubes[p.id] = p.id === 'VP' ? 10 : 1; }); g.regions[r.id].controller = 'VP'; });
+  g.turn = D.RULES.maxTurns; var et = E.endTurn(g);
+  ok(!et.between && g.over && g.result.direct && g.winner === 'VP', 'majorité absolue au 1er tour : élu, sans négociation');
+})();
+
 console.log('\n' + passes + ' vérifications réussies, ' + fails + ' en échec.');
 process.exit(fails ? 1 : 0);

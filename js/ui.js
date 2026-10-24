@@ -185,7 +185,7 @@
       (gameMode === 'reel' ? '<div class="score24"><span>Score de départ</span><b>' + pctFr(natScore(gameBase, p.id) / 100, 1) + ' %</b><small>' + esc(D.BASES[gameBase].text) + ' <button type="button" class="linkbtn" data-learn="' + D.BASES[gameBase].learn + '">Pourquoi ce chiffre ?</button></small></div>'
         : '<div class="score24"><span>Mode Égalité</span><b>2</b><small>électeurs dans chaque région pour chaque parti : personne ne part en tête.</small></div>') +
       axisHtml(p.id) +
-      (p.pos === 1 || p.pos === 6 ? '<div><b>Au bout de l\'axe.</b> Les reports de second tour seront rares. Pense aux alliances !</div>' : '') +
+      (p.pos === 1 || p.pos === 6 ? '<div><b>Au bout de l\'axe.</b> Au second tour, les reports de voix seront plus durs à obtenir : il faudra bien négocier entre les deux tours.</div>' : '') +
       '<div><b>Force.</b> ' + esc(p.force) + '</div><div><b>Faiblesse.</b> ' + esc(p.weakness) +
       '</div><div><b>Bases.</b> ' + p.bases.map(function (r) { return E.REG[r].name; }).join(', ') +
       '</div><div><b>Cartes.</b> ' + p.cards.map(function (c) { return D.CARDS[c].name; }).join(' · ') + '</div>';
@@ -556,7 +556,6 @@
       case 'fonds': return 'On renfloue les caisses. Les donateurs adorent les petits-fours.';
       case 'reforme': return 'Montrer ce qu\'on fait là où on gouverne : du concret, j\'adore.';
       case 'card': return 'Tu sors une carte maîtresse : « ' + D.CARDS[act.card].name + ' » !';
-      case 'alliance': return 'Une alliance ? Les reports de voix au second tour, ça peut tout changer.';
       case 'enquete': return 'On fouille… mais si on se fait prendre, ça nous retombe dessus.';
       case 'rupture': return 'Rompre ? Leurs électeurs ne l\'oublieront pas de sitôt.';
     }
@@ -959,10 +958,6 @@
     });
     items.push({ special: 'enquete', icon: '🔎', name: 'Enquêter sur un rival', cost: costLabel({ type: 'enquete', target: null }),
       fx: 'Fouiller son passé : s\'il traîne des casseroles, une affaire lui tombe dessus', err: g.turn >= R.maxTurns ? 'trop tard pour sortir un dossier' : null });
-    var ally = E.allyOf(g, me);
-    items.push({ special: ally ? 'break' : 'alliance', icon: '🤝', name: ally ? 'Allié : ' + party(ally).short : 'Alliance', cost: ally ? 'rompre ?' : '1 ★',
-      fx: ally ? 'Toucher pour rompre l\'alliance' : 'S\'allier à un parti proche pour le second tour',
-      err: queue.some(function (q) { return q.type === 'alliance' || q.type === 'rupture'; }) ? 'déjà programmée' : null });
     var html = '<div class="pick">' + items.map(function (it, i) {
       return '<button type="button" class="pick-row' + (it.err ? ' off' : '') + '" data-i="' + i + '"><span class="pick-i">' + it.icon + '</span>' +
         '<span class="pick-txt"><b>' + esc(it.name) + '</b><small>' + (it.err ? esc(it.err) : it.fx) + '</small></span><span class="pick-cost">' + esc(it.cost) + '</span></button>';
@@ -1221,6 +1216,7 @@
     if (spot && !spot.paid && spot.pid !== me) toast(party(spot.pid).short + ' sous les projecteurs : −1 cube en ' + spot.regions.map(function (x) { return SHORT[x]; }).join(', '));
     else if (spot && spot.paid && spot.pid !== me) toast(party(spot.pid).short + ' paie 2 ★ pour éviter le scandale');
     if (res.over) return electionNight();
+    if (res.between) return betweenScreen();
     if (g.turn === 1 && tutoGame) {
       tutoGame = false;
       return modal({ kicker: 'Tutoriel', title: 'Bon à savoir', html:
@@ -1245,6 +1241,148 @@
   /* ---------- v0.6 : la soirée électorale à 20h ---------- */
   var nightTimers = [], nightDone = false;
   function later(fn, ms) { nightTimers.push(setTimeout(fn, ms)); }
+  /* ---------- v1.6 : entre les deux tours ---------- */
+  function consigneTxt(b, c) { return c === 'A' ? 'appelle à voter ' + who2(b.a) : c === 'B' ? 'appelle à voter ' + who2(b.b) : c === 'none' ? 'ne soutient personne' : 'hésite encore'; }
+  function who2(pid) { return pid === me ? 'toi' : party(pid).short; }
+  function pctN(x) { return Math.round(100 * x); }
+  function betweenScreen() {
+    $('toast').hidden = true;
+    var b = g.between, isFin = me === b.a || me === b.b;
+    // l'ordinateur ne connaît pas tes décisions à venir : s'il n'y a que des finalistes menés par l'ordinateur, ils jouent tout de suite
+    if (!isFin) for (var k = 0; k < R.round2.actions; k++) [b.a, b.b].forEach(function (f) { E.aiBetweenStep(g, f); });
+    go('between');
+    renderBetween();
+    $('screen-between').scrollTop = 0;
+    modal({ kicker: 'Premier tour · 20h', title: isFin ? 'Tu es qualifié pour le second tour !' : 'Éliminé… mais pas hors jeu',
+      html: '<p>' + (isFin ? 'Face à <b>' + esc(party(me === b.a ? b.b : b.a).short) + '</b>. Les partis éliminés pèsent ' + pctN(1 - g.round1.first[0].pct - g.round1.first[1].pct) + ' % des voix : il te faut leurs électeurs. Tu as <b>' + R.round2.actions + ' actions</b> : négocier un soutien en échange d\'une concession, mobiliser les abstentionnistes, ou lancer un appel au rassemblement.'
+        : '<b>' + esc(party(b.a).short) + '</b> et <b>' + esc(party(b.b).short) + '</b> s\'affrontent au second tour. Tes électeurs peuvent faire la différence : écoute leurs offres, puis donne ta <b>consigne de vote</b>.') + '</p>' + learnBox('alliances'),
+      buttons: [{ label: 'À moi de jouer', primary: true }] });
+  }
+  function renderBetween() {
+    var b = g.between, isFin = me === b.a || me === b.b, rival = me === b.a ? b.b : b.a, r1 = g.round1;
+    $('btw-title').textContent = isFin ? 'Le second tour se joue maintenant' : 'Tes électeurs valent de l\'or';
+    $('btw-sub').innerHTML = esc(party(b.a).short) + ' contre ' + esc(party(b.b).short) + '. ' + (isFin ? 'Il te reste <b>' + b.left[me] + ' action' + (b.left[me] > 1 ? 's' : '') + '</b>.' : 'Ta consigne : <b>' + consigneTxt(b, b.consignes[me]) + '</b>.');
+    // le premier tour, figé
+    $('btw-first').innerHTML = '<div class="kicker">Premier tour · résultat définitif</div>' + r1.first.map(function (x) {
+      var p = party(x.pid), q = x.pid === b.a || x.pid === b.b;
+      return '<div class="vote-row' + (q ? ' qual' : '') + '"><span class="vote-lbl">' + chip(x.pid) + (x.pid === me ? 'Toi' : esc(p.short)) + '</span><span class="vote-bar"><i style="width:' + (100 * x.pct / r1.first[0].pct) + '%;background:' + p.color + '"></i></span><b>' + pctFr(x.pct, 1) + ' %</b></div>';
+    }).join('') + '<p class="hint">Qualifiés : ' + esc(party(b.a).short) + ' et ' + esc(party(b.b).short) + '. Participation ' + pctFr(r1.stats1.participation, 1) + ' %.</p>';
+    // l'estimation, avec ses hypothèses
+    var pr = E.projectSecond(g), PA = party(b.a), PB = party(b.b);
+    $('btw-estim').innerHTML = '<div class="kicker">Si l\'on votait maintenant · estimation</div>' +
+      '<div class="duel-bar"><span style="width:' + (100 * pr.pctA) + '%;background:' + PA.color + ';color:' + PA.ink + '">' + (b.a === me ? 'Toi' : esc(PA.short)) + ' ' + pctFr(pr.pctA, 1) + ' %</span><span style="width:' + (100 * pr.pctB) + '%;background:' + PB.color + ';color:' + PB.ink + '">' + (b.b === me ? 'Toi' : esc(PB.short)) + ' ' + pctFr(pr.pctB, 1) + ' %</span><i class="mark"></i></div>' +
+      '<p class="hint">Hypothèses : les consignes pas encore données sont remplacées par ce que chaque parti ferait probablement' + (isFin ? '' : ' (pour toi : ne soutenir personne)') + '. Les actions à venir peuvent tout changer.</p>';
+    // ce que je peux faire
+    var mine = $('btw-me');
+    if (isFin) {
+      var acts = [
+        { k: 'negocier', icon: '🤝', name: 'Négocier un soutien', fx: 'Avec un parti éliminé, en échange d\'une de ses mesures' },
+        { k: 'mobiliser', icon: '🚪', name: 'Mobiliser les abstentionnistes', fx: '+' + pctFr(R.round2.mobilize, 1) + ' % des suffrages pour toi (' + b.boost[me].mob + '/' + R.round2.maxUses + ')' },
+        { k: 'rassembler', icon: '📣', name: 'Appel au rassemblement', fx: '+' + pctN(R.round2.rassemble) + ' points de report de chaque parti éliminé (' + b.boost[me].ras + '/' + R.round2.maxUses + ')' }];
+      mine.innerHTML = '<div class="kicker">Tes actions · ' + b.left[me] + ' sur ' + R.round2.actions + '</div><div class="pick">' + acts.map(function (a) {
+        var err = b.left[me] <= 0 ? 'Plus d\'action disponible.' : a.k === 'negocier' ? (b.elim.some(function (e) { return !b.deals[e]; }) ? null : 'Plus aucun parti libre.') : E.betweenError(g, me, { type: a.k });
+        return '<button type="button" class="pick-row' + (err ? ' off' : '') + '" data-bact="' + a.k + '"><span class="pick-i">' + a.icon + '</span><span class="pick-txt"><b>' + a.name + '</b><small>' + esc(err || a.fx) + '</small></span></button>';
+      }).join('') + '</div>';
+      Array.prototype.forEach.call(mine.querySelectorAll('[data-bact]'), function (row) {
+        row.addEventListener('click', function () {
+          if (row.classList.contains('off')) return toast(row.querySelector('small').textContent);
+          var k = row.getAttribute('data-bact');
+          if (k === 'negocier') negotiateMenu();
+          else playBetween({ type: k });
+        });
+      });
+    } else {
+      var offers = b.offers.filter(function (o) { return o.to === me; }), deal = b.deals[me];
+      var h = '<div class="kicker">Tes décisions</div>';
+      if (deal) h += '<p>🤝 <b>Accord conclu avec ' + esc(party(deal.with).short) + '</b> : il reprend ta mesure « ' + esc(E.measure(deal.measure).name) + ' ». Ta consigne : voter ' + esc(party(deal.with).short) + '.</p>';
+      offers.forEach(function (o) {
+        var pe = mePl(), canCounter = pe.phare && pe.phare !== o.measure && E.concessionsFor(g, o.from, me).indexOf(pe.phare) >= 0;
+        h += '<div class="offer"><p><b>' + esc(party(o.from).short) + '</b> te propose un accord : il reprend ta mesure « <b>' + esc(E.measure(o.measure).name) + '</b> » si tu appelles à voter pour lui.</p>' +
+          '<div class="offer-btns"><button type="button" class="btn btn-ink" data-offer="accept" data-from="' + o.from + '">Accepter</button>' +
+          (canCounter ? '<button type="button" class="btn" data-offer="counter" data-from="' + o.from + '">Réclamer ma mesure phare</button>' : '') +
+          '<button type="button" class="btn" data-offer="refuse" data-from="' + o.from + '">Refuser</button></div></div>';
+      });
+      if (!offers.length && !deal) h += '<p class="hint">Aucune offre en attente. Tu peux tout de même donner ta consigne.</p>';
+      if (!deal) h += '<div class="kicker" style="margin-top:6px">Ta consigne de vote</div><div class="consigne">' + [['A', 'Voter ' + who2(b.a)], ['B', 'Voter ' + who2(b.b)], ['none', 'Ne soutenir personne']].map(function (c) {
+        return '<button type="button" class="btn' + (b.consignes[me] === c[0] ? ' btn-ink' : '') + '" data-cons="' + c[0] + '">' + esc(c[1]) + '</button>';
+      }).join('') + '</div><p class="hint">Une consigne ne déplace qu\'une partie de tes électeurs : les autres font ce qu\'ils veulent.</p>';
+      mine.innerHTML = h;
+      Array.prototype.forEach.call(mine.querySelectorAll('[data-offer]'), function (bt) {
+        bt.addEventListener('click', function () {
+          var from = bt.getAttribute('data-from'), r = E.answerBetweenOffer(g, from, bt.getAttribute('data-offer'));
+          toast(r.outcome === 'accept' ? 'Accord conclu avec ' + party(from).short + ' !' : bt.getAttribute('data-offer') === 'counter' ? party(from).short + ' refuse ta contre-offre.' : 'Offre refusée.');
+          renderBetween();
+        });
+      });
+      Array.prototype.forEach.call(mine.querySelectorAll('[data-cons]'), function (bt) {
+        bt.addEventListener('click', function () { E.setConsigne(g, me, bt.getAttribute('data-cons')); renderBetween(); });
+      });
+    }
+    // les partis éliminés : position et reports estimés
+    $('btw-parties').innerHTML = '<div class="kicker">Les partis éliminés · reports estimés</div>' + b.elim.map(function (e) {
+      var t = E.transfersFor(g, e, true), d = b.deals[e], c = b.consignes[e];
+      var st = d ? '🤝 accord avec ' + esc(who2(d.with)) + ' (« ' + esc(E.measure(d.measure).name) + ' »)' : c ? (c === 'none' ? '∅ ' : '➜ ') + consigneTxt(b, c) : '… hésite';
+      return '<button type="button" class="elim-row" data-why="' + e + '"><span class="elim-top">' + chip(e) + '<b>' + (e === me ? 'Toi' : esc(party(e).short)) + '</b> <span class="muted">' + pctFr(votePct(e), 1) + ' %</span><span class="elim-st">' + st + '</span></span>' +
+        '<span class="split"><i style="width:' + (100 * t.toA) + '%;background:' + PA.color + '"></i><i style="width:' + (100 * t.toB) + '%;background:' + PB.color + '"></i><i class="split-rest" style="width:' + (100 * (t.blank + t.abst)) + '%"></i></span>' +
+        '<small>' + pctN(t.toA) + ' % → ' + esc(who2(b.a)) + ' · ' + pctN(t.toB) + ' % → ' + esc(who2(b.b)) + ' · ' + pctN(t.blank + t.abst) + ' % blanc ou abstention</small></button>';
+    }).join('');
+    Array.prototype.forEach.call(document.querySelectorAll('[data-why]'), function (row) {
+      row.addEventListener('click', function () {
+        var e = row.getAttribute('data-why'), t = E.transfersFor(g, e, true);
+        modal({ kicker: 'Reports de voix · estimation', title: e === me ? 'Tes électeurs' : 'Les électeurs de ' + party(e).short, html: '<div class="brief">' + t.why.map(function (w) { return line('•', esc(w)); }).join('') +
+          line('=', '<b>' + pctN(t.toA) + ' %</b> pour ' + esc(who2(b.a)) + ', <b>' + pctN(t.toB) + ' %</b> pour ' + esc(who2(b.b)) + ', ' + pctN(t.blank) + ' % blanc, ' + pctN(t.abst) + ' % abstention') + '</div><p class="hint">Ces taux sont des règles du jeu, pas des prévisions politiques réelles.</p>' });
+      });
+    });
+    // le fil des négociations
+    $('btw-feed').innerHTML = '<div class="kicker">Dans les coulisses</div>' + (b.log.length ? b.log.slice().reverse().slice(0, 8).map(function (l) {
+      return '<p>' + ({ deal: '🤝', refuse: '✋', counter: '↩️', offer: '✉️', mob: '🚪', ras: '📣' }[l.type] || '•') + ' ' + esc(l.text) + '</p>';
+    }).join('') : '<p class="hint">Rien pour l\'instant.</p>');
+    var undecided = !isFin && !b.deals[me] && !b.consignes[me];
+    $('btw-go').textContent = undecided ? 'Choisis d\'abord ta consigne' : 'Aller au second tour';
+    $('btw-go').disabled = undecided;
+  }
+  function votePct(pid) { var x = g.round1.first.filter(function (y) { return y.pid === pid; })[0]; return x ? x.pct : 0; }
+  function negotiateMenu() {
+    var b = g.between, free = b.elim.filter(function (e) { return !b.deals[e]; }).sort(function (x, y) { return votePct(y) - votePct(x); });
+    var buttons = free.map(function (e) {
+      var err = E.betweenError(g, me, { type: 'negocier', target: e, measure: E.concessionsFor(g, me, e)[0] });
+      return { label: party(e).short + ' · ' + pctFr(votePct(e), 1) + ' % · distance ' + E.dist(me, e) + (err ? ' — ' + err : ''), disabled: !!err, onClick: function () { concessionMenu(e); } };
+    });
+    buttons.push({ label: 'Annuler' });
+    modal({ kicker: '1 action', title: 'Avec qui négocier ?', html: axisHtml(me) + '<p>Plus un parti est proche de toi sur l\'axe, plus il acceptera facilement, et plus ses électeurs suivront sa consigne. Un accord avec un parti éloigné (distance 3 ou plus) fait fuir ' + pctN(R.round2.farDealLoss) + ' % de tes électeurs.</p>', buttons: buttons });
+  }
+  function concessionMenu(e) {
+    var list = E.concessionsFor(g, me, e).slice(0, 5), pe = E.player(g, e);
+    var buttons = list.map(function (mid) {
+      var m = E.measure(mid), ch = E.dealChance(g, me, e, mid);
+      return { label: th(m.theme).icon + ' ' + m.name + (mid === pe.phare ? ' ★ sa mesure phare' : '') + ' · ' + costTxt(m.cost) + ' · accord ' + chanceLabel(ch), onClick: function () { playBetween({ type: 'negocier', target: e, measure: mid }); } };
+    });
+    buttons.push({ label: 'Annuler' });
+    modal({ kicker: 'Ta concession à ' + party(e).short, title: 'Quelle mesure reprends-tu ?', html: '<p>La mesure s\'ajoute à tes engagements pour le mandat. Céder sa <b>mesure phare</b> augmente nettement les chances d\'accord.</p>', buttons: buttons });
+  }
+  /* Une action du joueur finaliste, puis la réponse de son rival (mené par l'ordinateur) */
+  function playBetween(act) {
+    var b = g.between, rival = me === b.a ? b.b : b.a, r = E.betweenAct(g, me, act);
+    if (!r.ok) return toast(r.text);
+    function rivalTurn() {
+      var rr = E.aiBetweenStep(g, rival);
+      renderBetween();
+      if (rr) { var last = b.log[b.log.length - 1]; if (last) toast(last.text); }
+    }
+    if (act.type !== 'negocier') { renderBetween(); return rivalTurn(); }
+    var pn = party(act.target).short, m = E.measure(act.measure);
+    if (r.outcome === 'accept') modal({ kicker: '🤝 Accord', title: pn + ' accepte !', html: '<p>' + esc(pn) + ' appelle à voter pour toi. Tu reprends « ' + esc(m.name) + ' » dans tes engagements.</p>', buttons: [{ label: 'Continuer', primary: true, onClick: rivalTurn }] });
+    else if (r.outcome === 'counter') modal({ kicker: '↩️ Contre-offre', title: pn + ' veut mieux', html: '<p>' + esc(pn) + ' refuse « ' + esc(m.name) + ' », mais signe tout de suite si tu reprends sa mesure phare : « <b>' + esc(E.measure(r.measure).name) + '</b> » (' + costTxt(E.measure(r.measure).cost) + ').</p>',
+      buttons: [{ label: 'Accepter la contre-offre', primary: true, onClick: function () { E.answerCounter(g, true); rivalTurn(); } }, { label: 'Refuser', onClick: function () { E.answerCounter(g, false); rivalTurn(); } }] });
+    else modal({ kicker: '✋ Refus', title: pn + ' refuse', html: '<p>' + esc(pn) + ' ne veut pas s\'engager avec toi pour l\'instant. Une nouvelle demande aura moins de chances.</p>', buttons: [{ label: 'Continuer', primary: true, onClick: rivalTurn }] });
+  }
+  $('btw-go').addEventListener('click', function () {
+    var b = g.between, isFin = me === b.a || me === b.b;
+    function go2() { E.closeBetween(g); electionNight(); }
+    if (isFin && b.left[me] > 0) modal({ title: 'Il te reste ' + b.left[me] + ' action' + (b.left[me] > 1 ? 's' : ''), html: '<p>Les actions non utilisées sont perdues.</p>', buttons: [{ label: 'Aller voter', primary: true, onClick: go2 }, { label: 'Retour' }] });
+    else go2();
+  });
+
   /* v1.4 : la soirée électorale en trois temps.
      1. Le dépouillement : les régions tombent une à une sur la carte (des plus petites à l'Île-de-France),
         avec des résultats partiels qui bougent.
@@ -1285,7 +1423,7 @@
     $('night-stage').innerHTML = '<div class="night-est">' + (res.second ? 'Second tour' : 'Premier tour') + ' · dépouillement en cours</div>' +
       '<div class="count-prog"><span class="count-bar"><i id="count-fill"></i></span><span><b id="count-pct">0 %</b> des bureaux</span></div>' +
       '<p class="count-line" id="count-line">Les bureaux de vote ferment, on ouvre les urnes…</p>';
-    $('night-bars').innerHTML = '<div class="kicker kicker-yellow">Résultats partiels · ils vont encore bouger</div>' + finals.map(function (x) {
+    $('night-bars').innerHTML = '<div class="kicker kicker-yellow">Résultats partiels (mise en scène) · ils vont encore bouger</div>' + finals.map(function (x) {
       var p = party(x.pid);
       return '<div class="nb-row" data-pid="' + x.pid + '"><span class="nb-lbl">' + (x.pid === me ? 'Toi' : esc(p.short)) + '</span><span class="nb-bar"><i style="background:' + p.color + '"></i></span><b>–</b></div>';
     }).join('');
@@ -1391,9 +1529,11 @@
       h += '<div class="kicker" style="margin-top:12px">Second tour</div>' + turnoutLine(s.stats) +
         bars([{ pid: s.a, pct: s.pctA }, { pid: s.b, pct: s.pctB }].sort(function (x, y) { return y.pct - x.pct; }), Math.max(s.pctA, s.pctB));
       h += '<div class="transfers">' + s.transfers.map(function (t) {
-        return '<p>' + chip(t.pid) + 'Reports : ' + Math.round(100 * t.toA) + ' % → ' + s.a + ', ' + Math.round(100 * t.toB) + ' % → ' + s.b + ', ' + Math.round(100 * t.abst) + ' % blanc ou abstention' +
-          (E.allyOf(g, t.pid) === s.a || E.allyOf(g, t.pid) === s.b ? ' <em class="ally">alliance</em>' : '') + '</p>';
-      }).join('') + (res.othersTransfer ? '<p><span class="who" style="background:#C6C9BF">…</span>Autres listes : ' + Math.round(100 * res.othersTransfer.toA) + ' % → ' + s.a + ', ' + Math.round(100 * res.othersTransfer.toB) + ' % → ' + s.b + ', ' + Math.round(100 * res.othersTransfer.abst) + ' % blanc ou abstention</p>' : '') + '</div>';
+        var d = t.deal ? ' · 🤝 accord (« ' + esc(E.measure(t.deal.measure).name) + ' »)' : '';
+        return '<p>' + chip(t.pid) + '<b>' + (t.consigne === 'A' ? 'Consigne : ' + esc(s.a) : t.consigne === 'B' ? 'Consigne : ' + esc(s.b) : 'Aucune consigne') + '</b>' + d + ' → ' + Math.round(100 * t.toA) + ' % ' + s.a + ', ' + Math.round(100 * t.toB) + ' % ' + s.b + ', ' + Math.round(100 * t.blank) + ' % blanc, ' + Math.round(100 * t.abst) + ' % abstention</p>';
+      }).join('') + (res.othersTransfer ? '<p><span class="who" style="background:#C6C9BF">…</span>Autres listes : ' + Math.round(100 * res.othersTransfer.toA) + ' % → ' + s.a + ', ' + Math.round(100 * res.othersTransfer.toB) + ' % → ' + s.b + ', ' + Math.round(100 * res.othersTransfer.abstTotal) + ' % blanc ou abstention</p>' : '') +
+        (s.mob.a || s.mob.b ? '<p>🚪 Mobilisation : ' + s.a + ' ×' + s.mob.a + ', ' + s.b + ' ×' + s.mob.b + ' (+' + pctFr(R.round2.mobilize, 1) + ' % des suffrages à chaque fois)</p>' : '') +
+        s.notes.map(function (n) { return '<p>' + chip(n.pid) + esc(n.text) + '</p>'; }).join('') + '</div>';
     }
     // v1.5 : du dernier sondage au 1er tour, la seule différence vient des objectifs secrets réussis
     var lastPoll = {}; E.poll(g).forEach(function (x) { lastPoll[x.pid] = x.pct; });
@@ -1444,10 +1584,12 @@
       '<p><b>But :</b> remporter l\'élection présidentielle à la fin des <b>8 tours de campagne</b>. Chaque région vote selon ses cubes. Elle pèse ses <b>vrais électeurs</b> : ses inscrits (le chiffre sur la carte, en millions), moins ceux qui s\'abstiennent, moins ceux qui votent blanc ou nul. Le parti qui contrôle une région y gagne un petit bonus.</p>' +
       '<p><b>Deux modes de jeu.</b> <b>Réaliste</b> : chaque parti démarre avec ses vrais scores, au choix ceux de la présidentielle 2022, la moyenne des législatives et des européennes 2024, ou la moyenne de 6 sondages d\'octobre 2026 ; les petites listes et les partis absents de ta partie comptent sous « Autres » dans les sondages, et la campagne les réduit peu à peu. <b>Simulation</b> : chaque parti a 2 électeurs dans chaque région et personne ne tient de région : le départ est strictement égal, sans bonus caché. Ensuite, au second tour, les partis du centre de l\'axe reçoivent plus facilement des reports de voix que ceux des extrémités.</p>' +
       '<p><b>L\'abstention :</b> environ un quart des inscrits ne votent pas, et beaucoup plus en outre-mer. Le bouton <b>Abstention</b> au-dessus de la carte la montre. 🚪 <b>Mobiliser</b> fait voter des abstentionnistes ; attaquer ou multiplier les affaires en dégoûte d\'autres.</p>' +
-      '<p><b>Premier tour :</b> plus de 50 % des suffrages exprimés (les blancs ne comptent pas) = élu directement. Sinon, les deux premiers vont au <b>second tour</b>. Les électeurs des autres partis se reportent selon leur proximité politique (alliés : 85 %) ; les autres votent blanc ou restent chez eux.</p>' +
+      '<p><b>Premier tour :</b> les ' + D.PARTIES.length + ' partis sont en lice. Plus de 50 % des suffrages exprimés (les blancs ne comptent pas) = élu directement. Sinon, les deux premiers sont qualifiés, et le résultat est figé.</p>' +
+      '<p><b>🤝 Entre les deux tours :</b> chaque finaliste a <b>' + R.round2.actions + ' actions</b>. Il peut <b>négocier un soutien</b> avec un parti éliminé en lui cédant une de ses mesures (celui-ci accepte, refuse ou réclame sa mesure phare), <b>mobiliser</b> des abstentionnistes ou lancer un <b>appel au rassemblement</b>. Chaque parti éliminé, toi compris si tu es éliminé, donne ensuite sa <b>consigne de vote</b> : un finaliste, ou personne.</p>' +
+      '<p><b>Les reports de voix</b> ne sont jamais automatiques : une consigne déplace une partie des électeurs, d\'autant moins que les partis sont éloignés sur l\'axe ; les autres votent pour l\'autre finaliste, blanc ou s\'abstiennent. Le détail s\'affiche avant et après le vote. Un accord avec un parti éloigné (distance 3 ou plus) fait fuir 3 % de tes propres électeurs. Les concessions sont des engagements de campagne : elles ne donnent pas de majorité à l\'Assemblée.</p>' +
       axisHtml(me || chosen) +
       '<p><b>Partis proches :</b> quand tu fais un Meeting ou passes à la Télé là où un parti voisin sur l\'axe est présent, tu lui prends 1 électeur (distance 2 : sur un dé de 4 à 6).</p>' +
-      '<p><b>Alliances :</b> 1 ★ et 1 action, avec un parti à distance 2 au plus. Entre alliés, pas d\'attaque ni de vol d\'électeurs. Rompre coûte 2 ★ et ruine les reports.</p>' +
+      '<p><b>🤝 Pas d\'alliance avant le 1er tour :</b> chaque parti fait campagne seul. Les accords se négocient <b>entre les deux tours</b> (voir plus bas).</p>' +
       '<p><b>Chaque tour :</b> revenus (4 € + 1 € par région contrôlée, max +3 ; +2 ★), un événement, puis <b>3 actions secrètes</b>. Tout le monde choisit en secret, puis les plans sont joués <b>chacun son tour</b> : l\'action 1 de chaque parti, puis l\'action 2, puis la 3. Le parti qui commence change à chaque tour (l\'ordre est affiché dans le flash info). Une action peut donc échouer si un rival a changé la situation juste avant : le flash info te dit pourquoi.</p>' +
       '<p><b>Ton message.</b> Meeting, Télé, Buzz et Faire la une portent un <b>thème</b> (💶 🏭 🏥 🌿 🚓 🛂). Son <b>impact</b>, de 0 à 4 = ta crédibilité sur le thème (0 à 2) + 1 si la région s\'en préoccupe + 1 si le thème fait l\'actu. Le bon message au bon endroit rapporte deux fois plus.</p>' +
       '<p><b>Les actions :</b></p><ul class="rules-acts">' +
@@ -1460,7 +1602,7 @@
         '<li>💰 <b>Collecte</b> (gratuit) : +3 € dans la caisse.</li>' +
         '<li>📜 <b>Promesse</b> (4 ★) : dans une région que tu tiens, +1 cube dans toutes les régions du même type.</li>' +
         '<li>👥 <b>Militants</b> (3 €) : une équipe dans la région, +1 cube à chaque début de tour (3 équipes au plus).</li>' +
-        '<li>🤝 <b>Alliance</b> (1 ★) et 2 cartes spéciales par parti.</li></ul>' +
+        '<li>🃏 2 cartes spéciales par parti.</li></ul>' +
       '<p><b>⚡ La forme du candidat</b> (4 au plus, +2 par tour). Meeting et Télé coûtent 1 ⚡. Si une action la fait tomber à 0, le candidat épuisé peut faire une <b>gaffe</b> (4 chances sur 10) : aucun cube et une casserole.</p>' +
       '<p><b>↗ La dynamique.</b> Si tu gagnes 1,5 point au sondage en un tour, tes Meetings rapportent 1 cube de plus au tour suivant. Si tu en perds 1,5, 1 de moins.</p>' +
       '<p><b>Crédibilité qui évolue.</b> Après 3 actions sur un même thème, ta crédibilité dessus augmente (2 au plus). Le bonus compte à partir de l\'action suivante.</p>' +
@@ -1469,7 +1611,7 @@
       '<p><b>💥 Les affaires.</b> Chaque casserole 🍳 donne 12 % de risque d\'affaire par tour. Le Canard Déchaîné en sort aussi de temps en temps, et un rival peut <b>🔎 enquêter</b> sur toi. Quand une affaire tombe, tu choisis ta réaction : nier, t\'excuser, sacrifier un collaborateur ou accuser les médias.</p>' +
       '<p><b>🤔 Les dilemmes.</b> Chaque tour, un parti (à tour de rôle) doit faire un choix. Certains choix ont des <b>conséquences différées</b> qui peuvent ressortir quelques tours plus tard.</p>' +
       '<p><b>Les crises.</b> Chaque partie connaît une crise en 3 actes (krach, grève, été brûlant, désindustrialisation). Les régions touchées sont marquées sur la carte : leur thème y compte comme à la une.</p>' +
-      '<p><b>🎙️ Le débat télévisé</b> (tours 3, 6 et 8) : chaque parti affronte les 3 autres, une question chacun. Choisis ta réplique : 🥊 Attaque bat ❤️ Émotion, ❤️ Émotion bat 📊 Chiffres, 📊 Chiffres bat 🥊 Attaque, 🙃 Esquive = nul. Manche gagnée 2 points, nulle 1. Bonus : 🥊 +1 si le rival a des casseroles, 📊 +1 sur ton point fort (−1 si ce n\'est pas ton sujet), ❤️ +1 si le thème fait l\'actu. Chaque ★ de préparation (3 au plus) = +1 point. Le 1er gagne +1 cube dans 4 régions, le 2e dans 2 régions (doublé au débat final). Chaque parti a son tempérament : observe-le !</p>' +
+      '<p><b>🎙️ Le débat télévisé</b> (tours 3, 6 et 8) : chaque parti affronte 3 adversaires tirés au sort, une question chacun. Choisis ta réplique : 🥊 Attaque bat ❤️ Émotion, ❤️ Émotion bat 📊 Chiffres, 📊 Chiffres bat 🥊 Attaque, 🙃 Esquive = nul. Manche gagnée 2 points, nulle 1. Bonus : 🥊 +1 si le rival a des casseroles, 📊 +1 sur ton point fort (−1 si ce n\'est pas ton sujet), ❤️ +1 si le thème fait l\'actu. Chaque ★ de préparation (3 au plus) = +1 point. Le 1er gagne +1 cube dans 4 régions, le 2e dans 2 régions (doublé au débat final). Chaque parti a son tempérament : observe-le !</p>' +
       '<p><b>Sous les projecteurs :</b> le premier des sondages paie 2 ★ ou perd des cubes à chaque fin de tour.</p>' });
   }
 

@@ -95,6 +95,7 @@
       elected: Math.round(pct * 1000) / 10,
       measures: pl.programme.map(function (id) { return { id: id, status: 'pending', amended: false }; }),
       financing: (pl.financing || []).slice(),
+      deals: (pl.deals || []).slice(),   // v1.6 : engagements pris entre les deux tours (déclaratifs : pas de vote ni de majorité automatique)
       seats: {}, used493: false, censures: 0, dissolved: false, fell: 0, log: [], history: [],
       oneOff: 0, financingDone: false, dissolvedYear: 0,
       cardsDeck: shuffle(BUDGET_CARDS.map(function (c) { return c.id; }), g.rng),

@@ -430,7 +430,10 @@
     othersTransfer: 0.6,         // au 2nd tour, 60 % des électeurs des autres listes votent pour un finaliste
     startScale: 10,              // mode Réaliste : cubes de départ = score moyen législatives + européennes 2024 (%) × 10 / 100
     spotlightCost: 2,
-    /* v0.2 : axe politique, transferts, alliances, élection */
+    /* v1.6 : tous les partis du jeu se présentent au 1er tour (le joueur + les autres, menés par l'ordinateur) */
+    rivals: 99,                  // nombre maximal d'adversaires (99 = tous les partis de data.js)
+    debateDuels: 3,              // à chaque débat, chaque parti affronte 3 adversaires (et non tous)
+    /* v0.2 : axe politique, transferts, élection */
     maxAllianceDistance: 2,
     breakCost: 2,
     incumbentBonus: 1.25,        // prime au sortant : les cubes du parti qui contrôle une région comptent ×1,25 dans les votes
@@ -475,7 +478,24 @@
     mobTurnout: 0.006,           // chaque cube mobilisé = +0,6 point de participation dans la région
     registerTurns: 3,            // jusqu'au tour 3 : Mobiliser inscrit aussi de nouveaux électeurs (+0,3 % d'inscrits)
     attackBlank: 0.003, attackAbst: 0.002, affairAbst: 0.001,   // campagne négative : des électeurs écœurés
-    blankOfNonTransfer: 0.35     // au 2nd tour, part des électeurs non reportés qui votent blanc (le reste s'abstient)
+    blankOfNonTransfer: 0.35,    // au 2nd tour, part des électeurs non reportés qui votent blanc (le reste s'abstient)
+    /* v1.6 : l'entre-deux-tours. Ces taux sont des réglages de jeu (pas des prédictions politiques), à équilibrer.
+       Report de base selon la distance sur l'axe : voir « transfer » plus haut. */
+    round2: {
+      actions: 3,                                              // actions de chaque finaliste entre les deux tours
+      accept: { 1: 0.85, 2: 0.6, 3: 0.3, 4: 0.12, 5: 0.05 },   // chance qu'un parti éliminé accepte un accord, selon la distance
+      phareBoost: 1.3,                                         // ×1,3 si on lui accorde sa mesure phare
+      retry: 0.6,                                              // ×0,6 à chaque nouvelle demande après un refus
+      counterChance: 0.5,                                      // en cas de refus, une chance sur deux qu'il fasse une contre-offre (sa mesure phare)
+      endorse: { 1: 0.25, 2: 0.18, 3: 0.10, 4: 0.05, 5: 0.02 }, // consigne de vote : points de report en plus (moins on est proche, moins les électeurs suivent)
+      noneFactor: 0.75,                                        // « ne soutenir personne » : les reports vers les deux finalistes ×0,75
+      dealBonus: 0.05,                                         // un accord avec concession rend la consigne plus crédible : +5 points
+      farDealLoss: 0.03,                                       // un accord avec un parti éloigné (distance 3 ou plus) fait fuir 3 % de ses propres électeurs
+      mobilize: 0.012,                                         // « Mobiliser » : +1,2 % des suffrages, pris dans l'abstention (2 fois au plus)
+      rassemble: 0.03,                                         // « Rassembler » : +3 points de report de chaque parti éliminé (2 fois au plus)
+      maxUses: 2,
+      maxTransfer: 0.95
+    }
   };
 
   /* ---------- v0.6 : le débat télévisé ----------

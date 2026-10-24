@@ -56,7 +56,7 @@
   <section id="screen-choose" class="screen">
     <div class="choose-head">
       <button type="button" class="linkbtn back-link" data-go="setup">‹ Paramètres de la partie</button>
-      <span class="kicker" id="choose-kicker">Toi contre 3 partis menés par l'ordinateur</span>
+      <span class="kicker" id="choose-kicker">Toi contre 5 partis menés par l'ordinateur</span>
       <h1 class="h1">Choisis ton parti</h1>
     </div>
     <div id="party-grid" class="party-grid"></div>
@@ -119,6 +119,21 @@
         </div>
       </div>
     </div>
+  </section>
+
+  <!-- v1.6 : entre les deux tours -->
+  <section id="screen-between" class="screen between">
+    <div class="btw-head">
+      <span class="kicker" id="btw-kicker">Entre les deux tours</span>
+      <h1 class="h1" id="btw-title">Le second tour se prépare</h1>
+      <p class="region-sub" id="btw-sub"></p>
+    </div>
+    <div id="btw-first" class="btw-card"></div>
+    <div id="btw-estim" class="btw-card"></div>
+    <div id="btw-me" class="btw-card btw-me"></div>
+    <div id="btw-parties" class="btw-card"></div>
+    <div id="btw-feed" class="btw-card btw-feed"></div>
+    <button id="btw-go" class="btn btn-ink btn-big" type="button">Aller au second tour</button>
   </section>
 
   <!-- v0.6 : soirée électorale -->

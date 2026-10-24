@@ -73,6 +73,9 @@
       var M = E.measure(m.id), st = m.status === 'adopted' ? (m.amended ? '✅ adoptée (amendée)' : '✅ adoptée') : m.status === 'rejected' ? '❌ rejetée' : '⏳ à faire voter';
       return '<div class="gp-row ' + m.status + '"><span>' + esc(M.name) + '</span><small>' + st + '</small></div>';
     }).join('');
+    if (gv.deals && gv.deals.length) $('gov-prog').innerHTML += '<div class="kicker" style="margin-top:8px">Engagements d\'entre-deux-tours</div>' + gv.deals.map(function (d) {
+      return '<div class="gp-row"><span>' + esc(E.measure(d.measure).name) + '</span><small>🤝 promis à ' + esc(E.PARTY[d.with].short) + ' · engagement de campagne, sans vote ni soutien automatique à l\'Assemblée</small></div>';
+    }).join('');
     $('gov-advisor').innerHTML = '<span class="adv-face">' + A.advisor() + '</span><p><b>Lulu :</b> ' + esc(advice()) + '</p>';
     $('gov-dissolve').hidden = !(G.canDissolve(gv) && current() === 'loi');
     $('gov-next').textContent = gv.over ? 'Voir le bilan du mandat' : STEP_LABEL[current()];
