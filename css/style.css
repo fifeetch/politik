@@ -93,12 +93,36 @@ button { font-family: inherit; color: inherit; }
 #btn-start { margin-top: auto; flex-shrink: 0; }
 
 /* Choix du mode de jeu */
-.mode-pick { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 12px; }
+.mode-pick { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .mode-btn { display: flex; flex-direction: column; gap: 2px; text-align: left; padding: 8px 10px; border-radius: 12px; border: 1.5px solid var(--rule); background: var(--sheet); cursor: pointer; }
 .mode-btn b { font-size: 15px; }
 .mode-btn small { font-size: 12px; color: var(--muted); line-height: 1.3; }
 .mode-btn.on { border-color: var(--violet); background: var(--violet-2); box-shadow: inset 0 0 0 1px var(--violet); }
 .mode-btn.on b { color: var(--violet); }
+
+/* Paramètres de la partie */
+#screen-setup { gap: 8px; }
+.setup-h { margin: 8px 0 2px; font-family: var(--display); font-weight: 800; font-stretch: 80%; font-size: 20px; }
+.base-pick { display: flex; flex-direction: column; gap: 6px; }
+.base-card { border: 1.5px solid var(--rule); border-radius: 12px; background: var(--sheet); overflow: hidden; }
+.base-card.on { border-color: var(--violet); box-shadow: inset 0 0 0 1px var(--violet); }
+.base-btn { width: 100%; display: flex; flex-direction: column; gap: 2px; text-align: left; padding: 9px 12px; border: 0; background: transparent; cursor: pointer; }
+.base-btn b { font-size: 15px; }
+.base-card.on .base-btn b { color: var(--violet); }
+.base-btn small { font-size: 13px; color: var(--muted); line-height: 1.35; }
+.polls { padding: 0 12px 6px; font-size: 13.5px; line-height: 1.45; }
+.polls p { margin: 0 0 4px; }
+.polls ul { margin: 0 0 6px; padding-left: 18px; }
+.base-why { margin: 0 12px 10px; font-size: 13px; }
+.setup-preview { display: flex; flex-direction: column; gap: 4px; }
+.prev-bars { display: flex; flex-direction: column; gap: 4px; background: var(--sheet); border-radius: 12px; padding: 10px 12px; }
+.prev-row { display: grid; grid-template-columns: 130px 1fr 52px; gap: 8px; align-items: center; font-size: 13.5px; }
+.prev-row span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.prev-track { height: 10px; background: var(--paper); border-radius: 5px; overflow: hidden; }
+.prev-track i { display: block; height: 100%; }
+.prev-row b { text-align: right; }
+#btn-setup-go { margin-top: auto; flex-shrink: 0; position: sticky; bottom: 0; }
+.back-link { align-self: flex-start; font-size: 13.5px; margin-bottom: 4px; }
 
 /* ---------- Programme ---------- */
 #screen-programme { overflow-y: auto; padding: max(14px, env(safe-area-inset-top)) 14px 0; gap: 10px; }

@@ -17,7 +17,7 @@ Jeu de stratégie électorale parodique sur la carte de France, pensé pour le t
 
 ## Règles (v1.0, résumé)
 
-- **But** : remporter l'élection présidentielle après **8 tours de campagne**. Chaque région vote selon ses cubes et pèse ses vrais électeurs : ses inscrits, moins les abstentionnistes et les votes blancs ou nuls. Deux modes : **Réaliste** (départ à la moyenne des législatives et des européennes 2024) et **Égalité** (tout le monde part avec les mêmes chances). Le parti qui contrôle une région y gagne un bonus de voix.
+- **But** : remporter l'élection présidentielle après **8 tours de campagne**. Chaque région vote selon ses cubes et pèse ses vrais électeurs : ses inscrits, moins les abstentionnistes et les votes blancs ou nuls. Avant chaque partie, on choisit le mode : **Réaliste** (départ aux vrais scores : présidentielle 2022, moyenne législatives + européennes 2024, ou moyenne de 6 sondages d'octobre 2026) ou **Simulation** (tout le monde part avec les mêmes chances). Le parti qui contrôle une région y gagne un bonus de voix.
 - **Scrutin** : plus de 50 % au premier tour = élu. Sinon, second tour entre les deux premiers, avec reports de voix selon la proximité politique (alliés : 85 %).
 - **Axe politique** : FI · VP · SM · EM · UG · MN. Faire campagne là où un parti voisin est présent lui prend des électeurs.
 - **Alliances** : avec un parti à distance 2 au plus ; pas d'attaque entre alliés ; rompre coûte 2 ★ et ruine les reports.

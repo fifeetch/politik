@@ -28,7 +28,7 @@
       <p class="tagline">8 tours de campagne, 2 tours de scrutin, un seul élu. Puis cinq ans pour gouverner.</p>
     </div>
     <div class="stack">
-      <button class="btn btn-yellow btn-big" data-go="choose">Nouvelle partie</button>
+      <button class="btn btn-yellow btn-big" data-go="setup">Nouvelle partie</button>
       <button class="btn btn-ghost-light" data-action="tuto">Comment jouer (tutoriel)</button>
       <button class="btn btn-ghost-light" data-action="rules">Règles du jeu</button>
       <button class="btn btn-ghost-light" id="btn-install" type="button" hidden>📲 Installer l'application</button>
@@ -36,13 +36,29 @@
     <p class="fineprint">Parodie politique. Toute ressemblance est volontaire,<br>toute caricature est équitable.</p>
   </section>
 
+  <!-- v1.2 : paramètres de la partie -->
+  <section id="screen-setup" class="screen">
+    <div class="choose-head">
+      <span class="kicker">Nouvelle partie</span>
+      <h1 class="h1">Paramètre ta partie</h1>
+    </div>
+    <h2 class="setup-h">Mode de jeu</h2>
+    <div id="mode-pick" class="mode-pick" role="radiogroup" aria-label="Mode de jeu"></div>
+    <div id="base-wrap">
+      <h2 class="setup-h">Point de départ</h2>
+      <div id="base-pick" class="base-pick" role="radiogroup" aria-label="Point de départ"></div>
+    </div>
+    <div id="setup-preview" class="setup-preview"></div>
+    <button id="btn-setup-go" class="btn btn-ink btn-big" type="button">Choisir mon parti</button>
+  </section>
+
   <!-- Choix du parti -->
   <section id="screen-choose" class="screen">
     <div class="choose-head">
-      <span class="kicker">Toi contre 3 partis menés par l'ordinateur</span>
+      <button type="button" class="linkbtn back-link" data-go="setup">‹ Paramètres de la partie</button>
+      <span class="kicker" id="choose-kicker">Toi contre 3 partis menés par l'ordinateur</span>
       <h1 class="h1">Choisis ton parti</h1>
     </div>
-    <div id="mode-pick" class="mode-pick" role="group" aria-label="Mode de jeu"></div>
     <div id="party-grid" class="party-grid"></div>
     <div id="party-detail" class="party-detail"></div>
     <button id="btn-start" class="btn btn-ink btn-big">Composer mon programme</button>
@@ -123,7 +139,7 @@
     <div id="end-table" class="end-table"></div>
     <div class="stack">
       <button class="btn btn-yellow btn-big" id="btn-govern" type="button" hidden>Gouverner le pays</button>
-      <button class="btn btn-ghost-light" data-go="choose">Rejouer une campagne</button>
+      <button class="btn btn-ghost-light" data-go="setup">Rejouer une campagne</button>
       <button class="btn btn-ghost-light" data-go="title">Accueil</button>
     </div>
   </section>

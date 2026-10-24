@@ -106,6 +106,15 @@ Quand tu gagnes la présidentielle, le bouton « 🏛️ Gouverner le pays » ou
 - Nouvelles mesures très débattues : âge de la retraite (60, 62, 64 ou 65 ans), droit du sol, aide médicale d'État, encadrement des loyers, nouveaux réacteurs nucléaires, éoliennes, référendum d'initiative citoyenne, proportionnelle, places de prison.
 - Thèmes absents du jeu : logement, énergie, Europe, institutions, agriculture.
 
+## v1.3 — fait : un écran pour paramétrer sa partie
+- Après « Nouvelle partie », un écran de paramétrage : mode **Réaliste** ou **Simulation** (égalité des chances).
+- En Réaliste, trois points de départ au choix, avec leurs sources et leurs limites :
+  1. **Présidentielle 2022** : 1er tour par région (Mélenchon, Hidalgo, Jadot, Macron, Pécresse, Le Pen ; ministère de l'Intérieur).
+  2. **Dernières élections** : moyenne des législatives et des européennes 2024.
+  3. **Sondages 2026** : moyenne de 6 sondages d'octobre 2026 pour la présidentielle 2027 (Harris Interactive, OpinionWay, Ifop, YouGov, Elabe, Odoxa) : RN 35,1 %, LFI 16,3 %, centre (Philippe + Attal) 15,8 %, PS-Place publique 12,8 %, LR 5,9 %, Écologistes 3 %. Chaque région garde son profil de 2024 et suit la tendance nationale.
+- Aperçu des scores nationaux de départ ; chaque parti a au moins 1 électeur dans chaque région.
+- Simulation (1 500 parties par point de départ) : la présidentielle 2022 avantage le centre (43 % de victoires), les sondages 2026 le RN (34 %), conformément aux chiffres réels.
+
 ## Plus tard — rejouabilité
 - Phase des **500 parrainages** avant la campagne.
 - IA avec des personnalités (populiste, prudente, opportuniste).

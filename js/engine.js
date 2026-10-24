@@ -251,6 +251,18 @@
     });
     return v;
   }
+  /* v1.2 : score de départ d'un parti dans une région, selon le point de départ choisi (mode Réaliste) */
+  var NAT24 = (function () {
+    var n = {}, w = 0;
+    D.REGIONS.forEach(function (r) { var ex = r.ins * (1 - r.abst / 100) * (1 - (r.blanc + r.nuls) / 100); w += ex; Object.keys(r.start).forEach(function (p) { n[p] = (n[p] || 0) + ex * r.start[p]; }); });
+    Object.keys(n).forEach(function (p) { n[p] /= w; });
+    return n;
+  })();
+  function baseScore(base, r, pid) {
+    if (base === 'p2022') return (r.start22 && r.start22[pid]) || 0;
+    if (base === 'sond') return (r.start[pid] || 0) * D.POLLS.avg[pid] / NAT24[pid];   // profil 2024 × tendance nationale des sondages
+    return r.start[pid] || 0;
+  }
   /* Mode Réaliste : la part des « autres » (petites listes, partis absents de la partie). La campagne les écrase peu à peu :
      les électeurs se rangent derrière les grands candidats (vote utile). */
   function othersShare(g, rid) {
@@ -280,7 +292,7 @@
     var ids = humanParty ? [humanParty].concat(ai) : ai;
     var objs = shuffle(D.OBJECTIVES.map(function (o) { return o.id; }), rng);
     var g = {
-      seed: seed, rng: rng, mode: opts.mode === 'egal' ? 'egal' : 'reel', turn: 0, phase: 'setup', winner: null, over: false, result: null,
+      seed: seed, rng: rng, mode: opts.mode === 'egal' ? 'egal' : 'reel', base: D.BASES[opts.base] ? opts.base : 'e2024', turn: 0, phase: 'setup', winner: null, over: false, result: null,
       alliances: {}, betrayed: {}, offers: [], hot: [], nextHot: [], news: null,
       bases: {}, pending: [], markers: [], crisis: null, dilemma: null, dilemmas: [], lastPoll: null,
       affairs: [], nextAffairs: [], affairDeck: [], affairIdx: 0,
@@ -306,9 +318,10 @@
       }
       // Mode Réaliste : la moyenne des législatives et des européennes 2024 (voir data.js). Le contrôle des régions
       // suit ensuite la règle normale (au moins 3 électeurs, 4 pour le Mouvement National, et être devant)
-      g.players.forEach(function (pl) { var n = Math.round((r.start[pl.id] || 0) * R.startScale / 100); if (n) addCubes(g, r.id, pl.id, n); });
+      // au moins 1 électeur partout : chaque parti a des sympathisants dans toutes les régions
+      g.players.forEach(function (pl) { var n = Math.max(1, Math.round(baseScore(g.base, r, pl.id) * R.startScale / 100)); addCubes(g, r.id, pl.id, n); });
       // les électeurs des partis absents de la partie et des autres listes : « autres », qui pèsent dans les sondages
-      var sum = 0; pids(g).forEach(function (id) { sum += r.start[id] || 0; });
+      var sum = 0; pids(g).forEach(function (id) { sum += baseScore(g.base, r, id); });
       g.regions[r.id].others = Math.max(0, 100 - sum) / 100;
     });
     updateAllControl(g);
@@ -976,7 +989,7 @@
     actionCost: actionCost, checkAction: checkAction, mediaRegions: mediaRegions, gain: gain, bestRegions: bestRegions,
     controlledPoints: controlledPoints, controlledRegions: controlledRegions, totalCubes: totalCubes, ranking: ranking,
     leader: leader, cubes: cubes, minControl: minControl, player: player, rivalIn: rivalIn, strongestRegion: strongestRegion,
-    regionVoters: regionVoters, othersShare: othersShare, turnoutStats: turnoutStats, mobilizeGain: mobilizeGain, lowTurnoutFit: lowTurnoutFit,
+    regionVoters: regionVoters, othersShare: othersShare, baseScore: baseScore, turnoutStats: turnoutStats, mobilizeGain: mobilizeGain, lowTurnoutFit: lowTurnoutFit,
     NATPOP: NATPOP, setProgramme: setProgramme, segmentAppeal: segmentAppeal, echoOf: echoOf, echo: echo, echoBonus: echoBonus, echoRanks: echoRanks, programmeCred: programmeCred, programmeCost: programmeCost, measure: measure, MEAS: MEAS,
     resolveAffair: resolveAffair, enqueteChance: enqueteChance, affairDef: affairDef,
     resolveDilemma: resolveDilemma, dilemmaDef: dilemmaDef, applyFx: applyFx, markerAt: markerAt, hotHere: hotHere, crisisAct: crisisAct,

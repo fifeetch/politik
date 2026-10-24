@@ -8,8 +8,9 @@
   var SVGNS = 'http://www.w3.org/2000/svg';
 
   var g = null, me = null, chosen = 'VP', selected = null, queue = [];
-  var gameMode = 'reel';   // v1.1 : 'reel' (Réaliste, départ 2024) ou 'egal' (Égalité des chances)
-  try { if (localStorage.getItem('politik_mode') === 'egal') gameMode = 'egal'; } catch (e) {}
+  var gameMode = 'reel';   // v1.1 : 'reel' (Réaliste) ou 'egal' (Simulation : égalité des chances)
+  var gameBase = 'e2024';  // v1.2 : point de départ du mode Réaliste : 'p2022', 'e2024' ou 'sond'
+  try { if (localStorage.getItem('politik_mode') === 'egal') gameMode = 'egal'; var sb = localStorage.getItem('politik_base'); if (D.BASES[sb]) gameBase = sb; } catch (e) {}
   var theme = null, themePicked = false;   // v0.3 : le message (thème) choisi pour les actions
   var advisorHidden = false;               // v0.7 : la conseillère, masquée pour ce tour
   var T = window.PolitikTuto, forceTuto = false, tutoGame = false;
@@ -53,13 +54,14 @@
 
   /* ---------- Écrans ---------- */
   function go(name) {
-    if (name === 'choose' || name === 'title') g = null;
+    if (name === 'choose' || name === 'title' || name === 'setup') g = null;
     Array.prototype.forEach.call(document.querySelectorAll('.screen'), function (s) { s.classList.remove('active'); });
     $('screen-' + name).classList.add('active');
     if (name === 'choose') renderChoose();
+    if (name === 'setup') renderSetup();
   }
   document.addEventListener('click', function (e) {
-    var h = e.target.closest('[data-action="tuto"]'); if (h) { forceTuto = true; go('choose'); return; }
+    var h = e.target.closest('[data-action="tuto"]'); if (h) { forceTuto = true; go('setup'); return; }
     var t = e.target.closest('[data-go]'); if (t) go(t.getAttribute('data-go'));
     var a = e.target.closest('[data-action="rules"]'); if (a) showRules();
   });
@@ -105,14 +107,54 @@
     });
   }
 
+  /* ---------- v1.2 : paramètres de la partie ---------- */
+  /* Score national de départ d'un parti, en %, pour un point de départ donné */
+  function natScore(base, pid) {
+    if (base === 'sond') return D.POLLS.avg[pid];
+    var s = 0, w = 0;
+    D.REGIONS.forEach(function (r) { var ex = r.ins * (1 - r.abst / 100) * (1 - (r.blanc + r.nuls) / 100); s += ex * E.baseScore(base, r, pid); w += ex; });
+    return s / w;
+  }
+  function renderSetup() {
+    var modes = [['reel', 'Réaliste', 'Les partis partent avec leurs vrais scores.'], ['egal', 'Simulation', 'Tout le monde part avec les mêmes chances.']];
+    $('mode-pick').innerHTML = modes.map(function (m) {
+      return '<button type="button" role="radio" class="mode-btn' + (gameMode === m[0] ? ' on' : '') + '" data-mode="' + m[0] + '" aria-checked="' + (gameMode === m[0]) + '"><b>' + m[1] + '</b><small>' + m[2] + '</small></button>';
+    }).join('');
+    $('base-wrap').hidden = gameMode !== 'reel';
+    $('base-pick').innerHTML = ['p2022', 'e2024', 'sond'].map(function (k) {
+      var B = D.BASES[k], on = gameBase === k, more = '';
+      if (on && k === 'sond') {
+        more = '<div class="polls"><p>Moyenne de <b>6 sondages</b> réalisés en ' + D.POLLS.date + ' pour la présidentielle 2027 :</p><ul>' +
+          D.POLLS.list.map(function (x) { return '<li>' + esc(x.who) + ', ' + esc(x.when) + '</li>'; }).join('') + '</ul>' +
+          '<p class="hint">En Mouvement = Philippe (Horizons) + Attal (Renaissance) quand il est testé ; L\'Union Gaulliste = Retailleau (LR) ; Les Verts Pâturages = Tondelier. Les sondages sont nationaux : chaque région garde son profil de 2024 et suit la tendance.</p>' + srcHtml(D.POLLS) + '</div>';
+      } else if (on) {
+        var L = D.LEARN[B.learn];
+        more = '<div class="polls">' + srcHtml(L) + '</div>';
+      }
+      return '<div class="base-card' + (on ? ' on' : '') + '"><button type="button" role="radio" class="base-btn" data-base="' + k + '" aria-checked="' + on + '"><b>' + esc(B.name) + '</b><small>' + esc(B.text) + '</small></button>' + more +
+        (on ? '<button type="button" class="linkbtn base-why" data-learn="' + B.learn + '">Pourquoi ce choix, et ses limites</button>' : '') + '</div>';
+    }).join('');
+    // aperçu : le score national de départ de chaque parti
+    var parts = D.PARTIES.slice().sort(function (a, b) { return a.pos - b.pos; });
+    var max = 0, sc = {};
+    parts.forEach(function (p) { sc[p.id] = gameMode === 'egal' ? 1 : natScore(gameBase, p.id); max = Math.max(max, sc[p.id]); });
+    $('setup-preview').innerHTML = '<h2 class="setup-h">Au départ</h2>' + (gameMode === 'egal'
+      ? '<p class="hint">Chaque parti a 2 électeurs dans chaque région. Personne ne tient de région, personne ne part en tête.</p>'
+      : '<div class="prev-bars">' + parts.map(function (p) {
+          return '<div class="prev-row"><span>' + esc(p.short) + '</span><span class="prev-track"><i style="width:' + (100 * sc[p.id] / max) + '%;background:' + p.color + '"></i></span><b>' + pctFr(sc[p.id] / 100, 1) + ' %</b></div>';
+        }).join('') + '</div><p class="hint">Score national. Le reste va aux petites listes, qui comptent sous « Autres » dans les sondages du jeu.</p>');
+    Array.prototype.forEach.call(document.querySelectorAll('[data-mode]'), function (b) {
+      b.addEventListener('click', function () { gameMode = b.getAttribute('data-mode'); try { localStorage.setItem('politik_mode', gameMode); } catch (e) {} renderSetup(); });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-base]'), function (b) {
+      b.addEventListener('click', function () { gameBase = b.getAttribute('data-base'); try { localStorage.setItem('politik_base', gameBase); } catch (e) {} renderSetup(); });
+    });
+  }
+  $('btn-setup-go').addEventListener('click', function () { go('choose'); });
+
   /* ---------- Choix du parti ---------- */
   function renderChoose() {
-    $('mode-pick').innerHTML = [['reel', 'Réaliste', 'Départ avec les vrais scores de 2024'], ['egal', 'Égalité', 'Tout le monde part avec les mêmes chances']].map(function (m) {
-      return '<button type="button" class="mode-btn' + (gameMode === m[0] ? ' on' : '') + '" data-mode="' + m[0] + '" aria-pressed="' + (gameMode === m[0]) + '"><b>' + m[1] + '</b><small>' + m[2] + '</small></button>';
-    }).join('');
-    Array.prototype.forEach.call(document.querySelectorAll('[data-mode]'), function (b) {
-      b.addEventListener('click', function () { gameMode = b.getAttribute('data-mode'); try { localStorage.setItem('politik_mode', gameMode); } catch (e) {} renderChoose(); });
-    });
+    $('choose-kicker').textContent = gameMode === 'egal' ? 'Simulation : tout le monde part à égalité' : 'Réaliste : départ « ' + D.BASES[gameBase].short + ' »';
     var grid = $('party-grid'); grid.innerHTML = '';
     D.PARTIES.forEach(function (p) {
       var b = el('button', { class: 'party-card' + (p.id === chosen ? ' on' : ''), type: 'button', 'aria-pressed': p.id === chosen, style: 'border-left-color:' + p.color });
@@ -124,7 +166,7 @@
     });
     var p = party(chosen);
     $('party-detail').innerHTML = '<div class="cand-line">' + A.portrait(p.id) + '<div><b class="cand-name">' + esc(p.candidate) + '</b><span>' + esc(p.candTitle) + ' · tempérament ' + D.TEMPERS[p.id].label + '</span></div></div>' +
-      (gameMode === 'reel' ? '<div class="score24"><span>Score de départ</span><b>' + pctFr(score2024(p.id), 1) + ' %</b><small>moyenne des législatives et des européennes 2024, région par région. <button type="button" class="linkbtn" data-learn="depart2024">Pourquoi ce chiffre ?</button></small></div>'
+      (gameMode === 'reel' ? '<div class="score24"><span>Score de départ</span><b>' + pctFr(natScore(gameBase, p.id) / 100, 1) + ' %</b><small>' + esc(D.BASES[gameBase].text) + ' <button type="button" class="linkbtn" data-learn="' + D.BASES[gameBase].learn + '">Pourquoi ce chiffre ?</button></small></div>'
         : '<div class="score24"><span>Mode Égalité</span><b>2</b><small>électeurs dans chaque région pour chaque parti : personne ne part en tête.</small></div>') +
       axisHtml(p.id) +
       (p.pos === 1 || p.pos === 6 ? '<div><b>Au bout de l\'axe.</b> Les reports de second tour seront rares. Pense aux alliances !</div>' : '') +
@@ -283,7 +325,7 @@
 
   /* ---------- Partie ---------- */
   function startGame(pid, prog, fin) {
-    g = E.createGame(pid, { mode: gameMode }); me = pid; selected = null; queue = []; theme = null; themePicked = false; advisorHidden = false;
+    g = E.createGame(pid, { mode: gameMode, base: gameBase }); me = pid; selected = null; queue = []; theme = null; themePicked = false; advisorHidden = false;
     E.setProgramme(g, pid, prog || party(pid).programme, fin || party(pid).financing);
     go('game');
     nextTurn();
@@ -291,7 +333,7 @@
   function mePl() { return E.player(g, me); }
   /* Raccourci : la campagne se joue toute seule, et tu l'emportes de justesse au second tour */
   function skipCampaign(pid, prog, fin) {
-    g = E.createGame(pid, { mode: gameMode }); me = pid;
+    g = E.createGame(pid, { mode: gameMode, base: gameBase }); me = pid;
     E.setProgramme(g, pid, prog, fin);
     while (!g.over) {
       var info = E.startTurn(g);
@@ -1119,7 +1161,7 @@
   function showRules() {
     modal({ kicker: 'Règles v1.0', title: 'Comment gagner', html:
       '<p><b>But :</b> remporter l\'élection présidentielle à la fin des <b>8 tours de campagne</b>. Chaque région vote selon ses cubes. Elle pèse ses <b>vrais électeurs</b> : ses inscrits (le chiffre sur la carte, en millions), moins ceux qui s\'abstiennent, moins ceux qui votent blanc ou nul. Le parti qui contrôle une région y gagne un petit bonus.</p>' +
-      '<p><b>Deux modes de jeu.</b> <b>Réaliste</b> : chaque parti démarre avec la moyenne de ses scores aux législatives et aux européennes de 2024, région par région ; les petites listes et les partis absents de ta partie comptent sous « Autres » dans les sondages, et la campagne les réduit peu à peu. <b>Égalité</b> : chaque parti a 2 électeurs dans chaque région, personne ne tient de région au départ, et tout le monde a les mêmes chances. <button type="button" class="linkbtn" data-learn="depart2024">Pourquoi ces chiffres ?</button></p>' +
+      '<p><b>Deux modes de jeu.</b> <b>Réaliste</b> : chaque parti démarre avec ses vrais scores, au choix ceux de la présidentielle 2022, la moyenne des législatives et des européennes 2024, ou la moyenne de 6 sondages d\'octobre 2026 ; les petites listes et les partis absents de ta partie comptent sous « Autres » dans les sondages, et la campagne les réduit peu à peu. <b>Simulation</b> : chaque parti a 2 électeurs dans chaque région, personne ne tient de région au départ, et tout le monde a les mêmes chances.</p>' +
       '<p><b>L\'abstention :</b> environ un quart des inscrits ne votent pas, et beaucoup plus en outre-mer. Le bouton <b>Abstention</b> au-dessus de la carte la montre. 🚪 <b>Mobiliser</b> fait voter des abstentionnistes ; attaquer ou multiplier les affaires en dégoûte d\'autres.</p>' +
       '<p><b>Premier tour :</b> plus de 50 % des suffrages exprimés (les blancs ne comptent pas) = élu directement. Sinon, les deux premiers vont au <b>second tour</b>. Les électeurs des autres partis se reportent selon leur proximité politique (alliés : 85 %) ; les autres votent blanc ou restent chez eux.</p>' +
       axisHtml(me || chosen) +
