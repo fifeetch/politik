@@ -1,6 +1,6 @@
 /* Politik — interface (écrans, carte, déroulement d'un tour). */
 (function () {
-  var D = window.PolitikData, M = window.PolitikMap, E = window.PolitikEngine, AI = window.PolitikAI, A = window.PolitikArt;
+  var D = window.PolitikData, M = window.PolitikMap, E = window.PolitikEngine, AI = window.PolitikAI, A = window.PolitikArt, FX = window.PolitikFX;
   var R = D.RULES;
   var SHORT = { idf: 'IDF', ara: 'ARA', hdf: 'HDF', naq: 'N-AQ', occ: 'OCC', ges: 'G-EST', pac: 'PACA',
                 pdl: 'PDL', bre: 'BRE', nor: 'NOR', bfc: 'BFC', cvl: 'CVL', cor: 'CORSE' };
@@ -11,6 +11,7 @@
   var gameMode = 'reel';   // v1.1 : 'reel' (Réaliste) ou 'egal' (Simulation : égalité des chances)
   var gameBase = 'e2024';  // v1.2 : point de départ du mode Réaliste : 'p2022', 'e2024' ou 'sond'
   try { if (localStorage.getItem('politik_mode') === 'egal') gameMode = 'egal'; var sb = localStorage.getItem('politik_base'); if (D.BASES[sb]) gameBase = sb; } catch (e) {}
+  var justAdded = -1;                      // v1.4 : la dernière carte posée, qui se retourne
   var theme = null, themePicked = false;   // v0.3 : le message (thème) choisi pour les actions
   var advisorHidden = false;               // v0.7 : la conseillère, masquée pour ce tour
   var T = window.PolitikTuto, forceTuto = false, tutoGame = false;
@@ -55,6 +56,7 @@
   /* ---------- Écrans ---------- */
   function go(name) {
     if (name === 'choose' || name === 'title' || name === 'setup') g = null;
+    if (name !== 'game') FX.clearBreaking();
     Array.prototype.forEach.call(document.querySelectorAll('.screen'), function (s) { s.classList.remove('active'); });
     $('screen-' + name).classList.add('active');
     if (name === 'choose') renderChoose();
@@ -68,6 +70,8 @@
 
   /* ---------- Modale & toast ---------- */
   function modal(opts) {
+    var card = document.querySelector('#modal .modal-card');
+    card.className = 'modal-card' + (opts.cls ? ' ' + opts.cls : '');
     $('modal-kicker').textContent = opts.kicker || '';
     $('modal-title').textContent = opts.title || '';
     $('modal-body').innerHTML = opts.html || '';
@@ -79,9 +83,11 @@
       bx.appendChild(btn);
     });
     $('modal').hidden = false;
+    FX.setModal(true);
+    FX.replay(card, 'enter');
     if (opts.onOpen) opts.onOpen();
   }
-  function closeModal() { $('modal').hidden = true; }
+  function closeModal() { $('modal').hidden = true; FX.setModal(false); }
   var toastTimer;
   function toast(msg) { var t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.hidden = true; }, 2200); }
 
@@ -361,7 +367,7 @@
 
   function nextTurn() {
     var info = E.startTurn(g);
-    queue = []; themePicked = false; theme = E.bestTheme(g, me, selected); advisorHidden = false;
+    queue = []; themePicked = false; theme = E.bestTheme(g, me, selected); advisorHidden = false; advReact = null;
     // les affaires et le dilemme des IA se règlent tout de suite ; les tiens t'attendent après le journal
     var aiAff = [];
     g.affairs.filter(function (a) { return a.pid !== me; }).forEach(function (a) { aiAff.push(Object.assign({ src: a.src }, E.resolveAffair(g, a.pid, AI.chooseReaction(g, a.pid)))); });
@@ -370,6 +376,12 @@
     render();
     var mine = g.affairs.filter(function (a) { return a.pid === me; });
     var waits = mine.length || (g.dilemma && g.dilemma.pid === me);
+    var alerts = [];
+    if (info.crisis) alerts.push('CRISE · ' + info.crisis.title);
+    mine.forEach(function (a) { alerts.push('AFFAIRE · Toi : ' + a.title); });
+    aiAff.forEach(function (x) { alerts.push('AFFAIRE · ' + party(x.pid).short + ' : ' + x.title); });
+    info.later.forEach(function (x) { if (x.hit) alerts.push(x.title + (x.pid === me ? '' : ' (' + party(x.pid).short + ')')); });
+    FX.breaking('Alerte info', alerts);
     modal({ kicker: 'Tour ' + g.turn + ' / ' + R.maxTurns, title: g.turn === 1 ? 'La campagne commence' : 'Le journal du matin', html: journalHtml(info, aiDil, aiAff),
             buttons: [{ label: mine.length ? 'Une affaire te tombe dessus →' : waits ? 'Une décision t’attend →' : 'À mes actions', primary: true, onClick: function () {
               chain([function (next) { mine.length ? showAffair(next) : next(); },
@@ -386,11 +398,13 @@
     if (!a) return then();
     var src = a.src === 'budget' ? 'Les économistes ont épluché ton programme.' : a.src === 'casseroles' ? 'À force d\'accumuler les casseroles, ça devait sortir.' :
       a.src === 'canard' ? 'Le Canard Déchaîné sort l\'info en une.' : 'Un rival a fouillé ton passé…';
-    var html = '<div class="aff-vign">' + A.vignette('scandale') + '</div><p><b>' + esc(src) + '</b> ' + esc(a.text) + '</p>' + learnBox('affaires') +
+    var html = '<div class="paper paper-spin paper-scandal"><div class="paper-mast">' + (a.src === 'canard' ? 'LE CANARD DÉCHAÎNÉ' : 'LE QUOTIDIEN NATIONAL') + ' <span>· Édition spéciale</span></div>' +
+      '<div class="paper-vign">' + A.vignette('scandale') + '</div><div class="paper-head">' + esc(a.title) + '</div></div>' +
+      '<p><b>' + esc(src) + '</b> ' + esc(a.text) + '</p>' + learnBox('affaires') +
       '<div class="pick">' + D.REACTIONS.map(function (rc, i) {
         return '<button type="button" class="pick-row" data-rc="' + i + '"><span class="pick-txt"><b>' + esc(rc.label) + '</b><small>' + esc(rc.hint) + '</small></span></button>';
       }).join('') + '</div>';
-    modal({ kicker: '💥 Affaire', title: a.title, html: html, buttons: [],
+    modal({ kicker: '💥 Affaire', title: 'Ça sort dans la presse', cls: 'shake', html: html, buttons: [],
       onOpen: function () {
         Array.prototype.forEach.call(document.querySelectorAll('[data-rc]'), function (row) {
           row.addEventListener('click', function () {
@@ -410,7 +424,7 @@
   /* Le journal du tour : la une, puis « en bref » (seulement ce qui compte) */
   function journalHtml(info, aiDil, aiAff) {
     var vk = info.crisis ? g.news.theme : g.news.theme;
-    var h = '<div class="paper"><div class="paper-mast">LE QUOTIDIEN NATIONAL <span>· Tour ' + g.turn + '</span></div>' +
+    var h = '<div class="paper paper-spin"><div class="paper-mast">LE QUOTIDIEN NATIONAL <span>· Tour ' + g.turn + '</span></div>' +
       (A.hasVignette(vk) ? '<div class="paper-vign">' + A.vignette(vk) + '</div>' : '');
     if (info.crisis) {
       h += '<div class="paper-crisis">Crise · ' + esc(info.crisis.name) + ' · ' + (info.crisis.index + 1) + '/3</div>' +
@@ -485,12 +499,57 @@
     if (g.turn <= R.registerTurns + 2 && E.lowTurnoutFit(g, me, low.id) >= 0.18) return 'En ' + low.name + ', ton programme parle à ceux qui votent peu : 🚪 Mobiliser y fait voter des abstentionnistes.';
     return 'Vise les régions qui pèsent lourd : le chiffre sur la carte, c\'est leur nombre d\'inscrits, en millions.';
   }
+  /* v1.4 : Lulu parle dans une bulle de BD. Elle s'écrit lettre par lettre quand le conseil change,
+     et Lulu réagit quelques secondes à chaque action que tu programmes. */
+  var advShown = null, advTyper = null, advReact = null, advReactTimer = null;
   function renderAdvisor() {
     var box = $('advisor');
-    if (!g || g.phase !== 'actions' || advisorHidden) { box.hidden = true; return; }
-    box.hidden = false;
-    box.innerHTML = '<span class="adv-face">' + A.advisor() + '</span><p><b>' + D.ADVISOR.name + ' :</b> ' + esc(advice()) + '</p><button type="button" class="adv-close" aria-label="Masquer le conseil">✕</button>';
-    box.querySelector('.adv-close').addEventListener('click', function () { advisorHidden = true; renderAdvisor(); });
+    if (!g || g.phase !== 'actions' || advisorHidden) { box.hidden = true; advShown = null; return; }
+    var text = advReact || advice();
+    if (!box.hidden && text === advShown) return;
+    box.hidden = false; advShown = text;
+    if (!box.querySelector('.adv-bubble')) {
+      box.innerHTML = '<span class="adv-face">' + A.advisor() + '</span><p class="adv-bubble" aria-live="polite"><b>' + D.ADVISOR.name + ' :</b> <span class="adv-txt"></span></p><button type="button" class="adv-close" aria-label="Masquer le conseil">✕</button>';
+      box.querySelector('.adv-close').addEventListener('click', function () { advisorHidden = true; renderAdvisor(); });
+    }
+    box.classList.toggle('react', !!advReact);
+    var txt = box.querySelector('.adv-txt');
+    if (advTyper) advTyper.stop();
+    txt.textContent = '';
+    FX.whenFree('lulu', function () {
+      if (advShown !== text || box.hidden) return;
+      FX.replay(box.querySelector('.adv-face'), 'lulu-pop');
+      FX.replay(box.querySelector('.adv-bubble'), 'bubble-in');
+      advTyper = FX.type(txt, text);
+    });
+  }
+  function luluSay(text) {
+    advReact = text;
+    clearTimeout(advReactTimer);
+    advReactTimer = setTimeout(function () { advReact = null; if (g) renderAdvisor(); }, 5200);
+  }
+  /* Ce que Lulu dit quand tu programmes une action */
+  function luluLine(act, wasTiring) {
+    var rn = act.region ? E.REG[act.region].name : '';
+    if (wasTiring) return 'Doucement ! Le candidat tire la langue (⚡ à 0) : à ce rythme, la gaffe nous guette.';
+    if (queue.length >= R.actionsPerTurn) return 'Les 3 actions sont prêtes. Tu valides quand tu veux, on fonce !';
+    switch (act.type) {
+      case 'terrain': var n = E.terrainCubes(g, me, act.region, act.theme);
+        return n >= 3 ? '+' + n + ' en ' + rn + ' ? Je réserve la plus grande salle de la ville !' : 'Un meeting en ' + rn + ' : je préviens la presse locale.';
+      case 'medias': return 'Un passage télé : ça rayonne sur trois régions d\'un coup. Bien vu.';
+      case 'mobiliser': return 'Aller chercher ceux qui ne votent plus en ' + rn + ' : c\'est souvent là que tout se joue.';
+      case 'reseaux': return 'Les réseaux sociaux… carton ou flop. Croisons les doigts !';
+      case 'imposer': return 'Demain, tout le monde parlera de notre sujet. Malin.';
+      case 'contre': return 'Ça va faire du bruit… et nous coûter une casserole 🍳.';
+      case 'militants': return 'Des militants en ' + rn + ' : ils rapporteront à chaque tour.';
+      case 'fonds': return 'On renfloue les caisses. Les donateurs adorent les petits-fours.';
+      case 'reforme': return 'Montrer ce qu\'on fait là où on gouverne : du concret, j\'adore.';
+      case 'card': return 'Tu sors une carte maîtresse : « ' + D.CARDS[act.card].name + ' » !';
+      case 'alliance': return 'Une alliance ? Les reports de voix au second tour, ça peut tout changer.';
+      case 'enquete': return 'On fouille… mais si on se fait prendre, ça nous retombe dessus.';
+      case 'rupture': return 'Rompre ? Leurs électeurs ne l\'oublieront pas de sitôt.';
+    }
+    return 'Noté !';
   }
 
   /* Ton dilemme du tour */
@@ -558,7 +617,10 @@
   function addAction(act) {
     var err = canQueue(act);
     if (err) { toast(err); return; }
-    queue.push(act); render(); T.notify('queue');
+    var wasTiring = tiring(act);
+    queue.push(act); justAdded = queue.length - 1;
+    luluSay(luluLine(act, wasTiring));
+    render(); T.notify('queue');
   }
 
   /* ---------- Rendu ---------- */
@@ -578,39 +640,111 @@
     $('race-status').innerHTML = st.length ? st.join('') : '50 % : élu dès le 1er tour';
     renderRace(); renderNews(); renderAdvisor(); renderMap(); renderRegion(); renderQueue(); renderMessage(); renderActions();
   }
+  /* v1.4 : on garde les mêmes barres d'un tour à l'autre pour qu'elles glissent vers leur nouvelle valeur,
+     et seulement quand l'écran est visible (pas derrière une fenêtre). */
+  var raceG = null, raceSig = '', raceShown = {};
   function renderRace() {
-    var bar = $('race-bar'), leg = $('race-legend'); bar.innerHTML = ''; leg.innerHTML = '';
-    var ally = E.allyOf(g, me);
-    E.poll(g).forEach(function (x) {
-      var pid = x.pid, pct = Math.round(100 * x.pct), p = party(pid);
-      bar.appendChild(el('div', { class: 'seg', style: 'width:' + (100 * x.pct) + '%;background:' + p.color }));
-      leg.appendChild(el('span', { class: pid === me ? 'me' : '' }, '<i class="sw" style="background:' + p.color + '"></i>' + (pid === me ? 'Toi' : pid) + ' ' + pct + ' %' + (pid === ally ? ' <em class="ally">allié</em>' : '')));
+    var sig = E.poll(g).map(function (x) { return x.pid + Math.round(x.pct * 1000); }).join() + '|' + E.allyOf(g, me);
+    if (raceG === g && sig === raceSig) return;
+    var fresh = raceG !== g; raceG = g; raceSig = sig;
+    if (fresh) { raceShown = {}; $('race-bar').innerHTML = ''; drawRace(true); }
+    else FX.whenFree('race', function () { if (g) drawRace(false); });
+  }
+  function drawRace(instant) {
+    var bar = $('race-bar'), leg = $('race-legend'), ally = E.allyOf(g, me), poll = E.poll(g);
+    var au = 1 - poll.reduce(function (s, x) { return s + x.pct; }, 0);
+    var rows = poll.concat(au > 0.005 ? [{ pid: '_autres', pct: au }] : []), keep = {};
+    bar.classList.toggle('instant', instant);
+    rows.forEach(function (x, i) {
+      keep[x.pid] = 1;
+      var seg = bar.querySelector('[data-pid="' + x.pid + '"]');
+      if (!seg) {
+        seg = el('div', { class: 'seg' + (x.pid === '_autres' ? ' seg-autres' : ''), 'data-pid': x.pid, style: 'width:0' });
+        if (x.pid !== '_autres') seg.style.background = party(x.pid).color;
+        bar.appendChild(seg);
+      }
+      seg.style.order = x.pid === '_autres' ? 50 : i;
+      seg.classList.toggle('me', x.pid === me);
+      if (instant) seg.style.width = (100 * x.pct) + '%';
+      else requestAnimationFrame(function () { seg.style.width = (100 * x.pct) + '%'; });
     });
-    var au = 1 - E.poll(g).reduce(function (s, x) { return s + x.pct; }, 0);
-    if (au > 0.005) {
-      bar.appendChild(el('div', { class: 'seg seg-autres', style: 'width:' + (100 * au) + '%' }));
-      leg.appendChild(el('span', { class: 'autres' }, '<i class="sw sw-autres"></i>Autres ' + Math.round(100 * au) + ' %'));
-    }
-    bar.appendChild(el('div', { class: 'mark' }));
+    Array.prototype.forEach.call(bar.querySelectorAll('.seg'), function (sg) { if (!keep[sg.getAttribute('data-pid')]) sg.remove(); });
+    if (!bar.querySelector('.mark')) bar.appendChild(el('div', { class: 'mark' }));
+    if (instant) requestAnimationFrame(function () { bar.classList.remove('instant'); });
+    leg.innerHTML = '';
+    var shown = {};
+    rows.forEach(function (x) {
+      var old = raceShown[x.pid], now = Math.round(100 * x.pct), was = old == null ? null : Math.round(100 * old);
+      var trend = !instant && was != null && was !== now ? (now > was ? 'up' : 'down') : '';
+      var name = x.pid === '_autres' ? 'Autres' : x.pid === me ? 'Toi' : x.pid;
+      var sw = x.pid === '_autres' ? '<i class="sw sw-autres"></i>' : '<i class="sw" style="background:' + party(x.pid).color + '"></i>';
+      var span = el('span', { class: x.pid === '_autres' ? 'autres' : x.pid === me ? 'me' : '' },
+        sw + name + ' <span class="num">' + (trend ? was : now) + '</span> %' + (trend ? '<b class="trend ' + trend + '">' + (trend === 'up' ? '▲' : '▼') + '</b>' : '') + (x.pid === ally ? ' <em class="ally">allié</em>' : ''));
+      leg.appendChild(span);
+      if (trend) FX.count(span.querySelector('.num'), was, now, 800, function (v) { return Math.round(v); });
+      shown[x.pid] = x.pct;
+    });
+    raceShown = shown;
   }
   var mapMode = 'ctrl';
   /* Calque « Abstention » : du plus clair (on vote) au plus foncé (on s'abstient) */
   function abstFill(a) { var t = Math.max(0, Math.min(1, (a - 0.18) / 0.34)); var c0 = [236, 230, 214], c1 = [44, 38, 92]; return 'rgb(' + c0.map(function (v, i) { return Math.round(v + (c1[i] - v) * t); }).join(',') + ')'; }
+  /* v1.4 : la carte vivante.
+     - ink : les régions qui viennent de changer de main. La nouvelle couleur se répand depuis le centre.
+     - candPos : la région où se trouve ton candidat (son pion se déplace à chaque tour). */
+  var mapG = null, lastCtrl = {}, ink = {}, candPos = null, pawnEl = null, replaying = false;
+  function ctrlColor(c) { return c ? party(c).color : NEUTRAL; }
+  function pawnPt(rid) { var m = M.regions[rid]; return { x: m.x - 19, y: m.y + 4 }; }
+  function startPos() {
+    var best = 'idf', bn = -1;
+    D.REGIONS.forEach(function (r) { var n = E.cubes(g, r.id, me); if (n > bn) { bn = n; best = r.id; } });
+    return best;
+  }
+  function inkPending() { return Object.keys(ink).filter(function (k) { return !ink[k].started; }).length; }
+  function inkMs() { var n = Object.keys(ink).length; return n && !FX.reduced ? 950 + 160 * (n - 1) : 0; }
+  function startInk() {
+    var i = 0;
+    Object.keys(ink).forEach(function (rid) {
+      var k = ink[rid]; if (k.started) return;
+      k.started = true;
+      FX.wait(160 * i++, function () {
+        if (ink[rid] !== k) return;
+        var m = M.regions[rid];
+        if (mapMode !== 'abst') FX.ripple($('map'), m.x, m.y, k.to, k.mine);
+        FX.tween(950, function (t) { k.p = t; FX.inkSet(rid, t); }, function () {
+          if (ink[rid] === k) delete ink[rid];
+          if (!Object.keys(ink).length && g && !replaying) renderMap();
+        });
+      });
+    });
+  }
   function renderMap() {
     var s = $('map'); s.innerHTML = '';
     var abstMode = mapMode === 'abst';
     $('map-wrap').classList.toggle('mode-abst', abstMode);
+    if (mapG !== g) { mapG = g; ink = {}; lastCtrl = {}; D.REGIONS.forEach(function (r) { lastCtrl[r.id] = g.regions[r.id].controller; }); candPos = startPos(); }
+    D.REGIONS.forEach(function (r) {
+      var c = g.regions[r.id].controller, c0 = lastCtrl[r.id];
+      if (c === c0) return;
+      lastCtrl[r.id] = c;
+      if (abstMode) return;
+      var from = ink[r.id] ? ink[r.id].to : ctrlColor(c0);
+      ink[r.id] = { from: from, to: ctrlColor(c), p: 0, started: false, mine: c === me || c0 === me };
+    });
     // l'encart : Corse, outre-mer et Français de l'étranger
     s.appendChild(svg('rect', { x: 326, y: 292, width: 42, height: 63, rx: 3, class: 'inset' }));
     var il = svg('text', { x: 347, y: 289, class: 'inset-l' }); il.textContent = '+ outre-mer'; s.appendChild(il);
     D.REGIONS.forEach(function (r) {
       var c = g.regions[r.id].controller;
-      var fill = abstMode ? abstFill(E.regionVoters(g, r.id).abst) : c ? party(c).color : NEUTRAL;
-      var p = svg('path', { d: M.regions[r.id].d, class: 'reg', fill: fill, tabindex: 0, role: 'button', 'aria-label': r.name });
+      var k = abstMode ? null : ink[r.id];
+      var fill = abstMode ? abstFill(E.regionVoters(g, r.id).abst) : k ? k.from : c ? party(c).color : NEUTRAL;
+      var p = svg('path', { d: M.regions[r.id].d, class: 'reg', fill: fill, tabindex: 0, role: 'button', 'aria-label': r.name, 'data-rid': r.id });
       p.addEventListener('click', function () { selectRegion(r.id); });
       p.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectRegion(r.id); } });
       s.appendChild(p);
+      if (k) FX.inkLayer(s, r.id, p, M.regions[r.id].d, M.regions[r.id].x, M.regions[r.id].y, k.to, k.p);
     });
+    if (inkPending()) FX.whenFree('ink', startInk);
     if (selected) {
       s.appendChild(svg('path', { d: M.regions[selected].d, class: 'sel' }));
       s.appendChild(svg('path', { d: M.regions[selected].d, class: 'sel-glow' }));
@@ -644,6 +778,9 @@
       s.appendChild(svg('circle', { cx: x, cy: y, r: 6, class: 'plan-dot' }));
       var t = svg('text', { x: x, y: y + 3, class: 'plan-num' }); t.textContent = i + 1; s.appendChild(t);
     });
+    // le pion de ton candidat
+    pawnEl = null;
+    if (!abstMode && candPos) { var pp = pawnPt(candPos); pawnEl = FX.pawn(s, pp.x, pp.y, A.portrait(me), party(me).color); }
   }
   Array.prototype.forEach.call(document.querySelectorAll('[data-mapmode]'), function (b) {
     b.addEventListener('click', function () {
@@ -695,10 +832,12 @@
       if (!a) { box.appendChild(el('div', { class: 'slot' }, 'Action ' + (i + 1))); continue; }
       var name = a.type === 'card' ? D.CARDS[a.card].name : D.ACTIONS[a.type].name;
       var sub = (a.theme ? th(a.theme).icon + ' ' : '') + (a.region ? SHORT[a.region] : a.target ? a.target : a.theme ? th(a.theme).short : '✕ retirer');
-      var b = el('button', { class: 'slot full', type: 'button', 'aria-label': 'Retirer ' + name }, esc(name) + '<small>' + sub + '</small>');
+      var b = el('button', { class: 'slot full' + (i === justAdded ? ' flip' : ''), type: 'button', 'aria-label': 'Retirer ' + name },
+        '<span class="slot-in"><span class="face front">' + esc(name) + '<small>' + sub + '</small></span><span class="face back" aria-hidden="true">★</span></span>');
       (function (idx) { b.addEventListener('click', function () { queue.splice(idx, 1); render(); }); })(i);
       box.appendChild(b);
     }
+    justAdded = -1;
     $('btn-validate').textContent = queue.length < R.actionsPerTurn ? 'Valider ' + queue.length + '/3' : 'Valider';
     $('btn-validate').disabled = g.phase !== 'actions';
   }
@@ -872,8 +1011,9 @@
   function stampThen(fn) {
     var q = document.querySelector('.queue'), reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     var st = el('span', { class: 'stamp stamp-hit', 'aria-hidden': 'true' }, 'Validé');
+    q.classList.add('played');
     q.appendChild(st);
-    setTimeout(function () { st.remove(); fn(); }, reduce ? 150 : 520);
+    setTimeout(function () { st.remove(); q.classList.remove('played'); fn(); }, reduce ? 150 : 820);
   }
   function resolve() {
     if (!resolve.busy) { resolve.busy = true; return stampThen(function () { resolve(); resolve.busy = false; }); }
@@ -882,10 +1022,61 @@
     var before = {}, ctrl0 = {}, allies0 = Object.assign({}, g.alliances);
     E.poll(g).forEach(function (x) { before[x.pid] = x.pct; });
     D.REGIONS.forEach(function (r) { ctrl0[r.id] = g.regions[r.id].controller; });
+    var cubes0 = {}; D.REGIONS.forEach(function (r) { cubes0[r.id] = E.cubes(g, r.id, me); });
+    var mine = queue.slice();
     var plans = {}; plans[me] = queue.slice();
     g.players.forEach(function (p) { if (!p.human) plans[p.id] = AI.plan(g, p.id); });
     var log = E.resolveActions(g, plans);
-    queue = []; render();
+    queue = []; advReact = null;
+    // v1.4 : on montre d'abord la tournée du candidat sur la carte, puis les régions qui basculent, puis le flash info
+    FX.hold(); render();
+    replayTurn(mine, cubes0, function () {
+      FX.release();
+      FX.wait(inkMs() + 120, function () { showFlash(log, before, ctrl0, allies0); });
+    });
+  }
+  /* La tournée du candidat : son pion va de région en région, une trace en pointillés derrière lui.
+     À chaque étape : les cubes gagnés s'envolent, et pour « Mobiliser » des abstentionnistes prennent ta couleur. */
+  function replayTurn(acts, cubes0, done) {
+    var stops = [];
+    acts.forEach(function (a) {
+      if (!a.region) return;
+      var last = stops[stops.length - 1];
+      if (last && last.rid === a.region) { last.mob = last.mob || a.type === 'mobiliser'; return; }
+      stops.push({ rid: a.region, mob: a.type === 'mobiliser' });
+    });
+    var ended = false;
+    function finish() {
+      if (ended) return; ended = true; replaying = false;
+      if (stops.length) candPos = stops[stops.length - 1].rid;
+      var sk = document.querySelector('.fx-skip'); if (sk) sk.remove();
+      if (g) renderMap();
+      done();
+    }
+    if (!stops.length || FX.reduced || mapMode === 'abst' || !pawnEl) return finish();
+    replaying = true;
+    var s = $('map'), shown = {}, i = 0;
+    var skip = el('button', { class: 'fx-skip', type: 'button', 'aria-label': 'Passer l\'animation' }, '<span>Ton candidat fait campagne… <u>passer</u></span>');
+    skip.addEventListener('click', finish);
+    $('screen-game').appendChild(skip);
+    (function next() {
+      if (ended) return;
+      if (i >= stops.length) return FX.wait(250, finish);
+      var st = stops[i++];
+      FX.route(s, pawnEl, pawnPt(candPos), pawnPt(st.rid), 900, function () {
+        if (ended) return;
+        candPos = st.rid;
+        var m = M.regions[st.rid], d = E.cubes(g, st.rid, me) - cubes0[st.rid];
+        if (!shown[st.rid]) {
+          shown[st.rid] = 1;
+          if (d) FX.floatText(s, m.x + 2, m.y - 12, (d > 0 ? '+' : '−') + Math.abs(d), d > 0 ? 'gain' : 'loss');
+          if (st.mob) FX.voters(s, m.x, m.y + 22, Math.max(1, d), party(me).color);
+        }
+        FX.wait(st.mob ? 1500 : 500, next);
+      });
+    })();
+  }
+  function showFlash(log, before, ctrl0, allies0) {
     var html = flashHtml(log, before, ctrl0, allies0) +
       '<details class="details"><summary>Détail des ' + log.length + ' actions</summary><div class="log">' + log.map(function (l) {
       return '<div class="log-row' + (l.gaffe ? ' gaffe' : l.ok ? '' : ' fail') + (l.credUp && l.pid === me ? ' up' : '') + '">' + chip(l.pid) + '<span><b>' + esc(l.action) + '</b>' + (l.theme ? ' ' + th(l.theme).icon : '') + (l.region ? ' · ' + SHORT[l.region] : '') + ' — ' + esc(l.text) + '</span></div>';
@@ -1039,54 +1230,123 @@
   /* ---------- v0.6 : la soirée électorale à 20h ---------- */
   var nightTimers = [], nightDone = false;
   function later(fn, ms) { nightTimers.push(setTimeout(fn, ms)); }
-  function regionWinner(rid) {
-    var best = null, bn = 0;
-    g.players.forEach(function (p) { var n = E.cubes(g, rid, p.id); if (n > bn) { bn = n; best = p.id; } });
-    return best;
-  }
+  /* v1.4 : la soirée électorale en trois temps.
+     1. Le dépouillement : les régions tombent une à une sur la carte (des plus petites à l'Île-de-France),
+        avec des résultats partiels qui bougent.
+     2. Le compte à rebours de 20h, face aux deux finalistes dans l'ombre.
+     3. 20h : le visage de l'élu apparaît, puis les vrais résultats. */
   function electionNight() {
     $('toast').hidden = true;
     var res = g.result, win = g.winner, P = party(win);
     var pct = res.direct ? res.first[0].pct : (res.second.a === win ? res.second.pctA : res.second.pctB);
+    var finals = res.second ? [{ pid: res.second.a, pct: res.second.pctA }, { pid: res.second.b, pct: res.second.pctB }] : res.first;
+    var among = finals.map(function (x) { return x.pid; });
+    var duo = res.second ? [res.second.a, res.second.b] : [res.first[0].pid, res.first[1].pid];
+    var STEP = 520;
     nightTimers.forEach(clearTimeout); nightTimers = []; nightDone = false;
+    var screen = $('screen-night'), clock = $('night-clock');
+    screen.classList.remove('flash20', 'counting', 'final');
+    clock.classList.remove('hot', 'tick', 'long');
     var mapEl = $('night-map'); mapEl.innerHTML = '';
     var paths = {};
     D.REGIONS.forEach(function (r) {
       var p = svg('path', { d: M.regions[r.id].d, fill: '#3A3560', stroke: '#1D1A33', 'stroke-width': 1.2, 'stroke-linejoin': 'round', class: 'night-reg' });
       mapEl.appendChild(p); paths[r.id] = p;
     });
-    $('night-stage').innerHTML = '<p class="night-wait">Les derniers bureaux de vote ferment…</p>';
-    $('night-bars').innerHTML = ''; $('night-clock').hidden = false; $('night-clock').textContent = '19:59:55';
+    // le vainqueur d'une région, parmi les candidats encore en lice
+    function leadIn(rid) {
+      var best = null, bn = 0;
+      among.forEach(function (pid) { var n = E.cubes(g, rid, pid); if (n > bn) { bn = n; best = pid; } });
+      return best;
+    }
+    function paint(rid, anim) {
+      var w = leadIn(rid); if (!w) return null;
+      paths[rid].setAttribute('fill', party(w).color);
+      if (anim) { FX.replay(paths[rid], 'pop'); var m = M.regions[rid]; FX.ripple(mapEl, m.x, m.y, party(w).color); }
+      return w;
+    }
+    clock.hidden = false; clock.textContent = '19:00';
     $('night-btn').textContent = 'Passer';
+    $('night-stage').innerHTML = '<div class="night-est">' + (res.second ? 'Second tour' : 'Premier tour') + ' · dépouillement en cours</div>' +
+      '<div class="count-prog"><span class="count-bar"><i id="count-fill"></i></span><span><b id="count-pct">0 %</b> des bureaux</span></div>' +
+      '<p class="count-line" id="count-line">Les bureaux de vote ferment, on ouvre les urnes…</p>';
+    $('night-bars').innerHTML = '<div class="kicker kicker-yellow">Résultats partiels · ils vont encore bouger</div>' + finals.map(function (x) {
+      var p = party(x.pid);
+      return '<div class="nb-row" data-pid="' + x.pid + '"><span class="nb-lbl">' + (x.pid === me ? 'Toi' : esc(p.short)) + '</span><span class="nb-bar"><i style="background:' + p.color + '"></i></span><b>–</b></div>';
+    }).join('');
+    screen.classList.add('counting');
     go('night');
-    // compte à rebours
-    [56, 57, 58, 59].forEach(function (sec, i) { later(function () { $('night-clock').textContent = '19:59:' + sec; }, 650 * (i + 1)); });
-    later(reveal, 650 * 5);
+
+    // 1. le dépouillement, région par région
+    var order = D.REGIONS.slice().sort(function (a, b) { return a.ins - b.ins; });
+    var totIns = 0; order.forEach(function (r) { totIns += r.ins; });
+    var finalSum = 0; finals.forEach(function (x) { finalSum += x.pct; });
+    var scale = res.second ? 1 : Math.max(0.3, finals[0].pct * 1.15);
+    var acc = {}, counted = 0;
+    among.forEach(function (pid) { acc[pid] = 0; });
+    order.forEach(function (r, i) { later(function () { countRegion(r); }, 600 + i * STEP); });
+    later(countdown, 600 + order.length * STEP + 700);
+    function countRegion(r) {
+      var w = {}, tot = 0;
+      among.forEach(function (pid) { w[pid] = E.cubes(g, r.id, pid); tot += w[pid]; });
+      among.forEach(function (pid) { acc[pid] += r.ins * (tot ? w[pid] / tot : 1 / among.length); });
+      counted += r.ins;
+      var f = counted / totIns, mix = 0.55 * f;   // les partiels se rapprochent du vrai résultat… sans le dévoiler
+      var rows = finals.map(function (x) { return { pid: x.pid, v: (acc[x.pid] / counted) * finalSum * (1 - mix) + x.pct * mix }; })
+        .sort(function (a, b) { return b.v - a.v; });
+      rows.forEach(function (x, i) {
+        var row = document.querySelector('.nb-row[data-pid="' + x.pid + '"]'); if (!row) return;
+        row.style.order = i + 1;
+        row.querySelector('i').style.width = Math.min(100, 100 * x.v / scale) + '%';
+        row.querySelector('b').textContent = (100 * x.v).toFixed(1).replace('.', ',') + ' %';
+      });
+      var shownPct = Math.round(97 * f);
+      $('count-fill').style.width = shownPct + '%';
+      $('count-pct').textContent = shownPct + ' %';
+      clock.textContent = '19:' + ('0' + Math.round(8 + 50 * f)).slice(-2);
+      var w0 = paint(r.id, true);
+      $('count-line').innerHTML = '<b>' + esc(r.name) + '</b> : ' + (w0 ? (w0 === me ? 'tu arrives en tête !' : esc(party(w0).short) + ' arrive en tête.') : 'résultat très serré.');
+      FX.replay($('count-line'), 'bump');
+    }
+    // 2. le compte à rebours, face aux deux finalistes dans l'ombre
+    function countdown() {
+      screen.classList.remove('counting');
+      $('night-bars').classList.add('veiled');
+      $('night-stage').innerHTML = '<div class="night-est">Premières estimations dans…</div>' +
+        '<div class="duo">' + duo.map(function (pid) { return '<span class="duo-face" style="--c:' + party(pid).color + '">' + A.portrait(pid) + '</span>'; }).join('<span class="duo-vs">?</span>') + '</div>';
+      clock.textContent = '19:59:50'; clock.classList.add('long');
+      for (var k = 1; k <= 9; k++) (function (k) {
+        later(function () {
+          clock.textContent = '19:59:5' + k;
+          clock.classList.toggle('hot', k >= 7);
+          FX.replay(clock, 'tick');
+        }, 560 * k);
+      })(k);
+      later(reveal, 560 * 10);
+    }
+    // 3. 20h
     function reveal() {
-      $('night-clock').textContent = '20:00';
-      $('screen-night').classList.add('flash20');
+      $('night-bars').classList.remove('veiled');
+      clock.classList.remove('hot', 'tick', 'long');
+      clock.textContent = '20:00';
+      screen.classList.add('flash20');
       $('night-stage').innerHTML = '<div class="night-est">Estimation · ' + (res.direct ? 'élu dès le 1er tour' : 'second tour') + '</div>' +
         '<div class="portrait" style="background:' + P.color + ';color:' + P.ink + '"><span class="portrait-art">' + A.portrait(win) + '</span><span class="portrait-name">' + esc(P.candidate) + ' · ' + esc(P.short) + '</span></div>' +
         '<div class="night-pct">' + (pct * 100).toFixed(1).replace('.', ',') + ' %</div>' +
         '<div class="night-who">' + (win === me ? '🎉 C\'EST TOI ! Tu es élu président.' : esc(P.name) + ' remporte l\'élection.') + '</div>';
-      later(colorMap, 2600);
-    }
-    function colorMap() {
-      $('screen-night').classList.remove('flash20');
-      D.REGIONS.slice().sort(function (a, b) { return a.pts - b.pts; }).forEach(function (r, i) {
-        later(function () { var w = regionWinner(r.id); if (w) { paths[r.id].setAttribute('fill', party(w).color); paths[r.id].classList.add('pop'); } }, 140 * i);
-      });
-      later(showBars, 140 * D.REGIONS.length + 300);
+      later(showBars, 2600);
     }
     function showBars() {
-      var list = res.second ? [{ pid: res.second.a, pct: res.second.pctA }, { pid: res.second.b, pct: res.second.pctB }].sort(function (x, y) { return y.pct - x.pct; }) : res.first;
+      screen.classList.remove('flash20');
+      $('night-bars').classList.remove('veiled');
+      var list = finals.slice().sort(function (x, y) { return y.pct - x.pct; });
       var stt = res.second ? res.second.stats : res.stats1;
       $('night-bars').innerHTML = '<div class="kicker kicker-yellow">' + (res.second ? 'Second tour' : 'Premier tour') + '</div>' +
         (stt ? '<div class="night-turnout"><span>Participation <b>' + pctFr(stt.participation, 1) + ' %</b></span><span>Blancs et nuls <b>' + pctFr(stt.blankPct, 1) + ' %</b> des votants</span></div>' : '') + list.map(function (x) {
         var p = party(x.pid);
         return '<div class="nb-row"><span class="nb-lbl">' + (x.pid === me ? 'Toi' : esc(p.short)) + '</span><span class="nb-bar"><i style="background:' + p.color + '" data-w="' + (100 * x.pct) + '"></i></span><b>' + (100 * x.pct).toFixed(1).replace('.', ',') + ' %</b></div>';
       }).join('');
-      requestAnimationFrame(function () { Array.prototype.forEach.call(document.querySelectorAll('.nb-bar i'), function (i) { i.style.width = i.getAttribute('data-w') + '%'; }); });
+      requestAnimationFrame(function () { Array.prototype.forEach.call(document.querySelectorAll('.nb-bar i[data-w]'), function (i) { i.style.width = i.getAttribute('data-w') + '%'; }); });
       $('night-bars').innerHTML += '<div class="night-learn">' + learnBox(res.second ? 'second_tour' : 'vingt_heures') + '</div>';
       nightDone = true; $('night-btn').textContent = 'Voir les résultats détaillés';
     }
@@ -1094,9 +1354,10 @@
       if (nightDone) { nightTimers.forEach(clearTimeout); return endGame(); }
       // passer : on saute directement à la fin de la mise en scène
       nightTimers.forEach(clearTimeout); nightTimers = [];
+      screen.classList.remove('counting');
+      D.REGIONS.forEach(function (r) { paint(r.id, false); });
       reveal(); nightTimers.forEach(clearTimeout); nightTimers = [];
-      $('screen-night').classList.remove('flash20');
-      D.REGIONS.forEach(function (r) { var w = regionWinner(r.id); if (w) paths[r.id].setAttribute('fill', party(w).color); });
+      screen.classList.remove('flash20');
       $('night-stage').querySelector('.portrait').classList.add('instant');
       showBars();
     };

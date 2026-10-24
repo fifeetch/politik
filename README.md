@@ -29,6 +29,7 @@ Jeu de stratégie électorale parodique sur la carte de France, pensé pour le t
 - **Programme financé et électorat (v0.8)** : dépenses, recettes et reste à financer ; 10 mesures de financement ; 6 groupes de population avec leur part réelle dans chaque région (Insee 2022) ; régions de cœur et régions hostiles.
 - **Gouverner (v0.9)** : une fois élu, 5 années de mandat : législatives, vote de tes lois à l'Assemblée (négociation, 49.3, motion de censure, référendum), budget en 3 arbitrages, actualité, bilan. Jauges : déficit, dette, popularité, Assemblée.
 - **Électeurs réels (v1.0)** : inscrits, abstention et votes blancs de chaque région (présidentielle 2022), deux modes de départ (Réaliste, Égalité), action 🚪 Mobiliser pour faire voter des abstentionnistes, calque « Abstention » sur la carte, participation à la soirée électorale. Gouverner : charge de la dette, recettes du programme au premier budget, dépenses ponctuelles, dissolution au choix dès l'année 2, sièges selon les inscrits.
+- **Animations (v1.4)** : les régions conquises se colorent comme une encre qui se répand, le pion du candidat fait sa tournée sur la carte (trace en pointillés, cubes gagnés qui s'envolent, abstentionnistes qui prennent ta couleur avec Mobiliser), barres du sondage qui glissent avec flèches ▲▼, journal du matin qui tourne, édition spéciale qui fait trembler l'écran en cas d'affaire, bandeau « Alerte info » pour les crises et scandales, cartes d'action qui se retournent, Lulu qui réagit en bulle de BD, et soirée électorale en trois temps (dépouillement région par région, compte à rebours face aux deux finalistes, visage de l'élu à 20h). Tout est coupé si le téléphone demande « moins d'animations ».
 - **Un tour** : journal du matin (revenus, militants, scandales, crise ou événement, dilemme) → 3 actions secrètes jouées par tous en même temps → débat (tours 3, 6, 8) → « Sous les projecteurs » pour le premier des sondages.
 
 ## Organisation du code
@@ -44,6 +45,7 @@ Jeu de stratégie électorale parodique sur la carte de France, pensé pour le t
 | `js/ai.js` | L'intelligence artificielle des adversaires |
 | `js/ui.js` | L'affichage et le déroulement d'une partie |
 | `js/art.js` | Les illustrations (candidats, conseillère, vignettes), dessinées en SVG |
+| `js/fx.js` | Les animations (encre, pion du candidat, bandeau alerte info, bulle de Lulu…), qui attendent que l'écran soit visible pour se jouer |
 | `js/govern.js` | Les règles du quinquennat (législatives, votes, budget, jauges) |
 | `js/govui.js` | L'écran « Gouverner » (hémicycle, lois, budget, bilan) |
 | `js/tuto.js` | Le tutoriel guidé du premier tour |
