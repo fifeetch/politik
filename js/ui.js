@@ -86,16 +86,16 @@
   /* Financé, partiellement financé, non financé (selon le reste à financer) */
   function fundingState(over) { return over <= 0 ? 'ok' : over <= R.budgetCasStep ? 'partial' : 'no'; }
   var FUND_LABEL = { ok: 'Programme financé', partial: 'Partiellement financé', no: 'Non financé' };
-  /* Score national du parti aux législatives 2024 (1er tour), pondéré par les suffrages exprimés de chaque région */
+  /* Score national du parti aux européennes 2024, pondéré par les suffrages exprimés de chaque région */
   function score2024(pid) {
     var s = 0, w = 0;
-    D.REGIONS.forEach(function (r) { var ex = r.ins * (1 - r.abst / 100) * (1 - (r.blanc + r.nuls) / 100); var t = 0; Object.keys(r.start).forEach(function (k) { t += r.start[k]; }); s += ex * r.start[pid] / t; w += ex; });
+    D.REGIONS.forEach(function (r) { var ex = r.ins * (1 - r.abst / 100) * (1 - (r.blanc + r.nuls) / 100); s += ex * r.start[pid] / 100; w += ex; });
     return s / w;
   }
 
   /* ---------- Écran titre : carte décorative ---------- */
   function renderTitleMap() {
-    // la carte de l'affiche : chaque région à la couleur de son vainqueur de 2024
+    // la carte de l'affiche : chaque région à la couleur de son vainqueur des européennes 2024
     var s = $('title-map');
     D.REGIONS.forEach(function (r) {
       var best = Object.keys(r.start).sort(function (a, b) { return r.start[b] - r.start[a]; })[0];
@@ -116,7 +116,7 @@
     });
     var p = party(chosen);
     $('party-detail').innerHTML = '<div class="cand-line">' + A.portrait(p.id) + '<div><b class="cand-name">' + esc(p.candidate) + '</b><span>' + esc(p.candTitle) + ' · tempérament ' + D.TEMPERS[p.id].label + '</span></div></div>' +
-      '<div class="score24"><span>Législatives 2024</span><b>' + pctFr(score2024(p.id), 1) + ' %</b><small>ton point de départ, région par région' + (p.id === 'MN' ? ' : le Mouvement National part en tête, comme en 2024' : '') + '</small></div>' +
+      '<div class="score24"><span>Européennes 2024</span><b>' + pctFr(score2024(p.id), 1) + ' %</b><small>ton point de départ, région par région' + (p.id === 'MN' ? ' : le Mouvement National part en tête partout, comme en juin 2024' : '') + '. <button type="button" class="linkbtn" data-learn="depart2024">Pourquoi les européennes ?</button></small></div>' +
       axisHtml(p.id) +
       (p.pos === 1 || p.pos === 6 ? '<div><b>Au bout de l\'axe.</b> Les reports de second tour seront rares. Pense aux alliances !</div>' : '') +
       '<div><b>Force.</b> ' + esc(p.force) + '</div><div><b>Faiblesse.</b> ' + esc(p.weakness) +
@@ -1093,7 +1093,7 @@
   function showRules() {
     modal({ kicker: 'Règles v1.0', title: 'Comment gagner', html:
       '<p><b>But :</b> remporter l\'élection présidentielle à la fin des <b>8 tours de campagne</b>. Chaque région vote selon ses cubes. Elle pèse ses <b>vrais électeurs</b> : ses inscrits (le chiffre sur la carte, en millions), moins ceux qui s\'abstiennent, moins ceux qui votent blanc ou nul. Le parti qui contrôle une région y gagne un petit bonus.</p>' +
-      '<p><b>Le point de départ :</b> les cubes de départ suivent les résultats des législatives de 2024, région par région, et chaque région part à la couleur de son vainqueur de 2024. La gauche avait fait liste commune : là où elle était arrivée en tête (Île-de-France, Bretagne, outre-mer…), la région part au plus fort des partis de gauche de ta partie, et les électeurs d\'un parti de gauche absent rejoignent en partie ses partenaires. Le Mouvement National part en tête presque partout, comme en 2024.</p>' +
+      '<p><b>Le point de départ :</b> chaque parti démarre avec le score de sa liste aux élections européennes du 9 juin 2024, région par région, et chaque région part à la couleur de la liste arrivée en tête parmi les partis de ta partie. Pourquoi les européennes ? C\'est le scrutin le plus récent où chaque parti avait sa propre liste partout, à la proportionnelle. Aux législatives qui ont suivi, les partis étaient en alliances et pas partout candidats, on ne peut donc pas y lire le score de chacun. Le Mouvement National part en tête dans toutes les régions, comme en juin 2024. <button type="button" class="linkbtn" data-learn="depart2024">En savoir plus</button></p>' +
       '<p><b>L\'abstention :</b> environ un quart des inscrits ne votent pas, et beaucoup plus en outre-mer. Le bouton <b>Abstention</b> au-dessus de la carte la montre. 🚪 <b>Mobiliser</b> fait voter des abstentionnistes ; attaquer ou multiplier les affaires en dégoûte d\'autres.</p>' +
       '<p><b>Premier tour :</b> plus de 50 % des suffrages exprimés (les blancs ne comptent pas) = élu directement. Sinon, les deux premiers vont au <b>second tour</b>. Les électeurs des autres partis se reportent selon leur proximité politique (alliés : 85 %) ; les autres votent blanc ou restent chez eux.</p>' +
       axisHtml(me || chosen) +

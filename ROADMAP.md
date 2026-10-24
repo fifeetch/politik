@@ -90,11 +90,10 @@ Quand tu gagnes la présidentielle, le bouton « 🏛️ Gouverner le pays » ou
 - Simulation (`node test/govern-sim.js 300 c`) : un mandat équilibré est réélu environ une fois sur trois ; tout dépenser ou tout économiser mène à l'échec.
 - **Nouvel univers graphique « bureau de vote »** : papier de bulletin, encre violette de tampon pour les actions, rouge pour l'actualité et les affaires. Titres en Anybody (police d'affiche), texte et chiffres en Atkinson Hyperlegible (conçue pour la lisibilité). Coup de tampon « Validé » à la fin de chaque tour. Polices livrées avec le jeu : il marche entièrement hors ligne.
 
-## v1.0.2 — fait : une carte de départ fidèle à 2024
-- Chaque région part à la couleur de son vrai vainqueur du 1er tour des législatives 2024, quels que soient les 4 partis de la partie (vérifié sur les 15 compositions possibles).
-- La gauche unie (liste commune en 2024) compte comme un seul bloc : là où elle était en tête, la région part au plus fort de ses partis présents. Les électeurs d'un parti de gauche absent rejoignent en partie (60 %) ses partenaires.
-- Les égalités dues à l'arrondi en cubes sont départagées par le vrai score de 2024.
-- À surveiller : Socialisme Modéré gagne plus souvent en simulation (39 % contre 29 %).
+## v1.0.2 — fait : un point de départ lisible, les européennes 2024
+- Les scores de départ suivent désormais les **élections européennes du 9 juin 2024** (résultats définitifs du ministère de l'Intérieur), région par région, outre-mer et Français de l'étranger compris : FI = LFI, SM = PS-Place publique, VP = Les Écologistes, EM = Besoin d'Europe, UG = LR, MN = RN.
+- Pourquoi : c'est le scrutin le plus récent où chaque parti avait sa propre liste partout, à la proportionnelle. Aux législatives 2024, les partis étaient en alliances (NFP, Ensemble, RN-Ciotti) et pas présents partout. Une fiche « Le saviez-vous ? » l'explique dans le jeu.
+- Chaque région part à la couleur de la liste arrivée en tête parmi les partis de la partie ; les égalités dues à l'arrondi sont départagées par le vrai score.
 
 ## Plus tard — rejouabilité
 - Phase des **500 parrainages** avant la campagne.
