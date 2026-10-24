@@ -5,7 +5,7 @@ name: Sources officielles
 
 on:
   push:
-    paths: ['js/**', 'test/check-sources.js', '.github/workflows/sources.yml']
+    paths: ['js/**', 'test/**', '.github/workflows/sources.yml']
   schedule:
     - cron: '17 6 * * 1'
   workflow_dispatch:
@@ -18,6 +18,8 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
+      - name: Règles du jeu (profils, cartes, objectifs, mode Simulation)
+        run: node test/check-rules.js
       - name: Contrôle des fiches (hors ligne)
         run: node test/check-sources.js
       - name: Ouverture de chaque lien officiel

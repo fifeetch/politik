@@ -38,19 +38,19 @@
     sond: { name: 'Sondages 2026', short: 'Sondages 2026', text: 'La moyenne de 6 sondages d\'octobre 2026 pour la présidentielle 2027.', learn: 'departSondages' }
   };
   var REGIONS = [
-    { id: 'idf', name: 'Île-de-France', profile: '      ', pts: 9.8, ins: 7.35, abst: 29.4, blanc: 6.2, nuls: 1.7, start: { FI: 18.6, SM: 15.7, VP: 7.1, EM: 20.5, UG: 9.5, MN: 19.5 }, start22: { FI: 30.2, SM: 1.4, VP: 5.4, EM: 30.2, UG: 6.2, MN: 13 }, concerns: ['pouvoir', 'securite'], pop: { ind: 3.3, cad: 20.0, pi: 15.5, pop: 23.7, ret: 19.7, sae: 18.0 } },
-    { id: 'ara', name: 'Auvergne-Rhône-Alpes', profile: '      ', pts: 7.4, ins: 5.56, abst: 25.6, blanc: 6.7, nuls: 2.2, start: { FI: 10.2, SM: 13.4, VP: 6.1, EM: 16.7, UG: 11.9, MN: 32 }, start22: { FI: 21.2, SM: 1.8, VP: 5.3, EM: 27.8, UG: 5.1, MN: 22.3 }, concerns: ['ecologie', 'emploi'], pop: { ind: 4.8, cad: 10.7, pi: 15.5, pop: 26.7, ret: 27.6, sae: 14.7 } },
-    { id: 'hdf', name: 'Hauts-de-France', profile: ' ', pts: 5.7, ins: 4.26, abst: 26.7, blanc: 5.2, nuls: 2.2, start: { FI: 9.6, SM: 9.7, VP: 3.6, EM: 15.1, UG: 8.4, MN: 43.1 }, start22: { FI: 19, SM: 1.3, VP: 3.1, EM: 25.4, UG: 3.5, MN: 33.3 }, concerns: ['emploi', 'pouvoir'], pop: { ind: 3.2, cad: 7.9, pi: 13.9, pop: 30.1, ret: 26.6, sae: 18.2 } },
-    { id: 'naq', name: 'Nouvelle-Aquitaine', profile: '       ', pts: 5.9, ins: 4.46, abst: 24.2, blanc: 7.4, nuls: 3.1, start: { FI: 7.9, SM: 16.8, VP: 5.7, EM: 19.5, UG: 6.5, MN: 32.7 }, start22: { FI: 19.9, SM: 2.3, VP: 4.4, EM: 27.6, UG: 4.6, MN: 22.8 }, concerns: ['services', 'ecologie'], pop: { ind: 5.3, cad: 8.2, pi: 13.6, pop: 26.8, ret: 32.8, sae: 13.3 } },
-    { id: 'occ', name: 'Occitanie', profile: '       ', pts: 5.8, ins: 4.32, abst: 24.8, blanc: 7.3, nuls: 3.1, start: { FI: 10.1, SM: 15.9, VP: 5.2, EM: 16.6, UG: 4.8, MN: 36.2 }, start22: { FI: 22.4, SM: 2.3, VP: 4.2, EM: 23.5, UG: 3.9, MN: 24.6 }, concerns: ['pouvoir', 'services'], pop: { ind: 5.4, cad: 9.4, pi: 13.9, pop: 24.9, ret: 30.4, sae: 16.0 } },
-    { id: 'ges', name: 'Grand Est', profile: ' ', pts: 5.1, ins: 3.86, abst: 26.3, blanc: 5.6, nuls: 1.9, start: { FI: 7.9, SM: 10.2, VP: 4.2, EM: 17.4, UG: 11.2, MN: 38.5 }, start22: { FI: 17.6, SM: 1.4, VP: 4, EM: 27.3, UG: 4.3, MN: 29.5 }, concerns: ['emploi', 'immigration'], pop: { ind: 3.7, cad: 8.0, pi: 14.2, pop: 29.9, ret: 28.5, sae: 15.6 } },
-    { id: 'pac', name: "Provence-Alpes-Côte d'Azur", profile: '      ', pts: 4.9, ins: 3.66, abst: 27.5, blanc: 5.9, nuls: 1.9, start: { FI: 10.2, SM: 10.5, VP: 4.8, EM: 15.8, UG: 6.8, MN: 41.6 }, start22: { FI: 19.8, SM: 1.1, VP: 4.1, EM: 23.3, UG: 4.4, MN: 27.6 }, concerns: ['securite', 'immigration'], pop: { ind: 5.1, cad: 9.4, pi: 13.9, pop: 24.9, ret: 29.8, sae: 16.9 } },
-    { id: 'pdl', name: 'Pays de la Loire', profile: '       ', pts: 3.8, ins: 2.83, abst: 23.6, blanc: 6.7, nuls: 2.1, start: { FI: 7.7, SM: 15.6, VP: 6.8, EM: 23.2, UG: 8.7, MN: 28.7 }, start22: { FI: 19.2, SM: 2, VP: 6, EM: 33.3, UG: 5, MN: 20.8 }, concerns: ['ecologie', 'emploi'], pop: { ind: 4.4, cad: 9.1, pi: 14.6, pop: 28.9, ret: 30.3, sae: 12.8 } },
-    { id: 'bre', name: 'Bretagne', profile: '       ', pts: 3.4, ins: 2.56, abst: 22.1, blanc: 7.2, nuls: 2.4, start: { FI: 7.6, SM: 17.4, VP: 6.8, EM: 24, UG: 7.2, MN: 26.7 }, start22: { FI: 20.6, SM: 2.2, VP: 6.2, EM: 32.8, UG: 4.7, MN: 19.5 }, concerns: ['ecologie', 'services'], pop: { ind: 4.7, cad: 8.6, pi: 14.1, pop: 27.0, ret: 32.2, sae: 13.5 } },
-    { id: 'nor', name: 'Normandie', profile: '   ', pts: 3.2, ins: 2.41, abst: 24.2, blanc: 6.4, nuls: 2.0, start: { FI: 8.1, SM: 13.1, VP: 4.4, EM: 19.6, UG: 8.6, MN: 35.8 }, start22: { FI: 18.8, SM: 1.7, VP: 4.1, EM: 29.3, UG: 4.5, MN: 27.1 }, concerns: ['emploi', 'services'], pop: { ind: 4.2, cad: 7.2, pi: 13.7, pop: 29.2, ret: 31.3, sae: 14.5 } },
-    { id: 'bfc', name: 'Bourgogne-Franche-Comté', profile: '   ', pts: 2.7, ins: 1.99, abst: 25.2, blanc: 6.9, nuls: 2.6, start: { FI: 7.9, SM: 12, VP: 4.5, EM: 17, UG: 10.1, MN: 38.5 }, start22: { FI: 18.6, SM: 1.8, VP: 4, EM: 26.3, UG: 5.1, MN: 27.4 }, concerns: ['services', 'pouvoir'], pop: { ind: 4.6, cad: 7.0, pi: 13.4, pop: 29.0, ret: 32.3, sae: 13.7 } },
-    { id: 'cvl', name: 'Centre-Val de Loire', profile: '   ', pts: 2.5, ins: 1.84, abst: 25.3, blanc: 6.5, nuls: 2.4, start: { FI: 7.9, SM: 12, VP: 4.1, EM: 20.5, UG: 8.4, MN: 36.3 }, start22: { FI: 18.7, SM: 1.7, VP: 4, EM: 28.5, UG: 5.3, MN: 25.9 }, concerns: ['services', 'securite'], pop: { ind: 4.1, cad: 8.0, pi: 14.1, pop: 28.4, ret: 31.9, sae: 13.5 } },
-    { id: 'cor', name: 'Corse, outre-mer et Français de l\'étranger', profile: '   ', pts: 4.8, ins: 3.63, abst: 54.5, blanc: 4.6, nuls: 2.9, start: { FI: 10.4, SM: 15.7, VP: 5.8, EM: 18.6, UG: 11.7, MN: 19.2 }, start22: { FI: 31.2, SM: 2, VP: 4.3, EM: 28.6, UG: 4.3, MN: 16.6 }, concerns: ['pouvoir', 'services'], pop: { ind: 4.9, cad: 5.6, pi: 12.7, pop: 29.4, ret: 21.9, sae: 25.4 } }
+    { id: 'idf', name: 'Île-de-France', profile: 'urbaine', pts: 9.8, ins: 7.35, abst: 29.4, blanc: 6.2, nuls: 1.7, start: { FI: 18.6, SM: 15.7, VP: 7.1, EM: 20.5, UG: 9.5, MN: 19.5 }, start22: { FI: 30.2, SM: 1.4, VP: 5.4, EM: 30.2, UG: 6.2, MN: 13 }, concerns: ['pouvoir', 'securite'], pop: { ind: 3.3, cad: 20.0, pi: 15.5, pop: 23.7, ret: 19.7, sae: 18.0 } },
+    { id: 'ara', name: 'Auvergne-Rhône-Alpes', profile: 'urbaine', pts: 7.4, ins: 5.56, abst: 25.6, blanc: 6.7, nuls: 2.2, start: { FI: 10.2, SM: 13.4, VP: 6.1, EM: 16.7, UG: 11.9, MN: 32 }, start22: { FI: 21.2, SM: 1.8, VP: 5.3, EM: 27.8, UG: 5.1, MN: 22.3 }, concerns: ['ecologie', 'emploi'], pop: { ind: 4.8, cad: 10.7, pi: 15.5, pop: 26.7, ret: 27.6, sae: 14.7 } },
+    { id: 'hdf', name: 'Hauts-de-France', profile: 'industrielle', pts: 5.7, ins: 4.26, abst: 26.7, blanc: 5.2, nuls: 2.2, start: { FI: 9.6, SM: 9.7, VP: 3.6, EM: 15.1, UG: 8.4, MN: 43.1 }, start22: { FI: 19, SM: 1.3, VP: 3.1, EM: 25.4, UG: 3.5, MN: 33.3 }, concerns: ['emploi', 'pouvoir'], pop: { ind: 3.2, cad: 7.9, pi: 13.9, pop: 30.1, ret: 26.6, sae: 18.2 } },
+    { id: 'naq', name: 'Nouvelle-Aquitaine', profile: 'rurale', pts: 5.9, ins: 4.46, abst: 24.2, blanc: 7.4, nuls: 3.1, start: { FI: 7.9, SM: 16.8, VP: 5.7, EM: 19.5, UG: 6.5, MN: 32.7 }, start22: { FI: 19.9, SM: 2.3, VP: 4.4, EM: 27.6, UG: 4.6, MN: 22.8 }, concerns: ['services', 'ecologie'], pop: { ind: 5.3, cad: 8.2, pi: 13.6, pop: 26.8, ret: 32.8, sae: 13.3 } },
+    { id: 'occ', name: 'Occitanie', profile: 'rurale', pts: 5.8, ins: 4.32, abst: 24.8, blanc: 7.3, nuls: 3.1, start: { FI: 10.1, SM: 15.9, VP: 5.2, EM: 16.6, UG: 4.8, MN: 36.2 }, start22: { FI: 22.4, SM: 2.3, VP: 4.2, EM: 23.5, UG: 3.9, MN: 24.6 }, concerns: ['pouvoir', 'services'], pop: { ind: 5.4, cad: 9.4, pi: 13.9, pop: 24.9, ret: 30.4, sae: 16.0 } },
+    { id: 'ges', name: 'Grand Est', profile: 'industrielle', pts: 5.1, ins: 3.86, abst: 26.3, blanc: 5.6, nuls: 1.9, start: { FI: 7.9, SM: 10.2, VP: 4.2, EM: 17.4, UG: 11.2, MN: 38.5 }, start22: { FI: 17.6, SM: 1.4, VP: 4, EM: 27.3, UG: 4.3, MN: 29.5 }, concerns: ['emploi', 'immigration'], pop: { ind: 3.7, cad: 8.0, pi: 14.2, pop: 29.9, ret: 28.5, sae: 15.6 } },
+    { id: 'pac', name: "Provence-Alpes-Côte d'Azur", profile: 'urbaine', pts: 4.9, ins: 3.66, abst: 27.5, blanc: 5.9, nuls: 1.9, start: { FI: 10.2, SM: 10.5, VP: 4.8, EM: 15.8, UG: 6.8, MN: 41.6 }, start22: { FI: 19.8, SM: 1.1, VP: 4.1, EM: 23.3, UG: 4.4, MN: 27.6 }, concerns: ['securite', 'immigration'], pop: { ind: 5.1, cad: 9.4, pi: 13.9, pop: 24.9, ret: 29.8, sae: 16.9 } },
+    { id: 'pdl', name: 'Pays de la Loire', profile: 'rurale', pts: 3.8, ins: 2.83, abst: 23.6, blanc: 6.7, nuls: 2.1, start: { FI: 7.7, SM: 15.6, VP: 6.8, EM: 23.2, UG: 8.7, MN: 28.7 }, start22: { FI: 19.2, SM: 2, VP: 6, EM: 33.3, UG: 5, MN: 20.8 }, concerns: ['ecologie', 'emploi'], pop: { ind: 4.4, cad: 9.1, pi: 14.6, pop: 28.9, ret: 30.3, sae: 12.8 } },
+    { id: 'bre', name: 'Bretagne', profile: 'rurale', pts: 3.4, ins: 2.56, abst: 22.1, blanc: 7.2, nuls: 2.4, start: { FI: 7.6, SM: 17.4, VP: 6.8, EM: 24, UG: 7.2, MN: 26.7 }, start22: { FI: 20.6, SM: 2.2, VP: 6.2, EM: 32.8, UG: 4.7, MN: 19.5 }, concerns: ['ecologie', 'services'], pop: { ind: 4.7, cad: 8.6, pi: 14.1, pop: 27.0, ret: 32.2, sae: 13.5 } },
+    { id: 'nor', name: 'Normandie', profile: 'historique', pts: 3.2, ins: 2.41, abst: 24.2, blanc: 6.4, nuls: 2.0, start: { FI: 8.1, SM: 13.1, VP: 4.4, EM: 19.6, UG: 8.6, MN: 35.8 }, start22: { FI: 18.8, SM: 1.7, VP: 4.1, EM: 29.3, UG: 4.5, MN: 27.1 }, concerns: ['emploi', 'services'], pop: { ind: 4.2, cad: 7.2, pi: 13.7, pop: 29.2, ret: 31.3, sae: 14.5 } },
+    { id: 'bfc', name: 'Bourgogne-Franche-Comté', profile: 'historique', pts: 2.7, ins: 1.99, abst: 25.2, blanc: 6.9, nuls: 2.6, start: { FI: 7.9, SM: 12, VP: 4.5, EM: 17, UG: 10.1, MN: 38.5 }, start22: { FI: 18.6, SM: 1.8, VP: 4, EM: 26.3, UG: 5.1, MN: 27.4 }, concerns: ['services', 'pouvoir'], pop: { ind: 4.6, cad: 7.0, pi: 13.4, pop: 29.0, ret: 32.3, sae: 13.7 } },
+    { id: 'cvl', name: 'Centre-Val de Loire', profile: 'historique', pts: 2.5, ins: 1.84, abst: 25.3, blanc: 6.5, nuls: 2.4, start: { FI: 7.9, SM: 12, VP: 4.1, EM: 20.5, UG: 8.4, MN: 36.3 }, start22: { FI: 18.7, SM: 1.7, VP: 4, EM: 28.5, UG: 5.3, MN: 25.9 }, concerns: ['services', 'securite'], pop: { ind: 4.1, cad: 8.0, pi: 14.1, pop: 28.4, ret: 31.9, sae: 13.5 } },
+    { id: 'cor', name: 'Corse, outre-mer et Français de l\'étranger', profile: 'historique', pts: 4.8, ins: 3.63, abst: 54.5, blanc: 4.6, nuls: 2.9, start: { FI: 10.4, SM: 15.7, VP: 5.8, EM: 18.6, UG: 11.7, MN: 19.2 }, start22: { FI: 31.2, SM: 2, VP: 4.3, EM: 28.6, UG: 4.3, MN: 16.6 }, concerns: ['pouvoir', 'services'], pop: { ind: 4.9, cad: 5.6, pi: 12.7, pop: 29.4, ret: 21.9, sae: 25.4 } }
   ];
 
   /* v0.3 — Les thèmes de campagne.
@@ -414,7 +414,7 @@
     { id: 'industrie',  name: 'Le cœur industriel',     text: 'Contrôler les 2 régions industrielles',             bonus: 4 },
     { id: 'patrimoine', name: 'Le patrimoine',          text: 'Contrôler 3 régions historiques',                   bonus: 4 },
     { id: 'paris',      name: "Paris d'abord",          text: "Contrôler l'Île-de-France",                         bonus: 3 },
-    { id: 'partout',    name: 'Présent partout',        text: 'Avoir au moins 1 cube dans les 13 régions',         bonus: 3 },
+    { id: 'terrains',   name: 'Sur tous les terrains',  text: 'Contrôler au moins une région de chaque type : urbaine, rurale, industrielle et historique', bonus: 3 },
     { id: 'debat',      name: 'Maître du débat',        text: 'Gagner 2 débats',                                   bonus: 3 },
     { id: 'corse',      name: 'Au-delà de l\'Hexagone',   text: 'Contrôler la Corse, l\'outre-mer et les Français de l\'étranger', bonus: 3 }
   ];
@@ -426,7 +426,6 @@
     incomeMoney: 4, incomePerRegion: 1, incomeRegionMax: 3, incomeInfl: 2,
     minControl: 3, maxCubes: 10, startCubes: 3,
     equalStart: 2,               // v1.1 mode Égalité : 2 électeurs pour chaque parti dans chaque région
-    egalEdgeBoost: 1.18,         // v1.1 mode Égalité : électorat des partis aux bouts de l'axe (FI, MN) ×1,18
     othersKeep: 0.82,            // v1.1 mode Réaliste : à chaque tour, les « autres listes » gardent 82 % de leurs électeurs
     othersTransfer: 0.6,         // au 2nd tour, 60 % des électeurs des autres listes votent pour un finaliste
     startScale: 10,              // mode Réaliste : cubes de départ = score moyen législatives + européennes 2024 (%) × 10 / 100
@@ -572,9 +571,27 @@
       { title: 'Plan de relance', text: 'L\'État annonce un plan de relance. Les partis très crédibles sur l\'emploi gagnent 1 cube.', theme: 'emploi', fx: [{ k: 'credTop', theme: 'emploi', n: 1 }] } ] }
   ];
 
+  /* v1.5 : contrôle des données. Une erreur ici veut dire qu'une règle annoncée ne pourra pas fonctionner
+     (ex. en v1.0 à v1.4, les 13 profils de région étaient vides : cartes, bonus et objectifs territoriaux ne marchaient plus). */
+  function validate() {
+    var errs = [], ids = {}, profs = Object.keys(PROFILES);
+    REGIONS.forEach(function (r) {
+      ids[r.id] = 1;
+      if (profs.indexOf(r.profile) < 0) errs.push('Région ' + r.id + ' : profil inconnu « ' + r.profile + ' »');
+      (r.concerns || []).forEach(function (t) { if (!THEMES.some(function (x) { return x.id === t; })) errs.push('Région ' + r.id + ' : souci inconnu ' + t); });
+    });
+    profs.forEach(function (pf) { if (!REGIONS.some(function (r) { return r.profile === pf; })) errs.push('Aucune région de profil ' + pf); });
+    Object.keys(CARDS).forEach(function (k) {
+      (CARDS[k].profiles || []).forEach(function (pf) { if (profs.indexOf(pf) < 0) errs.push('Carte ' + k + ' : profil inconnu ' + pf); });
+      if (CARDS[k].profiles && !REGIONS.some(function (r) { return CARDS[k].profiles.indexOf(r.profile) >= 0; })) errs.push('Carte ' + k + ' : aucune région cible possible');
+    });
+    PARTIES.forEach(function (p) { (p.bases || []).forEach(function (b) { if (!ids[b]) errs.push('Parti ' + p.id + ' : région de base inconnue ' + b); }); });
+    return errs;
+  }
+
   var DATA = { REFERENCE_2027: REFERENCE_2027, POLLS: POLLS, BASES: BASES, REGIONS: REGIONS, PROFILES: PROFILES, THEMES: THEMES, HEADLINES: HEADLINES, PARTIES: PARTIES, ACTIONS: ACTIONS,
                CARDS: CARDS, EVENTS: EVENTS, DILEMMAS: DILEMMAS, CRISES: CRISES, REPLIES: REPLIES, TEMPERS: TEMPERS,
-               MEASURES: MEASURES, FUNDING: FUNDING, SEGMENTS: SEGMENTS, VOTE_PROP: VOTE_PROP, SEGMENTS_SRC: SEGMENTS_SRC, AFFAIRS: AFFAIRS, LEARN: LEARN, BUDGET_AFFAIR: BUDGET_AFFAIR, REACTIONS: REACTIONS, ADVISOR: ADVISOR, OBJECTIVES: OBJECTIVES, RULES: RULES };
+               MEASURES: MEASURES, FUNDING: FUNDING, SEGMENTS: SEGMENTS, VOTE_PROP: VOTE_PROP, SEGMENTS_SRC: SEGMENTS_SRC, AFFAIRS: AFFAIRS, LEARN: LEARN, BUDGET_AFFAIR: BUDGET_AFFAIR, REACTIONS: REACTIONS, ADVISOR: ADVISOR, OBJECTIVES: OBJECTIVES, RULES: RULES, validate: validate };
   if (typeof module !== 'undefined' && module.exports) module.exports = DATA;
   else root.PolitikData = DATA;
 })(this);

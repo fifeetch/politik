@@ -44,7 +44,7 @@ for (var i = 0; i < N; i++) {
   var vd = G.verdict(gv); ver[vd.verdict] = (ver[vd.verdict] || 0) + 1;
   sum.def += gv.deficit; sum.debt += gv.debt; sum.pop += vd.pop; sum.adopted += vd.adopted; sum.fell += gv.fell;
 }
-console.log('Quinquennats :', N, '· stratégie', strat === 'a' ? 'dépensière' : 'économe');
+console.log('Quinquennats :', N, '· stratégie', strat === 'a' ? 'dépensière' : strat === 'b' ? 'économe' : 'équilibrée');
 console.log('Majorité après les législatives :', JSON.stringify(maj));
 console.log('Fin de mandat (moyennes) : déficit ' + (sum.def / N).toFixed(2) + ' % · dette ' + (sum.debt / N).toFixed(1) + ' % · popularité ' + (sum.pop / N).toFixed(0) + ' % · mesures adoptées ' + (sum.adopted / N).toFixed(1) + ' / 5');
 console.log('49.3 par mandat : ' + (sum.d493 / N).toFixed(2) + ' · gouvernements renversés : ' + (sum.fell / N).toFixed(2) + ' · dissolutions : ' + (sum.diss / N).toFixed(2));

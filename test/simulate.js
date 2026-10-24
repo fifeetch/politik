@@ -12,7 +12,10 @@ var firstRound = 0, alliances = 0, finals = {}, turnsSum = 0, errors = 0, action
 
 for (var i = 0; i < N; i++) {
   var rng = E.makeRng(1000 + i);
-  var parties = all.slice().sort(function () { return rng() - 0.5; }).slice(0, 4);
+  // v1.5 : vrai mélange (Fisher-Yates) avec graine, au lieu d'un tri au hasard (qui n'est pas uniforme)
+  var parties = all.slice();
+  for (var k = parties.length - 1; k > 0; k--) { var j = Math.floor(rng() * (k + 1)), tmp = parties[k]; parties[k] = parties[j]; parties[j] = tmp; }
+  parties = parties.slice(0, 4);
   var g = E.createGame(null, { seed: 5000 + i, aiParties: parties, mode: process.env.MODE, base: process.env.BASE });
   try {
     while (!g.over) {
