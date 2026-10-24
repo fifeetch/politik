@@ -392,6 +392,8 @@
     aiAff.forEach(function (x) { alerts.push('AFFAIRE · ' + party(x.pid).short + ' : ' + x.title); });
     info.later.forEach(function (x) { if (x.hit) alerts.push(x.title + (x.pid === me ? '' : ' (' + party(x.pid).short + ')')); });
     FX.breaking('Alerte info', alerts);
+    lastJournal = journalHtml(info, aiDil, aiAff).replace('paper paper-spin', 'paper');
+    showTab('carte'); $('tab-actu-dot').hidden = false;
     modal({ kicker: 'Tour ' + g.turn + ' / ' + R.maxTurns, title: g.turn === 1 ? 'La campagne commence' : 'Le journal du matin', html: journalHtml(info, aiDil, aiAff),
             buttons: [{ label: mine.length ? 'Une affaire te tombe dessus →' : waits ? 'Une décision t’attend →' : 'À mes actions', primary: true, onClick: function () {
               chain([function (next) { mine.length ? showAffair(next) : next(); },
@@ -521,7 +523,8 @@
     box.hidden = false; advShown = text;
     if (!box.querySelector('.adv-bubble')) {
       box.innerHTML = '<span class="adv-face">' + A.advisor() + '</span><p class="adv-bubble" aria-live="polite"><b>' + D.ADVISOR.name + ' :</b> <span class="adv-txt"></span></p><button type="button" class="adv-close" aria-label="Masquer le conseil">✕</button>';
-      box.querySelector('.adv-close').addEventListener('click', function () { advisorHidden = true; renderAdvisor(); });
+      box.querySelector('.adv-close').addEventListener('click', function (e) { e.stopPropagation(); advisorHidden = true; renderAdvisor(); });
+      box.querySelector('.adv-bubble').addEventListener('click', function () { modal({ kicker: D.ADVISOR.title, title: D.ADVISOR.name + ' te conseille', html: '<div class="learn">' + A.advisor() + '<p>' + esc(advShown || '') + '</p></div>' }); });
     }
     box.classList.toggle('react', !!advReact);
     var txt = box.querySelector('.adv-txt');
@@ -633,6 +636,48 @@
     render(); T.notify('queue');
   }
 
+  /* ---------- v1.8 : les onglets ---------- */
+  var activeTab = 'carte', journalSeen = '';
+  function showTab(name) {
+    activeTab = name;
+    ['sondage', 'actu', 'parti'].forEach(function (k) { $('tab-' + k).hidden = k !== name; });
+    Array.prototype.forEach.call(document.querySelectorAll('.tabbar [data-tab]'), function (b) {
+      if (b.getAttribute('data-tab') === name) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+    });
+    if (name === 'sondage') { renderPollTab(); $('tab-sondage').scrollTop = 0; }
+    if (name === 'actu') { renderActu(); journalSeen = g.turn + ''; $('tab-actu-dot').hidden = true; $('tab-actu').scrollTop = 0; }
+    if (name === 'parti') { renderParti(); $('tab-parti').scrollTop = 0; }
+    T.notify('tab');
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('.tabbar [data-tab]'), function (b) {
+    b.addEventListener('click', function () { if (g) showTab(b.getAttribute('data-tab')); });
+  });
+  function ordinal(n) { return n + (n === 1 ? 'er' : 'ᵉ'); }
+  function renderPollTab() {
+    var poll = E.poll(g), rank = 1 + poll.findIndex(function (x) { return x.pid === me; }), mine = poll[rank - 1];
+    var prev = g.history.length ? g.history[g.history.length - 1].filter(function (x) { return x.pid === me; })[0] : null, d = prev ? 100 * (mine.pct - prev.pct) : 0;
+    $('pos-card').innerHTML = '<div><span class="pos-k">Ta position</span><b class="pos-rank">' + ordinal(rank) + ' sur ' + poll.length + '</b><span class="pos-k">Les 2 premiers vont au second tour</span></div>' +
+      '<div class="pos-right"><b class="pos-pct">' + pctFr(mine.pct, 1) + ' %</b>' + (prev ? '<span class="' + (d >= 0 ? 'up' : 'down') + '">' + (d >= 0 ? '+' : '−') + Math.abs(d).toFixed(1).replace('.', ',') + ' pt ce tour</span>' : '') + '</div>';
+    var max = poll[0].pct;
+    $('poll-list').innerHTML = poll.map(function (x, i) {
+      var P = party(x.pid);
+      return '<li><button type="button" class="poll-row' + (x.pid === me ? ' me' : '') + '" data-party="' + x.pid + '"><span class="pr-n">' + (i + 1) + '</span><span class="pr-name">' + (x.pid === me ? 'Toi · ' : '') + esc(P.short) + '</span>' +
+        '<span class="pr-bar"><i style="width:' + (100 * x.pct / max) + '%;background:' + P.color + '"></i></span><b>' + pctFr(x.pct, 1) + '</b></button></li>';
+    }).join('');
+    Array.prototype.forEach.call(document.querySelectorAll('[data-party]'), function (b) { b.addEventListener('click', function () { partyCard(b.getAttribute('data-party')); }); });
+  }
+  function partyCard(pid) {
+    var P = party(pid), regs = D.REGIONS.filter(function (r) { return g.regions[r.id].controller === pid; });
+    modal({ kicker: P.family, title: pid === me ? 'Toi · ' + P.name : P.name,
+      html: '<div class="cand-line">' + A.portrait(pid) + '<div><b class="cand-name">' + esc(P.candidate) + '</b><span>' + esc(P.candTitle) + '</span></div></div>' + axisHtml(pid) +
+        '<p><b>Régions tenues :</b> ' + (regs.length ? regs.map(function (r) { return esc(r.name); }).join(', ') : 'aucune') + '</p>' +
+        '<p><b>Force :</b> ' + esc(P.force) + '</p><p><b>Faiblesse :</b> ' + esc(P.weakness) + '</p>' + (pid !== me ? '<p class="muted">Débat : tempérament ' + esc(D.TEMPERS[pid].label) + '.</p>' : '') });
+  }
+  var lastJournal = '';
+  function renderActu() {
+    $('actu-body').innerHTML = (g.news ? newsHtml(g.news) : '') + (lastJournal ? '<div class="kicker" style="margin-top:6px">Le journal du matin · tour ' + g.turn + '</div>' + lastJournal : '');
+  }
+
   /* ---------- Rendu ---------- */
   function render() {
     if (!g) return;
@@ -648,6 +693,9 @@
     if (pl.momentum < 0) st.push('<span class="st st-down">↘ Passage à vide</span>');
     if (pl.cas > 0) st.push('<span class="st st-cas" title="Casseroles">' + new Array(pl.cas + 1).join('🍳') + '</span>');
     $('race-status').innerHTML = st.length ? st.join('') : '50 % : élu dès le 1er tour';
+    var rk = 1 + E.poll(g).findIndex(function (x) { return x.pid === me; });
+    $('tab-sondage-label').textContent = 'Sondage · ' + ordinal(rk);
+    if (activeTab === 'sondage') renderPollTab();
     renderRace(); renderNews(); renderAdvisor(); renderMap(); renderRegion(); renderQueue(); renderMessage(); renderActions();
   }
   /* v1.4 : on garde les mêmes barres d'un tour à l'autre pour qu'elles glissent vers leur nouvelle valeur,
@@ -768,9 +816,11 @@
     }
     D.REGIONS.forEach(function (r) {
       var m = M.regions[r.id], gb = svg('g', { class: 'badge' });
-      var label = abstMode ? pctFr(E.regionVoters(g, r.id).abst) + '%' : mio(r.ins);
-      gb.appendChild(svg('rect', { x: m.x - 11, y: m.y - 7, width: 22, height: 13, rx: 6.5 }));
-      var t = svg('text', { x: m.x, y: m.y + 3 }); t.textContent = label; gb.appendChild(t);
+      var ctl = g.regions[r.id].controller;
+      var label = abstMode ? pctFr(E.regionVoters(g, r.id).abst) + '%' : ctl === me ? 'Toi' : ctl || '—';
+      if (!abstMode && ctl) gb.setAttribute('class', 'badge badge-owner' + (ctl === me ? ' badge-me' : ''));
+      gb.appendChild(svg('rect', { x: m.x - 13, y: m.y - 8, width: 26, height: 15, rx: 7.5 }));
+      var t = svg('text', { x: m.x, y: m.y + 3.5 }); t.textContent = label; gb.appendChild(t);
       s.appendChild(gb);
     });
     // crises : icônes posées sur la carte
@@ -811,38 +861,50 @@
     if (!themePicked) theme = E.bestTheme(g, me, rid);
     render(); T.notify('region');
   }
+  /* v1.8 : la fiche de la région, en version courte. Le détail (soucis, forces, calcul) s'ouvre dans « Détails ». */
+  function rankIn(rid, pid) {
+    var mine = E.cubes(g, rid, pid);
+    return 1 + g.players.filter(function (p) { return p.id !== pid && E.cubes(g, rid, p.id) > mine; }).length;
+  }
   function renderRegion() {
     var box = $('region-info');
     if (!selected) {
-      box.innerHTML = '<div class="region-head"><div><h2 class="region-name">Touche une région</h2>' +
-        '<span class="region-sub">' + objLine(me).html + '</span></div></div>';
+      var ol = objLine(me);
+      box.innerHTML = '<div class="region-head"><h2 class="region-name">Touche une région</h2></div>' +
+        '<button type="button" class="linkbtn obj-line" id="btn-obj">🎯 Objectif : ' + esc(ol.o.name) + ' · <b>' + ol.pr.done + '/' + ol.pr.need + '</b></button>';
+      $('btn-obj').addEventListener('click', function () { showTab('parti'); });
       return;
     }
     var r = E.REG[selected], reg = g.regions[selected], c = reg.controller;
     var tag = c === me ? '<span class="stamp">À toi</span>'
       : c ? '<span class="tag" style="background:' + party(c).color + ';color:' + party(c).ink + '">' + c + '</span>'
       : '<span class="tag tag-yellow">À prendre</span>';
-    var v = E.regionVoters(g, selected), echo = E.echoBonus(g, me, selected);
-    var html = '<div class="region-head"><h2 class="region-name">' + esc(r.name) + '</h2>' + tag + '</div>' +
-      '<div class="chips"><span class="chip"><b>' + mio(v.ins) + ' M</b> inscrits</span><span class="chip"><b>' + pctFr(v.abst) + ' %</b> abstention</span>' +
-      (echo > 0 ? '<span class="chip chip-good">❤️ Région de cœur</span>' : echo < 0 ? '<span class="chip chip-bad">👎 Hostile</span>' : '') + '</div>' +
-      '<div class="chips"><span class="chips-k">Soucis</span>' + r.concerns.map(function (x) { return '<span class="chip chip-theme' + (E.isHot(g, x) ? ' hot' : '') + '">' + th(x).icon + ' ' + esc(th(x).short) + (E.isHot(g, x) ? ' 🔥' : '') + '</span>'; }).join('') + '<button type="button" class="linkbtn chips-end" id="btn-pop">Qui vit ici ?</button></div>';
-    // forces en présence : une barre empilée, du plus fort au plus faible
-    var rows = g.players.filter(function (p) { return p.id === me || E.cubes(g, selected, p.id) > 0; })
-      .sort(function (a, b) { return E.cubes(g, selected, b.id) - E.cubes(g, selected, a.id); });
-    var tot = 0; rows.forEach(function (p) { tot += E.cubes(g, selected, p.id); });
-    html += '<div class="forces-wrap"><div class="forces-bar">' + rows.filter(function (p) { return E.cubes(g, selected, p.id) > 0; }).map(function (p) {
-      var n = E.cubes(g, selected, p.id), P = party(p.id);
-      return '<span class="fseg' + (p.id === me ? ' me' : '') + '" style="flex:' + n + ';background:' + P.color + ';color:' + P.ink + '">' + (p.id === me ? 'Toi' : p.id) + ' ' + n + '</span>';
-    }).join('') + (tot ? '' : '<span class="fseg empty">Personne ici</span>') + '</div>' +
-      ((g.bases[selected] || []).indexOf(me) >= 0 ? '<div class="forces-foot">👥 Tes militants sont implantés ici : +1 électeur par tour.</div>' : '') + '</div>';
-    var bd = E.terrainBreakdown(g, me, selected, theme), room = R.maxCubes != null ? R.maxCubes - E.cubes(g, selected, me) : null;
+    var v = E.regionVoters(g, selected), echo = E.echoBonus(g, me, selected), rk = rankIn(selected, me), n = E.cubes(g, selected, me);
+    box.innerHTML = '<div class="region-head"><h2 class="region-name">' + esc(r.name) + '</h2>' +
+      (echo > 0 ? '<span class="chip chip-good">❤️ De cœur</span>' : echo < 0 ? '<span class="chip chip-bad">👎 Hostile</span>' : '') + tag + '</div>' +
+      '<div class="region-line"><span>' + mio(v.ins) + ' M inscrits · ' + pctFr(v.abst) + ' % d\'abstention · tu es <b>' + rk + (rk === 1 ? 'er' : 'ᵉ') + '</b> ici (' + n + ' cube' + (n > 1 ? 's' : '') + ')</span>' +
+      '<button type="button" class="linkbtn" id="btn-reg-more">Détails</button></div>';
+    $('btn-reg-more').addEventListener('click', regionDetails);
+  }
+  function regionDetails() {
+    if (!selected) return;
+    var r = E.REG[selected];
+    var html = '<div class="chips"><span class="chips-k">Soucis</span>' + r.concerns.map(function (x) { return '<span class="chip chip-theme' + (E.isHot(g, x) ? ' hot' : '') + '">' + th(x).icon + ' ' + esc(th(x).short) + (E.isHot(g, x) ? ' 🔥' : '') + '</span>'; }).join('') + '</div>';
+    var rows = g.players.filter(function (p) { return E.cubes(g, selected, p.id) > 0; }).sort(function (a, b) { return E.cubes(g, selected, b.id) - E.cubes(g, selected, a.id); });
+    html += '<div class="kicker">Qui mène ici (cubes = électeurs)</div><div class="brief">' + rows.map(function (p, i) {
+      var nn = E.cubes(g, selected, p.id);
+      return '<div class="vote-row' + (p.id === me ? ' qual' : '') + '"><span class="vote-lbl">' + chip(p.id) + (p.id === me ? 'Toi' : esc(party(p.id).short)) + '</span><span class="vote-bar"><i style="width:' + (10 * nn) + '%;background:' + party(p.id).color + '"></i></span><b>' + nn + '</b></div>';
+    }).join('') + '</div>';
+    var c = g.regions[selected].controller, need = 0;
+    if (c !== me) { var top = rows.length ? E.cubes(g, selected, rows[0].id) : 0; need = Math.max(E.minControl(me), top + 1) - E.cubes(g, selected, me); }
+    if (need > 0) html += '<p>Il te manque <b>' + need + ' cube' + (need > 1 ? 's' : '') + '</b> pour prendre la région (au moins ' + E.minControl(me) + ' et être devant tout le monde).</p>';
+    if ((g.bases[selected] || []).indexOf(me) >= 0) html += '<p>👥 Tes militants sont implantés ici : +1 électeur par tour.</p>';
+    var bd = E.terrainBreakdown(g, me, selected, theme), room = R.maxCubes - E.cubes(g, selected, me);
     html += '<div class="calc-line">📣 Meeting ici : ' + bd.parts.map(function (x, i) { return (i ? (x.n >= 0 ? ' + ' : ' − ') : '') + esc(x.label) + ' <b>' + (i ? Math.abs(x.n) : x.n) + '</b>'; }).join('') +
-      ' = <b>' + bd.total + ' cube' + (bd.total > 1 ? 's' : '') + '</b>' + (E.poachTarget(g, me, selected, true) ? ' <span class="muted">· et peut-être 1 électeur pris à un parti voisin</span>' : '') + (room != null && room < bd.total ? ' <span class="calc-warn">(plafond : +' + Math.max(0, room) + ' seulement)</span>' : '') + '</div>';
+      ' = <b>' + bd.total + ' cube' + (bd.total > 1 ? 's' : '') + '</b>' + (E.poachTarget(g, me, selected, true) ? ' <span class="muted">· et peut-être 1 électeur pris à un parti voisin</span>' : '') + (room < bd.total ? ' <span class="calc-warn">(plafond : +' + Math.max(0, room) + ' seulement)</span>' : '') + '</div>';
     var mk = E.markerAt(g, selected);
     if (mk) html += '<div class="mk-line">' + mk.icon + ' ' + esc(mk.title) + ' : ici, ' + th(mk.theme).icon + ' ' + esc(th(mk.theme).name) + ' compte comme à la une.</div>';
-    box.innerHTML = html;
-    var bp = $('btn-pop'); if (bp) bp.addEventListener('click', function () { popModal(selected); });
+    modal({ kicker: 'Région', title: r.name, html: html, buttons: [{ label: 'Qui vit ici ?', onClick: function () { popModal(selected); } }, { label: 'Fermer', primary: true }] });
   }
   function renderQueue() {
     var box = $('queue-slots'); box.innerHTML = '';
@@ -1556,7 +1618,8 @@
   }
 
   /* ---------- Menu & règles ---------- */
-  $('btn-menu').addEventListener('click', function () {
+  /* v1.8 : l'onglet « Mon parti » (avant : la fenêtre du bouton •••) */
+  function renderParti() {
     var pl = mePl(), o = D.OBJECTIVES.filter(function (x) { return x.id === pl.objective; })[0], p = party(me);
     var html = '<div class="cand-line">' + A.portrait(me) + '<div><b class="cand-name">' + esc(p.candidate) + '</b><span>' + esc(p.candTitle) + '</span></div></div>' +
       '<p>' + objLine(me).html + '.</p>' +
@@ -1570,9 +1633,12 @@
       line(pl.momentum > 0 ? '↗' : pl.momentum < 0 ? '↘' : '→', pl.momentum > 0 ? '<b>En dynamique</b> : +1 cube sur tes Meetings.' : pl.momentum < 0 ? '<b>Passage à vide</b> : −1 cube sur tes Meetings.' : '<b>Dynamique stable.</b> Gagne 1,5 point au sondage en un tour pour être en dynamique.') +
       line('👥', '<b>' + pl.militants + ' / ' + R.militantsMax + ' équipes de militants</b> — chacune rapporte 1 cube par tour.') +
       '</div><p><b>Force :</b> ' + esc(p.force) + '</p><p><b>Faiblesse :</b> ' + esc(p.weakness) + '</p>' + credHtml(me);
-    modal({ kicker: 'Ton parti', title: p.name, html: html,
-            buttons: [{ label: 'Reprendre', primary: true }, { label: '📚 Comprendre la politique', onClick: library }, { label: 'Règles du jeu', onClick: showRules }, { label: 'Abandonner la partie', onClick: function () { go('title'); } }] });
-  });
+    $('parti-body').innerHTML = '<span class="kicker">Ton parti</span><h1 class="h1 tab-title">' + esc(p.name) + '</h1>' + html +
+      '<div class="stack parti-btns"><button type="button" class="btn" id="pb-lib">📚 Comprendre la politique</button><button type="button" class="btn" id="pb-rules">Règles du jeu</button><button type="button" class="btn btn-ghost" id="pb-quit">Abandonner la partie</button></div>';
+    $('pb-lib').addEventListener('click', library); $('pb-rules').addEventListener('click', showRules);
+    $('pb-quit').addEventListener('click', function () { modal({ title: 'Abandonner la partie ?', html: '<p>Ta campagne sera perdue.</p>', buttons: [{ label: 'Abandonner', primary: true, onClick: function () { go('title'); } }, { label: 'Continuer à jouer' }] }); });
+  }
+  $('btn-menu').addEventListener('click', function () { showTab(activeTab === 'parti' ? 'carte' : 'parti'); });
   /* La bibliothèque : toutes les fiches « Le saviez-vous ? » */
   function library() {
     var keys = Object.keys(D.LEARN);

@@ -93,14 +93,6 @@
       </div>
     </header>
 
-    <div class="race">
-      <div class="race-head"><span>Sondage · 1er tour</span><span id="race-status">50 % : élu dès le 1er tour</span></div>
-      <div id="race-bar" class="race-bar"></div>
-      <div id="race-legend" class="race-legend"></div>
-    </div>
-
-    <button id="news" class="news" type="button" aria-label="Voir l'actualité du tour"></button>
-
     <div id="advisor" class="advisor" hidden></div>
 
     <div class="map-wrap" id="map-wrap">
@@ -119,6 +111,33 @@
         </div>
       </div>
     </div>
+
+    <!-- v1.8 : les onglets (sondage, actualité, ton parti) s'ouvrent par-dessus la carte -->
+    <div id="tab-sondage" class="tab-pane" hidden>
+      <h1 class="h1 tab-title">Sondage <small>1er tour</small></h1>
+      <div id="pos-card" class="pos-card"></div>
+      <div class="race">
+        <div class="race-head"><span>Tous les partis</span><span id="race-status">50 % : élu dès le 1er tour</span></div>
+        <div id="race-bar" class="race-bar"></div>
+        <div id="race-legend" class="race-legend"></div>
+      </div>
+      <ol id="poll-list" class="poll-list"></ol>
+      <p class="hint">Touche un parti pour voir son candidat et ses régions.</p>
+    </div>
+    <div id="tab-actu" class="tab-pane" hidden>
+      <h1 class="h1 tab-title">Actualité</h1>
+      <button id="news" class="news" type="button" aria-label="Voir l'actualité du tour"></button>
+      <div id="actu-body" class="actu-body"></div>
+    </div>
+    <div id="tab-parti" class="tab-pane" hidden>
+      <div id="parti-body" class="parti-body"></div>
+    </div>
+    <nav class="tabbar" aria-label="Écrans du jeu">
+      <button type="button" id="tab-btn-carte" data-tab="carte" aria-current="page"><svg viewBox="0 0 22 22" aria-hidden="true"><path d="M3 6l5-2 6 2 5-2v12l-5 2-6-2-5 2z M8 4v12 M14 6v12"/></svg><span>Carte</span></button>
+      <button type="button" id="tab-btn-sondage" data-tab="sondage"><svg viewBox="0 0 22 22" aria-hidden="true"><path d="M4 18V11M9 18V6M14 18V9M19 18V4"/></svg><span id="tab-sondage-label">Sondage</span></button>
+      <button type="button" id="tab-btn-actu" data-tab="actu"><svg viewBox="0 0 22 22" aria-hidden="true"><path d="M4 4h12v14H6a2 2 0 0 1-2-2zM16 8h2v8a2 2 0 0 1-2 2M7 8h6M7 11h6M7 14h4"/></svg><span>Actu</span><i class="tab-dot" id="tab-actu-dot" hidden></i></button>
+      <button type="button" id="tab-btn-parti" data-tab="parti"><svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="8" r="4"/><path d="M4 19c1-4 4-6 7-6s6 2 7 6"/></svg><span>Mon parti</span></button>
+    </nav>
   </section>
 
   <!-- v1.6 : entre les deux tours -->
