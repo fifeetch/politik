@@ -69,9 +69,12 @@ else {
 
 /* 5. Vérification en ligne */
 function norm(t) { return String(t).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[’']/g, "'"); }
+/* Pages « êtes-vous un robot ? » : on ne conclut rien, on demande une vérification à la main. */
+var BOT_WALL = /captcha|v[ée]rification de s[ée]curit[ée]|access denied|just a moment|cf-chl|challenge-platform|enable javascript|activer javascript|datadome|altcha|are you a robot|[êe]tes-vous un robot/i;
 function fetchOne(url) {
   var ctl = new AbortController(); var timer = setTimeout(function () { ctl.abort(); }, 25000);
-  return fetch(url, { redirect: 'follow', signal: ctl.signal, headers: { 'User-Agent': 'Mozilla/5.0 (Politik, verification des sources)', 'Accept-Language': 'fr-FR,fr;q=0.9' } })
+  return fetch(url, { redirect: 'follow', signal: ctl.signal, headers: { 'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0 Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8', 'Accept-Language': 'fr-FR,fr;q=0.9' } })
     .then(function (res) {
       var type = res.headers.get('content-type') || '';
       if (type.indexOf('html') < 0) return { status: res.status, type: type, text: '' };
@@ -95,7 +98,7 @@ function online() {
       if (r.status === 404 || r.status === 410) err(j.where, 'lien mort (' + r.status + ') : ' + j.s.url);
       else if (r.status >= 400) warn(j.where, 'le site a refusé la visite du robot (' + r.status + '), à vérifier à la main : ' + j.s.url);
       else if (j.s.expect && r.text) {
-        if (/captcha|v[ée]rification de s[ée]curit[ée]|access denied/i.test(r.text.slice(0, 4000)) && norm(r.text).indexOf(norm(j.s.expect)) < 0)
+        if (norm(r.text).indexOf(norm(j.s.expect)) < 0 && (BOT_WALL.test(r.text.slice(0, 20000)) || r.text.length < 6000))
           warn(j.where, 'page protégée contre les robots, à vérifier à la main : ' + j.s.url);
         else if (norm(r.text).indexOf(norm(j.s.expect)) < 0)
           err(j.where, 'la page ne parle plus de « ' + j.s.expect + ' » (contenu changé ?) : ' + j.s.url);
