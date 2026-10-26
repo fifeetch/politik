@@ -717,6 +717,7 @@
     canardChance: 0.35,              // sinon, Le Canard Déchaîné sort une affaire 35 % du temps
     affairsMax: 2,                   // au plus 2 affaires par tour
     enqueteBase: 0.35, enqueteCas: 0.15, enqueteBackfire: 0.3,
+    aiEnqueteMax: 2,                 // v3.6.5 : chaque parti de l'ordinateur enquête 2 fois par partie au plus, sur un rival direct
     /* v1.0 : participation et vote blanc */
     round1Abst: 0.939,           // abstention au 1er tour = abstention du 2nd × 0,939 (26,31 % contre 28,01 % en 2022)
     round1Blank: 0.254,          // blancs et nuls au 1er tour = ceux du 2nd × 0,254 (2,2 % contre 8,7 % des votants en 2022)

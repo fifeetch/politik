@@ -633,6 +633,7 @@
         for (var i = 0; i < g.players.length; i++) { r -= g.players[i].cas + 1; if (r <= 0) { pick = g.players[i]; break; } }
         list.push({ pid: pick.id, src: 'canard' });
       }
+      var seenAff = {}; list = list.filter(function (x) { if (seenAff[x.pid]) return false; seenAff[x.pid] = 1; return true; });   // v3.6.5 : une affaire par parti et par tour
       g.affairs = list.slice(0, R.affairsMax).map(function (x) {
         var id = x.id || g.affairDeck[g.affairIdx++ % g.affairDeck.length];
         var def = affairDef(id);
@@ -1023,9 +1024,10 @@
         t.push('+' + got + ' en ' + rn + ' (abstentionnistes convaincus' + (mg.why.length ? ' : ' + mg.why.join(', ') : '') + ')');
         break; }
       case 'enquete': {
+        pl.enqUsed = (pl.enqUsed || 0) + 1;
         var tgt = player(g, act.target), ch = enqueteChance(g, act.target);
         if (g.rng() < ch) {
-          g.nextAffairs.push({ pid: act.target, from: pid });
+          if (!g.nextAffairs.some(function (x) { return x.pid === act.target; })) g.nextAffairs.push({ pid: act.target, from: pid });   // v3.6.5 : un seul dossier par cible et par tour
           t.push('dossier trouvé sur ' + PARTY[act.target].short + ' : l’affaire sortira demain');
         } else if (g.rng() < R.enqueteBackfire) {
           pl.cas = Math.min(R.casseroleMax, pl.cas + 2);

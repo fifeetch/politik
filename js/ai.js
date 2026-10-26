@@ -39,9 +39,12 @@
     if (tr === 'transparent') list.push({ type: 'eclat' });
     // enquêter sur un rival qui traîne des casseroles ou qui mène
     // v1.7 : avec 12 partis, on n'enquête que sur les 3 premiers des sondages (sinon chacun enquête sur tout le monde)
-    if (v.turn < D.RULES.maxTurns) E.ranking(v).filter(function (id) { return id !== pid; }).slice(0, 3).forEach(function (id) {
-      list.push({ type: 'enquete', target: id });
-    });
+    // v3.6.5 : on n'enquête que sur un rival direct (juste devant soi au sondage, ou le premier si l'on est 2e), 2 fois par partie au plus
+    var rkAll = E.ranking(v), myRk = rkAll.indexOf(pid);
+    if (v.turn < D.RULES.maxTurns && (pl.enqUsed || 0) < D.RULES.aiEnqueteMax && myRk > 0 && myRk <= 4) {
+      list.push({ type: 'enquete', target: rkAll[myRk - 1] });
+      if (myRk === 2) list.push({ type: 'enquete', target: rkAll[0] });
+    }
     // v1.6 : plus d'alliance pendant la campagne du 1er tour (elles se négocient entre les deux tours)
     pl.cards.forEach(function (card) {
       var def = D.CARDS[card];

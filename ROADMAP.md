@@ -273,3 +273,8 @@ Avant, en Réaliste, tous les partis convergeaient vers ~8 % : Lutte Obstinée d
 - « Cordon » autour du RN et de Rétroconquête (comme aux législatives) : la gauche et le centre leur reportent ×0,35. PS → RN 9 %, Écologistes 4 %, PCF 2 % (2022 : 17 % des électeurs de Mélenchon vers Le Pen, moins de 10 % pour Jadot, Roussel, Hidalgo).
 - Barrage par indice de rejet ramené à 0,15 (le cordon en fait déjà une partie).
 - Simulation (Réaliste 2024) : PS–RN 53/47, RE–RN 52/48, LFI–RN 45/55.
+
+## v3.6.5 — fait : moins d'acharnement, gaffe expliquée
+- L'ordinateur n'enquête que sur un rival direct (juste devant lui au sondage, ou le premier s'il est 2e), 2 fois par partie au plus (avant : chacun des 11 partis enquêtait sur les 3 premiers à chaque tour, ~38 enquêtes par partie, 6 maintenant).
+- Une seule affaire par parti et par tour.
+- La tuile « risque de gaffe » devient « ⚡ épuisé : 4/10 de gaffe », avec l'explication au survol.
