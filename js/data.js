@@ -207,6 +207,8 @@
       edu: { what: 'Limiter la déduction fiscale des intérêts quand une filiale française est très endettée auprès de son propre groupe, une technique pour déplacer les bénéfices.', pro: 'S\'attaque à l\'optimisation fiscale des multinationales.', con: 'Les multinationales s\'y opposent et peuvent réduire leurs investissements en France.' } },
     { id: 'carried_interest', name: 'Taxer davantage le « carried interest »', cost: -1, fans: { pop: 1, sae: 1, cad: -1 }, camp: 'gauche',
       edu: { what: 'Imposer comme un salaire les gains des gestionnaires de fonds quand ils ne correspondent pas à un vrai investissement à risque.', pro: 'Supprime un avantage fiscal réservé à quelques professionnels de la finance.', con: 'Risque de voir des sociétés de gestion partir à Londres, au Luxembourg ou ailleurs.' } },
+    { id: 'cir_cut', name: 'Réduire le crédit d\'impôt recherche des grandes entreprises', cost: -2, fans: { pop: 1, cad: -1, pi: -1 }, camp: 'gauche',
+      edu: { what: 'Le crédit d\'impôt recherche rembourse aux entreprises 30 % de leurs dépenses de recherche. Il coûte environ 7 milliards d\'euros par an, dont une large part va aux grands groupes. La loi réduit le taux pour les grandes entreprises, en épargnant les PME.', pro: 'Plusieurs évaluations publiques doutent de son effet sur la recherche des grands groupes : une partie serait un effet d\'aubaine.', con: 'Risque de voir des laboratoires privés partir à l\'étranger, et des emplois de chercheurs menacés.' } },
     { id: 'pay_gap_tax', name: 'Contribution sur les écarts de rémunération', cost: -1, fans: { pop: 1, sae: 1, cad: -1 }, camp: 'gauche',
       edu: { what: 'Une contribution pour les entreprises où le salaire du dirigeant dépasse de très loin celui des salariés.', pro: 'Peut encourager à augmenter les bas salaires.', con: 'Il faut un calcul fiable de l\'écart, et les grandes entreprises s\'y opposent.' } }
   ];
@@ -335,6 +337,8 @@
                        vrai: 'Depuis 2019, la France plafonne déjà la déduction des charges financières nettes (règle européenne des 30 % de l\'Ebitda). Un plafond plus strict pour la dette intragroupe est une proposition de jeu.' },
     carried_interest: { src: [{ label: 'Régime des parts de « carried interest » (BOFiP, impots.gouv.fr)', url: 'https://bofip.impots.gouv.fr/export/pdf/15810' }],
                        vrai: 'Le « carried interest » bénéficie d\'un régime fiscal particulier, encadré par la loi et régulièrement débattu lors des budgets.' },
+    cir_cut:         { src: [{ label: 'Le crédit d\'impôt recherche (ministère de l\'Enseignement supérieur et de la Recherche)', url: 'https://www.enseignementsup-recherche.gouv.fr/fr/le-credit-d-impot-recherche-cir-47773', expect: 'recherche' }, { label: 'Évaluation de la réforme du crédit d\'impôt recherche de 2008 (Direction générale du Trésor)', url: 'https://www.tresor.economie.gouv.fr/Articles/2021/09/20/evaluation-de-la-reforme-du-credit-impot-recherche-de-2008' }],
+                       vrai: 'Le crédit d\'impôt recherche est l\'une des plus grosses niches fiscales. Les budgets 2025 et 2026 l\'ont déjà raboté ; son recentrage sur les PME est régulièrement débattu au Parlement.' },
     pay_gap_tax:     { src: [{ label: 'Les sociétés cotées doivent-elles communiquer le salaire de leurs dirigeants ? (ministère de l\'Économie)', url: 'https://www.economie.gouv.fr/cedef/salaire-dirigeants-entreprises-cotees', expect: 'dirigeants' }],
                        vrai: 'Depuis la loi Pacte (2019), les sociétés cotées publient le « ratio d\'équité » entre la rémunération du dirigeant et celle des salariés. Le taxer est une proposition de jeu.' }
   };
@@ -803,7 +807,7 @@
     posts: [
       { id: 'pm',    icon: '🏛️', name: 'Premier ministre',                 short: 'Matignon',   themes: [],                      text: 'Fait voter tes lois. Un fusible que l\'on peut sacrifier pour remonter dans les sondages.' },
       { id: 'eco',   icon: '💶', name: 'Économie, Finances et Industrie',  short: 'Bercy',      themes: ['pouvoir', 'emploi'],   text: 'Le budget et l\'emploi : un bon ministre fait baisser le déficit.',
-        measures: ['executive_pay_tax', 'bank_balance_tax', 'large_life_insurance', 'data_tax', 'digital_ads_tax', 'crypto_tax', 'luxury_vat', 'luxury_homes_tax', 'vacant_offices', 'concession_rent', 'carbon_imports', 'unused_buildable_land', 'aid_clawback', 'dormant_patents', 'intragroup_debt', 'carried_interest', 'pay_gap_tax'] },
+        measures: ['executive_pay_tax', 'bank_balance_tax', 'large_life_insurance', 'data_tax', 'digital_ads_tax', 'crypto_tax', 'luxury_vat', 'luxury_homes_tax', 'vacant_offices', 'concession_rent', 'carbon_imports', 'unused_buildable_land', 'aid_clawback', 'dormant_patents', 'intragroup_debt', 'carried_interest', 'pay_gap_tax', 'cir_cut'] },
       { id: 'int',   icon: '🚓', name: 'Intérieur',                         short: 'Intérieur',  themes: ['securite', 'immigration'], text: 'La sécurité et l\'immigration.' },
       { id: 'sante', icon: '🏥', name: 'Santé',                             short: 'Santé',      themes: ['services'],            text: 'L\'hôpital, les médecins, les épidémies.' },
       { id: 'educ',  icon: '🎒', name: 'Éducation nationale',               short: 'Éducation',  themes: ['services'],            text: 'L\'école et les enseignants.', measures: ['classes'] },

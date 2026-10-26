@@ -260,7 +260,7 @@
       // v3.4 : vingt nouvelles recettes (data.js, FUNDING)
       'executive_pay_tax', 'bank_balance_tax', 'large_life_insurance', 'data_tax', 'digital_ads_tax', 'crypto_tax', 'luxury_vat', 'luxury_homes_tax',
       'vacant_offices', 'concession_rent', 'flight_frequency_tax', 'carbon_imports', 'nonrecyclable_packaging', 'land_artificialisation',
-      'unused_buildable_land', 'aid_clawback', 'dormant_patents', 'intragroup_debt', 'carried_interest', 'pay_gap_tax'],
+      'unused_buildable_land', 'aid_clawback', 'dormant_patents', 'intragroup_debt', 'carried_interest', 'pay_gap_tax', 'cir_cut'],
     economies: ['trainvie', 'fraude', 'gelpoint', 'gelpensions', 'chomage', 'nonremplacement', 'retraites']
   };
   function itemOf(gv, mid) { return gv.measures.filter(function (x) { return x.id === mid; })[0] || (gv.extra || []).filter(function (x) { return x.id === mid; })[0]; }
