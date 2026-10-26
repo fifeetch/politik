@@ -1573,7 +1573,7 @@
     function round(k) {
       var i = mine[k], d = deb.duels[i], o = d.a === me ? d.b : d.a;
       var h = '<div class="question"><div class="q-face">' + A.portrait(o) + '</div><div><span class="kicker">Question ' + (k + 1) + ' / 3</span><div class="q-theme">' + th(d.theme).icon + ' ' + esc(th(d.theme).name) + '</div>' +
-        '<div class="q-vs">Face à <b>' + esc(party(o).candidate) + '</b> (' + esc(party(o).short) + ') · ' + D.TEMPERS[o].label + '</div></div></div><div class="pick">' +
+        '<div class="q-vs">Face à <b>' + esc(party(o).candidate) + '</b> (' + esc(party(o).short) + ') · ' + D.TEMPERS[o].label + '</div></div></div><div class="question-guide"><b>À toi</b><span>Choisis la réplique qui te ressemble le plus.</span></div><div class="debate-pick-label">Ta réponse</div><div class="pick">' +
         ['attaque', 'chiffres', 'emotion', 'esquive'].map(function (key) {
           var r = D.REPLIES[key];
           var bh = bonusHint(key, d, o), txt = bh ? esc(r.hint.split('. ')[0]) + '.' + bh : esc(r.hint);
