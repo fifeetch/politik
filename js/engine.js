@@ -64,6 +64,13 @@
       g.hist[r.id] = hs;   // le socle électoral : la part historique de chaque parti dans la région
     });
   }
+  /* Part des voix servant au contrôle d'une région en Réaliste : socle + campagne, sans la prime au sortant (sinon le contrôle se nourrirait lui-même) */
+  function controlShares(g, rid) {
+    var T = 0, out = {}, so = R.socle;
+    pids(g).forEach(function (id) { T += strength(g, rid, id); });
+    pids(g).forEach(function (id) { out[id] = (T ? (1 - so) * strength(g, rid, id) / T : 0) + so * ((g.hist[rid] && g.hist[rid][id]) || 0); });
+    return out;
+  }
   /* Part des voix de chaque parti dans une région (sans les « autres »), socle compris */
   function regionShares(g, rid) {
     var reg = g.regions[rid], T = 0, w = {}, out = {}, so = g.hist ? R.socle : 0;
@@ -371,8 +378,10 @@
   function updateControl(g, rid) {
     var reg = g.regions[rid];
     var best = -1, leaders = [];
+    var sh = g.hist ? controlShares(g, rid) : null;
     pids(g).forEach(function (pid) {
-      var n = strength(g, rid, pid);   // v3.2 : en Réaliste, c'est le poids électoral qui compte (sinon, poids 1)
+      // v3.5.4 : en Réaliste, la région revient à qui fait le plus de voix, socle électoral compris (sinon : les soutiens)
+      var n = sh ? sh[pid] : strength(g, rid, pid);
       if (n > best + 1e-9) { best = n; leaders = [pid]; } else if (Math.abs(n - best) <= 1e-9) leaders.push(pid);
     });
     var prev = reg.controller;
@@ -1526,7 +1535,7 @@
     resolveAffair: resolveAffair, enqueteChance: enqueteChance, affairDef: affairDef,
     resolveDilemma: resolveDilemma, dilemmaDef: dilemmaDef, applyFx: applyFx, markerAt: markerAt, hotHere: hotHere, crisisAct: crisisAct,
     impact: impact, cred: cred, isHot: isHot, concerns: concerns, bestTheme: bestTheme, terrainCubes: terrainCubes, mediaCubes: mediaCubes,
-    weight: weight, strength: strength, regionLean: regionLean, natLean: natLean, regionShares: regionShares,
+    weight: weight, strength: strength, controlShares: controlShares, regionLean: regionLean, natLean: natLean, regionShares: regionShares,
     traitOf: traitOf, nostalgiaPreview: nostalgiaPreview, petalsCount: petalsCount, lostPetals: lostPetals, jammed: jammed, zapped: zapped, isHidden: isHidden, retireeRegion: retireeRegion, resolvePrimaire: resolvePrimaire, actionsFor: actionsFor, centrists: centrists, tickBingo: tickBingo, ensureTraits: ensureTraits,
     REG: REG, PARTY: PARTY, sigle: sigle, THEME: THEME, makeRng: makeRng, setFormat: setFormat, saveGame: saveGame, loadGame: loadGame, registerParty: registerParty, unregisterParty: unregisterParty
   };

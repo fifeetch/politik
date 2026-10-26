@@ -1275,6 +1275,7 @@
   }
   /* v1.8 : la fiche de la région, en version courte. Le détail (soucis, forces, calcul) s'ouvre dans « Détails ». */
   function rankIn(rid, pid) {
+    if (g.hist) { var sh = E.regionShares(g, rid); return 1 + g.players.filter(function (p) { return p.id !== pid && sh[p.id] > sh[pid]; }).length; }   // v3.5.4 : en Réaliste, le rang suit les voix
     var mine = E.cubes(g, rid, pid);
     return 1 + g.players.filter(function (p) { return p.id !== pid && E.cubes(g, rid, p.id) > mine; }).length;
   }
@@ -1318,10 +1319,15 @@
     }).join('') + '</div>';
     var c = g.regions[selected].controller, need = 0;
     if (c !== me) {
-      if (real) {
-        var topS = 0; g.players.forEach(function (p) { if (p.id !== me) topS = Math.max(topS, E.strength(g, selected, p.id)); });
-        var mw = E.weight(g, selected, me), byStr = Math.floor((topS - E.strength(g, selected, me)) / mw) + 1;
-        need = Math.max(E.minControl(me) - E.cubes(g, selected, me), byStr);
+      if (real) {   // v3.5.4 : combien de soutiens pour passer devant en voix (socle compris) ?
+        var c0 = g.regions[selected].cubes[me] || 0, byStr = 99;
+        for (var k = 1; k <= R.maxCubes - c0; k++) {
+          g.regions[selected].cubes[me] = c0 + k;
+          var cs = E.controlShares(g, selected), lead = g.players.every(function (p) { return p.id === me || cs[me] > cs[p.id]; });
+          if (lead) { byStr = k; break; }
+        }
+        g.regions[selected].cubes[me] = c0;
+        need = Math.max(E.minControl(me) - c0, byStr);
       } else { var top = rows.length ? E.cubes(g, selected, rows[0].id) : 0; need = Math.max(E.minControl(me), top + 1) - E.cubes(g, selected, me); }
     }
     if (need > R.maxCubes - E.cubes(g, selected, me)) html += '<p>Prendre cette région est <b>hors de portée</b> pour l\u2019instant. Chaque soutien compte quand même pour tes voix.</p>';
