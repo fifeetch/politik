@@ -372,7 +372,7 @@
         E.resolveDebate(g, pr, deb.duels.map(function (d) { return { ra: AI.chooseReply(g, d.a, d.theme, d.b), rb: AI.chooseReply(g, d.b, d.theme, d.a) }; }));
       }
       var t = E.spotlightTarget(g); if (t) E.applySpotlight(g, t, AI.paySpotlight(g, t));
-      E.endTurn(g);
+      if (E.endTurn(g).between) E.autoBetween(g);   // v2.3 : l'entre-deux-tours se joue tout seul (sinon la boucle ne finissait jamais)
     }
     if (g.winner !== me) {
       var rival = g.result.first.filter(function (x) { return x.pid !== me; })[0].pid;

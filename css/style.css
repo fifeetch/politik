@@ -973,3 +973,35 @@ button { font-family: inherit; color: inherit; }
 @media (prefers-reduced-motion: reduce) { .une-in .une-pic svg, .une-in .une-word, .une-in .une-teasers, .pages-in-anim, .art-hi { animation: none; } }
 .art-rule { margin: 0 0 8px; padding: 8px 10px; background: #17151F; color: #fff; border-radius: 8px; font-size: 14px; line-height: 1.4; }
 .art-rule b { color: #FFD84D; }
+
+/* ---------- v2.3 : la soirée des législatives ---------- */
+.legis { gap: 8px; }
+.lg-head { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.lg-title { margin: 0; font-family: var(--display); font-weight: 900; font-stretch: 130%; font-size: 26px; line-height: 1.05; letter-spacing: -.5px; }
+.lg-hemi { width: 100%; }
+.lg-hemi svg { display: block; width: 100%; max-height: 190px; }
+.lg-hemi circle { transition: fill .35s, transform .35s; transform-box: fill-box; transform-origin: center; }
+.lg-hemi circle.new { animation: pop .45s ease-out; }
+.lg-hemi .hemi-n { fill: var(--paper); }
+.lg-hemi .hemi-l { fill: #C8C2EA; }
+.lg-camp { width: 100%; display: flex; flex-direction: column; gap: 4px; text-align: left; }
+.lg-bar { position: relative; height: 14px; background: #3A3560; border-radius: 7px; overflow: visible; }
+.lg-bar i { display: block; height: 100%; border-radius: 7px; width: 0; transition: width .45s ease-out; }
+.lg-bar .lg-maj { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--paper); }
+.lg-bar .lg-maj::after { content: '289'; position: absolute; top: -15px; left: -9px; font-size: 10.5px; font-weight: 700; color: #C8C2EA; }
+.lg-campline { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 13px; color: #C8C2EA; }
+.lg-campline b { font-family: var(--display); font-weight: 800; font-size: 22px; color: var(--paper); }
+.lg-stage { width: 100%; display: flex; flex-direction: column; gap: 6px; text-align: left; }
+.lg-ticker { min-height: 22px; font-size: 14.5px; text-align: center; }
+.lg-counts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.lg-count { background: rgba(255,255,255,.07); border-radius: 10px; padding: 6px 4px; text-align: center; font-size: 12px; color: #C8C2EA; line-height: 1.2; }
+.lg-count b { display: block; font-family: var(--display); font-weight: 800; font-size: 22px; color: var(--paper); }
+.lg-more { background: transparent; border: 1px solid #6A64A0; color: var(--paper); border-radius: 10px; min-height: 40px; font: 700 14px var(--body); cursor: pointer; }
+.lg-verdict { text-align: center; font-size: 15px; line-height: 1.4; margin: 0; }
+.lg-verdict b { color: var(--paper); }
+.lg-reg { display: flex; flex-direction: column; gap: 2px; padding: 7px 0; border-bottom: 1px solid var(--rule); font-size: 13.5px; }
+.lg-reg small { color: var(--ink-2); font-size: 12.5px; }
+.lg-seg { display: flex; height: 8px; border-radius: 4px; overflow: hidden; gap: 1px; margin-top: 2px; }
+@media (max-height: 700px) { .lg-hemi svg { max-height: 150px; } .lg-title { font-size: 22px; } }
+.lg-seg i { display: block; height: 100%; }
+.legis .nb-bar i { transition: none; }

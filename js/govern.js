@@ -6,6 +6,7 @@
   var node = typeof module !== 'undefined' && module.exports;
   var D = node ? require('./data.js') : root.PolitikData;
   var E = node ? require('./engine.js') : root.PolitikEngine;
+  var LG = node ? require('./legis.js') : root.PolitikLegis;
 
   var C = {
     years: 5, seats: 577, majority: 289,
@@ -87,10 +88,11 @@
   function create(g, pid) {
     var pl = E.player(g, pid), ally = E.allyOf(g, pid);
     var res = g.result, pct = res.second ? (res.second.a === pid ? res.second.pctA : res.second.pctB) : res.first[0].pct;
+    var loser = res.second ? (res.second.a === pid ? res.second.b : res.second.a) : null;
     var ap = E.segmentAppeal(pl.programme.concat(pl.financing || []));
     var sat = {}; D.SEGMENTS.forEach(function (sg) { sat[sg.id] = clamp(45 + 5 * ap[sg.id], 15, 85); });
     var gv = {
-      rng: g.rng, pid: pid, ally: ally, year: 1, over: false,
+      rng: g.rng, pid: pid, ally: ally, allies: [], year: 1, margin: pct - 0.5, loser: loser, over: false,
       deficit: C.deficit0, debt: C.debt0, sat: sat, popBonus: 0,
       elected: Math.round(pct * 1000) / 10,
       measures: pl.programme.map(function (id) { return { id: id, status: 'pending', amended: false }; }),
@@ -103,7 +105,7 @@
       achievements: {}
     };
     gv.popBonus = Math.round((pct * 100 - popularity(gv)) * 0.6) + C.honeymoon;
-    legislatives(gv, g);
+    legislatives(gv, g, null, { margin: gv.margin, loser: loser });
     return gv;
   }
   function clamp(x, a, b) { return Math.max(a, Math.min(b, x)); }
@@ -117,37 +119,34 @@
     return clamp(Math.round(p / w + (gv.popBonus || 0)), 3, 97);
   }
 
-  /* ---------- Les législatives : 577 sièges, région par région ---------- */
-  function legislatives(gv, g, popShift) {
-    var ids = g.players.map(function (p) { return p.id; }), seats = {}, total = 0;
-    ids.forEach(function (id) { seats[id] = 0; });
-    var insSum = 0; D.REGIONS.forEach(function (r) { insSum += r.ins; });   // les sièges suivent le nombre d'inscrits
-    var alloc = [];
-    D.REGIONS.forEach(function (r) {
-      var n = Math.round(C.seats * r.ins / insSum), w = {}, s = 0;
-      ids.forEach(function (id) {
-        var c = E.cubes(g, r.id, id) + 0.5;
-        if (id === gv.pid) c *= popShift ? popShift : 1.0;    // l'élan présidentiel (ou le désaveu)
-        w[id] = Math.pow(c, 1.05); s += w[id];                   // le scrutin majoritaire amplifie le premier
-      });
-      ids.forEach(function (id) { var x = n * w[id] / s; seats[id] += Math.floor(x); alloc.push({ id: id, rest: x - Math.floor(x) }); });
-      total += n;
-    });
-    var placed = 0; ids.forEach(function (id) { placed += seats[id]; });
-    alloc.sort(function (a, b) { return b.rest - a.rest; });
-    for (var i = 0; placed < C.seats; i++, placed++) seats[alloc[i % alloc.length].id]++;
-    while (placed > C.seats) { var big = ids.slice().sort(function (a, b) { return seats[b] - seats[a]; })[0]; seats[big]--; placed--; }
-    gv.seats = seats;
-    return seats;
+  /* ---------- Les législatives (v2.3) : 577 circonscriptions, deux tours, voir js/legis.js ----------
+     popShift : en cas de dissolution, l'élan (ou le désaveu) du président selon sa popularité du moment */
+  function legislatives(gv, g, popShift, o) {
+    o = o || {};
+    var partners = (gv.deals || []).map(function (d) { return d.with; });
+    if (gv.ally && partners.indexOf(gv.ally) < 0) partners.push(gv.ally);
+    var res = LG.run(g, { rng: gv.rng, pres: gv.pid, margin: o.margin, loser: o.loser, partners: partners,
+      presMult: popShift || null, dissolution: !!popShift });
+    gv.legis = res;
+    gv.seats = res.seats;
+    gv.allies = res.outcome.camp.filter(function (p) { return p !== gv.pid; });   // la majorité présidentielle
+    return res.seats;
   }
-  function blocSeats(gv) { return gv.seats[gv.pid] + (gv.ally ? gv.seats[gv.ally] || 0 : 0); }
-  function majorityType(gv) { var b = blocSeats(gv); return b >= C.majority ? 'absolue' : b >= 200 ? 'relative' : 'faible'; }
+  function isAlly(gv, gid) { return gid === gv.ally || (gv.allies || []).indexOf(gid) >= 0; }
+  function blocSeats(gv) { var s = gv.seats[gv.pid] || 0; Object.keys(gv.seats).forEach(function (id) { if (id !== gv.pid && isAlly(gv, id)) s += gv.seats[id]; }); return s; }
+  /* absolue · relative (premier bloc) · sans (un autre bloc est devant) · cohabitation (un autre bloc a 289 sièges) */
+  function majorityType(gv) {
+    var b = blocSeats(gv);
+    if (b >= C.majority) return 'absolue';
+    var o = gv.legis ? gv.legis.outcome.type : null;
+    return o === 'cohabitation' || o === 'sans' ? o : 'relative';
+  }
 
   /* ---------- Les votes à l'Assemblée ---------- */
   /* Position d'un groupe sur une mesure (ou sur le budget) : pour, abstention ou contre */
   function stance(gv, gid, mid) {
     if (gid === gv.pid) return 'pour';
-    if (gid === gv.ally) return mid && E.measure(mid).choc ? 'abst' : 'pour';   // même un allié rechigne devant une mesure choc
+    if (isAlly(gv, gid)) return mid && E.measure(mid).choc ? 'abst' : 'pour';   // même un allié rechigne devant une mesure choc
     var d = E.dist(gid, gv.pid), score = 2 - d;
     if (mid) {
       var m = E.measure(mid), party = E.PARTY[gid];
@@ -181,7 +180,7 @@
   function censure(gv, negotiated) {
     var pour = 0, groups = [];
     Object.keys(gv.seats).forEach(function (gid) {
-      if (gid === gv.pid || gid === gv.ally || gid === negotiated) { groups.push({ id: gid, seats: gv.seats[gid], stance: 'contre' }); return; }
+      if (gid === gv.pid || isAlly(gv, gid) || gid === negotiated) { groups.push({ id: gid, seats: gv.seats[gid], stance: 'contre' }); return; }
       var d = E.dist(gid, gv.pid);
       var votes = d >= 3 || (d === 2 && popularity(gv) < 40);
       if (votes) pour += gv.seats[gid];
@@ -218,11 +217,13 @@
   function governmentFalls(gv) { gv.fell += 1; gv.popBonus -= 4; return 'nouveau'; }
   /* Article 12 : le président peut dissoudre l'Assemblée, mais pas dans l'année qui suit des législatives.
      Dans le jeu : à partir de l'année 2, et une seule fois par mandat. */
+  /* L'élan (ou le désaveu) du camp présidentiel lors d'une dissolution, selon la popularité du moment */
+  function dissolveMult(pop) { return clamp(Math.pow(pop / 45, 2), 0.45, 1.6); }
   function canDissolve(gv) { return !gv.over && gv.year >= 2 && !gv.dissolved; }
   function dissolve(gv, g) {
     var before = blocSeats(gv);
     gv.dissolved = true; gv.dissolvedYear = gv.year;
-    legislatives(gv, g, clamp(popularity(gv) / 45, 0.6, 1.4));      // on revote… avec la popularité du moment
+    legislatives(gv, g, dissolveMult(popularity(gv)));      // on revote… avec la popularité du moment
     return { before: before, after: blocSeats(gv) };
   }
   /* Les recettes du programme (impôts, économies) entrent dans le premier budget, à l'automne de l'année 1 */
@@ -286,7 +287,7 @@
   }
 
   var API = { C: C, BUDGET_CARDS: BUDGET_CARDS, EVENTS: EVENTS, create: create, popularity: popularity, legislatives: legislatives, blocSeats: blocSeats,
-    majorityType: majorityType, stance: stance, vote: vote, frondeurs: frondeurs, censure: censure, referendum: referendum, adopt: adopt, reject: reject,
-    governmentFalls: governmentFalls, canDissolve: canDissolve, dissolve: dissolve, applyFinancing: applyFinancing, canReferendum: canReferendum, drawCards: drawCards, applyOpt: applyOpt, drawEvent: drawEvent, endYear: endYear, verdict: verdict, addSat: addSat };
+    majorityType: majorityType, isAlly: isAlly, stance: stance, vote: vote, frondeurs: frondeurs, censure: censure, referendum: referendum, adopt: adopt, reject: reject,
+    governmentFalls: governmentFalls, canDissolve: canDissolve, dissolveMult: dissolveMult, dissolve: dissolve, applyFinancing: applyFinancing, canReferendum: canReferendum, drawCards: drawCards, applyOpt: applyOpt, drawEvent: drawEvent, endYear: endYear, verdict: verdict, addSat: addSat };
   if (node) module.exports = API; else root.PolitikGov = API;
 })(this);

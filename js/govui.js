@@ -1,6 +1,6 @@
 /* Politik — v1.0 : l'écran « Gouverner » (le quinquennat). S'appuie sur js/govern.js pour les règles. */
 (function () {
-  var D = window.PolitikData, E = window.PolitikEngine, G = window.PolitikGov, A = window.PolitikArt, U = window.PolitikUI;
+  var D = window.PolitikData, E = window.PolitikEngine, G = window.PolitikGov, LG = window.PolitikLegis, FX = window.PolitikFX, A = window.PolitikArt, U = window.PolitikUI;
   var modal = U.modal, closeModal = U.closeModal, toast = U.toast, esc = U.esc, line = U.line, srcHtml = U.srcHtml;
   var gv = null, g = null, me = null, learned = {}, step = 0, lawsThisYear = 0;
   function $(id) { return document.getElementById(id); }
@@ -48,6 +48,7 @@
     }).join('') + '</div>';
   }
 
+  var MAJ_LABEL = { absolue: 'majorité absolue', relative: 'majorité relative', sans: 'sans majorité', cohabitation: 'cohabitation' };
   /* ---------- L'écran principal ---------- */
   var STEPS = ['loi', 'evenement', 'budget', 'bilan'];
   var STEP_LABEL = { legislatives: 'Les législatives', loi: 'Printemps : ta loi de l\'année', evenement: 'Été : l\'actualité', budget: 'Automne : le budget', bilan: 'Hiver : le bilan de l\'année' };
@@ -63,7 +64,7 @@
       gauge('💶', 'Déficit', fr(gv.deficit, 1) + ' %', 'objectif ' + fr(tgt, 1) + ' %', gv.deficit > tgt + 0.3 ? 'bad' : 'ok') +
       gauge('📈', 'Dette', fr(gv.debt, 0) + ' %', 'du PIB', gv.debt > G.C.debt0 + 4 ? 'bad' : '') +
       gauge('😊', 'Popularité', pop + ' %', pop >= 45 ? 'soutenu' : pop >= 30 ? 'contesté' : 'impopulaire', pop < 30 ? 'bad' : pop >= 45 ? 'ok' : '') +
-      gauge('🏛️', 'Assemblée', bloc + ' / 577', 'majorité ' + G.majorityType(gv), bloc >= 289 ? 'ok' : 'bad');
+      gauge('🏛️', 'Assemblée', bloc + ' / 577', MAJ_LABEL[G.majorityType(gv)], bloc >= 289 ? 'ok' : 'bad');
     $('gov-hemi').innerHTML = hemicycle(gv.seats) + legend(gv.seats);
     $('gov-sat').innerHTML = D.SEGMENTS.map(function (s) {
       var v = gv.sat[s.id], f = v >= 65 ? '😀' : v >= 50 ? '🙂' : v >= 35 ? '😐' : v >= 20 ? '🙁' : '😡';
@@ -97,14 +98,13 @@
     g = U.game(); me = U.me();
     if (!g || g.winner !== me) return;
     gv = G.create(g, me); learned = {}; step = -1; lawsThisYear = 0;
-    U.go('gov'); render();
-    showLegislatives();
+    legisNight({ onDone: function () { step = 0; U.go('gov'); render(); } });
   });
   $('gov-next').addEventListener('click', function () {
     if (!gv) return;
     if (gv.over) return finalBilan();
     var s = current();
-    if (s === 'legislatives') return showLegislatives();
+    if (s === 'legislatives') return legisNight({ onDone: function () { step = 0; U.go('gov'); render(); } });
     if (s === 'loi') return chooseLaw();
     if (s === 'evenement') return showEvent();
     if (s === 'budget') return budget();
@@ -119,22 +119,139 @@
       '<div class="brief">' + line(pop >= 45 ? '✅' : '⚠️', pop >= 45 ? 'Avec une telle popularité, ton camp devrait gagner des sièges.' : 'Sous 45 % de popularité, ton camp risque de perdre des sièges.') +
       line('🔁', 'Une seule dissolution par mandat.') + '</div>' + learn('dissolution'),
       buttons: [{ label: 'Dissoudre', primary: true, onClick: function () {
-        var r = G.dissolve(gv, g); render();
-        modal({ kicker: 'Législatives anticipées', title: r.after >= r.before ? 'Pari gagné' : 'Pari perdu', html: hemicycle(gv.seats, null, true) + legend(gv.seats) +
-          '<p>Ton camp passe de <b>' + r.before + '</b> à <b>' + r.after + ' députés</b>. Majorité ' + G.majorityType(gv) + '.</p>',
-          buttons: [{ label: 'Continuer', primary: true, onClick: render }] });
+        var r = G.dissolve(gv, g);
+        legisNight({ dissolution: true, before: r.before, onDone: function () { U.go('gov'); render(); } });
       } }, { label: 'Garder cette Assemblée', onClick: closeModal }] });
   });
   function next() { step = step + 1; if (step >= STEPS.length) { step = 0; } render(); }
 
-  function showLegislatives() {
-    var bloc = G.blocSeats(gv), t = G.majorityType(gv);
-    var html = '<p>Un mois après ton élection, les Français élisent leurs députés. Voici ta nouvelle Assemblée :</p>' + hemicycle(gv.seats, null, true) + legend(gv.seats) +
-      '<div class="brief">' + line('🏛️', 'Ton camp' + (gv.ally ? ' (avec ton allié ' + esc(party(gv.ally).short) + ')' : '') + ' : <b>' + bloc + ' députés</b> sur 577.') +
-      line(t === 'absolue' ? '✅' : '⚠️', t === 'absolue' ? '<b>Majorité absolue</b> (289 au moins) : tu as les mains libres… tant que tes députés te suivent.' :
-        '<b>Majorité ' + t + '</b> : il te manque ' + (289 - bloc) + ' voix. Chaque loi sera une bataille.') + '</div>' + learn('legislatives');
-    modal({ kicker: 'Juin · Élections législatives', title: t === 'absolue' ? 'Une majorité pour gouverner' : 'Une Assemblée sans majorité', html: html,
-      buttons: [{ label: 'Au travail !', primary: true, onClick: function () { step = 0; render(); } }] });
+  /* ---------- v2.3 : la soirée des législatives ----------
+     1. Le 1er tour : les scores par bloc, les élus dès le 1er tour (déjà assis dans l'hémicycle), duels et triangulaires.
+     2. Le 2nd tour : l'hémicycle se remplit région par région, la barre de ton camp avance vers 289.
+     3. Le verdict : majorité absolue, relative, sans majorité ou cohabitation. */
+  var lgTimers = [];
+  function lgLater(fn, ms) { lgTimers.push(setTimeout(fn, ms)); }
+  function lgStop() { lgTimers.forEach(clearTimeout); lgTimers = []; }
+  function blocName(b) { return b.id === 'pres' ? (gv.pid === me ? 'Ton camp' : 'Majorité présidentielle') : b.id === me ? 'Toi' : b.name; }
+  function blocColor(b) {
+    if (b.id === 'pres') return party(gv.pid).color;
+    var best = b.parties[0], res = gv.legis; b.parties.forEach(function (p) { if ((res.seats[p] || 0) > (res.seats[best] || 0)) best = p; });
+    return party(best).color;
+  }
+  /* Les places de l'hémicycle : de gauche à droite, chaque parti occupe sa part (comme hemicycle()) */
+  function hemiLayout(seats) {
+    var order = D.PARTIES.slice().sort(function (a, b) { return a.pos - b.pos; }).map(function (p) { return p.id; }).filter(function (id) { return seats[id] != null; });
+    var rows = 11, r0 = 34, r1 = 96, pts = [], lens = [], sum = 0, total = 577;
+    for (var i = 0; i < rows; i++) { var r = r0 + (r1 - r0) * i / (rows - 1); lens.push(r); sum += r; }
+    var counts = lens.map(function (l) { return Math.round(total * l / sum); });
+    counts[rows - 1] += total - counts.reduce(function (a, b) { return a + b; }, 0);
+    lens.forEach(function (r, i) { for (var k = 0; k < counts[i]; k++) { var a = Math.PI * (1 - (k + 0.5) / counts[i]); pts.push({ x: 100 + r * Math.cos(a), y: 104 - r * Math.sin(a), a: a }); } });
+    pts.sort(function (p, q) { return q.a - p.a; });
+    var j = 0; order.forEach(function (id) { for (var k = 0; k < seats[id]; k++) { pts[j].pid = id; pts[j].k = k; j++; } });
+    return pts;
+  }
+  function legisNight(o) {
+    lgStop();
+    var res = gv.legis, out = res.outcome, layout = hemiLayout(res.seats), shown = {}, campSet = {};
+    out.camp.forEach(function (p) { campSet[p] = true; });
+    Object.keys(res.seats).forEach(function (p) { shown[p] = 0; });
+    $('lg-kicker').textContent = (o.dissolution ? 'Législatives anticipées' : 'Juin · Élections législatives') + ' · 1er tour';
+    $('lg-title').textContent = o.dissolution ? 'Les Français revotent' : 'Le 1er tour';
+    $('lg-hemi').innerHTML = '<svg viewBox="0 0 200 110" aria-label="Hémicycle de l\'Assemblée nationale">' + layout.map(function (pt, i) {
+      return '<circle id="lgd' + i + '" cx="' + pt.x.toFixed(1) + '" cy="' + pt.y.toFixed(1) + '" r="2.3" fill="#3A3560"/>';
+    }).join('') + '<text x="100" y="100" text-anchor="middle" class="hemi-n" id="lg-n">0</text><text x="100" y="108" text-anchor="middle" class="hemi-l">députés élus</text></svg>';
+    var campColor = party(gv.pid).color;
+    $('lg-camp').innerHTML = '<div class="lg-campline"><span>' + (gv.pid === me ? 'Ton camp' : 'Majorité présidentielle') + '</span><b id="lg-cs">0</b></div>' +
+      '<div class="lg-bar"><i id="lg-cbar" style="background:' + campColor + '"></i><span class="lg-maj" style="left:' + (100 * 289 / 400).toFixed(1) + '%"></span></div>';
+    // places déjà pourvues : on allume les points de chaque parti jusqu'à son nombre de sièges
+    function seat(pid, n) {
+      for (var i = 0; i < layout.length; i++) {
+        var pt = layout[i]; if (pt.pid !== pid || pt.k < shown[pid] || pt.k >= shown[pid] + n) continue;
+        var c = $('lgd' + i); c.setAttribute('fill', party(pid).color); FX.replay(c, 'new');
+      }
+      shown[pid] += n;
+    }
+    function refresh() {
+      var tot = 0, cs = 0; Object.keys(shown).forEach(function (p) { tot += shown[p]; if (campSet[p]) cs += shown[p]; });
+      $('lg-n').textContent = tot; $('lg-cs').textContent = cs;
+      $('lg-cbar').style.width = Math.min(100, 100 * cs / 400) + '%';
+    }
+    // 1. Le 1er tour
+    var tot1 = 0; Object.keys(res.votes1).forEach(function (k) { tot1 += res.votes1[k]; });
+    var bl = out.blocs.map(function (b) { return Object.assign({ pct: (res.votes1[b.id] || 0) / tot1 }, b); }).sort(function (a, b) { return b.pct - a.pct; });
+    var top = bl.slice(0, 4), rest = 1 - top.reduce(function (a, b) { return a + b.pct; }, 0), maxp = top[0].pct;
+    var e1 = {}; res.circs.forEach(function (c) { if (c.status === 'elu1') e1[c.winner] = (e1[c.winner] || 0) + 1; });
+    Object.keys(e1).forEach(function (p) { seat(p, e1[p]); });
+    refresh();
+    var lead = top[0];
+    $('lg-stage').innerHTML =
+      '<div class="night-turnout"><span>Participation <b>' + fr(100 * res.participation1, 1) + ' %</b></span><span>' + (lead.id === 'pres' && gv.pid === me ? 'Ton camp arrive en tête' : esc(blocName(lead)) + ' en tête') + '</span></div>' +
+      top.map(function (b) {
+        return '<div class="nb-row"><span class="nb-lbl">' + esc(blocName(b)) + '</span><span class="nb-bar"><i style="background:' + blocColor(b) + ';width:' + (100 * b.pct / maxp).toFixed(0) + '%"></i></span><b>' + fr(100 * b.pct, 1) + ' %</b></div>';
+      }).join('') + '<div class="nb-row"><span class="nb-lbl">Autres partis</span><span class="nb-bar"><i style="background:#8E8AA8;width:' + (100 * rest / maxp).toFixed(0) + '%"></i></span><b>' + fr(100 * rest, 1) + ' %</b></div>' +
+      '<div class="lg-counts"><span class="lg-count"><b>' + res.counts.elu1 + '</b>élus dès ce soir</span><span class="lg-count"><b>' + res.counts.duel + '</b>duels</span><span class="lg-count"><b>' + res.counts.tri + '</b>triangulaires' + (res.counts.desist ? ' · ' + res.counts.desist + ' désistements' : '') + '</span></div>' +
+      '<button type="button" class="lg-more" id="lg-regions">Région par région ›</button>';
+    $('lg-regions').onclick = regionsDetail;
+    $('lg-btn').textContent = 'Le second tour';
+    $('lg-btn').onclick = round2;
+    U.go('legis');
+    // 2. Le 2nd tour, région par région (des plus petites à l'Île-de-France)
+    function round2() {
+      $('lg-kicker').textContent = (o.dissolution ? 'Législatives anticipées' : 'Juin · Élections législatives') + ' · 2nd tour';
+      $('lg-title').textContent = 'L\'Assemblée se remplit';
+      $('lg-stage').innerHTML = '<p class="lg-ticker" id="lg-tick">Les bureaux ferment…</p>';
+      $('lg-btn').textContent = 'Passer';
+      $('lg-btn').onclick = function () { lgStop(); order.forEach(fill); verdict(); };
+      var order = D.REGIONS.slice().sort(function (a, b) { return a.seats - b.seats; }), done = {};
+      function fill(r) {
+        if (done[r.id]) return; done[r.id] = true;
+        var add = {}, camp = 0;
+        res.circs.forEach(function (c) { if (c.r === r.id && c.status !== 'elu1') add[c.winner] = (add[c.winner] || 0) + 1; });
+        Object.keys(add).forEach(function (p) { seat(p, add[p]); });
+        Object.keys(res.regions[r.id].seats).forEach(function (p) { if (campSet[p]) camp += res.regions[r.id].seats[p]; });
+        refresh();
+        var t = $('lg-tick'); if (t) { t.innerHTML = '<b>' + esc(r.name) + '</b> : ' + (gv.pid === me ? 'ton camp' : 'la majorité') + ' ' + camp + ' sur ' + r.seats; FX.replay(t, 'bump'); }
+      }
+      order.forEach(function (r, i) { lgLater(function () { fill(r); }, 500 + i * 560); });
+      lgLater(verdict, 500 + order.length * 560 + 500);
+    }
+    // 3. Le verdict
+    function verdict() {
+      lgStop(); refresh();
+      var t = out.type, cs = out.campSeats, riv = out.rival;
+      var title = t === 'absolue' ? 'Majorité absolue !' : t === 'relative' ? 'Majorité relative' : t === 'sans' ? 'Pas de majorité' : 'Cohabitation';
+      var txt = t === 'absolue' ? 'Avec <b>' + cs + ' députés</b>, ton camp dépasse les 289 sièges : tu as les mains libres… tant que tes députés te suivent.' :
+        t === 'relative' ? 'Ton camp arrive en tête avec <b>' + cs + ' députés</b>, mais il en manque <b>' + (289 - cs) + '</b> pour la majorité. Chaque loi sera une bataille.' :
+        t === 'sans' ? 'Aucun bloc n\'a la majorité, et ' + esc(blocName(riv)) + ' (' + riv.seats + ') devance ton camp (' + cs + '). Il faudra négocier chaque texte.' :
+        esc(blocName(riv)) + ' obtient <b>' + riv.seats + ' sièges</b> : la majorité absolue contre toi. En vrai, le président devrait nommer un Premier ministre de cette majorité, qui conduirait la politique du pays.';
+      if (o.dissolution && o.before != null) txt += '<br>Ton camp passe de <b>' + o.before + '</b> à <b>' + cs + '</b> députés : ' + (cs >= o.before ? 'pari gagné.' : 'pari perdu.');
+      $('lg-title').textContent = title;
+      $('lg-kicker').textContent = o.dissolution ? 'Législatives anticipées · résultat' : 'Le résultat des législatives';
+      $('lg-stage').innerHTML = '<p class="lg-verdict">' + txt + '</p><div class="hemi-leg">' + out.blocs.filter(function (b) { return b.seats > 0; }).map(function (b) {
+        return '<span><i style="background:' + blocColor(b) + '"></i>' + esc(blocName(b)) + ' ' + b.seats + '</span>';
+      }).join('') + '</div>' + '<button type="button" class="lg-more" id="lg-regions">Région par région ›</button>' +
+        '<button type="button" class="lg-more" id="lg-learn">📚 Comment on devient député</button>';
+      $('lg-regions').onclick = regionsDetail;
+      $('lg-learn').onclick = function () {
+        var L1 = D.LEARN.scrutin_legis, L2 = D.LEARN.locomotive;
+        modal({ kicker: 'Le saviez-vous ?', title: L1.title, html: '<p>' + esc(L1.text) + '</p>' + srcHtml(L1) + '<h3>' + esc(L2.title) + '</h3><p>' + esc(L2.text) + '</p>' + srcHtml(L2) });
+      };
+      $('lg-btn').textContent = 'Au travail !';
+      $('lg-btn').onclick = function () { lgStop(); o.onDone && o.onDone(); };
+    }
+  }
+  /* Le détail, région par région : élus au 1er tour, duels, triangulaires et sièges de chaque bloc */
+  function regionsDetail() {
+    var res = gv.legis, out = res.outcome;
+    var html = D.REGIONS.slice().sort(function (a, b) { return b.seats - a.seats; }).map(function (r) {
+      var rg = res.regions[r.id], parts = out.blocs.map(function (b) {
+        var n = 0; b.parties.forEach(function (p) { n += rg.seats[p] || 0; }); return { b: b, n: n };
+      }).filter(function (x) { return x.n > 0; }).sort(function (a, b) { return b.n - a.n; });
+      return '<div class="lg-reg"><b>' + esc(r.name) + ' · ' + r.seats + ' sièges</b><small>' + rg.elu1 + ' élu' + (rg.elu1 > 1 ? 's' : '') + ' au 1er tour · ' + rg.duel + ' duel' + (rg.duel > 1 ? 's' : '') + ' · ' + rg.tri + ' triangulaire' + (rg.tri > 1 ? 's' : '') + (rg.desist ? ' · ' + rg.desist + ' désistement' + (rg.desist > 1 ? 's' : '') : '') + '</small>' +
+        '<small>' + parts.map(function (x) { return esc(blocName(x.b)) + ' <b>' + x.n + '</b>'; }).join(' · ') + '</small>' +
+        '<span class="lg-seg">' + parts.map(function (x) { return '<i style="flex:' + x.n + ';background:' + blocColor(x.b) + '"></i>'; }).join('') + '</span></div>';
+    }).join('');
+    modal({ kicker: 'Législatives', title: 'Région par région', html: html });
   }
 
   /* ---------- Printemps : la loi de l'année ---------- */

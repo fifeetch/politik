@@ -41,19 +41,19 @@
     sond: { name: 'Sondages 2026', short: 'Sondages 2026', text: 'La moyenne de 6 sondages d\'octobre 2026 pour la présidentielle 2027.', learn: 'departSondages' }
   };
   var REGIONS = [
-    { id: 'idf', name: 'Île-de-France', profile: 'urbaine', pts: 9.8, ins: 7.35, abst: 29.4, blanc: 6.2, nuls: 1.7, start: { FI: 18.6, SM: 15.7, VP: 7.1, EM: 20.5, UG: 9.5, MN: 19.5 }, start22: { FI: 30.2, SM: 1.4, VP: 5.4, EM: 30.2, UG: 6.2, MN: 13 }, concerns: ['pouvoir', 'securite'], pop: { ind: 3.3, cad: 20.0, pi: 15.5, pop: 23.7, ret: 19.7, sae: 18.0 } },
-    { id: 'ara', name: 'Auvergne-Rhône-Alpes', profile: 'urbaine', pts: 7.4, ins: 5.56, abst: 25.6, blanc: 6.7, nuls: 2.2, start: { FI: 10.2, SM: 13.4, VP: 6.1, EM: 16.7, UG: 11.9, MN: 32 }, start22: { FI: 21.2, SM: 1.8, VP: 5.3, EM: 27.8, UG: 5.1, MN: 22.3 }, concerns: ['ecologie', 'emploi'], pop: { ind: 4.8, cad: 10.7, pi: 15.5, pop: 26.7, ret: 27.6, sae: 14.7 } },
-    { id: 'hdf', name: 'Hauts-de-France', profile: 'industrielle', pts: 5.7, ins: 4.26, abst: 26.7, blanc: 5.2, nuls: 2.2, start: { FI: 9.6, SM: 9.7, VP: 3.6, EM: 15.1, UG: 8.4, MN: 43.1 }, start22: { FI: 19, SM: 1.3, VP: 3.1, EM: 25.4, UG: 3.5, MN: 33.3 }, concerns: ['emploi', 'pouvoir'], pop: { ind: 3.2, cad: 7.9, pi: 13.9, pop: 30.1, ret: 26.6, sae: 18.2 } },
-    { id: 'naq', name: 'Nouvelle-Aquitaine', profile: 'rurale', pts: 5.9, ins: 4.46, abst: 24.2, blanc: 7.4, nuls: 3.1, start: { FI: 7.9, SM: 16.8, VP: 5.7, EM: 19.5, UG: 6.5, MN: 32.7 }, start22: { FI: 19.9, SM: 2.3, VP: 4.4, EM: 27.6, UG: 4.6, MN: 22.8 }, concerns: ['services', 'ecologie'], pop: { ind: 5.3, cad: 8.2, pi: 13.6, pop: 26.8, ret: 32.8, sae: 13.3 } },
-    { id: 'occ', name: 'Occitanie', profile: 'rurale', pts: 5.8, ins: 4.32, abst: 24.8, blanc: 7.3, nuls: 3.1, start: { FI: 10.1, SM: 15.9, VP: 5.2, EM: 16.6, UG: 4.8, MN: 36.2 }, start22: { FI: 22.4, SM: 2.3, VP: 4.2, EM: 23.5, UG: 3.9, MN: 24.6 }, concerns: ['pouvoir', 'services'], pop: { ind: 5.4, cad: 9.4, pi: 13.9, pop: 24.9, ret: 30.4, sae: 16.0 } },
-    { id: 'ges', name: 'Grand Est', profile: 'industrielle', pts: 5.1, ins: 3.86, abst: 26.3, blanc: 5.6, nuls: 1.9, start: { FI: 7.9, SM: 10.2, VP: 4.2, EM: 17.4, UG: 11.2, MN: 38.5 }, start22: { FI: 17.6, SM: 1.4, VP: 4, EM: 27.3, UG: 4.3, MN: 29.5 }, concerns: ['emploi', 'immigration'], pop: { ind: 3.7, cad: 8.0, pi: 14.2, pop: 29.9, ret: 28.5, sae: 15.6 } },
-    { id: 'pac', name: "Provence-Alpes-Côte d'Azur", profile: 'urbaine', pts: 4.9, ins: 3.66, abst: 27.5, blanc: 5.9, nuls: 1.9, start: { FI: 10.2, SM: 10.5, VP: 4.8, EM: 15.8, UG: 6.8, MN: 41.6 }, start22: { FI: 19.8, SM: 1.1, VP: 4.1, EM: 23.3, UG: 4.4, MN: 27.6 }, concerns: ['securite', 'immigration'], pop: { ind: 5.1, cad: 9.4, pi: 13.9, pop: 24.9, ret: 29.8, sae: 16.9 } },
-    { id: 'pdl', name: 'Pays de la Loire', profile: 'rurale', pts: 3.8, ins: 2.83, abst: 23.6, blanc: 6.7, nuls: 2.1, start: { FI: 7.7, SM: 15.6, VP: 6.8, EM: 23.2, UG: 8.7, MN: 28.7 }, start22: { FI: 19.2, SM: 2, VP: 6, EM: 33.3, UG: 5, MN: 20.8 }, concerns: ['ecologie', 'emploi'], pop: { ind: 4.4, cad: 9.1, pi: 14.6, pop: 28.9, ret: 30.3, sae: 12.8 } },
-    { id: 'bre', name: 'Bretagne', profile: 'rurale', pts: 3.4, ins: 2.56, abst: 22.1, blanc: 7.2, nuls: 2.4, start: { FI: 7.6, SM: 17.4, VP: 6.8, EM: 24, UG: 7.2, MN: 26.7 }, start22: { FI: 20.6, SM: 2.2, VP: 6.2, EM: 32.8, UG: 4.7, MN: 19.5 }, concerns: ['ecologie', 'services'], pop: { ind: 4.7, cad: 8.6, pi: 14.1, pop: 27.0, ret: 32.2, sae: 13.5 } },
-    { id: 'nor', name: 'Normandie', profile: 'historique', pts: 3.2, ins: 2.41, abst: 24.2, blanc: 6.4, nuls: 2.0, start: { FI: 8.1, SM: 13.1, VP: 4.4, EM: 19.6, UG: 8.6, MN: 35.8 }, start22: { FI: 18.8, SM: 1.7, VP: 4.1, EM: 29.3, UG: 4.5, MN: 27.1 }, concerns: ['emploi', 'services'], pop: { ind: 4.2, cad: 7.2, pi: 13.7, pop: 29.2, ret: 31.3, sae: 14.5 } },
-    { id: 'bfc', name: 'Bourgogne-Franche-Comté', profile: 'historique', pts: 2.7, ins: 1.99, abst: 25.2, blanc: 6.9, nuls: 2.6, start: { FI: 7.9, SM: 12, VP: 4.5, EM: 17, UG: 10.1, MN: 38.5 }, start22: { FI: 18.6, SM: 1.8, VP: 4, EM: 26.3, UG: 5.1, MN: 27.4 }, concerns: ['services', 'pouvoir'], pop: { ind: 4.6, cad: 7.0, pi: 13.4, pop: 29.0, ret: 32.3, sae: 13.7 } },
-    { id: 'cvl', name: 'Centre-Val de Loire', profile: 'historique', pts: 2.5, ins: 1.84, abst: 25.3, blanc: 6.5, nuls: 2.4, start: { FI: 7.9, SM: 12, VP: 4.1, EM: 20.5, UG: 8.4, MN: 36.3 }, start22: { FI: 18.7, SM: 1.7, VP: 4, EM: 28.5, UG: 5.3, MN: 25.9 }, concerns: ['services', 'securite'], pop: { ind: 4.1, cad: 8.0, pi: 14.1, pop: 28.4, ret: 31.9, sae: 13.5 } },
-    { id: 'cor', name: 'Corse, outre-mer et Français de l\'étranger', profile: 'historique', pts: 4.8, ins: 3.63, abst: 54.5, blanc: 4.6, nuls: 2.9, start: { FI: 10.4, SM: 15.7, VP: 5.8, EM: 18.6, UG: 11.7, MN: 19.2 }, start22: { FI: 31.2, SM: 2, VP: 4.3, EM: 28.6, UG: 4.3, MN: 16.6 }, concerns: ['pouvoir', 'services'], pop: { ind: 4.9, cad: 5.6, pi: 12.7, pop: 29.4, ret: 21.9, sae: 25.4 } }
+    { id: 'idf', name: 'Île-de-France', profile: 'urbaine', seats: 97, pts: 9.8, ins: 7.35, abst: 29.4, blanc: 6.2, nuls: 1.7, start: { FI: 18.6, SM: 15.7, VP: 7.1, EM: 20.5, UG: 9.5, MN: 19.5 }, start22: { FI: 30.2, SM: 1.4, VP: 5.4, EM: 30.2, UG: 6.2, MN: 13 }, concerns: ['pouvoir', 'securite'], pop: { ind: 3.3, cad: 20.0, pi: 15.5, pop: 23.7, ret: 19.7, sae: 18.0 } },
+    { id: 'ara', name: 'Auvergne-Rhône-Alpes', profile: 'urbaine', seats: 64, pts: 7.4, ins: 5.56, abst: 25.6, blanc: 6.7, nuls: 2.2, start: { FI: 10.2, SM: 13.4, VP: 6.1, EM: 16.7, UG: 11.9, MN: 32 }, start22: { FI: 21.2, SM: 1.8, VP: 5.3, EM: 27.8, UG: 5.1, MN: 22.3 }, concerns: ['ecologie', 'emploi'], pop: { ind: 4.8, cad: 10.7, pi: 15.5, pop: 26.7, ret: 27.6, sae: 14.7 } },
+    { id: 'hdf', name: 'Hauts-de-France', profile: 'industrielle', seats: 50, pts: 5.7, ins: 4.26, abst: 26.7, blanc: 5.2, nuls: 2.2, start: { FI: 9.6, SM: 9.7, VP: 3.6, EM: 15.1, UG: 8.4, MN: 43.1 }, start22: { FI: 19, SM: 1.3, VP: 3.1, EM: 25.4, UG: 3.5, MN: 33.3 }, concerns: ['emploi', 'pouvoir'], pop: { ind: 3.2, cad: 7.9, pi: 13.9, pop: 30.1, ret: 26.6, sae: 18.2 } },
+    { id: 'naq', name: 'Nouvelle-Aquitaine', profile: 'rurale', seats: 49, pts: 5.9, ins: 4.46, abst: 24.2, blanc: 7.4, nuls: 3.1, start: { FI: 7.9, SM: 16.8, VP: 5.7, EM: 19.5, UG: 6.5, MN: 32.7 }, start22: { FI: 19.9, SM: 2.3, VP: 4.4, EM: 27.6, UG: 4.6, MN: 22.8 }, concerns: ['services', 'ecologie'], pop: { ind: 5.3, cad: 8.2, pi: 13.6, pop: 26.8, ret: 32.8, sae: 13.3 } },
+    { id: 'occ', name: 'Occitanie', profile: 'rurale', seats: 49, pts: 5.8, ins: 4.32, abst: 24.8, blanc: 7.3, nuls: 3.1, start: { FI: 10.1, SM: 15.9, VP: 5.2, EM: 16.6, UG: 4.8, MN: 36.2 }, start22: { FI: 22.4, SM: 2.3, VP: 4.2, EM: 23.5, UG: 3.9, MN: 24.6 }, concerns: ['pouvoir', 'services'], pop: { ind: 5.4, cad: 9.4, pi: 13.9, pop: 24.9, ret: 30.4, sae: 16.0 } },
+    { id: 'ges', name: 'Grand Est', profile: 'industrielle', seats: 49, pts: 5.1, ins: 3.86, abst: 26.3, blanc: 5.6, nuls: 1.9, start: { FI: 7.9, SM: 10.2, VP: 4.2, EM: 17.4, UG: 11.2, MN: 38.5 }, start22: { FI: 17.6, SM: 1.4, VP: 4, EM: 27.3, UG: 4.3, MN: 29.5 }, concerns: ['emploi', 'immigration'], pop: { ind: 3.7, cad: 8.0, pi: 14.2, pop: 29.9, ret: 28.5, sae: 15.6 } },
+    { id: 'pac', name: "Provence-Alpes-Côte d'Azur", profile: 'urbaine', seats: 42, pts: 4.9, ins: 3.66, abst: 27.5, blanc: 5.9, nuls: 1.9, start: { FI: 10.2, SM: 10.5, VP: 4.8, EM: 15.8, UG: 6.8, MN: 41.6 }, start22: { FI: 19.8, SM: 1.1, VP: 4.1, EM: 23.3, UG: 4.4, MN: 27.6 }, concerns: ['securite', 'immigration'], pop: { ind: 5.1, cad: 9.4, pi: 13.9, pop: 24.9, ret: 29.8, sae: 16.9 } },
+    { id: 'pdl', name: 'Pays de la Loire', profile: 'rurale', seats: 30, pts: 3.8, ins: 2.83, abst: 23.6, blanc: 6.7, nuls: 2.1, start: { FI: 7.7, SM: 15.6, VP: 6.8, EM: 23.2, UG: 8.7, MN: 28.7 }, start22: { FI: 19.2, SM: 2, VP: 6, EM: 33.3, UG: 5, MN: 20.8 }, concerns: ['ecologie', 'emploi'], pop: { ind: 4.4, cad: 9.1, pi: 14.6, pop: 28.9, ret: 30.3, sae: 12.8 } },
+    { id: 'bre', name: 'Bretagne', profile: 'rurale', seats: 27, pts: 3.4, ins: 2.56, abst: 22.1, blanc: 7.2, nuls: 2.4, start: { FI: 7.6, SM: 17.4, VP: 6.8, EM: 24, UG: 7.2, MN: 26.7 }, start22: { FI: 20.6, SM: 2.2, VP: 6.2, EM: 32.8, UG: 4.7, MN: 19.5 }, concerns: ['ecologie', 'services'], pop: { ind: 4.7, cad: 8.6, pi: 14.1, pop: 27.0, ret: 32.2, sae: 13.5 } },
+    { id: 'nor', name: 'Normandie', profile: 'historique', seats: 28, pts: 3.2, ins: 2.41, abst: 24.2, blanc: 6.4, nuls: 2.0, start: { FI: 8.1, SM: 13.1, VP: 4.4, EM: 19.6, UG: 8.6, MN: 35.8 }, start22: { FI: 18.8, SM: 1.7, VP: 4.1, EM: 29.3, UG: 4.5, MN: 27.1 }, concerns: ['emploi', 'services'], pop: { ind: 4.2, cad: 7.2, pi: 13.7, pop: 29.2, ret: 31.3, sae: 14.5 } },
+    { id: 'bfc', name: 'Bourgogne-Franche-Comté', profile: 'historique', seats: 27, pts: 2.7, ins: 1.99, abst: 25.2, blanc: 6.9, nuls: 2.6, start: { FI: 7.9, SM: 12, VP: 4.5, EM: 17, UG: 10.1, MN: 38.5 }, start22: { FI: 18.6, SM: 1.8, VP: 4, EM: 26.3, UG: 5.1, MN: 27.4 }, concerns: ['services', 'pouvoir'], pop: { ind: 4.6, cad: 7.0, pi: 13.4, pop: 29.0, ret: 32.3, sae: 13.7 } },
+    { id: 'cvl', name: 'Centre-Val de Loire', profile: 'historique', seats: 23, pts: 2.5, ins: 1.84, abst: 25.3, blanc: 6.5, nuls: 2.4, start: { FI: 7.9, SM: 12, VP: 4.1, EM: 20.5, UG: 8.4, MN: 36.3 }, start22: { FI: 18.7, SM: 1.7, VP: 4, EM: 28.5, UG: 5.3, MN: 25.9 }, concerns: ['services', 'securite'], pop: { ind: 4.1, cad: 8.0, pi: 14.1, pop: 28.4, ret: 31.9, sae: 13.5 } },
+    { id: 'cor', name: 'Corse, outre-mer et Français de l\'étranger', profile: 'historique', seats: 42, pts: 4.8, ins: 3.63, abst: 54.5, blanc: 4.6, nuls: 2.9, start: { FI: 10.4, SM: 15.7, VP: 5.8, EM: 18.6, UG: 11.7, MN: 19.2 }, start22: { FI: 31.2, SM: 2, VP: 4.3, EM: 28.6, UG: 4.3, MN: 16.6 }, concerns: ['pouvoir', 'services'], pop: { ind: 4.9, cad: 5.6, pi: 12.7, pop: 29.4, ret: 21.9, sae: 25.4 } }
   ];
 
   /* v0.3 — Les thèmes de campagne.
@@ -309,6 +309,8 @@
     militants: { title: 'Les militants', text: 'Les militants font vivre une campagne sur le terrain : tractage, porte-à-porte, réunions, collage d\'affiches sur les panneaux officiels installés devant chaque bureau de vote.' },
     agenda: { title: 'L\'agenda médiatique', text: 'Les sujets dont parlent les médias influencent ce qui préoccupe les électeurs. Les candidats essaient d\'imposer « leurs » thèmes : ceux sur lesquels ils sont jugés les plus crédibles.' },
     legislatives: { title: 'Les élections législatives', text: 'Les 577 députés sont élus dans 577 circonscriptions, au scrutin majoritaire à deux tours, pour 5 ans. Pour gouverner sereinement, le président a besoin d\'une majorité absolue : 289 députés.', src: [{ label: 'Fiche de synthèse n° 3 : l\'élection des députés (Assemblée nationale)', url: 'https://www.assemblee-nationale.fr/dyn/synthese/deputes-groupes-parlementaires/l-election-des-deputes' }] },
+    scrutin_legis: { title: 'Comment on devient député', text: 'Dans chaque circonscription, il faut plus de 50 % des voix et au moins 25 % des inscrits pour être élu dès le 1er tour. Sinon, ceux qui ont réuni au moins 12,5 % des inscrits vont au 2nd tour (les deux premiers au minimum). À trois, on parle de triangulaire : le troisième peut se retirer pour faire gagner un candidat proche. Au 2nd tour, le premier l\'emporte.', src: [{ label: 'Fiche de synthèse n° 3 : l\'élection des députés (Assemblée nationale)', url: 'https://www.assemblee-nationale.fr/dyn/synthese/deputes-groupes-parlementaires/l-election-des-deputes' }] },
+    locomotive: { title: 'Pourquoi les législatives suivent la présidentielle', text: 'Depuis 2002, les législatives ont lieu quelques semaines après la présidentielle : une loi organique de 2001 a inversé le calendrier, après le passage au quinquennat. Les électeurs confirment souvent leur choix : le président a obtenu une majorité absolue en 2002, 2007, 2012 et 2017, mais seulement une majorité relative en 2022.', src: [{ label: 'Loi organique n° 2001-419 du 15 mai 2001 modifiant la date d\'expiration des pouvoirs de l\'Assemblée nationale (Légifrance)', url: 'https://www.legifrance.gouv.fr/loda/id/JORFTEXT000000404920' }] },
     majorite: { title: 'Comment une loi est adoptée', text: 'À l\'Assemblée, une loi est adoptée si elle recueille plus de voix « pour » que de voix « contre » : les abstentions ne comptent pas. C\'est la majorité des suffrages exprimés. Sans majorité absolue, il faut convaincre d\'autres groupes, souvent en acceptant des amendements.', src: [{ label: 'Fiche de synthèse n° 56 : les votes à l\'Assemblée nationale', url: 'https://www.assemblee-nationale.fr/dyn/synthese/fonctionnement-assemblee-nationale/travail-legislatif/les-votes-a-l-assemblee-nationale' }] },
     hcfp: { title: 'Le Haut Conseil des finances publiques', text: 'Un organisme indépendant, rattaché à la Cour des comptes, qui vérifie chaque automne si les prévisions du gouvernement sont réalistes et si le budget respecte la trajectoire promise.', src: [{ label: 'Haut Conseil des finances publiques', url: 'https://www.hcfp.fr/' }] },
     trois_pourcent: { title: 'La règle des 3 %', text: 'Les règles européennes demandent de garder le déficit public sous 3 % du PIB. La France fait l\'objet d\'une procédure pour déficit excessif et s\'est engagée à repasser sous 3 % en 2029.', src: [{ label: 'La situation et les perspectives des finances publiques, juin 2026 (Cour des comptes)', url: 'https://www.ccomptes.fr/fr/publications/la-situation-et-les-perspectives-des-finances-publiques-17' }, { label: 'Le nouveau cadre budgétaire européen (Direction générale du Trésor)', url: 'https://www.tresor.economie.gouv.fr/Articles/2026/04/14/le-nouveau-cadre-budgetaire-europeen-de-la-negociation-a-la-mise-en-oeuvre' }] },
@@ -574,6 +576,42 @@
     }
   };
 
+
+  /* ---------- v2.3 : les élections législatives ----------
+     577 circonscriptions, un député chacune, scrutin majoritaire à deux tours (code électoral, articles L123 à L126 et L162).
+     Sièges par région : découpage de 2010 (REGIONS[].seats ; « cor » = Corse 4 + outre-mer 27 + Français de l'étranger 11).
+     Les taux ci-dessous sont des réglages de jeu, calés pour retrouver les ordres de grandeur réels depuis 2002 :
+     le président obtient une majorité absolue 4 fois sur 5 (2002 : 389 sièges, 2007 : 343, 2012 : 328, 2017 : 351, 2022 : 245). */
+  var LEGIS = {
+    seats: 577, majority: 289, censureSign: 58,
+    electedVotes: 0.5, electedIns: 0.25,     // élu au 1er tour : plus de 50 % des exprimés ET au moins 25 % des inscrits
+    qualifyIns: 0.125,                         // qualifié pour le 2nd tour : au moins 12,5 % des inscrits (sinon les deux premiers)
+    turnoutRatio: 0.66,                        // participation aux législatives ≈ 2/3 de celle de la présidentielle (47,5 % contre 73,7 % au 1er tour en 2022)
+    turnoutDissolution: 0.9,                   // une dissolution mobilise davantage (66,7 % de participation en 2024)
+    lowTurnoutPenalty: 0.9,                    // les électorats qui votent peu (jeunes, ouvriers) perdent jusqu'à ~10 % de leurs voix
+    blank1: 0.025, blank2: 0.06,               // blancs et nuls (part des votants), 1er et 2nd tour
+    loco: 0.1, locoMargin: 1.0,                // effet locomotive : +10 % pour le parti du président, + 1 × son avance au 2nd tour
+    locoAlone: 2.2,                            // un président sans union derrière lui : son parti profite encore plus de l'élan (comme en 2017)
+    locoUnion: 0.5,                            // ses partenaires d'union en profitent à moitié
+    rallyDist: 0.5,                            // ralliements : un parti seul à moins de 0,5 cran du président sur l'axe rejoint sa majorité
+    swing: 0.12,                               // l'humeur du pays : d'une élection à l'autre, le camp du président fait mieux ou moins bien que prévu
+    confirm: 0.06,                             // effet confirmation : au 2nd tour, +6 points de report vers le camp du président
+    loserDip: 0.06,                            // le finaliste battu démobilise un peu
+    tilt: 0.7, noise: 0.22,                   // variations locales : penchant gauche-droite de la circonscription, et bruit propre à chaque parti
+    unionKeep: 0.85,                           // une candidature unique ne garde pas tous les électeurs des partis qui la soutiennent
+    othersStrength: 0.6,                       // les « divers » pèsent dans les exprimés, rarement assez pour gagner
+    /* Les candidatures communes par défaut, comme en 2022 et 2024 (gauche unie, majorité présidentielle unie) */
+    unions: [
+      { id: 'gauche', name: 'Union de la gauche', parties: ['FI', 'PC', 'VP', 'SM'] },
+      { id: 'centre', name: 'Union du centre', parties: ['EM', 'MD', 'HZ'] }
+    ],
+    /* Désistement au 2nd tour (triangulaire) : le 3e se retire si le premier est loin de lui et un autre qualifié proche */
+    withdrawFar: 3, withdrawNear: 2, withdrawChance: 0.8,
+    /* Reports de voix au 2nd tour selon la distance politique (0 = même famille) */
+    transfer2: { 0: 0.85, 1: 0.72, 2: 0.55, 3: 0.3, 4: 0.17, 5: 0.1 },
+    turnout2: 0.97                             // un peu moins de votants au 2nd tour
+  };
+
   /* ---------- v0.6 : le débat télévisé ----------
      Chaque parti affronte chacun des autres sur une question (un thème).
      Attaque bat Émotion, Émotion bat Chiffres, Chiffres bat Attaque. Esquive = match nul.
@@ -693,7 +731,7 @@
 
   var DATA = { REFERENCE_2027: REFERENCE_2027, POLLS: POLLS, BASES: BASES, REGIONS: REGIONS, PROFILES: PROFILES, THEMES: THEMES, HEADLINES: HEADLINES, PARTIES: PARTIES, ACTIONS: ACTIONS,
                CARDS: CARDS, EVENTS: EVENTS, DILEMMAS: DILEMMAS, CRISES: CRISES, REPLIES: REPLIES, TEMPERS: TEMPERS,
-               MEASURES: MEASURES, FUNDING: FUNDING, SEGMENTS: SEGMENTS, VOTE_PROP: VOTE_PROP, SEGMENTS_SRC: SEGMENTS_SRC, AFFAIRS: AFFAIRS, LEARN: LEARN, BUDGET_AFFAIR: BUDGET_AFFAIR, REACTIONS: REACTIONS, ADVISOR: ADVISOR, OBJECTIVES: OBJECTIVES, RULES: RULES, validate: validate };
+               MEASURES: MEASURES, FUNDING: FUNDING, SEGMENTS: SEGMENTS, VOTE_PROP: VOTE_PROP, SEGMENTS_SRC: SEGMENTS_SRC, AFFAIRS: AFFAIRS, LEARN: LEARN, BUDGET_AFFAIR: BUDGET_AFFAIR, REACTIONS: REACTIONS, ADVISOR: ADVISOR, OBJECTIVES: OBJECTIVES, RULES: RULES, LEGIS: LEGIS, validate: validate };
   if (typeof module !== 'undefined' && module.exports) module.exports = DATA;
   else root.PolitikData = DATA;
 })(this);

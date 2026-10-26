@@ -271,5 +271,48 @@ function toBetween(human, seed, humanLast) {
   ok(!et.between && g.over && g.result.direct && g.winner === 'VP', 'majorité absolue au 1er tour : élu, sans négociation');
 })();
 
+/* ---------- v2.3 : les législatives ---------- */
+section('Législatives');
+(function () {
+  var LG = require('../js/legis.js'), L = D.LEGIS, G = require('../js/govern.js');
+  var tot = 0; D.REGIONS.forEach(function (r) { tot += r.seats; });
+  ok(tot === 577, 'les 13 régions totalisent 577 sièges (' + tot + ')');
+  ok(D.REGIONS.filter(function (r) { return r.id === 'idf'; })[0].seats === 97 && D.REGIONS.filter(function (r) { return r.id === 'cor'; })[0].seats === 42, 'Île-de-France 97, Corse-outre-mer-étranger 42');
+  var g = E.createGame('EM', { seed: 11 });
+  var res = LG.run(g, { rng: E.makeRng(5), pres: 'EM', margin: 0.08 });
+  var n = 0; Object.keys(res.seats).forEach(function (p) { n += res.seats[p]; });
+  ok(n === 577 && res.circs.length === 577, '577 circonscriptions, 577 députés');
+  var bad = 0, quals = 0;
+  res.circs.forEach(function (c) {
+    var ex = c.turnout1 * (1 - L.blank1), top = c.c1[0];
+    if (c.status === 'elu1' && !(top.v > 0.5 && top.v * ex >= 0.25)) bad++;
+    if (c.status !== 'elu1' && top.v > 0.5 && top.v * ex >= 0.25) bad++;
+    if (c.status !== 'elu1') {
+      var q = Object.keys(c.v2);
+      if (q.length < 2) bad++;
+      // tout candidat au-dessus de 12,5 % des inscrits est au 2nd tour, sauf s'il s'est désisté
+      c.c1.forEach(function (x) { if (x.v * ex >= 0.125 && q.indexOf(x.pid) < 0 && c.withdrawn.indexOf(x.pid) < 0) bad++; });
+      // en dessous de 12,5 %, on n'est qualifié que pour compléter un duel
+      q.forEach(function (pid) { var x = c.c1.filter(function (y) { return y.pid === pid; })[0]; if (x.v * ex < 0.125 && q.length > 2) bad++; });
+      var best = q.sort(function (a, b) { return c.v2[b] - c.v2[a]; })[0];
+      if (best !== c.winner) bad++;
+      quals++;
+    }
+  });
+  ok(bad === 0, 'règles de qualification et d\'élection respectées dans chaque circonscription (' + bad + ' anomalies)');
+  ok(res.participation1 > 0.35 && res.participation1 < 0.65, 'participation au 1er tour autour de 50 % (' + Math.round(100 * res.participation1) + ' %)');
+  ok(res.outcome.camp.indexOf('EM') >= 0 && res.outcome.camp.indexOf('MD') >= 0, 'la majorité présidentielle réunit le président et son union');
+  // l'effet locomotive : avec une large victoire, le camp du président a plus de sièges qu'avec une victoire étroite
+  var big = 0, small = 0;
+  for (var i = 0; i < 6; i++) { big += LG.run(g, { rng: E.makeRng(100 + i), pres: 'EM', margin: 0.2 }).outcome.campSeats; small += LG.run(g, { rng: E.makeRng(100 + i), pres: 'EM', margin: 0 }).outcome.campSeats; }
+  ok(big > small, 'effet locomotive : une large victoire rapporte plus de députés (' + Math.round(big / 6) + ' contre ' + Math.round(small / 6) + ')');
+  // dissolution : une forte popularité rapporte plus qu'une faible
+  ok(G.dissolveMult(60) > 1 && G.dissolveMult(30) < 1, 'dissolution : élan si populaire, désaveu sinon');
+  var o = LG.outcome({ unions: [{ id: 'pres', parties: ['EM'], pres: true }, { id: 'x', parties: ['MN'] }], seats: { EM: 200, MN: 300 } }, 'EM');
+  ok(o.type === 'cohabitation', 'un autre bloc à 289 sièges ou plus : cohabitation');
+  o = LG.outcome({ unions: [{ id: 'pres', parties: ['EM'], pres: true }, { id: 'x', parties: ['MN'] }], seats: { EM: 250, MN: 200 } }, 'EM');
+  ok(o.type === 'relative', 'premier bloc sans 289 sièges : majorité relative');
+})();
+
 console.log('\n' + passes + ' vérifications réussies, ' + fails + ' en échec.');
 process.exit(fails ? 1 : 0);
