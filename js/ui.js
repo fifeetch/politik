@@ -467,7 +467,7 @@
       });
       list.appendChild(sec);
     });
-    // financement : jusqu'à 3 mesures de recettes ou d'économies
+    // financement : jusqu'à R.fundingMax mesures de recettes ou d'économies
     var fsec = el('div', { class: 'pl-theme pl-fin' }, '<div class="pl-head">🏦 <b>Comment tu finances</b><span class="pl-cred">' + progFin.length + ' / ' + R.fundingMax + ' (facultatif)</span></div>');
     D.FUNDING.forEach(function (m) {
       var on = progFin.indexOf(m.id) >= 0;
@@ -477,7 +477,7 @@
         '<button type="button" class="pl-info" aria-label="Le saviez-vous ?">?</button>';
       row.querySelector('.pl-pick').addEventListener('click', function () {
         if (on) progFin.splice(progFin.indexOf(m.id), 1);
-        else if (progFin.length >= R.fundingMax) { toast('3 mesures de financement au plus.'); return; }
+        else if (progFin.length >= R.fundingMax) { toast(R.fundingMax + ' mesures de financement au plus.'); return; }
         else progFin.push(m.id);
         renderProgramme(pid);
       });

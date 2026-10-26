@@ -708,7 +708,7 @@
     /* v0.7 : programme et affaires */
     programmeSize: 5,
     budgetCap: 25,                   // v0.8 : au-delà de 25 Md€ de reste à financer, le programme n'est pas financé
-    fundingMax: 3,                   // mesures de financement en plus des 5 promesses
+    fundingMax: 5,                   // v3.5.2 : jusqu'à 5 mesures de financement en plus des 5 promesses
     echoScale: 15, echoGoodN: 4, echoBadN: 2,     // écho du programme : +1 cube en Meeting dans ses 4 régions de cœur, −1 dans ses 2 régions hostiles
     budgetCasStep: 15,               // +1 casserole par tranche de 15 Md€ de dépassement
     pharBonus: 1,                    // mesure phare : +1 cube en Meeting sur son thème
