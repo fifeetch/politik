@@ -155,7 +155,7 @@
     var res = gv.legis, out = res.outcome, layout = hemiLayout(res.seats), shown = {}, campSet = {};
     out.camp.forEach(function (p) { campSet[p] = true; });
     Object.keys(res.seats).forEach(function (p) { shown[p] = 0; });
-    $('lg-kicker').textContent = (o.dissolution ? 'Législatives anticipées' : 'Juin · Élections législatives') + ' · 1er tour';
+    $('lg-kicker').textContent = o.dissolution ? 'Législatives anticipées' : 'Juin · Élections législatives';
     $('lg-title').textContent = o.dissolution ? 'Les Français revotent' : 'Le 1er tour';
     $('lg-hemi').innerHTML = '<svg viewBox="0 0 200 110" aria-label="Hémicycle de l\'Assemblée nationale">' + layout.map(function (pt, i) {
       return '<circle id="lgd' + i + '" cx="' + pt.x.toFixed(1) + '" cy="' + pt.y.toFixed(1) + '" r="2.3" fill="#3A3560"/>';
@@ -189,7 +189,7 @@
       top.map(function (b) {
         return '<div class="nb-row"><span class="nb-lbl">' + esc(blocName(b)) + '</span><span class="nb-bar"><i style="background:' + blocColor(b) + ';width:' + (100 * b.pct / maxp).toFixed(0) + '%"></i></span><b>' + fr(100 * b.pct, 1) + ' %</b></div>';
       }).join('') + '<div class="nb-row"><span class="nb-lbl">Autres partis</span><span class="nb-bar"><i style="background:#8E8AA8;width:' + (100 * rest / maxp).toFixed(0) + '%"></i></span><b>' + fr(100 * rest, 1) + ' %</b></div>' +
-      '<div class="lg-counts"><span class="lg-count"><b>' + res.counts.elu1 + '</b>élus dès ce soir</span><span class="lg-count"><b>' + res.counts.duel + '</b>duels</span><span class="lg-count"><b>' + res.counts.tri + '</b>triangulaires' + (res.counts.desist ? ' · ' + res.counts.desist + ' désistements' : '') + '</span></div>' +
+      '<div class="lg-counts"><span class="lg-count"><b>' + res.counts.elu1 + '</b>élus dès ce soir</span><span class="lg-count"><b>' + res.counts.duel + '</b>duels</span><span class="lg-count"><b>' + res.counts.tri + '</b>triangulaires' + (res.counts.desist ? ' · ' + res.counts.desist + ' désistement' + (res.counts.desist > 1 ? 's' : '') : '') + '</span></div>' +
       '<button type="button" class="lg-more" id="lg-regions">Région par région ›</button>';
     $('lg-regions').onclick = regionsDetail;
     $('lg-btn').textContent = 'Le second tour';

@@ -1,9 +1,9 @@
 /* Politik — service worker : rend le jeu installable et jouable sans internet.
    À chaque nouvelle version du jeu, changer VERSION pour que les téléphones se mettent à jour. */
-var VERSION = 'politik-v2.2.0';
+var VERSION = 'politik-v2.3.0';
 var FILES = [
   './', 'index.html', 'manifest.webmanifest', 'css/style.css',
-  'js/data.js', 'js/map.js', 'js/art.js', 'js/press.js', 'js/fx.js', 'js/engine.js', 'js/ai.js', 'js/govern.js', 'js/tuto.js', 'js/ui.js', 'js/govui.js',
+  'js/data.js', 'js/map.js', 'js/art.js', 'js/press.js', 'js/fx.js', 'js/engine.js', 'js/ai.js', 'js/legis.js', 'js/govern.js', 'js/tuto.js', 'js/ui.js', 'js/govui.js',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-192.png', 'icons/icon-maskable-512.png',
   'icons/apple-touch-icon.png', 'icons/favicon.png',
   'fonts/anybody.woff2', 'fonts/atkinson-400.woff2', 'fonts/atkinson-400-italic.woff2', 'fonts/atkinson-700.woff2', 'fonts/archivo.woff2'

@@ -141,6 +141,19 @@ Quand tu gagnes la présidentielle, le bouton « 🏛️ Gouverner le pays » ou
 - **La une photo** : une scène dessinée plein écran et un mot géant (« Rideau. », « Krach. », « Pugilat. »…) selon l'événement, puis 3 titres qui ouvrent chacun leur article.
 - **De vrais articles** écrits à partir du tour : les partis à la rencontre des habitants d'une ville, au 20 h, en porte-à-porte, sur les réseaux, les régions qui basculent, les affaires, le sondage.
 
+## v2.3 — fait : les vraies législatives (lot 1 sur 4)
+- **577 circonscriptions** simulées, sièges réels par région (découpage de 2010), deux tours avec les règles du code électoral : élu au 1er tour (50 % des exprimés et 25 % des inscrits), qualification à 12,5 % des inscrits, triangulaires, désistements quand le premier est loin et un autre qualifié proche.
+- **Point de départ** : les scores régionaux du 1er tour de la présidentielle, effet locomotive selon l'avance du président, abstention plus forte chez les jeunes et les ouvriers (6 groupes Insee), variations locales gauche-droite, candidatures communes par grandes familles (en attendant de les négocier au lot 2).
+- **Soirée des législatives** : 1er tour (participation, scores par bloc, élus du soir, duels, triangulaires), puis hémicycle qui se remplit région par région avec la barre des 289 ; verdict : majorité absolue, relative, sans majorité ou cohabitation. Aussi après une dissolution (le résultat suit la popularité du moment).
+- **Équilibre** (`node test/legis-sim.js 200`) : majorité absolue environ 2 fois sur 3, relative 1 fois sur 4, sans majorité ou cohabitation sinon ; participation autour de 48 % ; une dissolution à 35 % de popularité tourne souvent mal.
+- 2 fiches « Le saviez-vous ? » : comment on devient député, pourquoi les législatives suivent la présidentielle.
+- Raccourci « Passer la campagne » réparé (il ne finissait plus depuis l'entre-deux-tours).
+
+## Prochains lots (législatives, gouvernement, opposition)
+- **v2.4 — Ta campagne des législatives** : 2 tours de campagne (circonscriptions sûres, disputées, perdues), Investir une vedette, Le président en meeting, Mobiliser ; **alliances à négocier soi-même** : faciles dans son camp (gauche ou droite), possibles entre camps (par exemple gauche modérée, écologistes et droite) ; puis ton entre-deux-tours (maintien ou désistement, consignes, échanges de circonscriptions).
+- **v2.5 — Le gouvernement** : 6 postes, cartes ministres (compétence, loyauté, notoriété, un trait), parité, allié servi, remaniement.
+- **v2.6 — L'opposition** : le perdant (finaliste ou éliminé au 1er tour) continue chef de son parti, à chaque trimestre pendant 5 ans : propositions de loi le jour réservé, coalitions, motions de censure ; chute du gouvernement, dissolution par le président (dès l'année 2), cohabitation où tu deviens Premier ministre.
+
 ## À venir (pistes du bêta-testeur)
 - **Campagne éclair** : un format court en 3 tours, et une sauvegarde automatique pour reprendre une partie.
 - **Mécaniques débloquées au fil des parties** : scandales et dilemmes, puis le programme détaillé, puis les alliances et la phase « gouverner ».
