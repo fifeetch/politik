@@ -34,7 +34,8 @@
   function renderResume() {
     var sv = readSave(), b = $('btn-resume'); if (!b) return;
     if (!sv) { b.hidden = true; return; }
-    var gg = JSON.parse(sv.game), P = E.PARTY[sv.me] || (sv.founded && sv.founded.sigle === sv.me ? sv.founded : null);
+    var gg; try { gg = JSON.parse(sv.game); } catch (e) { b.hidden = true; return; }
+    var P = E.PARTY[sv.me] || (sv.founded && sv.founded.sigle === sv.me ? sv.founded : null);
     b.hidden = !P;
     if (P) b.innerHTML = '↻ Reprendre ta partie<small>' + esc(P.name || P.short) + ' · tour ' + (gg.turn + 1) + ' sur ' + (D.FORMATS[gg.format] || D.FORMATS.classique).turns + '</small>';
   }
@@ -946,7 +947,13 @@
 
   /* ---------- v1.8 : les onglets ---------- */
   var activeTab = 'carte', journalSeen = '';
-  function showTab(name) {
+  function showTab(name, fromBack) {
+    // v3.3.2 : le bouton « retour » du téléphone ramène à la carte au lieu de quitter le jeu
+    if (!fromBack) {
+      var inTab = history.state && history.state.politikTab;
+      if (name !== 'carte' && !inTab) history.pushState({ politikTab: 1 }, '');
+      else if (name === 'carte' && inTab) { history.back(); return; }
+    }
     activeTab = name;
     ['sondage', 'actu', 'parti'].forEach(function (k) { $('tab-' + k).hidden = k !== name; });
     Array.prototype.forEach.call(document.querySelectorAll('.tabbar [data-tab]'), function (b) {
@@ -960,6 +967,22 @@
   Array.prototype.forEach.call(document.querySelectorAll('.tabbar [data-tab]'), function (b) {
     b.addEventListener('click', function () { if (g) showTab(b.getAttribute('data-tab')); });
   });
+  window.addEventListener('popstate', function () { if (activeTab !== 'carte') showTab('carte', true); });
+  // Un bouton « Retour à la carte » toujours visible en haut de chaque onglet
+  ['sondage', 'actu', 'parti'].forEach(function (k) {
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'tab-back'; b.textContent = '← Retour à la carte';
+    b.addEventListener('click', function () { showTab('carte'); });
+    $('tab-' + k).insertBefore(b, $('tab-' + k).firstChild);
+  });
+  // La vraie hauteur visible de l'écran (évite que le bas passe sous la barre du téléphone)
+  function fitHeight() {
+    var h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    document.documentElement.style.setProperty('--app-h', Math.round(h) + 'px');
+  }
+  fitHeight();
+  window.addEventListener('resize', fitHeight);
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', fitHeight);
   function ordinal(n) { return n + (n === 1 ? 'er' : 'ᵉ'); }
   function renderPollTab() {
     var poll = E.poll(g), rank = 1 + poll.findIndex(function (x) { return x.pid === me; }), mine = poll[rank - 1];
