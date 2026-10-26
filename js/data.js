@@ -727,6 +727,7 @@
     /* v1.6 : l'entre-deux-tours. Ces taux sont des réglages de jeu (pas des prédictions politiques), à équilibrer.
        Report de base selon la distance sur l'axe : voir « transfer » plus haut. */
     round2: {
+      aiActions: 3,                                            // v3.6.1 : l'ordinateur, face à un joueur humain, n'en a que 3
       actions: 4,                                              // v3.6 : 4 actions de chaque finaliste entre les deux tours (3 avant)
       accept: { 1: 0.85, 2: 0.6, 3: 0.3, 4: 0.12, 5: 0.05 },   // chance qu'un parti éliminé accepte un accord, selon la distance
       phareBoost: 1.3,                                         // ×1,3 si on lui accorde sa mesure phare
@@ -734,6 +735,7 @@
       counterChance: 0.5,                                      // en cas de refus, une chance sur deux qu'il fasse une contre-offre (sa mesure phare)
       endorse: { 1: 0.3, 2: 0.24, 3: 0.15, 4: 0.08, 5: 0.03 },  // v3.6 : des consignes qui pèsent plus // consigne de vote : points de report en plus (moins on est proche, moins les électeurs suivent)
       noneFactor: 0.75,                                        // « ne soutenir personne » : les reports vers les deux finalistes ×0,75
+      lukewarm: 0.5,                                           // v3.6.1 : sans accord, une consigne n'est suivie qu'à moitié
       dealBonus: 0.08,                                         // un accord avec concession rend la consigne plus crédible : +8 points (v3.6)
       farDealLoss: 0.03,                                       // un accord avec un parti éloigné (distance 3 ou plus) fait fuir 3 % de ses propres électeurs
       mobilize: 0.02,                                          // « Mobiliser » : +2 % des suffrages, pris dans l'abstention (2 fois au plus, v3.6)

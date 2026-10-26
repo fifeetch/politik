@@ -1314,6 +1314,8 @@
     var r1 = g.round1, b = { a: r1.finalists[0], b: r1.finalists[1], elim: r1.first.slice(2).map(function (x) { return x.pid; }),
       left: {}, deals: {}, consignes: {}, tried: {}, boost: {}, offers: [], counter: null, log: [], plan: {}, closed: false };
     [b.a, b.b].forEach(function (f) { b.left[f] = R2.actions; b.boost[f] = { mob: 0, ras: 0 }; player(g, f).deals = []; });
+    // v3.6.1 : face à un joueur humain, l'ordinateur a une action de moins (un joueur habile peut faire basculer un duel serré)
+    if (player(g, b.a).human !== player(g, b.b).human) [b.a, b.b].forEach(function (f) { if (!player(g, f).human) b.left[f] = R2.aiActions; });
     b.elim.forEach(function (e) { b.consignes[e] = null; });
     // chaque finaliste mené par l'ordinateur prépare ses actions maintenant, sans connaître les décisions à venir des autres
     [b.a, b.b].forEach(function (f) { if (!player(g, f).human) b.plan[f] = aiBetweenPlan(g, b, f); });
@@ -1455,9 +1457,10 @@
     why.push('proximité : ' + Math.round(100 * ra) + ' % vers ' + PARTY[A].short + ', ' + Math.round(100 * rb) + ' % vers ' + PARTY[B].short);
     var c = b.consignes[e] || (expected ? (player(g, e).human ? 'none' : aiConsigne(g, b, e)) : 'none'), deal = b.deals[e] || null;
     if (c === 'A' || c === 'B') {
-      var to = c === 'A' ? A : B, plus = R2.endorse[dist(e, to)] || 0;
+      // v3.6.1 : sans accord, la consigne est donnée « du bout des lèvres » (moitié moins suivie) ; un accord la rend franche
+      var to = c === 'A' ? A : B, plus = (R2.endorse[dist(e, to)] || 0) * (deal ? 1 : R2.lukewarm);
       if (c === 'A') { ra += plus; rb = Math.max(0, rb - plus / 2); } else { rb += plus; ra = Math.max(0, ra - plus / 2); }
-      why.push('consigne : voter ' + PARTY[to].short + ' (+' + Math.round(100 * plus) + ' pts)');
+      why.push((deal ? 'consigne franche' : 'consigne du bout des lèvres') + ' : voter ' + PARTY[to].short + ' (+' + Math.round(100 * plus) + ' pts)');
       if (deal) { if (c === 'A') ra += R2.dealBonus; else rb += R2.dealBonus; why.push('accord avec concession (+' + Math.round(100 * R2.dealBonus) + ' pts)'); }
     } else { ra *= R2.noneFactor; rb *= R2.noneFactor; why.push('ne soutient personne (reports ×' + String(R2.noneFactor).replace('.', ',') + ')'); }
     // v3.6 : le front républicain, non systématique (voir D.RULES.round2.reject)
@@ -1557,7 +1560,7 @@
     resolveAffair: resolveAffair, enqueteChance: enqueteChance, affairDef: affairDef,
     resolveDilemma: resolveDilemma, dilemmaDef: dilemmaDef, applyFx: applyFx, markerAt: markerAt, hotHere: hotHere, crisisAct: crisisAct,
     impact: impact, cred: cred, isHot: isHot, concerns: concerns, bestTheme: bestTheme, terrainCubes: terrainCubes, mediaCubes: mediaCubes,
-    weight: weight, strength: strength, controlShares: controlShares, regionVote: regionVote, regionLean: regionLean, natLean: natLean, regionShares: regionShares,
+    makeDeal: makeDeal, weight: weight, strength: strength, controlShares: controlShares, regionVote: regionVote, regionLean: regionLean, natLean: natLean, regionShares: regionShares,
     traitOf: traitOf, nostalgiaPreview: nostalgiaPreview, petalsCount: petalsCount, lostPetals: lostPetals, jammed: jammed, zapped: zapped, isHidden: isHidden, retireeRegion: retireeRegion, resolvePrimaire: resolvePrimaire, actionsFor: actionsFor, centrists: centrists, tickBingo: tickBingo, ensureTraits: ensureTraits,
     REG: REG, PARTY: PARTY, sigle: sigle, THEME: THEME, makeRng: makeRng, setFormat: setFormat, saveGame: saveGame, loadGame: loadGame, registerParty: registerParty, unregisterParty: unregisterParty
   };

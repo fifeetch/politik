@@ -258,3 +258,8 @@ Avant, en Réaliste, tous les partis convergeaient vers ~8 % : Lutte Obstinée d
 - **Barrage (« front républicain ») non systématique** : un indice de rejet par parti (ordre de grandeur de jeu inspiré des sondages de « vote impossible », pas un chiffre officiel). Les électeurs éliminés éloignés du finaliste le plus rejeté reportent 0,3 × l'écart de rejet en plus vers l'autre. RN et LFI ayant un rejet comparable, l'effet s'annule dans ce duel.
 - Résultats (200 parties IA, Réaliste 2024) : RE–RN 49/51 en moyenne, PS–RN 50/50, LFI–RN 41/59.
 - Carte de départ Réaliste : seuil de contrôle abaissé d'un soutien (v3.5.6), la carte « Présidentielle 2022 » retrouve les vraies couleurs régionales.
+
+## v3.6.1 — fait : un entre-deux-tours où tes actions se voient
+- Sans accord, la consigne d'un parti éliminé est « du bout des lèvres » (suivie à moitié) ; un accord la rend franche (+ bonus de concession). Avant, l'estimation comptait déjà la consigne et l'accord ne changeait presque rien.
+- Après chaque action, un message sépare **l'effet de ton action** et **la réponse du rival** (avant, la réponse du rival faisait croire que « Mobiliser » faisait baisser).
+- Face à un joueur humain, l'ordinateur n'a que 3 actions (4 pour toi). Simulation d'un joueur qui choisit au mieux (Réaliste 2024) : contre le RN, PS 51 % de victoires, RE 75 % ; LFI reste à 0 % (départ trop bas, ~41 %).

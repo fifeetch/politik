@@ -244,7 +244,9 @@ function toBetween(human, seed, humanLast) {
   var r2 = E.betweenAct(g, b.b, { type: 'negocier', target: e2, measure: E.concessionsFor(g, b.b, e2)[0] });
   g.rng = rng;
   ok(r2.outcome === 'refuse' && !b.deals[e2], 'un parti peut refuser');
-  ok(b.left[f] === D.RULES.round2.actions - 1 && b.left[b.b] === D.RULES.round2.actions - 1, 'chaque action coûte 1 action sur ' + D.RULES.round2.actions);
+  // v3.6.1 : face à un humain, l'ordinateur démarre avec round2.aiActions
+  function startLeft(x) { var mixed = E.player(g, b.a).human !== E.player(g, b.b).human; return mixed && !E.player(g, x).human ? D.RULES.round2.aiActions : D.RULES.round2.actions; }
+  ok(b.left[f] === startLeft(f) - 1 && b.left[b.b] === startLeft(b.b) - 1, 'chaque action coûte 1 action (4 pour toi, 3 pour l\'ordinateur qui t\'affronte)');
   // estimation sans effet, puis clôture
   var snap = JSON.stringify(b.consignes), proj = E.projectSecond(g);
   ok(JSON.stringify(b.consignes) === snap && !g.result, 'l\'estimation ne change rien');

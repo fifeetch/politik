@@ -140,7 +140,7 @@
   }
   function closeModal() { $('modal').hidden = true; FX.setModal(false); }
   var toastTimer;
-  function toast(msg) { var t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.hidden = true; }, 2200); }
+  function toast(msg) { var t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.hidden = true; }, Math.max(2200, String(msg).length * 45)); }
 
   function mio(x) { return x.toFixed(1).replace('.', ','); }
   function pctFr(x, d) { return (100 * x).toFixed(d == null ? 0 : d).replace('.', ','); }
@@ -1934,18 +1934,24 @@
   }
   /* Une action du joueur finaliste, puis la réponse de son rival (mené par l'ordinateur) */
   function playBetween(act) {
-    var b = g.between, rival = me === b.a ? b.b : b.a, r = E.betweenAct(g, me, act);
+    var b = g.between, rival = me === b.a ? b.b : b.a;
+    // v3.6.1 : on montre l'effet de TON action, puis celui de la réponse du rival, séparément
+    function myPct() { var pj = E.projectSecond(g); return me === pj.a ? pj.pctA : pj.pctB; }
+    function ptTxt(d) { var v = Math.round(1000 * d) / 10; return (v > 0 ? '+' : v < 0 ? '−' : '±') + String(Math.abs(v)).replace('.', ',') + ' pt'; }
+    var p0 = myPct(), r = E.betweenAct(g, me, act);
     if (!r.ok) return toast(r.text);
+    var p1 = myPct();
     function rivalTurn() {
-      var rr = E.aiBetweenStep(g, rival);
+      var rr = E.aiBetweenStep(g, rival), p2 = myPct();
       renderBetween();
-      if (rr) { var last = b.log[b.log.length - 1]; if (last) toast(last.text); }
+      var last = rr ? b.log[b.log.length - 1] : null;
+      toast('Ton action : ' + ptTxt(p1 - p0) + (rr ? ' · Réponse de ' + party(rival).short + ' : ' + ptTxt(p2 - p1) + (last ? ' (' + last.text + ')' : '') : ''));
     }
     if (act.type !== 'negocier') { renderBetween(); return rivalTurn(); }
     var pn = party(act.target).short, m = E.measure(act.measure);
     if (r.outcome === 'accept') modal({ kicker: '🤝 Accord', title: pn + ' accepte !', html: '<p>' + esc(pn) + ' appelle à voter pour toi. Tu reprends « ' + esc(m.name) + ' » dans tes engagements.</p>', buttons: [{ label: 'Continuer', primary: true, onClick: rivalTurn }] });
     else if (r.outcome === 'counter') modal({ kicker: '↩️ Contre-offre', title: pn + ' veut mieux', html: '<p>' + esc(pn) + ' refuse « ' + esc(m.name) + ' », mais signe tout de suite si tu reprends sa mesure phare : « <b>' + esc(E.measure(r.measure).name) + '</b> » (' + costTxt(E.measure(r.measure).cost) + ').</p>',
-      buttons: [{ label: 'Accepter la contre-offre', primary: true, onClick: function () { E.answerCounter(g, true); rivalTurn(); } }, { label: 'Refuser', onClick: function () { E.answerCounter(g, false); rivalTurn(); } }] });
+      buttons: [{ label: 'Accepter la contre-offre', primary: true, onClick: function () { E.answerCounter(g, true); p1 = myPct(); rivalTurn(); } }, { label: 'Refuser', onClick: function () { E.answerCounter(g, false); rivalTurn(); } }] });
     else modal({ kicker: '✋ Refus', title: pn + ' refuse', html: '<p>' + esc(pn) + ' ne veut pas s\'engager avec toi pour l\'instant. Une nouvelle demande aura moins de chances.</p>', buttons: [{ label: 'Continuer', primary: true, onClick: rivalTurn }] });
   }
   $('btw-go').addEventListener('click', function () {
