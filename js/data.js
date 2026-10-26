@@ -727,17 +727,23 @@
     /* v1.6 : l'entre-deux-tours. Ces taux sont des réglages de jeu (pas des prédictions politiques), à équilibrer.
        Report de base selon la distance sur l'axe : voir « transfer » plus haut. */
     round2: {
-      actions: 3,                                              // actions de chaque finaliste entre les deux tours
+      actions: 4,                                              // v3.6 : 4 actions de chaque finaliste entre les deux tours (3 avant)
       accept: { 1: 0.85, 2: 0.6, 3: 0.3, 4: 0.12, 5: 0.05 },   // chance qu'un parti éliminé accepte un accord, selon la distance
       phareBoost: 1.3,                                         // ×1,3 si on lui accorde sa mesure phare
       retry: 0.6,                                              // ×0,6 à chaque nouvelle demande après un refus
       counterChance: 0.5,                                      // en cas de refus, une chance sur deux qu'il fasse une contre-offre (sa mesure phare)
-      endorse: { 1: 0.25, 2: 0.18, 3: 0.10, 4: 0.05, 5: 0.02 }, // consigne de vote : points de report en plus (moins on est proche, moins les électeurs suivent)
+      endorse: { 1: 0.3, 2: 0.24, 3: 0.15, 4: 0.08, 5: 0.03 },  // v3.6 : des consignes qui pèsent plus // consigne de vote : points de report en plus (moins on est proche, moins les électeurs suivent)
       noneFactor: 0.75,                                        // « ne soutenir personne » : les reports vers les deux finalistes ×0,75
-      dealBonus: 0.05,                                         // un accord avec concession rend la consigne plus crédible : +5 points
+      dealBonus: 0.08,                                         // un accord avec concession rend la consigne plus crédible : +8 points (v3.6)
       farDealLoss: 0.03,                                       // un accord avec un parti éloigné (distance 3 ou plus) fait fuir 3 % de ses propres électeurs
-      mobilize: 0.012,                                         // « Mobiliser » : +1,2 % des suffrages, pris dans l'abstention (2 fois au plus)
-      rassemble: 0.03,                                         // « Rassembler » : +3 points de report de chaque parti éliminé (2 fois au plus)
+      mobilize: 0.02,                                          // « Mobiliser » : +2 % des suffrages, pris dans l'abstention (2 fois au plus, v3.6)
+      rassemble: 0.05,                                         // « Rassembler » : +5 points de report de chaque parti éliminé (2 fois au plus, v3.6)
+      /* v3.6 : le « front républicain », non systématique. Chaque parti a un indice de rejet (la part des électeurs qui ne voteraient
+         jamais pour lui) : les électeurs des partis éliminés votent davantage contre le finaliste le plus rejeté, sauf ceux qui
+         en sont proches. Face à deux finalistes aussi rejetés l'un que l'autre, l'effet s'annule. Ordres de grandeur de jeu,
+         inspirés des sondages de « vote impossible » : ce ne sont pas des chiffres officiels. */
+      reject: { MN: 0.55, RQ: 0.65, FI: 0.55, LO: 0.45, PC: 0.4, DL: 0.4, EM: 0.35, UG: 0.3, SM: 0.3, VP: 0.3, MD: 0.25, HZ: 0.25 },
+      barrage: 0.3,                                            // points de report déplacés = 0,3 × l'écart de rejet entre les finalistes
       maxUses: 2,
       maxTransfer: 0.95
     }

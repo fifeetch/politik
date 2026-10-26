@@ -1460,6 +1460,15 @@
       why.push('consigne : voter ' + PARTY[to].short + ' (+' + Math.round(100 * plus) + ' pts)');
       if (deal) { if (c === 'A') ra += R2.dealBonus; else rb += R2.dealBonus; why.push('accord avec concession (+' + Math.round(100 * R2.dealBonus) + ' pts)'); }
     } else { ra *= R2.noneFactor; rb *= R2.noneFactor; why.push('ne soutient personne (reports ×' + String(R2.noneFactor).replace('.', ',') + ')'); }
+    // v3.6 : le front républicain, non systématique (voir D.RULES.round2.reject)
+    var rj = R2.reject || {}, gap = (rj[B] || 0.3) - (rj[A] || 0.3);
+    if (Math.abs(gap) >= 0.05) {
+      var foe = gap > 0 ? B : A, shift = R2.barrage * Math.abs(gap);
+      if (dist(e, foe) >= 2) {
+        if (gap > 0) { ra += shift; rb = Math.max(0, rb - shift / 2); } else { rb += shift; ra = Math.max(0, ra - shift / 2); }
+        why.push('barrage contre ' + PARTY[foe].short + ' (+' + Math.round(100 * shift) + ' pts vers ' + PARTY[gap > 0 ? A : B].short + ')');
+      }
+    }
     if (b.boost[A].ras) { ra += R2.rassemble * b.boost[A].ras; why.push('appel au rassemblement de ' + PARTY[A].short); }
     if (b.boost[B].ras) { rb += R2.rassemble * b.boost[B].ras; why.push('appel au rassemblement de ' + PARTY[B].short); }
     if (ra + rb > R2.maxTransfer) { var k = R2.maxTransfer / (ra + rb); ra *= k; rb *= k; }

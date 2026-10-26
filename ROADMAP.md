@@ -252,3 +252,9 @@ Avant, en Réaliste, tous les partis convergeaient vers ~8 % : Lutte Obstinée d
 - Même jeu, même code : sur un écran de 1024 px de large ou plus (css/desktop.css), la campagne passe en trois colonnes : sondage toujours visible à gauche, carte en grand et actions au centre, actualité ou ton parti à droite (deux onglets).
 - Les fenêtres de choix deviennent des boîtes centrées ; le journal et les cartes à glisser s'affichent en page centrée sur fond sombre ; les autres écrans (accueil, programme, quinquennat, soirée électorale) sont centrés sur 760 px.
 - Survol à la souris sur les boutons. Le téléphone n'est pas modifié.
+
+## v3.6 — fait : un entre-deux-tours plus décisif et le barrage non systématique
+- 4 actions par finaliste (3 avant) ; Mobiliser +2 % (1,2 avant) ; Appel au rassemblement +5 points de report (3 avant) ; consignes plus suivies (+30 / +24 / +15 / +8 / +3 points selon la distance) ; accord avec concession +8 points.
+- **Barrage (« front républicain ») non systématique** : un indice de rejet par parti (ordre de grandeur de jeu inspiré des sondages de « vote impossible », pas un chiffre officiel). Les électeurs éliminés éloignés du finaliste le plus rejeté reportent 0,3 × l'écart de rejet en plus vers l'autre. RN et LFI ayant un rejet comparable, l'effet s'annule dans ce duel.
+- Résultats (200 parties IA, Réaliste 2024) : RE–RN 49/51 en moyenne, PS–RN 50/50, LFI–RN 41/59.
+- Carte de départ Réaliste : seuil de contrôle abaissé d'un soutien (v3.5.6), la carte « Présidentielle 2022 » retrouve les vraies couleurs régionales.
