@@ -125,3 +125,13 @@ Quand tu gagnes la présidentielle, le bouton « 🏛️ Gouverner le pays » ou
 - Multijoueur entre amis (tour par tour en ligne).
 - Version jeu de plateau (prototype papier).
 - Application sur les stores.
+
+## v2.0 — fait : du fun en 30 secondes (retours d'un bêta-testeur)
+- **▶ Jouer** : partie rapide en deux touchers (parti, puis « C'est parti ! »), programme conseillé pris d'office. Le paramétrage complet passe dans « Partie personnalisée ».
+- **Premier tour sans lecture** : pas de journal d'ouverture en partie rapide (il reste dans l'onglet Actu), et le dilemme du joueur passe au tour 2.
+- **Tutoriel en 4 gestes** : Lulu dit une phrase par étape, la meilleure région clignote, et chaque étape attend un geste du joueur. À la fin du tour, une récompense (ta place au sondage) remplace l'écran « Bon à savoir ».
+
+## À venir (pistes du bêta-testeur)
+- **Campagne éclair** : un format court en 3 tours, et une sauvegarde automatique pour reprendre une partie.
+- **Mécaniques débloquées au fil des parties** : scandales et dilemmes, puis le programme détaillé, puis les alliances et la phase « gouverner ».
+- **Dilemmes en cartes à glisser** (à la manière de Reigns).

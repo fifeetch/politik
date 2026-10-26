@@ -1,63 +1,51 @@
-/* Politik — tutoriel guidé du premier tour.
-   Met en lumière une zone de l'écran et affiche une bulle d'explication. */
+/* Politik — tutoriel du premier tour (v2.0 : on apprend en jouant).
+   4 étapes, une phrase chacune, dites par Lulu. Chaque étape attend un geste du joueur :
+   pas de bouton « Suivant », pas de pavé à lire. */
 (function () {
   var KEY = 'politik_tuto_done';
   var STEPS = [
-    { target: null, title: 'Bienvenue en campagne !',
-      text: 'Tu as <b>8 tours de campagne</b> pour gagner des électeurs dans les régions. Ensuite on vote : <b>premier tour</b>, puis <b>second tour</b> entre les deux premiers.' },
-    { target: '#tab-btn-actu', title: 'L\'actualité',
-      text: 'Chaque tour, un thème fait la une. Parler de ce thème rapporte plus… à tous les partis. L\'onglet <b>Actu</b> te permet de relire la une et le journal du matin.' },
-    { target: '#tab-btn-sondage', title: 'Le sondage',
-      text: 'L\'onglet <b>Sondage</b> montre ta place parmi les 12 partis. Les deux premiers vont au second tour ; au-delà de 50 %, tu es élu dès le premier tour.' },
-    { target: '.map-wrap', title: 'La carte',
-      text: 'La couleur et le sigle d\'une région indiquent le parti qui la contrôle (« — » : personne).<br><b>Touche une région</b> pour continuer.', wait: 'region' },
-    { target: '#region-info', title: 'La région',
-      text: 'Ses inscrits (plus il y en a, plus elle pèse), son abstention et ta place ici. Les <b>cubes</b> = les électeurs : le plus de cubes (au moins 3) donne le <b>contrôle</b>. Touche <b>Détails</b> pour voir qui mène et ce qui la préoccupe.' },
-    { target: '#message', title: 'Ton message',
-      text: 'Chaque campagne parle d\'un <b>thème</b>. Le meilleur pour cette région est déjà choisi. Les petits points montrent son impact : plus il y en a, plus ça rapporte.<br>Touche cette ligne quand tu veux parler d\'autre chose.' },
-    { target: '#actions', title: 'Tes actions',
-      text: 'Le gros chiffre = les cubes que tu vas gagner. <b>📣 Meeting</b> : ici. <b>📺 Télé</b> : sur 3 régions. <b>🚪 Mobiliser</b> : faire voter des abstentionnistes.<br><b>Touche « Meeting »</b> pour la programmer.', wait: 'queue' },
-    { target: '.queue', title: '3 actions par tour',
-      text: 'Ton action est programmée (son numéro apparaît sur la carte). Touche-la pour l\'annuler.' },
-    { target: '#btn-more', title: 'Plus d\'options',
-      text: 'Ici : le <b>Buzz</b>, implanter des <b>militants</b>, attaquer un rival, collecter de l\'argent, faire la une et tes <b>2 cartes spéciales</b>.' },
-    { target: '.res', title: 'Argent et influence',
-      text: '<b>€</b> paie les campagnes. <b>★</b> (influence) sert à la télé, aux attaques et aux débats. <b>⚡</b> c\'est la forme de ton candidat : Meeting et Télé le fatiguent. Le petit « /7 » = ce que tu avais avant tes actions.<br>L\'onglet <b>Mon parti</b> montre ton objectif secret et l\'état de ton candidat.' },
-    { target: '#btn-validate', title: 'À toi de jouer',
-      text: 'Choisis encore 2 actions, puis <b>Valider</b>. Tous les partis jouent en secret et en même temps, puis les actions sont révélées une à une.', last: true }
+    { target: '.map-wrap', wait: 'region', pulse: true,
+      text: '👆 Touche la région qui clignote.' },
+    { target: '#actions [data-act="terrain"]', wait: 'queue',
+      text: '📣 Lance un <b>Meeting</b>. Le gros chiffre = les électeurs que tu gagnes.' },
+    { target: null, wait: 'full', pos: 'top',
+      text: 'Bravo ! Ajoute une ou deux actions si tu as assez d\'argent (€), puis <b>Valider</b>.' },
+    { target: '#btn-validate', wait: 'validate',
+      text: '✅ <b>Valider</b> : tous les partis jouent en même temps.' }
   ];
-  var i = -1, active = false, focusEl = null, bubble = null;
+  var i = -1, active = false, focusEl = null, bubble = null, pulseRid = null;
 
   function done() { try { return localStorage.getItem(KEY) === '1'; } catch (e) { return false; } }
   function markDone() { try { localStorage.setItem(KEY, '1'); } catch (e) {} }
 
-  function clearFocus() { if (focusEl) focusEl.classList.remove('tuto-focus'); focusEl = null; }
-  function stop(finished) {
+  function clearFocus() {
+    if (focusEl) focusEl.classList.remove('tuto-focus'); focusEl = null;
+    Array.prototype.forEach.call(document.querySelectorAll('.tuto-pulse'), function (x) { x.classList.remove('tuto-pulse'); });
+  }
+  function stop() {
     active = false; clearFocus();
     if (bubble) bubble.remove(); bubble = null;
-    var dim = document.getElementById('tuto-dim'); if (dim) dim.hidden = true;
     markDone();
   }
+  function face() { var A = window.PolitikArt; return A && A.advisor ? A.advisor() : ''; }
   function show() {
     var s = STEPS[i], app = document.getElementById('app');
     clearFocus();
-    if (!bubble) { bubble = document.createElement('div'); bubble.className = 'tuto-bubble'; bubble.setAttribute('role', 'dialog'); app.appendChild(bubble); }
-    var dim = document.getElementById('tuto-dim');
-    if (s.target) {
-      focusEl = document.querySelector(s.target);
-      if (focusEl) focusEl.classList.add('tuto-focus');
-      if (dim) dim.hidden = true;
-    } else if (dim) dim.hidden = false;
-    var btn = s.wait ? '' : '<button type="button" class="btn btn-ink btn-small" data-tuto="next">' + (s.last ? 'C\'est parti !' : 'Suivant') + '</button>';
-    bubble.innerHTML = '<div class="tuto-top"><span class="kicker">Tutoriel · ' + (i + 1) + ' / ' + STEPS.length + '</span>' +
-      '<button type="button" class="tuto-skip" data-tuto="skip">Passer</button></div>' +
-      '<div class="tuto-title">' + s.title + '</div><p>' + s.text + '</p>' + btn;
+    if (!bubble) { bubble = document.createElement('div'); bubble.className = 'tuto-bubble'; bubble.setAttribute('role', 'dialog'); bubble.setAttribute('aria-live', 'polite'); app.appendChild(bubble); }
+    if (s.target) { focusEl = document.querySelector(s.target); if (focusEl) focusEl.classList.add('tuto-focus'); }
+    if (s.pulse && pulseRid) {
+      var p = document.querySelector('#map [data-rid="' + pulseRid + '"]'); if (p) p.classList.add('tuto-pulse');
+    }
+    bubble.innerHTML = '<span class="tb-face">' + face() + '</span><p>' + s.text + '</p>' +
+      '<div class="tb-side"><span class="tb-dots">' + STEPS.map(function (x, k) { return '<i class="' + (k <= i ? 'on' : '') + '"></i>'; }).join('') + '</span>' +
+      '<button type="button" class="tuto-skip" data-tuto="skip">Passer</button></div>';
     // bulle en bas si la zone est en haut, et inversement
     var r = focusEl ? focusEl.getBoundingClientRect() : null, ar = app.getBoundingClientRect();
     var upper = r ? (r.top + r.height / 2 - ar.top) < ar.height / 2 : false;
-    bubble.classList.toggle('at-bottom', !!(r && upper));
-    bubble.classList.toggle('at-top', !!(r && !upper));
-    bubble.classList.toggle('at-center', !r);
+    var top = s.pos === 'top' || (r && !upper);
+    bubble.classList.toggle('at-bottom', !top);
+    bubble.classList.toggle('at-top', !!top);
+    bubble.classList.remove('at-center');
   }
   function next() {
     i++;
@@ -66,25 +54,25 @@
   }
   document.addEventListener('click', function (e) {
     var t = e.target.closest('[data-tuto]'); if (!t) return;
-    if (t.getAttribute('data-tuto') === 'next') next();
-    else stop('skip');
+    stop();
   });
 
   window.PolitikTuto = {
-    /* force = true : relancer le tutoriel même s'il a déjà été vu */
-    maybeStart: function (force) {
+    /* force = true : relancer le tutoriel même s'il a déjà été vu. opts.region : la région à faire clignoter */
+    maybeStart: function (force, opts) {
       if (active || (!force && done())) return;
-      active = true; i = -1;
-      var dim = document.getElementById('tuto-dim');
-      if (!dim) { dim = document.createElement('div'); dim.id = 'tuto-dim'; dim.className = 'tuto-dim'; document.getElementById('app').appendChild(dim); }
+      active = true; i = -1; pulseRid = (opts && opts.region) || null;
       next();
     },
     notify: function (what) {
       if (!active) return;
       var s = STEPS[i];
       if (s && s.wait === what) setTimeout(next, 150);
-      else if (s && s.target) setTimeout(show, 0); // l'écran a été redessiné : on remet la mise en lumière
+      else if (what === 'full' && s && s.wait === 'queue') { i++; setTimeout(next, 150); } // déjà 3 actions : on saute une étape
+      else setTimeout(show, 0); // l'écran a été redessiné : on remet la mise en lumière
     },
+    /* la région qui clignote sur la carte (seulement pendant l'étape qui la demande) */
+    pulseRegion: function () { return active && STEPS[i] && STEPS[i].pulse ? pulseRid : null; },
     isActive: function () { return active; },
     stop: function () { if (active) stop(); },
     reset: function () { try { localStorage.removeItem(KEY); } catch (e) {} }

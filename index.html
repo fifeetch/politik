@@ -37,14 +37,15 @@
       <span class="poster-k">Élection présidentielle</span>
       <h1 class="logo">Politik</h1>
       <svg id="title-map" class="title-map" viewBox="0 0 370 357" aria-hidden="true"></svg>
-      <p class="tagline">8 tours de campagne, 2 tours de scrutin, un seul élu. Puis cinq ans pour gouverner.</p>
+      <p class="tagline">Fais campagne. Gagne la France.</p>
     </div>
     <div class="stack">
-      <button class="btn btn-yellow btn-big" data-go="setup">Nouvelle partie</button>
-      <button class="btn btn-ghost-light" data-action="tuto">Comment jouer (tutoriel)</button>
+      <button class="btn btn-yellow btn-big btn-play" data-action="play">▶ Jouer</button>
+      <button class="btn btn-ghost-light" data-go="setup">Partie personnalisée</button>
       <button class="btn btn-ghost-light" data-action="rules">Règles du jeu</button>
       <button class="btn btn-ghost-light" id="btn-install" type="button" hidden>📲 Installer l'application</button>
     </div>
+    <button type="button" class="linkbtn title-tuto" data-action="tuto">Revoir le tutoriel</button>
     <p class="fineprint">Parodie politique. Toute ressemblance est volontaire,<br>toute caricature est équitable.</p>
   </section>
 
@@ -67,7 +68,7 @@
   <!-- Choix du parti -->
   <section id="screen-choose" class="screen">
     <div class="choose-head">
-      <button type="button" class="linkbtn back-link" data-go="setup">‹ Paramètres de la partie</button>
+      <button type="button" class="linkbtn back-link" id="choose-back" data-go="setup">‹ Paramètres de la partie</button>
       <span class="kicker" id="choose-kicker">Toi contre 5 partis menés par l'ordinateur</span>
       <h1 class="h1">Choisis ton parti</h1>
     </div>
@@ -185,7 +186,7 @@
     <div id="end-table" class="end-table"></div>
     <div class="stack">
       <button class="btn btn-yellow btn-big" id="btn-govern" type="button" hidden>Gouverner le pays</button>
-      <button class="btn btn-ghost-light" data-go="setup">Rejouer une campagne</button>
+      <button class="btn btn-ghost-light" data-action="play">Rejouer une campagne</button>
       <button class="btn btn-ghost-light" data-go="title">Accueil</button>
     </div>
   </section>

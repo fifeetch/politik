@@ -13,7 +13,7 @@ Jeu de stratégie électorale parodique sur la carte de France, pensé pour le t
   - Android (Chrome) : la fenêtre d'installation s'ouvre directement.
   - iPhone (Safari) : bouton Partager ⬆️ puis « Sur l'écran d'accueil ».
   Politik a alors sa propre icône, s'ouvre en plein écran et fonctionne sans internet.
-- Première partie : un tutoriel guidé se lance automatiquement (relançable avec « Comment jouer » sur l'écran titre).
+- Première partie : touche **▶ Jouer**. Lulu te guide pendant le premier tour (relançable avec « Revoir le tutoriel » sur l'écran titre).
 
 ## Règles (v1.0, résumé)
 
@@ -33,6 +33,7 @@ Jeu de stratégie électorale parodique sur la carte de France, pensé pour le t
 - **Règles fiabilisées (v1.5)** : les 13 régions retrouvent leur type (urbaine, rurale, industrielle, historique), donc les cartes, bonus de partis et objectifs territoriaux fonctionnent de nouveau ; le mode Simulation part strictement à égalité (plus de bonus caché pour FI et MN) ; l'objectif « Présent partout », acquis d'office, devient « Sur tous les terrains » ; un objectif déjà rempli au départ est échangé ; sa progression et sa valeur (≈ 3 à 4 % des voix au scrutin, hors sondage) s'affichent ; le calcul du Meeting est détaillé (base + bonus) ; la crédibilité gagnée compte à partir de l'action suivante ; l'ordre de jeu du tour et les actions ratées apparaissent dans le flash info.
 - **Entre-deux-tours et 12 partis (v1.6-1.7)** : 12 partis en lice (dont Lutte Prolétaire, Parti Camarade, Juste Milieu, Cap au Large, Toujours Debout, Grande Nostalgie), plus d'alliance pendant la campagne, 1er tour figé, puis une vraie phase entre les deux tours : négocier un soutien contre une concession, mobiliser, appel au rassemblement, consignes de vote, reports de voix expliqués. Les engagements pris sont gardés pour le mandat.
 - **Écran de campagne en onglets (v1.8)** : la carte prend la place centrale, avec le sigle du parti qui tient chaque région ; la fiche de la région tient sur deux lignes (« Détails » ouvre le reste) ; Lulu tient sur une ligne ; le sondage des 12 partis, l'actualité et ton parti ont chacun leur onglet en bas de l'écran.
+- **Démarrage rapide (v2.0)** : sur l'écran titre, **▶ Jouer** lance une partie en deux touchers (choix du parti, programme conseillé pris d'office) ; « Partie personnalisée » garde le paramétrage complet. Le premier tour commence directement sur la carte. Le tutoriel est remplacé par 4 gestes guidés par Lulu (une région qui clignote, un Meeting, d'autres actions, Valider), puis une récompense : ta place au sondage. Le dilemme du joueur arrive au tour 2 au lieu du tour 1.
 - **Un tour** : journal du matin (revenus, militants, scandales, crise ou événement, dilemme) → 3 actions secrètes jouées par tous en même temps → débat (tours 3, 6, 8) → « Sous les projecteurs » pour le premier des sondages.
 
 ## Organisation du code

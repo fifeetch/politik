@@ -17,6 +17,7 @@
   var theme = null, themePicked = false;   // v0.3 : le message (thème) choisi pour les actions
   var advisorHidden = false;               // v0.7 : la conseillère, masquée pour ce tour
   var T = window.PolitikTuto, forceTuto = false, tutoGame = false;
+  var quick = false, quickGame = false;    // v2.0 : « Jouer » direct (programme conseillé, sans paramétrage)
 
   function $(id) { return document.getElementById(id); }
   function el(tag, attrs, html) {
@@ -66,6 +67,7 @@
   /* ---------- Écrans ---------- */
   function go(name) {
     if (name === 'choose' || name === 'title' || name === 'setup') g = null;
+    if (name === 'setup') quick = false;
     if (name !== 'game') FX.clearBreaking();
     Array.prototype.forEach.call(document.querySelectorAll('.screen'), function (s) { s.classList.remove('active'); });
     $('screen-' + name).classList.add('active');
@@ -73,7 +75,8 @@
     if (name === 'setup') renderSetup();
   }
   document.addEventListener('click', function (e) {
-    var h = e.target.closest('[data-action="tuto"]'); if (h) { forceTuto = true; go('setup'); return; }
+    var h = e.target.closest('[data-action="tuto"]'); if (h) { forceTuto = true; quick = true; go('choose'); return; }
+    var pl = e.target.closest('[data-action="play"]'); if (pl) { quick = true; go('choose'); return; }
     var t = e.target.closest('[data-go]'); if (t) go(t.getAttribute('data-go'));
     var a = e.target.closest('[data-action="rules"]'); if (a) showRules();
   });
@@ -170,7 +173,11 @@
 
   /* ---------- Choix du parti ---------- */
   function renderChoose() {
-    $('choose-kicker').textContent = gameMode === 'egal' ? 'Simulation : tout le monde part à égalité' : 'Réaliste : départ « ' + D.BASES[gameBase].short + ' »';
+    $('choose-kicker').textContent = quick ? 'Touche un parti, puis lance-toi' : gameMode === 'egal' ? 'Simulation : tout le monde part à égalité' : 'Réaliste : départ « ' + D.BASES[gameBase].short + ' »';
+    $('screen-choose').classList.toggle('quick', quick);
+    $('choose-back').setAttribute('data-go', quick ? 'title' : 'setup');
+    $('choose-back').textContent = quick ? '‹ Accueil' : '‹ Paramètres de la partie';
+    $('btn-start').textContent = quick ? 'C\'est parti !' : 'Composer mon programme';
     var grid = $('party-grid'); grid.innerHTML = '';
     D.PARTIES.forEach(function (p) {
       var b = el('button', { class: 'party-card' + (p.id === chosen ? ' on' : ''), type: 'button', 'aria-pressed': p.id === chosen, style: 'border-left-color:' + p.color });
@@ -190,7 +197,8 @@
       '</div><div><b>Bases.</b> ' + p.bases.map(function (r) { return E.REG[r].name; }).join(', ') +
       '</div><div><b>Cartes.</b> ' + p.cards.map(function (c) { return D.CARDS[c].name; }).join(' · ') + '</div>';
   }
-  $('btn-start').addEventListener('click', function () { openProgramme(chosen); });
+  /* v2.0 : en partie rapide, le programme conseillé du parti est pris d'office */
+  $('btn-start').addEventListener('click', function () { if (quick) startGame(chosen); else openProgramme(chosen); });
 
   /* ---------- v0.7 : composer son programme ---------- */
   var progSel = [], progFin = [];
@@ -342,6 +350,7 @@
   /* ---------- Partie ---------- */
   function startGame(pid, prog, fin) {
     g = E.createGame(pid, { mode: gameMode, base: gameBase }); me = pid; selected = null; queue = []; theme = null; themePicked = false; advisorHidden = false;
+    quickGame = quick;
     E.setProgramme(g, pid, prog || party(pid).programme, fin || party(pid).financing);
     go('game');
     nextTurn();
@@ -394,6 +403,8 @@
     FX.breaking('Alerte info', alerts);
     lastJournal = journalHtml(info, aiDil, aiAff).replace('paper paper-spin', 'paper');
     showTab('carte'); $('tab-actu-dot').hidden = false;
+    // v2.0 : en partie rapide, le premier tour démarre directement sur la carte (le journal reste dans l'onglet Actu)
+    if (g.turn === 1 && quickGame && !waits) return startActions();
     modal({ kicker: 'Tour ' + g.turn + ' / ' + R.maxTurns, title: g.turn === 1 ? 'La campagne commence' : 'Le journal du matin', html: journalHtml(info, aiDil, aiAff),
             buttons: [{ label: mine.length ? 'Une affaire te tombe dessus →' : waits ? 'Une décision t’attend →' : 'À mes actions', primary: true, onClick: function () {
               chain([function (next) { mine.length ? showAffair(next) : next(); },
@@ -430,7 +441,21 @@
   }
   function startActions() {
     render();
-    if (g.turn === 1 && (forceTuto || !T.isActive())) { var before = T.isActive(); T.maybeStart(forceTuto); tutoGame = !before && T.isActive(); forceTuto = false; }
+    if (g.turn === 1 && (forceTuto || !T.isActive())) {
+      var before = T.isActive(); T.maybeStart(forceTuto, { region: tutoRegion() }); tutoGame = !before && T.isActive(); forceTuto = false;
+      if (tutoGame) render();
+    }
+  }
+  /* v2.0 : la région que le tutoriel fait clignoter : celle où un Meeting rapporte le plus (puis la plus peuplée) */
+  function tutoRegion() {
+    var best = null, bn = -1;
+    D.REGIONS.forEach(function (r) {
+      var act = { type: 'terrain', region: r.id, theme: E.bestTheme(g, me, r.id) };
+      if (canQueue(act)) return;
+      var n = E.terrainCubes(g, me, r.id, act.theme) + r.ins / 100;
+      if (n > bn) { bn = n; best = r.id; }
+    });
+    return best;
   }
   function line(icon, html) { return '<div class="brief-row"><span class="brief-i">' + icon + '</span><span>' + html + '</span></div>'; }
   /* Le journal du tour : la une, puis « en bref » (seulement ce qui compte) */
@@ -517,7 +542,7 @@
   var advShown = null, advTyper = null, advReact = null, advReactTimer = null;
   function renderAdvisor() {
     var box = $('advisor');
-    if (!g || g.phase !== 'actions' || advisorHidden) { box.hidden = true; advShown = null; return; }
+    if (!g || g.phase !== 'actions' || advisorHidden || T.isActive()) { box.hidden = true; advShown = null; return; }
     var text = advReact || advice();
     if (!box.hidden && text === advShown) return;
     box.hidden = false; advShown = text;
@@ -633,7 +658,7 @@
     var wasTiring = tiring(act);
     queue.push(act); justAdded = queue.length - 1;
     luluSay(luluLine(act, wasTiring));
-    render(); T.notify('queue');
+    render(); T.notify(queue.length >= R.actionsPerTurn ? 'full' : 'queue');
   }
 
   /* ---------- v1.8 : les onglets ---------- */
@@ -803,7 +828,7 @@
       var c = g.regions[r.id].controller;
       var k = abstMode ? null : ink[r.id];
       var fill = abstMode ? abstFill(E.regionVoters(g, r.id).abst) : k ? k.from : c ? party(c).color : NEUTRAL;
-      var p = svg('path', { d: M.regions[r.id].d, class: 'reg', fill: fill, tabindex: 0, role: 'button', 'aria-label': r.name, 'data-rid': r.id });
+      var p = svg('path', { d: M.regions[r.id].d, class: 'reg' + (T.pulseRegion() === r.id ? ' tuto-pulse' : ''), fill: fill, tabindex: 0, role: 'button', 'aria-label': r.name, 'data-rid': r.id });
       p.addEventListener('click', function () { selectRegion(r.id); });
       p.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectRegion(r.id); } });
       s.appendChild(p);
@@ -994,7 +1019,7 @@
     MAIN.forEach(function (type) {
       var def = D.ACTIONS[type], act = { type: type, region: selected || undefined, theme: def.theme ? theme : undefined };
       var big = selected ? '+' + bigGain(act) : '—';
-      var b = el('button', { class: 'tile', type: 'button', 'aria-label': def.name + ', ' + costLabel(act) },
+      var b = el('button', { class: 'tile', type: 'button', 'data-act': type, 'aria-label': def.name + ', ' + costLabel(act) },
         '<span class="tile-n">' + def.name + '</span><span class="tile-mid"><span class="tile-i">' + def.icon + '</span><span class="tile-big">' + big + '</span></span>' +
         (selected && tiring(act) && !canQueue(act) ? '<span class="tile-cost tile-warn">⚠️ risque de gaffe</span>' : '<span class="tile-cost">' + costLabel(act, true) + '</span>'));
       if (!selected) b.disabled = true;
@@ -1078,7 +1103,7 @@
   /* ---------- Validation et résolution ---------- */
   $('btn-validate').addEventListener('click', function () {
     if (g.phase !== 'actions') return;
-    if (queue.length < R.actionsPerTurn) {
+    if (queue.length < R.actionsPerTurn && !T.isActive()) {
       modal({ title: 'Valider avec ' + queue.length + ' action' + (queue.length > 1 ? 's' : '') + ' ?', html: '<p>Les actions non utilisées sont perdues.</p>',
               buttons: [{ label: 'Valider quand même', primary: true, onClick: resolve }, { label: 'Retour' }] });
     } else resolve();
@@ -1288,13 +1313,13 @@
     if (res.between) return betweenScreen();
     if (g.turn === 1 && tutoGame) {
       tutoGame = false;
-      return modal({ kicker: 'Tutoriel', title: 'Bon à savoir', html:
-        '<p><b>Chaque tour</b> commence par le journal : un événement, le thème à la une, et parfois un <b>dilemme</b> pour toi.</p>' +
-        '<p><b>⚡ Ménage ton candidat :</b> Meeting et Télé le fatiguent. À 0 ⚡, il risque la gaffe.</p>' +
-        '<p><b>🍳 Attention aux casseroles :</b> attaquer ou tricher en ajoute, et elles finissent par sortir en scandale.</p>' +
-        '<p><b>Aux tours 3, 6 et 8</b>, un <b>débat télévisé</b> : 3 face-à-face où tu choisis tes répliques (🥊 bat ❤️, ❤️ bat 📊, 📊 bat 🥊). Le vainqueur gagne des cubes.</p>' +
-        '<p><b>Sous les projecteurs</b> : à la fin de chaque tour, le parti en tête paie 2 ★ ou perd des cubes. Être premier trop tôt, ça se paie !</p>' +
-        '<p>Tu peux revoir les règles à tout moment avec le bouton <b>•••</b>.</p>',
+      // v2.0 : une récompense courte à la place du long « Bon à savoir »
+      var poll = E.poll(g), rank = 1 + poll.findIndex(function (x) { return x.pid === me; }), mine = poll[rank - 1];
+      var held = D.REGIONS.filter(function (r) { return g.regions[r.id].controller === me; }).length;
+      return modal({ kicker: 'Tour 1 bouclé', title: rank <= 2 ? 'Bien joué !' : 'C\'est parti !', cls: 'reward', html:
+        '<div class="reward-big"><b>' + ordinal(rank) + '</b><span>au sondage · ' + pctFr(mine.pct, 1) + ' %</span></div>' +
+        '<div class="learn">' + A.advisor() + '<p>' + (rank <= 2 ? 'Tu es dans les 2 premiers : tu irais au second tour. Tiens bon jusqu\'au tour 8 !' : 'Objectif : finir dans les 2 premiers au tour 8 pour aller au second tour.') +
+        (held ? ' Tu tiens déjà ' + held + ' région' + (held > 1 ? 's' : '') + '.' : '') + ' Je te glisse un conseil à chaque tour.</p></div>',
         buttons: [{ label: 'Tour suivant', primary: true, onClick: nextTurn }] });
     }
     setTimeout(nextTurn, spot && spot.pid !== me ? 900 : 0);

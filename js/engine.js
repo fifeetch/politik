@@ -433,7 +433,10 @@
     }
     out.news = g.news;
     // dilemme : un parti à tour de rôle
-    var dp = g.players[(g.turn - 1) % g.players.length];
+    // v2.0 : le joueur humain reçoit le sien au tour 2, pour que le premier tour soit tout de suite du jeu
+    var order = g.players.slice();
+    if (order.length > 1 && order[0].human) order.splice(1, 0, order.shift());
+    var dp = order[(g.turn - 1) % order.length];
     var did = g.dilemmas[(g.turn - 1) % g.dilemmas.length];
     g.dilemma = { pid: dp.id, id: did };
     out.dilemma = g.dilemma;

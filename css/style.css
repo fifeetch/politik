@@ -447,17 +447,30 @@ button { font-family: inherit; color: inherit; }
 .transfers p { margin: 4px 0; font-size: 13px; color: var(--ink-2); }
 
 /* ---------- Tutoriel ---------- */
-.tuto-dim { position: absolute; inset: 0; background: rgba(35,32,58,.6); z-index: 40; }
-.tuto-focus { position: relative; z-index: 50; box-shadow: 0 0 0 3px var(--violet), 0 0 0 9999px rgba(35,32,58,.6) !important; }
-.tuto-bubble { position: absolute; left: 12px; right: 12px; z-index: 60; background: var(--sheet); border: 1.5px solid var(--ink); border-left: 6px solid var(--violet); padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 6px; animation: up .2s ease-out; }
+.tuto-focus { position: relative; z-index: 50; box-shadow: 0 0 0 3px var(--violet), 0 0 0 9999px rgba(35,32,58,.55) !important; border-radius: 12px; }
+/* v2.0 : Lulu guide le premier tour, une phrase à la fois */
+.tuto-bubble { position: absolute; left: 12px; right: 12px; z-index: 60; background: var(--sheet); border: 1.5px solid var(--ink); border-radius: 16px; box-shadow: 0 4px 0 var(--ink); padding: 10px 12px; display: flex; align-items: center; gap: 10px; animation: up .2s ease-out; }
 .tuto-bubble.at-top { top: max(12px, env(safe-area-inset-top)); }
 .tuto-bubble.at-bottom { bottom: max(16px, env(safe-area-inset-bottom)); }
-.tuto-bubble.at-center { top: 30%; }
-.tuto-bubble p { margin: 0; font-size: 15px; line-height: 1.45; }
-.tuto-bubble .btn { align-self: flex-end; margin-top: 4px; padding: 0 18px; }
-.tuto-top { display: flex; justify-content: space-between; align-items: center; }
-.tuto-title { font-family: var(--display); font-weight: 800; font-stretch: 75%; font-size: 24px; line-height: 1.05; }
-.tuto-skip { background: none; border: 0; font-size: 14px; font-weight: 700; text-decoration: underline; cursor: pointer; min-height: 32px; padding: 0 4px; color: var(--muted); }
+.tuto-bubble p { margin: 0; flex: 1; font-size: 16px; line-height: 1.35; }
+.tb-face { width: 46px; height: 46px; flex: none; display: block; }
+.tb-face svg { width: 100%; height: 100%; display: block; }
+.tb-side { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex: none; }
+.tb-dots { display: flex; gap: 4px; }
+.tb-dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--line, #D9DCD3); }
+.tb-dots i.on { background: var(--violet); }
+.tuto-skip { background: none; border: 0; font-size: 13px; font-weight: 700; text-decoration: underline; cursor: pointer; min-height: 32px; padding: 0 2px; color: var(--muted); }
+.reg.tuto-pulse { stroke: var(--violet); stroke-width: 3.5; animation: reg-pulse .7s ease-in-out infinite alternate; }
+@keyframes reg-pulse { from { opacity: 1; } to { opacity: .45; } }
+@media (prefers-reduced-motion: reduce) { .reg.tuto-pulse { animation: none; } }
+/* v2.0 : écran titre et partie rapide */
+#screen-title .btn-play { min-height: 64px; font-size: 22px; letter-spacing: .02em; }
+.title-tuto { align-self: center; color: #C9C4EC; font-size: 14px; margin: 2px 0 8px; }
+#screen-choose.quick #party-detail > :not(.cand-line):not(.score24) { display: none; }
+#screen-choose.quick #btn-start { position: sticky; bottom: max(10px, env(safe-area-inset-bottom)); z-index: 5; }
+.reward .reward-big { display: flex; align-items: baseline; justify-content: center; gap: 10px; margin: 4px 0 12px; }
+.reward .reward-big b { font-family: var(--display); font-weight: 800; font-size: 64px; line-height: 1; color: var(--violet); animation: up .35s ease-out; }
+.reward .reward-big span { font-size: 15px; font-weight: 700; }
 
 /* ---------- Illustrations, fiches, conseillère ---------- */
 .art { display: block; width: 100%; height: auto; }
