@@ -41,7 +41,7 @@
   }
   function blush(y) { return '<ellipse cx="44" cy="' + y + '" rx="4" ry="2.4" fill="#E8776F" opacity=".45"/><ellipse cx="76" cy="' + y + '" rx="4" ry="2.4" fill="#E8776F" opacity=".45"/>'; }
 
-  var P = {};
+  var P = {}, OVR = {};   // v2.5 : OVR = portraits remplacés par le personnage du joueur
   /* La France Indignée — Rémi Barricade, le tribun de la rue : crâne dégarni, sourcils broussailleux, il harangue la foule */
   P.FI = function () {
     var sk = '#E9B58C';
@@ -301,8 +301,36 @@
     '<path d="M64,26 Q80,14 96,26 Q96,38 80,38 L72,44 L74,37 Q64,35 64,26 Z" fill="#fff"' + o(2.4) + '/><text x="80" y="31" font-size="11" font-weight="900" text-anchor="middle" fill="' + INK + '" font-family="sans-serif">!?</text>' +
     '<rect x="66" y="74" width="28" height="16" rx="3" fill="#1B1F3B"' + o(2) + '/><text x="80" y="85" font-size="7" font-weight="900" text-anchor="middle" fill="#F5D547" font-family="sans-serif">DIRECT</text>', '#E6E1D4'); };
 
+
+  /* v2.5 : un visage à composer (ton personnage). cfg : skin, hair, hairColor, glasses, outfit, bg, mouth, beard */
+  var SKINS = ['#F6D4B6', '#F2CBA6', '#E9B58C', '#C68B5E', '#8D5A3B', '#5C3A24'];
+  function face(cfg) {
+    cfg = cfg || {};
+    var sk = SKINS[cfg.skin || 0] || SKINS[0], hc = cfg.hairColor || '#3A2A20', hair = cfg.hair || 'court', bg = cfg.bg || '#D9D4F0';
+    var back = '', top = '';
+    if (hair === 'long') back = '<path d="M28,92 Q20,44 36,26 Q60,10 84,26 Q100,44 92,92 Q84,98 80,86 L40,86 Q36,98 28,92 Z" fill="' + hc + '"' + o() + '/>';
+    if (hair === 'boucles') back = '<g fill="' + hc + '"' + o(2) + '><circle cx="36" cy="40" r="10"/><circle cx="84" cy="40" r="10"/><circle cx="34" cy="58" r="9"/><circle cx="86" cy="58" r="9"/><circle cx="46" cy="24" r="11"/><circle cx="74" cy="24" r="11"/><circle cx="60" cy="20" r="11"/></g>';
+    if (hair === 'chignon') back = '<ellipse cx="60" cy="16" rx="13" ry="10" fill="' + hc + '"' + o() + '/>';
+    if (hair === 'carre') back = '<path d="M30,74 Q24,30 60,24 Q96,30 90,74 L78,74 L78,46 L42,46 L42,74 Z" fill="' + hc + '"' + o() + '/>';
+    if (hair === 'court') top = '<path d="M38,48 Q36,24 60,23 Q84,24 82,48 Q78,34 66,36 Q60,30 52,36 Q42,34 38,48 Z" fill="' + hc + '"' + o(2.2) + '/>';
+    if (hair === 'long' || hair === 'carre' || hair === 'chignon') top = '<path d="M38,50 Q36,26 60,25 Q84,26 82,50 Q78,34 60,34 Q44,34 38,50 Z" fill="' + hc + '"' + o(2.2) + '/>';
+    if (hair === 'boucles') top = '<path d="M38,46 Q40,26 60,26 Q80,26 82,46 Q74,34 64,38 Q56,30 48,38 Q42,36 38,46 Z" fill="' + hc + '"' + o(2.2) + '/>';
+    if (hair === 'chauve') top = '<path d="M36,50 Q32,38 40,34 Q38,44 41,50 Z M84,50 Q88,38 80,34 Q82,44 79,50 Z" fill="' + hc + '"' + o(2) + '/>';
+    var gl = cfg.glasses === 'rondes' ? '<circle cx="51" cy="52" r="7.5" fill="none"' + o(2.4) + '/><circle cx="69" cy="52" r="7.5" fill="none"' + o(2.4) + '/><path d="M58.5,52 L61.5,52" fill="none"' + o(2.4) + '/>'
+      : cfg.glasses === 'carrees' ? '<rect x="42" y="46" width="16" height="11" rx="2" fill="none"' + o(2.4) + '/><rect x="62" y="46" width="16" height="11" rx="2" fill="none"' + o(2.4) + '/><path d="M58,51 L62,51" fill="none"' + o(2.4) + '/>' : '';
+    var mouth = cfg.mouth === 'grand' ? '<path d="M48,66 Q60,64 72,66 Q68,77 60,77 Q52,77 48,66 Z" fill="#fff"' + o(2.4) + '/><path d="M49,67 Q60,70 71,67" fill="none"' + o(1.4) + '/>'
+      : cfg.mouth === 'serieux' ? '<path d="M52,69 L68,69" fill="none"' + o(2.6) + '/>' : '<path d="M51,68 Q60,75 69,68" fill="none"' + o(2.6) + '/>';
+    var beard = cfg.beard ? '<path d="M40,62 Q42,84 60,85 Q78,84 80,62 Q74,74 60,74 Q46,74 40,62 Z" fill="' + hc + '"' + o(2) + '/>' : '';
+    return frame(bg, back + body(cfg.outfit || '#26305A', '#FFFFFF') + neck(sk) + ears(sk, 55, 22) +
+      '<path d="M39,54 Q38,28 60,27 Q82,28 81,54 Q81,79 60,81 Q39,79 39,54 Z" fill="' + sk + '"' + o() + '/>' + top +
+      brows(43, -1.5, 3, cfg.hair === 'chauve' ? '#7A7A84' : hc) + eyes(52, { r: 3.6 }) + gl +
+      '<path d="M59,56 Q57,62 61,63" fill="none"' + o(2) + '/>' + beard + mouth + blush(63));
+  }
+
   var ART = {
-    portrait: function (pid) { return P[pid] ? P[pid]() : ''; },
+    portrait: function (pid) { return OVR[pid] ? OVR[pid]() : P[pid] ? P[pid]() : ''; },
+    setPortrait: function (pid, fn) { if (fn) OVR[pid] = fn; else delete OVR[pid]; },
+    face: face, SKINS: SKINS,
     advisor: advisor,
     vignette: function (k) { return V[k] ? V[k]() : ''; },
     hasVignette: function (k) { return !!V[k]; }

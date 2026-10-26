@@ -503,6 +503,7 @@
     debateTurns: [3, 6, 8],
     incomeMoney: 4, incomePerRegion: 1, incomeRegionMax: 3, incomeInfl: 2,
     minControl: 3, maxCubes: 10, startCubes: 3,
+    novelty: { turns: 4, strongTurns: 1, start: 3 },   // v2.5 : ton parti tout neuf part d'environ 3 % ; effet nouveauté : +2 cubes en Meeting au tour 1, +1 aux tours 2 à 4
     equalStart: 2,               // v1.1 mode Égalité : 2 électeurs pour chaque parti dans chaque région
     othersKeep: 0.82,            // v1.1 mode Réaliste : à chaque tour, les « autres listes » gardent 82 % de leurs électeurs
     othersTransfer: 0.6,         // au 2nd tour, 60 % des électeurs des autres listes votent pour un finaliste

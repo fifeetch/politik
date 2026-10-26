@@ -10,6 +10,10 @@
   var SVGNS = 'http://www.w3.org/2000/svg';
 
   var g = null, me = null, chosen = 'VP', selected = null, queue = [];
+  /* v2.5 : ton personnage et ton parti (gardés d'une partie à l'autre) */
+  var PS = window.PolitikPerso, perso = null, founded = null, leadOn = false;
+  try { perso = JSON.parse(localStorage.getItem('politik_perso') || 'null'); founded = JSON.parse(localStorage.getItem('politik_parti') || 'null'); leadOn = localStorage.getItem('politik_lead') === '1'; } catch (e) {}
+  function savePerso() { try { localStorage.setItem('politik_perso', JSON.stringify(perso)); localStorage.setItem('politik_parti', JSON.stringify(founded)); localStorage.setItem('politik_lead', leadOn ? '1' : '0'); } catch (e) {} }
   var gameMode = 'reel';   // v1.1 : 'reel' (Réaliste) ou 'egal' (Simulation : égalité des chances)
   var gameBase = 'e2024';  // v1.2 : point de départ du mode Réaliste : 'p2022', 'e2024' ou 'sond'
   try { if (localStorage.getItem('politik_mode') === 'egal') gameMode = 'egal'; var sb = localStorage.getItem('politik_base'); if (D.BASES[sb]) gameBase = sb; } catch (e) {}
@@ -173,22 +177,38 @@
 
   /* ---------- Choix du parti ---------- */
   function renderChoose() {
+    PS.reset(A);   // v2.5 : les partis retrouvent leurs candidats, le parti fondé n'est pas encore en lice
+    renderPersoStrip();
     $('choose-kicker').textContent = quick ? 'Touche un parti, puis lance-toi' : gameMode === 'egal' ? 'Simulation : tout le monde part à égalité' : 'Réaliste : départ « ' + D.BASES[gameBase].short + ' »';
     $('screen-choose').classList.toggle('quick', quick);
     $('choose-back').setAttribute('data-go', quick ? 'title' : 'setup');
     $('choose-back').textContent = quick ? '‹ Accueil' : '‹ Paramètres de la partie';
     $('btn-start').textContent = quick ? 'C\'est parti !' : 'Composer mon programme';
     var grid = $('party-grid'); grid.innerHTML = '';
+    // v2.5 : ton parti (ou la case pour le fonder) en premier
+    var fb = el('button', { class: 'party-card party-new' + (founded && chosen === founded.sigle ? ' on' : ''), type: 'button', style: 'border-left-color:' + (founded ? founded.color : 'var(--violet)') });
+    if (founded) {
+      fb.innerHTML = '<div class="party-band" style="background:' + founded.color + ';color:' + PS.buildParty(founded, perso).ink + '"><span class="party-ini">' + esc(founded.sigle) + '</span><span class="party-fam">Ton parti</span></div><div class="party-face">' + A.face(PS.faceCfg(perso || PS.defaultChar(), founded.color)) +
+        '</div><div class="party-body"><span class="party-name">' + esc(founded.name) + '</span><span class="party-res">' + esc((perso && perso.name) || 'Toi') + '</span></div>';
+      fb.addEventListener('click', function () { chosen = founded.sigle; renderChoose(); });
+    } else {
+      fb.innerHTML = '<div class="party-band"><span class="party-ini">＋</span><span class="party-fam">Nouveau</span></div><div class="party-face party-plus">✦</div><div class="party-body"><span class="party-name">Fonder ton parti</span><span class="party-res">nom, couleur, idées</span></div>';
+      fb.addEventListener('click', function () { foundParty(); });
+    }
+    grid.appendChild(fb);
+    if (founded && chosen === founded.sigle) { renderFoundedDetail(); return; }
+    if (!E.PARTY[chosen]) chosen = 'VP';
     D.PARTIES.forEach(function (p) {
       var b = el('button', { class: 'party-card' + (p.id === chosen ? ' on' : ''), type: 'button', 'aria-pressed': p.id === chosen, style: 'border-left-color:' + p.color });
+      var meLead = leadOn && perso && perso.name && p.id === chosen;   // v2.5 : tu prends la tête du parti choisi
       b.innerHTML = '<div class="party-band" style="background:' + p.color + ';color:' + p.ink + '"><span class="party-ini">' + p.id +
-        '</span><span class="party-fam">' + esc(p.family) + '</span></div><div class="party-face">' + A.portrait(p.id) + '</div><div class="party-body"><span class="party-name">' + esc(p.name) +
-        '</span><span class="party-res">' + esc(p.candidate) + '</span></div>';
+        '</span><span class="party-fam">' + esc(p.family) + '</span></div><div class="party-face">' + (meLead ? A.face(PS.faceCfg(perso, p.color)) : A.portrait(p.id)) + '</div><div class="party-body"><span class="party-name">' + esc(p.name) +
+        '</span><span class="party-res">' + esc(meLead ? perso.name : p.candidate) + '</span></div>';
       b.addEventListener('click', function () { chosen = p.id; renderChoose(); });
       grid.appendChild(b);
     });
-    var p = party(chosen);
-    $('party-detail').innerHTML = '<div class="cand-line">' + A.portrait(p.id) + '<div><b class="cand-name">' + esc(p.candidate) + '</b><span>' + esc(p.candTitle) + ' · tempérament ' + D.TEMPERS[p.id].label + '</span></div></div>' +
+    var p = party(chosen), lead = leadOn && perso && perso.name;
+    $('party-detail').innerHTML = '<div class="cand-line">' + (lead ? A.face(PS.faceCfg(perso, p.color)) : A.portrait(p.id)) + '<div><b class="cand-name">' + esc(lead ? perso.name : p.candidate) + '</b><span>' + (lead ? 'à la tête du parti · ' + esc(PS.TRAITS[perso.trait].name.toLowerCase()) : esc(p.candTitle) + ' · tempérament ' + D.TEMPERS[p.id].label) + '</span></div></div>' +
       (gameMode === 'reel' ? '<div class="score24"><span>Score de départ</span><b>' + pctFr(natScore(gameBase, p.id) / 100, 1) + ' %</b><small>' + esc(D.BASES[gameBase].text) + ' <button type="button" class="linkbtn" data-learn="' + D.BASES[gameBase].learn + '">Pourquoi ce chiffre ?</button></small></div>'
         : '<div class="score24"><span>Mode Égalité</span><b>2</b><small>électeurs dans chaque région pour chaque parti : personne ne part en tête.</small></div>') +
       axisHtml(p.id) +
@@ -198,7 +218,141 @@
       '</div><div><b>Cartes.</b> ' + p.cards.map(function (c) { return D.CARDS[c].name; }).join(' · ') + '</div>';
   }
   /* v2.0 : en partie rapide, le programme conseillé du parti est pris d'office */
-  $('btn-start').addEventListener('click', function () { if (quick) startGame(chosen); else openProgramme(chosen); });
+  $('btn-start').addEventListener('click', function () {
+    if (founded && chosen === founded.sigle && !(perso && perso.name)) { toast('Crée d\'abord ton personnage.'); return editChar(function () { renderChoose(); }); }
+    applyPerso();
+    if (quick) startGame(chosen); else openProgramme(chosen);
+  });
+  /* v2.5 : juste avant la partie, ton parti entre en lice, ou tu prends la tête du parti choisi */
+  function applyPerso() {
+    PS.reset(A);
+    if (founded && chosen === founded.sigle) PS.found(founded, perso, A);
+    else if (leadOn && perso && perso.name) PS.lead(chosen, perso, A);
+  }
+  /* La bande « Ton personnage », au-dessus des partis */
+  function renderPersoStrip() {
+    var has = perso && perso.name, col = founded && chosen === founded.sigle ? founded.color : (E.PARTY[chosen] || { color: '#7B3FA0' }).color;
+    $('perso-strip').innerHTML = '<span class="ps-face">' + A.face(PS.faceCfg(perso || PS.defaultChar(), col)) + '</span><span class="ps-txt"><b>' + (has ? esc(perso.name) : 'Ton personnage') + '</b><small>' +
+      (has ? (founded && chosen === founded.sigle ? 'candidat de ton parti' : leadOn ? 'tu prends la tête du parti choisi' : 'tu joues avec le candidat du parti') : 'ton nom, ton visage, ton style en débat') + '</small></span>' +
+      (has && !(founded && chosen === founded.sigle) ? '<button type="button" class="ps-toggle" id="ps-lead" aria-pressed="' + leadOn + '">' + (leadOn ? 'Candidat : toi' : 'Être candidat') + '</button>' : '') +
+      '<button type="button" class="ps-edit" id="ps-edit">' + (has ? 'Modifier' : 'Créer') + '</button>';
+    $('ps-edit').onclick = function () { editChar(function () { if (!leadOn && perso.name) leadOn = true; savePerso(); renderChoose(); }); };
+    if ($('ps-lead')) $('ps-lead').onclick = function () { leadOn = !leadOn; savePerso(); renderChoose(); };
+  }
+  function renderFoundedDetail() {
+    var p = PS.buildParty(founded, perso);
+    D.PARTIES.forEach(function (q) {
+      var b = el('button', { class: 'party-card', type: 'button', style: 'border-left-color:' + q.color });
+      b.innerHTML = '<div class="party-band" style="background:' + q.color + ';color:' + q.ink + '"><span class="party-ini">' + q.id + '</span><span class="party-fam">' + esc(q.family) + '</span></div><div class="party-face">' + A.portrait(q.id) + '</div><div class="party-body"><span class="party-name">' + esc(q.name) + '</span><span class="party-res">' + esc(q.candidate) + '</span></div>';
+      b.addEventListener('click', function () { chosen = q.id; renderChoose(); });
+      $('party-grid').appendChild(b);
+    });
+    $('party-detail').innerHTML = '<div class="cand-line">' + A.face(PS.faceCfg(perso || PS.defaultChar(), p.color)) + '<div><b class="cand-name">' + esc((perso && perso.name) || 'Toi') + '</b><span>à la tête de ' + esc(p.name) + ' · ' + esc(PS.TRAITS[(perso || PS.defaultChar()).trait].name.toLowerCase()) + '</span></div></div>' +
+      '<div class="score24"><span>Score de départ</span><b>≈ ' + D.RULES.novelty.start + ' %</b><small>Un parti tout neuf : des sympathisants seulement là où tes thèmes parlent aux habitants.</small></div>' +
+      axisHtmlPos(p) +
+      '<div><b>Tes thèmes.</b> ' + p.themes.map(function (t) { return th(t).icon + ' ' + esc(th(t).name); }).join(' · ') + '</div>' +
+      '<div><b>Force.</b> ' + esc(p.force) + '</div><div><b>Faiblesse.</b> ' + esc(p.weakness) + '</div>' +
+      '<div><b>Bases.</b> ' + p.bases.map(function (r) { return E.REG[r].name; }).join(', ') + '</div>' +
+      '<div class="stack"><button type="button" class="btn" id="fp-edit">Modifier ton parti</button><button type="button" class="linkbtn" id="fp-del">Dissoudre ton parti</button></div>';
+    $('fp-edit').onclick = function () { foundParty(); };
+    $('fp-del').onclick = function () { modal({ kicker: 'Ton parti', title: 'Dissoudre ' + founded.name + ' ?', html: '<p>Ton parti disparaît. Ton personnage reste : tu pourras prendre la tête d\'un autre parti, ou en fonder un nouveau.</p>',
+      buttons: [{ label: 'Dissoudre', primary: true, onClick: function () { founded = null; chosen = 'VP'; savePerso(); renderChoose(); } }, { label: 'Annuler' }] }); };
+  }
+  /* L'axe avec ton parti placé parmi les 12 */
+  function axisHtmlPos(p) {
+    var all = D.PARTIES.concat([p]).sort(function (a, b) { return a.pos - b.pos; });
+    return '<div class="axis"><span class="axis-l">gauche</span>' + all.map(function (q) {
+      var on = q === p; return '<span class="axis-dot' + (on ? ' on' : '') + '" style="' + (on ? 'background:' + q.color + ';color:' + q.ink : '') + '">' + esc(q.id) + '</span>';
+    }).join('') + '<span class="axis-l">droite</span></div>';
+  }
+
+  /* ---------- v2.5 : l'atelier du personnage ---------- */
+  function editChar(onDone) {
+    var c = JSON.parse(JSON.stringify(perso || PS.defaultChar())), F = PS.FACE;
+    if (!c.name) c.name = PS.randomName();
+    function chips(key, list) {
+      return '<div class="pc-row">' + list.map(function (x) { var v = x[0], on = c.face[key] === v; return '<button type="button" class="pc-chip" data-k="' + key + '" data-v="' + v + '" aria-pressed="' + on + '">' + esc(x[1]) + '</button>'; }).join('') + '</div>';
+    }
+    function swatches(key, list, isSkin) {
+      return '<div class="pc-row">' + list.map(function (v, i) { var val = isSkin ? i : v, on = c.face[key] === val; return '<button type="button" class="pc-sw" data-k="' + key + '" data-v="' + val + '" aria-pressed="' + on + '" style="background:' + v + '" aria-label="couleur ' + (i + 1) + '"></button>'; }).join('') + '</div>';
+    }
+    function draw() {
+      var col = founded ? founded.color : (E.PARTY[chosen] || { color: '#7B3FA0' }).color;
+      $('pc-prev').innerHTML = A.face(PS.faceCfg(c, col));
+    }
+    var html = '<div class="pc-top"><div class="pc-prev" id="pc-prev"></div><div class="pc-name"><label class="kicker" for="pc-name">Ton nom</label><input id="pc-name" class="pc-input" maxlength="26" value="' + esc(c.name) + '"><button type="button" class="linkbtn" id="pc-rand">🎲 Un nom au hasard</button></div></div>' +
+      '<div class="kicker">Peau</div>' + swatches('skin', A.SKINS, true) +
+      '<div class="kicker">Cheveux</div>' + chips('hair', F.hair) + swatches('hairColor', F.hairColor) +
+      '<div class="kicker">Lunettes</div>' + chips('glasses', F.glasses) +
+      '<div class="kicker">Expression</div>' + chips('mouth', F.mouth) +
+      '<div class="kicker">Tenue</div>' + swatches('outfit', F.outfit) +
+      '<div class="pc-row"><button type="button" class="pc-chip" id="pc-beard" aria-pressed="' + !!c.face.beard + '">Barbe</button></div>' +
+      '<div class="kicker">Ton style en débat</div><div class="pick">' + Object.keys(PS.TRAITS).map(function (k) {
+        var t = PS.TRAITS[k]; return '<button type="button" class="pick-row pc-trait" data-trait="' + k + '" aria-pressed="' + (c.trait === k) + '"><span class="lc-ai">' + t.icon + '</span><span class="pick-txt"><b>' + esc(t.name) + '</b><small>' + esc(t.text) + '</small></span></button>';
+      }).join('') + '</div>';
+    modal({ kicker: 'Ton personnage', title: 'Qui es-tu ?', html: html, buttons: [{ label: 'C\'est moi !', primary: true, onClick: function () {
+      c.name = ($('pc-name') ? $('pc-name').value : c.name).trim() || PS.randomName(); perso = c; savePerso(); if (onDone) onDone();
+    } }, { label: 'Annuler' }],
+      onOpen: function () {
+        draw();
+        $('pc-name').addEventListener('input', function () { c.name = this.value; });
+        $('pc-rand').addEventListener('click', function () { c.name = PS.randomName(); $('pc-name').value = c.name; });
+        $('pc-beard').addEventListener('click', function () { c.face.beard = !c.face.beard; this.setAttribute('aria-pressed', c.face.beard); draw(); });
+        Array.prototype.forEach.call(document.querySelectorAll('[data-k]'), function (b) {
+          b.addEventListener('click', function () {
+            var k = b.getAttribute('data-k'), v = b.getAttribute('data-v'); c.face[k] = k === 'skin' ? +v : v;
+            Array.prototype.forEach.call(document.querySelectorAll('[data-k="' + k + '"]'), function (x) { x.setAttribute('aria-pressed', x === b); });
+            draw();
+          });
+        });
+        Array.prototype.forEach.call(document.querySelectorAll('[data-trait]'), function (b) {
+          b.addEventListener('click', function () { c.trait = b.getAttribute('data-trait'); Array.prototype.forEach.call(document.querySelectorAll('[data-trait]'), function (x) { x.setAttribute('aria-pressed', x === b); }); });
+        });
+      } });
+  }
+
+  /* ---------- v2.5 : fonder ton parti ---------- */
+  function foundParty() {
+    if (!(perso && perso.name)) { return editChar(function () { foundParty(); }); }
+    var d = founded ? JSON.parse(JSON.stringify(founded)) : { name: PS.randomPartyName(), sigle: '', color: PS.COLORS[0], pos: 3.5, themes: [] };
+    if (!d.sigle) d.sigle = PS.sigleOf(d.name);
+    var STEPS = [0.5, 1.2, 2, 2.5, 3.2, 3.8, 4.4, 5, 5.6, 6.3];
+    function axisPick() {
+      var all = D.PARTIES.slice().sort(function (a, b) { return a.pos - b.pos; });
+      return '<div class="fp-axis">' + STEPS.map(function (x) {
+        return '<button type="button" class="fp-step" data-pos="' + x + '" aria-pressed="' + (d.pos === x) + '" title="' + esc(PS.familyOf(x)) + '"></button>';
+      }).join('') + '</div><div class="fp-ref">' + all.map(function (q) { return '<i style="left:' + (100 * (q.pos - 0.2) / 6.6).toFixed(1) + '%;background:' + q.color + '" title="' + esc(q.short) + '"></i>'; }).join('') + '</div>' +
+        '<div class="fp-axl"><span>gauche</span><b id="fp-fam">' + esc(PS.familyOf(d.pos)) + '</b><span>droite</span></div>';
+    }
+    var html = '<label class="kicker" for="fp-name">Le nom de ton parti</label><input id="fp-name" class="pc-input" maxlength="32" value="' + esc(d.name) + '"><button type="button" class="linkbtn" id="fp-rand">🎲 Un nom au hasard</button>' +
+      '<div class="fp-two"><div><label class="kicker" for="fp-sig">Sigle</label><input id="fp-sig" class="pc-input fp-sig" maxlength="3" value="' + esc(d.sigle) + '"></div><div><span class="kicker">Couleur</span><div class="pc-row">' +
+      PS.COLORS.map(function (col) { return '<button type="button" class="pc-sw" data-col="' + col + '" aria-pressed="' + (d.color === col) + '" style="background:' + col + '" aria-label="couleur"></button>'; }).join('') + '</div></div></div>' +
+      '<span class="kicker">Ta place sur l\'axe gauche-droite</span>' + axisPick() +
+      '<p class="hint">Les points de couleur sont les 12 autres partis. Plus tu es près d\'eux, plus tu leur prends des électeurs… et plus les alliances avec eux sont faciles.</p>' +
+      '<span class="kicker">Tes 2 thèmes forts</span><div class="pc-row">' + D.THEMES.map(function (t) {
+        return '<button type="button" class="pc-chip" data-th="' + t.id + '" aria-pressed="' + (d.themes.indexOf(t.id) >= 0) + '">' + t.icon + ' ' + esc(t.name) + '</button>';
+      }).join('') + '</div><p class="hint" id="fp-err"></p>';
+    modal({ kicker: 'Nouveau parti', title: 'Fonder ton parti', html: html, buttons: [{ label: 'Fonder le parti', primary: true, keep: true, onClick: function () {
+      d.name = $('fp-name').value.trim(); d.sigle = $('fp-sig').value.toUpperCase().replace(/[^A-Z]/g, '');
+      var err = !d.name ? 'Donne un nom à ton parti.' : PS.sigleError(d.sigle) || (d.themes.length !== 2 ? 'Choisis 2 thèmes forts.' : null);
+      if (err) { $('fp-err').textContent = err; return; }
+      closeModal(); founded = d; chosen = d.sigle; savePerso(); renderChoose();
+      toast('🎉 ' + d.name + ' est né !');
+    } }, { label: 'Annuler' }],
+      onOpen: function () {
+        $('fp-name').addEventListener('input', function () { d.name = this.value; $('fp-sig').value = PS.sigleOf(d.name); });
+        $('fp-rand').addEventListener('click', function () { d.name = PS.randomPartyName(); $('fp-name').value = d.name; $('fp-sig').value = PS.sigleOf(d.name); });
+        Array.prototype.forEach.call(document.querySelectorAll('[data-col]'), function (b) { b.addEventListener('click', function () { d.color = b.getAttribute('data-col'); Array.prototype.forEach.call(document.querySelectorAll('[data-col]'), function (x) { x.setAttribute('aria-pressed', x === b); }); }); });
+        Array.prototype.forEach.call(document.querySelectorAll('[data-pos]'), function (b) { b.addEventListener('click', function () { d.pos = +b.getAttribute('data-pos'); $('fp-fam').textContent = PS.familyOf(d.pos); Array.prototype.forEach.call(document.querySelectorAll('[data-pos]'), function (x) { x.setAttribute('aria-pressed', x === b); }); }); });
+        Array.prototype.forEach.call(document.querySelectorAll('[data-th]'), function (b) {
+          b.addEventListener('click', function () {
+            var t = b.getAttribute('data-th'), i = d.themes.indexOf(t);
+            if (i >= 0) d.themes.splice(i, 1); else { d.themes.push(t); if (d.themes.length > 2) d.themes.shift(); }
+            Array.prototype.forEach.call(document.querySelectorAll('[data-th]'), function (x) { x.setAttribute('aria-pressed', d.themes.indexOf(x.getAttribute('data-th')) >= 0); });
+          });
+        });
+      } });
+  }
 
   /* ---------- v0.7 : composer son programme ---------- */
   var progSel = [], progFin = [];

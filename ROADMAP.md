@@ -156,9 +156,16 @@ Quand tu gagnes la présidentielle, le bouton « 🏛️ Gouverner le pays » ou
 - La carte des 577 circonscriptions est tirée une fois : projections et vote réel portent sur la même géographie ; le jour du vote garde sa part de hasard (l'humeur du pays).
 - **Équilibre** (`node test/legis-sim.js 150`) : un joueur qui forme son camp, fait campagne et choisit bien obtient la majorité absolue environ 6 fois sur 10 (relative 1 fois sur 4) ; avec des alliances mais sans campagne, environ 1 fois sur 2 ; seul, jamais.
 
+## v2.5 — fait : ton personnage et ton parti
+- **Ton personnage** : nom (ou un nom en jeu de mots au hasard), visage à composer dans le style dessin de presse (6 peaux, 6 coiffures, 6 couleurs de cheveux, lunettes, expression, tenue, barbe), et un style en débat (Tribun, Technocrate, Bagarreur, Rassembleur) qui fixe ton tempérament. Il remplace le candidat partout : pion sur la carte, journal, débats, soirée électorale, quinquennat.
+- **Prendre la tête d'un parti** : bouton « Candidat : toi » ; le parti garde ses électeurs, ses régions et son programme. Il retrouve son candidat à la partie suivante si tu changes d'avis.
+- **Fonder ton parti** : nom, sigle (2 ou 3 lettres), couleur, place sur l'axe (10 crans, avec les 12 partis en repère), 2 thèmes forts. Son programme part de tes thèmes, complété par les idées des partis voisins ; ses régions de base sont celles qui partagent tes préoccupations.
+- **Équilibre** (`node test/perso-sim.js 200`) : départ entre 2 et 4 %, environ 8 % au 1er tour quand l'ordinateur le mène, victoire 5 à 18 % des parties selon sa place sur l'axe (plus facile au centre, plus dur aux extrêmes).
+- Le gouvernement et l'opposition sont décalés en v2.6 et v2.7.
+
 ## Prochains lots (gouvernement, opposition)
-- **v2.5 — Le gouvernement** : 6 postes, cartes ministres (compétence, loyauté, notoriété, un trait), parité, allié servi, remaniement.
-- **v2.6 — L'opposition** : le perdant (finaliste ou éliminé au 1er tour) continue chef de son parti, à chaque trimestre pendant 5 ans : propositions de loi le jour réservé, coalitions, motions de censure ; chute du gouvernement, dissolution par le président (dès l'année 2), cohabitation où tu deviens Premier ministre.
+- **v2.6 — Le gouvernement** : 6 postes, cartes ministres (compétence, loyauté, notoriété, un trait), parité, allié servi, remaniement.
+- **v2.7 — L'opposition** : le perdant (finaliste ou éliminé au 1er tour) continue chef de son parti, à chaque trimestre pendant 5 ans : propositions de loi le jour réservé, coalitions, motions de censure ; chute du gouvernement, dissolution par le président (dès l'année 2), cohabitation où tu deviens Premier ministre.
 
 ## À venir (pistes du bêta-testeur)
 - **Campagne éclair** : un format court en 3 tours, et une sauvegarde automatique pour reprendre une partie.

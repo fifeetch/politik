@@ -346,5 +346,35 @@ section('Campagne des législatives');
   var n = 0; res.circs.forEach(function (c) { n++; }); ok(n === 577, 'toujours 577 circonscriptions');
 })();
 
+/* ---------- v2.5 : ton personnage et ton parti ---------- */
+section('Ton personnage et ton parti');
+(function () {
+  var PS = require('../js/perso.js'), LG = require('../js/legis.js'), G = require('../js/govern.js');
+  var ch = PS.defaultChar(); ch.name = 'Alex Térieur'; ch.trait = 'bagarreur';
+  ok(PS.sigleError('FI') && PS.sigleError('X') && !PS.sigleError('GE'), 'sigle : 2 ou 3 lettres, pas celui d\'un autre parti');
+  var p = PS.found({ name: 'Le Grand Élan', sigle: 'GE', color: '#7B3FA0', pos: 3.8, themes: ['ecologie', 'emploi'] }, ch);
+  ok(D.PARTIES.length === 13 && E.PARTY.GE && D.TEMPERS.GE.label === 'bagarreur', 'fonder : un 13e parti en lice, avec ton tempérament');
+  ok(p.programme.length === 5 && p.programme.slice(0, 2).every(function (m) { return ['ecologie', 'emploi'].indexOf(E.measure(m).theme) >= 0; }), 'son programme commence par tes thèmes forts');
+  var g = E.createGame('GE', { seed: 3 });
+  var start = E.poll(g).filter(function (x) { return x.pid === 'GE'; })[0].pct;
+  ok(start > 0.01 && start < 0.06, 'il part de presque rien (' + (100 * start).toFixed(1) + ' %)');
+  var empty = D.REGIONS.filter(function (r) { return E.cubes(g, r.id, 'GE') === 0; }).length;
+  ok(empty > 0, 'des sympathisants seulement là où ses thèmes parlent (' + (13 - empty) + ' régions sur 13)');
+  E.startTurn(g);
+  ok(E.terrainBreakdown(g, 'GE', 'idf', 'ecologie').parts.some(function (x) { return x.k === 'neuf' && x.n === 2; }), 'effet nouveauté : +2 cubes en Meeting au tour 1');
+  g.turn = 5; ok(!E.terrainBreakdown(g, 'GE', 'idf', 'ecologie').parts.some(function (x) { return x.k === 'neuf'; }), 'l\'effet nouveauté s\'use (plus rien au tour 5)');
+  // ton parti peut gouverner : législatives et quinquennat avec un 13e parti
+  g.result = { first: E.poll(g), second: { a: 'GE', b: 'MN', pctA: 0.55, pctB: 0.45 } }; g.winner = 'GE';
+  var gv = G.create(g, 'GE'), n = 0; Object.keys(gv.seats).forEach(function (k) { n += gv.seats[k]; });
+  ok(n === 577 && gv.seats.GE != null, 'législatives avec ton parti : 577 sièges répartis');
+  PS.reset();
+  ok(D.PARTIES.length === 12 && !E.PARTY.GE && !D.TEMPERS.GE && D.REGIONS.every(function (r) { return r.start.GE == null; }), 'nouvelle partie : ton parti n\'est plus en lice, tout est remis à 12');
+  var cand = E.PARTY.SM.candidate;
+  PS.lead('SM', ch);
+  ok(E.PARTY.SM.candidate === 'Alex Térieur' && D.TEMPERS.SM.label === 'bagarreur', 'prendre la tête d\'un parti : ton nom, ton tempérament');
+  PS.reset();
+  ok(E.PARTY.SM.candidate === cand && D.TEMPERS.SM.label === 'raisonnable', 'puis le parti retrouve son candidat');
+})();
+
 console.log('\n' + passes + ' vérifications réussies, ' + fails + ' en échec.');
 process.exit(fails ? 1 : 0);

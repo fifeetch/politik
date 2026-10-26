@@ -157,6 +157,8 @@
     var e = pl && pl.programme ? echoBonus(g, pid, rid) : 0;   // v0.8 : le programme plaît (ou déplaît) aux habitants
     if (e) parts.push({ k: 'echo', label: e > 0 ? 'région de cœur' : 'région hostile', n: e });
     if (pl && pl.momentum) parts.push({ k: 'dyn', label: pl.momentum > 0 ? 'dynamique' : 'passage à vide', n: pl.momentum });
+    // v2.5 : un parti tout neuf attire la curiosité au début de la campagne, puis l'effet s'use
+    if (pl && PARTY[pid] && PARTY[pid].novelty && g.turn <= R.novelty.turns) parts.push({ k: 'neuf', label: 'effet nouveauté', n: g.turn <= R.novelty.strongTurns ? 2 : 1 });
     var tot = 0; parts.forEach(function (x) { tot += x.n; });
     return { parts: parts, total: Math.max(1, tot) };
   }
@@ -294,6 +296,22 @@
   }
   function last(g) { var r = ranking(g); return r[r.length - 1]; }
 
+  /* ---------- v2.5 : un 13e parti, fondé par le joueur ----------
+     p : le parti (même forme que data.js), start : son score de départ (%) dans chaque région */
+  function registerParty(p, temper, start) {
+    unregisterParty(p.id);
+    D.PARTIES.push(p); PARTY[p.id] = p; D.TEMPERS[p.id] = temper;
+    D.REGIONS.forEach(function (r) { r.start[p.id] = start; if (r.start22) r.start22[p.id] = start; });
+    D.POLLS.avg[p.id] = start; NAT24[p.id] = start;
+  }
+  function unregisterParty(id) {
+    var i = D.PARTIES.map(function (x) { return x.id; }).indexOf(id);
+    if (i < 0 || !D.PARTIES[i].custom) return;
+    D.PARTIES.splice(i, 1); delete PARTY[id]; delete D.TEMPERS[id];
+    D.REGIONS.forEach(function (r) { delete r.start[id]; if (r.start22) delete r.start22[id]; });
+    delete D.POLLS.avg[id]; delete NAT24[id];
+  }
+
   /* ---------- Création ---------- */
   function createGame(humanParty, opts) {
     opts = opts || {};
@@ -331,7 +349,13 @@
       // Mode Réaliste : la moyenne des législatives et des européennes 2024 (voir data.js). Le contrôle des régions
       // suit ensuite la règle normale (au moins 3 électeurs, 4 pour le Mouvement National, et être devant)
       // au moins 1 électeur partout : chaque parti a des sympathisants dans toutes les régions
-      g.players.forEach(function (pl) { var n = Math.max(1, Math.round(baseScore(g.base, r, pl.id) * R.startScale / 100)); addCubes(g, r.id, pl.id, n); });
+      g.players.forEach(function (pl) {
+        var n = Math.max(1, Math.round(baseScore(g.base, r, pl.id) * R.startScale / 100));
+        // v2.5 : un parti tout neuf n'a de sympathisants que là où ses thèmes parlent aux habitants, et dans ses régions de base
+        var P = PARTY[pl.id];
+        if (P.custom) n = (P.bases.indexOf(r.id) >= 0 || (P.themes || []).some(function (t) { return r.concerns.indexOf(t) >= 0; })) ? 1 : 0;
+        if (n) addCubes(g, r.id, pl.id, n);
+      });
       // les électeurs des partis absents de la partie et des autres listes : « autres », qui pèsent dans les sondages
       var sum = 0; pids(g).forEach(function (id) { sum += baseScore(g.base, r, id); });
       g.regions[r.id].others = Math.max(0, 100 - sum) / 100;
@@ -1238,7 +1262,7 @@
     resolveAffair: resolveAffair, enqueteChance: enqueteChance, affairDef: affairDef,
     resolveDilemma: resolveDilemma, dilemmaDef: dilemmaDef, applyFx: applyFx, markerAt: markerAt, hotHere: hotHere, crisisAct: crisisAct,
     impact: impact, cred: cred, isHot: isHot, concerns: concerns, bestTheme: bestTheme, terrainCubes: terrainCubes, mediaCubes: mediaCubes,
-    REG: REG, PARTY: PARTY, THEME: THEME, makeRng: makeRng
+    REG: REG, PARTY: PARTY, THEME: THEME, makeRng: makeRng, registerParty: registerParty, unregisterParty: unregisterParty
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;
   else root.PolitikEngine = API;
