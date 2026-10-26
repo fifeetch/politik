@@ -860,6 +860,7 @@
       if (!lostPetals(g).length) return 'Ta rose a toutes ses pétales.';
       if (player(g, pid).rappelTurn === g.turn) return 'François Hésitant ne décroche qu\u2019une fois par tour.';
     }
+    if (act.type === 'repos' && player(g, pid).forme >= R.formeMax) return 'Ton candidat est déjà en pleine forme.';
     if (act.type === 'fusion' && !g.micro) return 'Aucun micro-parti à absorber pour l\u2019instant.';
     if (act.type === 'eclat' && g.eclatUntil >= g.turn) return 'Les caméras sont déjà braquées sur toi.';
     if (def.theme && !THEME[act.theme]) return 'Choisis un thème.';
@@ -1046,6 +1047,9 @@
         var prof2 = REG[act.region].profile;
         D.REGIONS.forEach(function (r) { if (r.profile === prof2) { var x = addCubes(g, r.id, pid, 1); if (x) t.push('+1 ' + r.name); } });
         break; }
+      case 'repos': {
+        var f0r = pl.forme; pl.forme = Math.min(R.formeMax, pl.forme + R.reposForme);
+        t.push('le candidat souffle un peu : +' + (pl.forme - f0r) + ' ⚡'); break; }
       case 'nostalgie': {
         var nv = nostalgiaPreview(g, pid, act.region), step = D.NOSTALGIA[nv.k];
         g.nost[pid] = nv.k + 1; pl.nostTurn = g.turn; entry.nost = { k: nv.k, year: step.year, what: step.what };

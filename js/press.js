@@ -320,7 +320,7 @@
 
     // 3 ter. v3.1 : tes autres actions de la veille ont aussi leur brève (c'est l'explication de ce qu'elles ont fait)
     var BRIEF = { imposer: ['Ton thème fait la une', 'Grâce à une opération de communication bien huilée, '], reforme: ['Une promesse qui fait le tour du pays', 'En promettant monts et merveilles, '],
-                  fonds: ['Soirée de levée de fonds', 'Petits fours et carnets de chèques : '], enquete: ['Des barbouzes dans les poubelles ?', 'Selon nos informations, '] };
+                  fonds: ['Soirée de levée de fonds', 'Petits fours et carnets de chèques : '], repos: ['Une journée loin des caméras', 'Balade, sieste et téléphone coupé : '], enquete: ['Des barbouzes dans les poubelles ?', 'Selon nos informations, '] };
     var briefSeen = {};
     (ctx.log || []).forEach(function (l) {
       if (l.pid !== me || !l.text) return;

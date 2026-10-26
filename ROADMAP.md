@@ -278,3 +278,6 @@ Avant, en Réaliste, tous les partis convergeaient vers ~8 % : Lutte Obstinée d
 - L'ordinateur n'enquête que sur un rival direct (juste devant lui au sondage, ou le premier s'il est 2e), 2 fois par partie au plus (avant : chacun des 11 partis enquêtait sur les 3 premiers à chaque tour, ~38 enquêtes par partie, 6 maintenant).
 - Une seule affaire par parti et par tour.
 - La tuile « risque de gaffe » devient « ⚡ épuisé : 4/10 de gaffe », avec l'explication au survol.
+
+## v3.6.6 — fait : 😴 Repos
+- Nouvelle action « Repos » (gratuite, 1 action) : +2 ⚡ tout de suite, les actions suivantes du tour en profitent. Dans le menu « Plus », qui se colore et affiche « 😴 Repos dispo » quand la forme est à 1 ou moins. L'ordinateur s'en sert aussi quand son candidat est épuisé. Brève dans le journal.

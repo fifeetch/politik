@@ -539,6 +539,7 @@
     enquete:  { name: 'Enquêter',       icon: '🔎', cost: { money: 1, infl: 1 }, target: 'party', text: 'Fouiller le passé d\'un rival : si tu trouves quelque chose, une affaire lui tombe dessus au prochain tour' },
     alliance: { name: 'Alliance',       cost: { money: 0, infl: 1 }, target: 'party',  text: "Proposer une alliance à un parti proche (distance 2 au plus)" },
     rupture:  { name: 'Rupture',        cost: { money: 0, infl: 0 }, target: null,     text: "Rompre ton alliance : −2 ★, et ton ex-allié ne te reportera presque rien au second tour" },
+    repos:    { name: 'Repos',          icon: '😴', cost: { money: 0, infl: 0 }, target: null,     text: 'Une journée loin des caméras : +2 ⚡ tout de suite' },   // v3.6.6
     /* v3.1 : les actions propres à un parti (voir TRAITS) */
     nostalgie:{ name: 'C\u2019était mieux avant', icon: '⏪', only: ['MN', 'RQ'], cost: { money: 2, infl: 0, forme: 1 }, target: 'region', text: 'Promettre le retour du passé : plaît aux retraités, fait fuir les jeunes à mesure qu\u2019on recule' },
     rappel:   { name: 'Rappeler un ancien', icon: '📞', only: ['SM'], cost: { money: 1, infl: 1 }, target: null, text: 'François Hésitant sort de sa retraite : il ramène un pétale… ou sort un livre qui règle ses comptes' },
@@ -694,7 +695,7 @@
     mediaRegions: 3,                 // nombre de régions touchées par la Télé
     socialHotBonus: 1,               // bonus du Buzz quand le thème fait l'actu
     /* v0.4 : le candidat et ses troupes */
-    formeMax: 4, formeStart: 4, formeRegen: 2,   // ⚡ forme du candidat (Meeting et Télé en coûtent 1)
+    formeMax: 4, formeStart: 4, formeRegen: 2, reposForme: 2,   // ⚡ forme du candidat (Meeting et Télé en coûtent 1)
     gaffeChance: 0.4,                // quand la forme tombe à 0 pendant une action : risque de gaffe
     militantsMax: 3,                 // équipes de militants par parti
     momentumStep: 0.015,             // +1,5 point au sondage en un tour = « en dynamique »

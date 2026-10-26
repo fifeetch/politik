@@ -31,6 +31,7 @@
       if (E.cred(v, pid, t.id) === 2 && !E.isHot(v, t.id)) list.push({ type: 'imposer', theme: t.id });
     });
     list.push({ type: 'fonds' });
+    list.push({ type: 'repos' });   // v3.6.6
     // v3.1 : les actions propres à un parti
     var tr = E.traitOf(pid);
     if (tr === 'nostalgie') D.REGIONS.forEach(function (r) { list.push({ type: 'nostalgie', region: r.id }); });
@@ -111,6 +112,7 @@
         var chance = E.acceptChance(v, act.target, pid);
         val += chance * (E.dist(pid, act.target) === 1 ? 6 : 4.5) * (v.turn >= 3 ? 1 : 0.6);
         break; }
+      case 'repos': val += pl.forme <= 0 ? 2.6 : pl.forme === 1 ? 1.4 : -5; break;
       case 'nostalgie': {
         var nv = E.nostalgiaPreview(v, pid, act.region);
         if (!nv || nv.stone) return null;   // l'ordinateur ne va jamais jusqu'à l'âge de pierre
@@ -170,6 +172,7 @@
       if (best.act.type === 'fonds') { pl.money += E.fundsGain(pid).money; pl.infl += E.fundsGain(pid).infl; }
       if (best.act.type === 'enquete') { v.enq = v.enq || {}; v.enq[pid + best.act.target] = 1; }
       if (best.act.type === 'alliance') { v.alliances[pid] = best.act.target; v.alliances[best.act.target] = pid; }
+      if (best.act.type === 'repos') pl.forme = Math.min(D.RULES.formeMax, pl.forme + D.RULES.reposForme);
       if (best.act.type === 'nostalgie') { v.nost[pid] = (v.nost[pid] || 0) + 1; pl.nostTurn = g.turn; }
       if (best.act.type === 'rappel') pl.rappelTurn = g.turn;
       if (best.act.type === 'fusion') v.micro = null;

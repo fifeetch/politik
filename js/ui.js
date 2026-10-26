@@ -926,6 +926,7 @@
     queue.forEach(function (a) {
       var c = E.actionCost(g, me, a); m -= c.money; f -= c.infl; fo -= c.forme;
       if (a.type === 'fonds') { m += E.fundsGain(me).money; f += E.fundsGain(me).infl; }
+      if (a.type === 'repos') fo = Math.min(R.formeMax, fo + R.reposForme);
       if (a.type === 'card' && a.card === 'primaire') f += 3;
       if (a.type === 'card' && a.card === 'rassemblement') { m += 3; f += 1; }
     });
@@ -1445,13 +1446,14 @@
       var big = selected ? '+' + bigGain(act) : '—';
       var b = el('button', { class: 'tile', type: 'button', 'data-act': type, 'aria-label': def.name + ', ' + costLabel(act) },
         '<span class="tile-n">' + def.name + '</span><span class="tile-mid"><span class="tile-i">' + def.icon + '</span><span class="tile-big">' + big + '</span></span>' +
-        (selected && tiring(act) && !canQueue(act) ? '<span class="tile-cost tile-warn" title="Ta forme tomberait à 0 : un candidat épuisé a 4 chances sur 10 de faire une gaffe (aucun soutien, +1 casserole). Elle remonte de 2 au tour suivant.">⚡ épuisé : 4/10 de gaffe</span>' : '<span class="tile-cost' + (selected && /argent|influence|épuisé/.test(canQueue(act) || '') ? ' tile-cost-no' : '') + '">' + costLabel(act, true) + '</span>'));
+        (selected && tiring(act) && !canQueue(act) ? '<span class="tile-cost tile-warn" title="Ta forme tomberait à 0 : un candidat épuisé a 4 chances sur 10 de faire une gaffe (aucun soutien, +1 casserole). Elle remonte de 2 au tour suivant, ou tout de suite avec 😴 Repos (menu Plus).">⚡ épuisé : 4/10 de gaffe</span>' : '<span class="tile-cost' + (selected && /argent|influence|épuisé/.test(canQueue(act) || '') ? ' tile-cost-no' : '') + '">' + costLabel(act, true) + '</span>'));
       if (!selected) b.disabled = true;
       else if (canQueue(act)) b.classList.add('dim');
       b.addEventListener('click', function () { addAction(act); });
       box.appendChild(b);
     });
-    var more = el('button', { class: 'tile tile-more', type: 'button', id: 'btn-more' }, '<span class="tile-n">Plus</span><span class="tile-mid"><span class="tile-big">⋯</span></span><span class="tile-cost">' + (traitKey(me) ? D.TRAITS[traitKey(me)].icon + ' + 7 actions' : '7 actions') + '</span>');
+    var more = el('button', { class: 'tile tile-more', type: 'button', id: 'btn-more' }, '<span class="tile-n">Plus</span><span class="tile-mid"><span class="tile-big">⋯</span></span><span class="tile-cost">' + (projected().forme <= 1 ? '😴 Repos dispo' : traitKey(me) ? D.TRAITS[traitKey(me)].icon + ' + 8 actions' : '8 actions') + '</span>');
+    if (projected().forme <= 1) more.classList.add('tile-rest');   // v3.6.6 : candidat fatigué, le repos est dans « Plus »
     more.addEventListener('click', moreMenu);
     box.appendChild(more);
   }
@@ -1463,7 +1465,7 @@
   /* Les autres actions, dans une fenêtre où l'on a la place de les expliquer */
   /* v3.1 : une ligne courte par action ; le détail arrive ensuite dans le journal */
   var MORE_SHORT = {
-    reseaux: 'Un coup de dé sur les réseaux', militants: '+1 soutien ici à chaque tour', imposer: 'Ton thème à la une demain',
+    repos: '+2 ⚡ tout de suite : le candidat récupère', reseaux: 'Un coup de dé sur les réseaux', militants: '+1 soutien ici à chaque tour', imposer: 'Ton thème à la une demain',
     contre: 'Affaiblir le rival en tête ici', fonds: 'Remplir la caisse', reforme: 'Gagner les régions du même type',
     nostalgie: 'Promettre le retour du passé', rappel: 'Faire revenir d\u2019anciens électeurs', fusion: 'Absorber le micro-parti', eclat: 'Faire revenir les caméras',
     marche_pop: 'Grosse mobilisation en ville', censure: 'Tous tes rivaux perdent 1 ★', fete_rose: 'Fête dans 2 régions', primaire: 'Gagner de l\u2019influence',
@@ -1473,7 +1475,7 @@
   function moreMenu() {
     if (g.phase !== 'actions') return;
     var items = [];
-    ['reseaux', 'militants', 'imposer', 'contre', 'fonds', 'reforme'].forEach(function (type) {
+    ['repos', 'reseaux', 'militants', 'imposer', 'contre', 'fonds', 'reforme'].forEach(function (type) {
       var def = D.ACTIONS[type], act = { type: type, region: def.target === 'region' ? selected : undefined, theme: def.theme ? theme : undefined };
       var err = def.target === 'region' && !selected ? 'choisis d\'abord une région' : canQueue(act);
       items.push({ act: act, icon: def.icon, name: def.name, cost: costLabel(act), fx: MORE_SHORT[type], err: err });

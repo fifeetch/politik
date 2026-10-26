@@ -1230,3 +1230,5 @@ button { font-family: inherit; color: inherit; }
 @keyframes bannerUp { from { transform: translateY(140%); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes bannerDown { to { transform: translateY(140%); opacity: 0; } }
 .tile-cost.tile-cost-no { color: var(--red); font-weight: 800; }
+.tile.tile-rest { border-color: var(--violet); background: var(--violet-2); }
+.tile.tile-rest .tile-cost { color: var(--violet); font-weight: 800; }
