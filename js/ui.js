@@ -1381,29 +1381,38 @@
     var n = 0; E.mediaRegions(g, me, act.region, act.theme).forEach(function (rid) { n += E.mediaCubes(g, me, rid, act.theme); }); return n;
   }
   /* Les autres actions, dans une fenêtre où l'on a la place de les expliquer */
+  /* v3.1 : une ligne courte par action ; le détail arrive ensuite dans le journal */
+  var MORE_SHORT = {
+    reseaux: 'Un coup de dé sur les réseaux', militants: '+1 soutien ici à chaque tour', imposer: 'Ton thème à la une demain',
+    contre: 'Affaiblir le rival en tête ici', fonds: 'Remplir la caisse', reforme: 'Gagner les régions du même type',
+    nostalgie: 'Promettre le retour du passé', rappel: 'Faire revenir d\u2019anciens électeurs', fusion: 'Absorber le micro-parti', eclat: 'Faire revenir les caméras',
+    marche_pop: 'Grosse mobilisation en ville', censure: 'Tous tes rivaux perdent 1 ★', fete_rose: 'Fête dans 2 régions', primaire: 'Gagner de l\u2019influence',
+    climat: 'Grosse mobilisation verte', canicule: 'Tous tes rivaux reculent', art493: 'Bloquer le rival en tête', remaniement: 'Déplacer tes soutiens ici',
+    appel18: 'Toutes les régions historiques', rassemblement: 'Argent et influence', plateau_tele: 'Passer à la télé dans 3 régions', grand_meeting: 'Gros meeting ici'
+  };
   function moreMenu() {
     if (g.phase !== 'actions') return;
     var items = [];
     ['reseaux', 'militants', 'imposer', 'contre', 'fonds', 'reforme'].forEach(function (type) {
       var def = D.ACTIONS[type], act = { type: type, region: def.target === 'region' ? selected : undefined, theme: def.theme ? theme : undefined };
       var err = def.target === 'region' && !selected ? 'choisis d\'abord une région' : canQueue(act);
-      items.push({ act: act, icon: def.icon, name: def.name, cost: costLabel(act), fx: effect(act), err: err });
+      items.push({ act: act, icon: def.icon, name: def.name, cost: costLabel(act), fx: MORE_SHORT[type], err: err });
     });
     Object.keys(D.ACTIONS).forEach(function (type) {   // v3.1 : les actions propres à ton parti
       var def = D.ACTIONS[type]; if (!def.only || def.only.indexOf(me) < 0) return;
       var act = { type: type, region: def.target === 'region' ? selected : undefined };
       var err = def.target === 'region' && !selected ? 'choisis d\u2019abord une région' : canQueue(act);
-      items.unshift({ act: act, icon: def.icon, name: def.name, cost: costLabel(act), fx: effect(act) + ' <span class="trait-tag">' + D.TRAITS[traitKey(me)].icon + ' ton parti</span>', err: err });
+      items.unshift({ act: act, icon: def.icon, name: def.name, cost: costLabel(act), fx: MORE_SHORT[type], err: err, mine: true });
     });
     mePl().cards.forEach(function (k) {
       var def = D.CARDS[k], act = { type: 'card', card: k, region: def.target === 'region' ? selected : undefined };
       var err = def.target === 'region' && !selected ? 'choisis d\'abord une région' : canQueue(act);
-      items.push({ act: act, icon: '🃏', name: def.name, cost: 'carte unique', fx: esc(def.text), err: err });
+      items.push({ act: act, icon: '🃏', name: def.name, cost: 'carte unique', fx: MORE_SHORT[k] || esc(def.text), err: err });
     });
     items.push({ special: 'enquete', icon: '🔎', name: 'Enquêter sur un rival', cost: costLabel({ type: 'enquete', target: null }),
-      fx: 'Fouiller son passé : s\'il traîne des casseroles, une affaire lui tombe dessus', err: g.turn >= R.maxTurns ? 'trop tard pour sortir un dossier' : null });
+      fx: 'Fouiller le passé d\u2019un rival', err: g.turn >= R.maxTurns ? 'trop tard pour sortir un dossier' : null });
     var html = '<div class="pick">' + items.map(function (it, i) {
-      return '<button type="button" class="pick-row' + (it.err ? ' off' : '') + '" data-i="' + i + '"><span class="pick-i">' + it.icon + '</span>' +
+      return '<button type="button" class="pick-row' + (it.err ? ' off' : '') + (it.mine ? ' mine' : '') + '" data-i="' + i + '"><span class="pick-i">' + it.icon + '</span>' +
         '<span class="pick-txt"><b>' + esc(it.name) + '</b><small>' + (it.err ? esc(it.err) : it.fx) + '</small></span><span class="pick-cost">' + esc(it.cost) + '</span></button>';
     }).join('') + '</div>';
     modal({ kicker: 'Autres actions', title: 'Plus d\'options', html: html, buttons: [{ label: 'Fermer' }],

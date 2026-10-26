@@ -318,6 +318,20 @@
     var byParty = {};
     field.filter(function (a) { if (byParty[a.pid]) return false; byParty[a.pid] = 1; return true; }).slice(0, 5).forEach(function (a) { arts.push(a); });
 
+    // 3 ter. v3.1 : tes autres actions de la veille ont aussi leur brève (c'est l'explication de ce qu'elles ont fait)
+    var BRIEF = { imposer: ['Ton thème fait la une', 'Grâce à une opération de communication bien huilée, '], reforme: ['Une promesse qui fait le tour du pays', 'En promettant monts et merveilles, '],
+                  fonds: ['Soirée de levée de fonds', 'Petits fours et carnets de chèques : '], enquete: ['Des barbouzes dans les poubelles ?', 'Selon nos informations, '] };
+    var briefSeen = {};
+    (ctx.log || []).forEach(function (l) {
+      if (l.pid !== me || !l.text) return;
+      var type = ACTION_TYPE[l.action], isCard = !type && D.CARDS && Object.keys(D.CARDS).some(function (k) { return D.CARDS[k].name === l.action; });
+      if (!isCard && !BRIEF[type]) return;
+      var key = isCard ? 'card-' + l.action : type; if (briefSeen[key]) return; briefSeen[key] = 1;
+      var p = P(l.pid), b = isCard ? [l.action + ' : ' + p.short + ' sort le grand jeu', p.candidate + ' a abattu une carte maîtresse. '] : BRIEF[type];
+      arts.push({ id: 'brief-' + key.replace(/\W/g, ''), rub: 'Campagne', pid: l.pid, mine: true, title: b[0],
+        text: b[1] + (l.ok ? 'bilan pour ' + p.short + ' : ' + l.text + '.' : 'raté : ' + l.text.replace(/^Échoue : /, '').toLowerCase()) });
+    });
+
     // 3 bis. v3.1 : les gags des partis (au plus 3 articles)
     var gags = [];
     (ctx.log || []).forEach(function (l) {

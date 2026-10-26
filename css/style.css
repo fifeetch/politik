@@ -1212,3 +1212,4 @@ button { font-family: inherit; color: inherit; }
 .bc { border: 1.5px solid var(--rule); border-radius: 8px; padding: 6px 4px; font-size: 11.5px; line-height: 1.2; text-align: center; background: #fff; min-height: 40px; display: flex; align-items: center; justify-content: center; }
 .bc.on { background: var(--red); color: #fff; border-color: var(--red); font-weight: 700; transform: rotate(-1.5deg); }
 .slot-lock { border-style: solid; border-color: var(--red); color: var(--red); background: var(--red-2); }
+.pick-row.mine { border-color: var(--violet); box-shadow: 3px 3px 0 var(--violet-2); }
