@@ -347,7 +347,7 @@
       affairs: [], nextAffairs: [], affairDeck: [], affairIdx: 0,
       players: ids.map(function (id, i) {
         var p = PARTY[id];
-        return { id: id, human: id === humanParty, money: p.money, infl: p.infl,
+        return { id: id, human: id === humanParty, money: Math.round(p.money * (1 - R.moneyBlend) + 5 * R.moneyBlend), infl: p.infl,   // v2.8.1 : en éclair, les cagnottes de départ se rapprochent
                  cards: p.cards.slice(), objective: objs[i % objs.length], debateWins: 0,
                  forme: R.formeStart, cas: 0, momentum: 0, cred: Object.assign({}, p.cred), talk: {}, militants: 0,
                  programme: null, phare: null, budget: 0 };
@@ -456,7 +456,7 @@
       out.affairs = g.affairs.slice();
     }
     var em = player(g, 'EM');
-    if (em && g.turn === 5) {
+    if (em && g.turn === R.wearTurn) {   // v2.8.1 : le tour de l'usure dépend du format (5 en classique, 2 en éclair)
       var rid = strongestRegion(g, 'EM');
       if (rid) { addCubes(g, rid, 'EM', -1); out.usure = rid; g.log.push({ pid: 'EM', text: 'Usure du pouvoir : −1 soutien en ' + REG[rid].name }); }
     }

@@ -377,7 +377,7 @@
       color: '#F2A93B', ink: '#1B1F3B', money: 8, infl: 4, bases: ['pdl', 'bre'],
       cred: { emploi: 2, securite: 2, ecologie: 1, services: 1, immigration: 1, pouvoir: 0 },
       force: 'Une Collecte rapporte 4 € et 1 ★. Candidat infatigable : récupère 3 ⚡ par tour (au lieu de 2).',
-      weakness: "Usure du pouvoir : au tour 5, perd 1 soutien dans sa région la plus forte.",
+      weakness: "Usure du pouvoir : au tour 5 (au tour 2 en campagne éclair), perd 1 soutien dans sa région la plus forte.",
       cards: ['art493', 'remaniement'] },
     { id: 'UG', pos: 5, name: "L'Union Gaulliste", short: 'Union Gaulliste', family: 'Droite',
       candidate: 'Hubert de La Motte', candTitle: 'le notable', programme: ['policiers', 'pme', 'controles', 'tva', 'nonremplacement'], financing: ['trainvie', 'gelpoint', 'chomage'],
@@ -504,10 +504,16 @@
     classique: { name: 'Classique', turns: 8, text: '8 tours, une vingtaine de minutes.' },
     eclair: { name: 'Éclair', turns: 3, text: '3 tours, une partie dans le métro.',
       rules: { maxTurns: 3, debateTurns: [3], crisisStart: [1, 1], registerTurns: 1, othersKeep: 0.5,
-               novelty: { turns: 2, strongTurns: 1, start: 3 }, incomeMoney: 6, formeRegen: 3 } }
+               novelty: { turns: 2, strongTurns: 1, start: 3 }, incomeMoney: 6,
+               /* v2.8.1 : rééquilibrage. En 3 tours, le parti qui part en tête n'avait pas le temps d'être rattrapé :
+                  chaque Meeting et chaque passage Télé rapporte plus, les cagnottes de départ se rapprochent,
+                  et l'usure d'En Mouvement frappe au tour 2. (1 200 parties simulées, voir ROADMAP) */
+               terrainCubes: [2, 2, 3, 4, 5], mediaCubes: [1, 1, 2, 2, 3], wearTurn: 2, moneyBlend: 0.6 } }
   };
   var RULES = {
     maxTurns: 8,
+    wearTurn: 5,                 // En Mouvement : l'usure du pouvoir frappe à ce tour
+    moneyBlend: 0,               // 0 = chaque parti garde sa cagnotte de départ ; 1 = tout le monde part avec 5 €
     actionsPerTurn: 3,
     debateTurns: [3, 6, 8],
     incomeMoney: 4, incomePerRegion: 1, incomeRegionMax: 3, incomeInfl: 2,

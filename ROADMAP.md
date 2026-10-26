@@ -187,7 +187,8 @@ Quand tu gagnes la présidentielle, le bouton « 🏛️ Gouverner le pays » ou
 ## v2.8 — fait : campagne éclair et sauvegarde
 - **Campagne éclair** (3 tours) : bouton sur l'écran titre et choix « Durée de la campagne » dans la partie personnalisée. Règles adaptées : un débat au tour 3, crise dès le tour 1, inscriptions possibles au tour 1 seulement, petites listes qui fondent plus vite, revenus de 6 € et +3 ⚡ par tour, effet nouveauté sur 2 tours.
 - **Sauvegarde automatique** au début de chaque tour de campagne (le hasard du jeu est sauvegardé aussi : la partie reprend à l'identique) ; « Reprendre ta partie » sur l'écran titre ; la sauvegarde s'efface à la soirée électorale ou si tu abandonnes.
-- Simulation (`FORMAT=eclair node test/simulate.js 400`) : aucune erreur ; en mode Réaliste, le parti qui part en tête (Mouvement National) gagne plus souvent qu'en 8 tours (45 % contre 32 %) : moins de temps pour remonter. À surveiller.
+- Simulation (`FORMAT=eclair node test/simulate.js 600`) : aucune erreur.
+- **v2.8.1 — rééquilibrage de l'éclair** : en 3 tours, le Mouvement National (en tête au départ) gagnait 45 % des parties, contre 32 % en 8 tours. Désormais, en éclair : un Meeting rapporte 2 à 5 soutiens (au lieu de 1 à 4), la Télé 1 à 3 par région (au lieu de 0 à 2), les cagnottes de départ se rapprochent (60 % du chemin vers 5 €), et l'usure du pouvoir d'En Mouvement frappe au tour 2 (elle ne se déclenchait jamais en 3 tours). Résultat sur 600 parties : Mouvement National 33 %, En Mouvement 21 %, Cap au Large 15 %, Socialisme Modéré 11 % ; le format classique est inchangé. En Mouvement reste un peu fort en éclair : à surveiller.
 - Pas encore sauvegardés : l'entre-deux-tours, les législatives et le quinquennat (on reprend au début du dernier tour de campagne).
 
 ## À venir (pistes du bêta-testeur)
