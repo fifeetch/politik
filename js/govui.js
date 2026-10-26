@@ -185,7 +185,7 @@
           (d <= 1 ? 'ton camp' : d === 2 ? 'proche' : d === 3 ? 'l\'autre camp' : 'très loin de toi') + ' · ' + (100 * presScore(p)).toFixed(0) + ' % à la présidentielle' + (lc.refused[p] ? ' · a refusé' : '') + '</small></span><b class="lc-pct">' + Math.round(100 * ch) + ' %</b></button>';
       }).join('') + '</div>';
     modal({ kicker: 'Législatives · avant le 1er tour', title: 'Former ton camp', html: html,
-      buttons: [{ label: first ? 'Partir en campagne' : 'Retour à la carte', primary: true, onClick: renderCamp }],
+      buttons: [{ label: first ? 'Partir en campagne' : 'Retour à la carte', primary: true, onClick: function () { renderCamp(); if (first) explainCamp(); } }],
       onOpen: function () {
         Array.prototype.forEach.call(document.querySelectorAll('[data-ally]'), function (b) {
           b.addEventListener('click', function () {
@@ -225,33 +225,64 @@
       gb.addEventListener('click', function () { lsel = r.id; renderCamp(); });
       s.appendChild(gb);
     });
-    // la région choisie et les actions
-    var info = $('lc-info');
-    if (!lsel) info.innerHTML = '<p class="lc-hint">Touche une région : les chiffres ⚖️ comptent ses circonscriptions <b>disputées</b>, celles qui peuvent basculer.</p>';
-    else { var rc = cls.regions[lsel]; info.innerHTML = '<span><b>' + esc(E.REG[lsel].name) + '</b> · ' + rc.seats + ' sièges</span><small>🟢 ' + rc.safe + ' sûres · ⚖️ ' + rc.open + ' disputées · 🔴 ' + rc.lost + ' perdues</small>'; }
-    var acts = [
-      lc.player ? { type: 'meeting', icon: '📣', name: 'Ton grand meeting', sub: 'une fois par tour' } : { type: 'meeting', icon: '📣', name: 'Le président en meeting', sub: 'use ta popularité (−' + LCP.meetingPop + ')' },
-      { type: 'vedette', icon: '🌟', name: 'Investir une vedette', sub: (LCP.vedetteMax - lc.vedettes) + ' vedette' + (LCP.vedetteMax - lc.vedettes > 1 ? 's' : '') + ' en réserve' },
-      { type: 'mobilise', icon: '🚪', name: 'Mobiliser', sub: 'porte-à-porte, surtout là où l\'on vote peu' },
-      { type: 'clip', icon: '📺', name: 'Clip national', sub: 'un peu partout' }
-    ];
-    $('lc-acts').innerHTML = acts.map(function (a) {
-      var err = LG.actError(g, lc, { type: a.type, rid: lsel }), gain = !err ? previewGain(a.type) : null;
-      return '<button type="button" class="lc-act" data-act="' + a.type + '"' + (err ? ' disabled' : '') + '><span class="lc-ai">' + a.icon + '</span><span class="lc-at"><b>' + a.name + '</b><small>' +
-        (err ? esc(err) : (gain > 0 ? '≈ +' + gain + ' siège' + (gain > 1 ? 's' : '') : 'peu d\'effet ici') + ' · ' + esc(a.sub)) + '</small></span></button>';
-    }).join('');
-    Array.prototype.forEach.call(document.querySelectorAll('[data-act]'), function (b) { b.addEventListener('click', function () { doAct(b.getAttribute('data-act')); }); });
+    // v2.8.2 : la légende, le journal du tour, puis les actions (chacune te demande OÙ la jouer)
+    var log = lc.log.filter(function (x) { return x.turn === lc.turn && x.seats != null; });
+    $('lc-info').innerHTML = '<p class="lc-legend"><i style="background:' + P.color + '"></i><span>Plus une région est foncée, plus elle penche pour ton camp. Les pastilles ⚖️ comptent ses circonscriptions <b>disputées</b> : c\'est là que se gagnent les sièges.</span></p>' +
+      (log.length ? '<div class="lc-log">' + log.map(function (x) {
+        return '<span>' + ACT_ICON[x.type] + ' ' + (x.rid ? esc(E.REG[x.rid].name) : 'Toute la France') + ' <b>' + (x.seats > 0 ? '+' + x.seats : x.seats) + ' siège' + (Math.abs(x.seats) > 1 ? 's' : '') + '</b></span>';
+      }).join('') + '</div>' : '') +
+      (lsel ? '<p class="lc-region"><b>' + esc(E.REG[lsel].name) + '</b> · ' + cls.regions[lsel].seats + ' sièges : 🟢 ' + cls.regions[lsel].safe + ' sûres · ⚖️ ' + cls.regions[lsel].open + ' disputées · 🔴 ' + cls.regions[lsel].lost + ' perdues</p>' : '');
+    if (lc.left <= 0) {
+      $('lc-acts').innerHTML = '<div class="lc-done">✅ Tes 3 actions de ce tour sont jouées.<small>Les autres partis vont faire campagne à leur tour.</small></div>';
+    } else {
+      $('lc-acts').innerHTML = campActs().map(function (a) {
+        var err = actErrNoRegion(a.type);
+        return '<button type="button" class="lc-act" data-act="' + a.type + '"' + (err ? ' disabled' : '') + '><span class="lc-ai">' + a.icon + '</span><span class="lc-at"><b>' + a.name + '</b><small>' + esc(err || a.sub) + '</small></span></button>';
+      }).join('');
+      Array.prototype.forEach.call(document.querySelectorAll('[data-act]'), function (bt) { bt.addEventListener('click', function () { pickWhere(bt.getAttribute('data-act')); }); });
+    }
     $('lc-advisor').innerHTML = '<span class="adv-face">' + A.advisor() + '</span><p><b>Lulu :</b> ' + esc(campAdvice(seats, cls)) + '</p>';
-    $('lc-next').textContent = lc.left > 0 ? 'Fin du tour (' + lc.left + ' action' + (lc.left > 1 ? 's' : '') + ' perdue' + (lc.left > 1 ? 's' : '') + ')' : lc.turn < LCP.turns ? 'Tour suivant' : 'Aller voter';
-    if (lc.left === 0) $('lc-next').textContent = lc.turn < LCP.turns ? 'Tour suivant' : 'Le 1er tour';
-    else $('lc-next').textContent = 'Fin du tour';
+    $('lc-next').textContent = lc.left > 0 ? 'Fin du tour (' + lc.left + ' action' + (lc.left > 1 ? 's' : '') + ' non jouée' + (lc.left > 1 ? 's' : '') + ')' : lc.turn < LCP.turns ? 'Tour suivant' : 'Le 1er tour';
   }
-  /* Combien de sièges rapporterait une action (projection avec l'action jouée) */
-  function previewGain(type) {
-    if (type !== 'clip' && !lsel) return 0;
-    var copy = JSON.parse(JSON.stringify(lc)), r = LG.act(g, copy, { type: type, rid: lsel });
-    if (!r.ok) return 0;
-    return LG.projection(g, copy).res.focusSeats - lproj.res.focusSeats;
+  var ACT_ICON = { meeting: '📣', vedette: '🌟', mobilise: '🚪', clip: '📺' };
+  function campActs() {
+    return [
+      lc.player ? { type: 'meeting', icon: '📣', name: 'Ton grand meeting', sub: 'le plus efficace · une fois par tour' } : { type: 'meeting', icon: '📣', name: 'Le président en meeting', sub: 'le plus efficace · −' + LCP.meetingPop + ' de popularité' },
+      { type: 'vedette', icon: '🌟', name: 'Investir une vedette', sub: 'un poids lourd parachuté · ' + (LCP.vedetteMax - lc.vedettes) + ' en réserve' },
+      { type: 'mobilise', icon: '🚪', name: 'Mobiliser', sub: 'porte-à-porte, fort là où l\'on vote peu' },
+      { type: 'clip', icon: '📺', name: 'Clip national', sub: 'un petit coup de pouce partout' }
+    ];
+  }
+  /* Les limites qui ne dépendent pas de la région (un meeting par tour, 2 vedettes en tout) */
+  function actErrNoRegion(type) { return LG.actError(g, lc, { type: type, rid: type === 'clip' ? null : 'idf' }); }
+  /* Ce que rapporterait une action dans une région, en sièges (projection avec l'action jouée) */
+  function gainAt(type, rid) {
+    var copy = JSON.parse(JSON.stringify(lc)), r = LG.act(g, copy, { type: type, rid: rid });
+    return r.ok ? LG.projection(g, copy).res.focusSeats - lproj.res.focusSeats : null;
+  }
+  /* Choisir OÙ jouer l'action : les régions classées par sièges à gagner */
+  function pickWhere(type) {
+    var A2 = campActs().filter(function (x) { return x.type === type; })[0];
+    if (type === 'clip') { var gc = gainAt('clip', null); return confirmAct(type, null, gc); }
+    var rows = D.REGIONS.map(function (r) { return { r: r, gain: gainAt(type, r.id), rc: lproj.cls.regions[r.id], used: lc.used[r.id] || 0 }; })
+      .sort(function (x, y) { return y.gain - x.gain || y.rc.open - x.rc.open; });
+    var html = '<p class="hint">' + esc(A2.sub) + '. Le gain est calculé sur la projection : des circonscriptions disputées qui basculent pour ton camp.</p><div class="pick">' + rows.map(function (x, i) {
+      return '<button type="button" class="pick-row lc-where" data-where="' + x.r.id + '"><span class="pick-txt"><b>' + esc(x.r.name) + (i === 0 && x.gain > 0 ? ' <span class="lc-best">conseillé</span>' : '') + (x.r.id === lsel ? ' <span class="lc-best sel">ta région</span>' : '') + '</b><small>⚖️ ' + x.rc.open + ' disputées · 🟢 ' + x.rc.safe + ' sûres' + (x.used ? ' · déjà ' + x.used + ' action' + (x.used > 1 ? 's' : '') + ' ici' : '') + '</small></span><b class="lc-gain' + (x.gain > 0 ? '' : ' zero') + '">' + (x.gain > 0 ? '+' + x.gain : '0') + '<small>siège' + (x.gain > 1 ? 's' : '') + '</small></b></button>';
+    }).join('') + '</div>';
+    modal({ kicker: A2.icon + ' ' + A2.name, title: 'Où ?', html: html, buttons: [{ label: 'Annuler' }],
+      onOpen: function () { Array.prototype.forEach.call(document.querySelectorAll('[data-where]'), function (bt) { bt.addEventListener('click', function () { closeModal(); doAct(type, bt.getAttribute('data-where')); }); }); } });
+  }
+  function confirmAct(type, rid, gain) {
+    modal({ kicker: '📺 Clip national', title: 'Un clip dans toute la France', html: '<p>Un coup de pouce dans les 577 circonscriptions : <b>' + (gain > 0 ? '+' + gain + ' siège' + (gain > 1 ? 's' : '') : 'presque rien') + '</b> d\'après la projection. Un meeting ou une vedette bien placés rapportent souvent plus.</p>',
+      buttons: [{ label: 'Diffuser le clip', primary: true, onClick: function () { doAct(type, null); } }, { label: 'Annuler' }] });
+  }
+  function explainCamp() {
+    modal({ kicker: 'Législatives', title: 'Ta campagne en 2 tours', html: '<div class="brief">' +
+      line('🎯', 'But : <b>289 députés</b> pour ton camp (la barre en haut).') +
+      line('⚖️', 'Seules les circonscriptions <b>disputées</b> peuvent basculer. La carte te montre où elles sont.') +
+      line('3️⃣', '<b>3 actions par tour</b>, 2 tours. Touche une action : le jeu te propose les régions, avec les sièges que tu peux y gagner.') +
+      line('🔁', 'Une même région rapporte moins à chaque nouvelle action : varie les lieux.') + '</div>',
+      buttons: [{ label: 'C\'est parti', primary: true }] });
   }
   function campAdvice(seats, cls) {
     if (!lc.allies.length) return 'Seul, ton parti affronte tout le monde dans 577 circonscriptions. Propose des alliances aux partis proches : touche « + allié ».';
@@ -259,14 +290,17 @@
     if (cls.open > 40) return 'Tu es en route pour la majorité, mais ' + cls.open + ' circonscriptions restent disputées. Rien n\'est joué avant le vote.';
     return 'La majorité se dessine. Garde le rythme jusqu\'au bout !';
   }
-  function doAct(type) {
-    if (type !== 'clip' && !lsel) return toast('Touche d\'abord une région.');
-    var before = lproj.res.focusSeats, r = LG.act(g, lc, { type: type, rid: lsel });
+  function doAct(type, rid) {
+    var before = lproj.res.focusSeats, r = LG.act(g, lc, { type: type, rid: rid });
     if (!r.ok) return toast(r.text);
     if (r.pop) gv.popBonus += r.pop;
-    renderCamp();
+    if (rid) lsel = rid;
+    lproj = LG.projection(g, lc);
     var d = lproj.res.focusSeats - before;
-    toast(d > 0 ? '+' + d + ' siège' + (d > 1 ? 's' : '') + ' dans la projection' : 'La projection ne bouge presque pas');
+    lc.log[lc.log.length - 1].seats = d;
+    renderCamp();
+    var bar = document.querySelector('#lc-proj .lc-bar i'); if (bar) FX.replay(bar, 'bump');
+    toast((d > 0 ? '+' + d + ' siège' + (d > 1 ? 's' : '') : 'Aucun siège de plus') + ' · projection ' + before + ' → ' + lproj.res.focusSeats);
   }
   $('lc-next').addEventListener('click', function () {
     if (!lc) return;

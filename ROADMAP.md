@@ -191,6 +191,12 @@ Quand tu gagnes la présidentielle, le bouton « 🏛️ Gouverner le pays » ou
 - **v2.8.1 — rééquilibrage de l'éclair** : en 3 tours, le Mouvement National (en tête au départ) gagnait 45 % des parties, contre 32 % en 8 tours. Désormais, en éclair : un Meeting rapporte 2 à 5 soutiens (au lieu de 1 à 4), la Télé 1 à 3 par région (au lieu de 0 à 2), les cagnottes de départ se rapprochent (60 % du chemin vers 5 €), et l'usure du pouvoir d'En Mouvement frappe au tour 2 (elle ne se déclenchait jamais en 3 tours). Résultat sur 600 parties : Mouvement National 33 %, En Mouvement 21 %, Cap au Large 15 %, Socialisme Modéré 11 % ; le format classique est inchangé. En Mouvement reste un peu fort en éclair : à surveiller.
 - Pas encore sauvegardés : l'entre-deux-tours, les législatives et le quinquennat (on reprend au début du dernier tour de campagne).
 
+## v2.8.2 — fait : la campagne des législatives, plus lisible
+- Les actions ne sont plus grisées en attendant qu'on touche une région : touche une action, le jeu te demande **« Où ? »** et classe les 13 régions par sièges à gagner (+12, +5…), avec la meilleure marquée « conseillé ».
+- Après chaque action : le gain en sièges et la projection avant → après, et un journal du tour (« 📣 Île-de-France +8 sièges »).
+- Une légende explique la carte (couleur = région qui penche pour ton camp, pastilles = circonscriptions disputées), et une fiche « Ta campagne en 2 tours » au début.
+- Quand les 3 actions sont jouées, un message le dit clairement au lieu de boutons grisés.
+
 ## À venir (pistes du bêta-testeur)
 - **Mécaniques débloquées au fil des parties** : scandales et dilemmes, puis le programme détaillé, puis les alliances et la phase « gouverner ».
 - **Dilemmes en cartes à glisser** (à la manière de Reigns).
