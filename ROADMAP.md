@@ -149,8 +149,14 @@ Quand tu gagnes la présidentielle, le bouton « 🏛️ Gouverner le pays » ou
 - 2 fiches « Le saviez-vous ? » : comment on devient député, pourquoi les législatives suivent la présidentielle.
 - Raccourci « Passer la campagne » réparé (il ne finissait plus depuis l'entre-deux-tours).
 
-## Prochains lots (législatives, gouvernement, opposition)
-- **v2.4 — Ta campagne des législatives** : 2 tours de campagne (circonscriptions sûres, disputées, perdues), Investir une vedette, Le président en meeting, Mobiliser ; **alliances à négocier soi-même** : faciles dans son camp (gauche ou droite), possibles entre camps (par exemple gauche modérée, écologistes et droite) ; puis ton entre-deux-tours (maintien ou désistement, consignes, échanges de circonscriptions).
+## v2.4 — fait : ta campagne des législatives (lot 2 sur 4)
+- **Former ton camp** : 3 propositions d'alliance (candidature unique dès le 1er tour). La chance d'un oui suit l'écart sur l'axe gauche-droite (85 % tout près, 60 %, 35 %, 15 %, 5 % aux antipodes) : facile dans son camp, possible entre camps (gauche modérée et droite, écologistes et droite…), +15 % pour un parti qui t'a soutenu au 2nd tour de la présidentielle. Le « cordon » : la droite nationale (Mouvement National, Grande Nostalgie) et les partis du centre et de la gauche se méfient (×0,4). Plus un allié est loin, moins ses électeurs suivent la candidature commune. Les partis de ta famille qui ne signent pas partent sous leur propre bannière.
+- **2 tours de campagne, 3 actions par tour**, sur une carte où chaque région affiche ses circonscriptions disputées : Le président en meeting (+10 %, −2 de popularité, une fois par tour), Investir une vedette (+8 %, 2 en tout), Mobiliser (+4 %, +3 % là où l'on vote peu), Clip national (+2 % partout). Une même région rapporte moins à chaque nouvelle action. Chaque bouton annonce les sièges qu'il peut rapporter, d'après la projection. Les autres blocs font campagne dans leurs régions fortes.
+- **Ton entre-deux-tours** : se maintenir ou se retirer dans chaque triangulaire où ton camp est 3e, un pacte de désistement réciproque avec un autre bloc (une tentative), et une consigne de barrage là où ton camp est éliminé. La projection du 2nd tour se met à jour à chaque choix.
+- La carte des 577 circonscriptions est tirée une fois : projections et vote réel portent sur la même géographie ; le jour du vote garde sa part de hasard (l'humeur du pays).
+- **Équilibre** (`node test/legis-sim.js 150`) : un joueur qui forme son camp, fait campagne et choisit bien obtient la majorité absolue environ 6 fois sur 10 (relative 1 fois sur 4) ; avec des alliances mais sans campagne, environ 1 fois sur 2 ; seul, jamais.
+
+## Prochains lots (gouvernement, opposition)
 - **v2.5 — Le gouvernement** : 6 postes, cartes ministres (compétence, loyauté, notoriété, un trait), parité, allié servi, remaniement.
 - **v2.6 — L'opposition** : le perdant (finaliste ou éliminé au 1er tour) continue chef de son parti, à chaque trimestre pendant 5 ans : propositions de loi le jour réservé, coalitions, motions de censure ; chute du gouvernement, dissolution par le président (dès l'année 2), cohabitation où tu deviens Premier ministre.
 

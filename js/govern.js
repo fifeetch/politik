@@ -85,7 +85,8 @@
   ];
 
   /* ---------- Création du quinquennat ---------- */
-  function create(g, pid) {
+  function create(g, pid, opts) {
+    opts = opts || {};
     var pl = E.player(g, pid), ally = E.allyOf(g, pid);
     var res = g.result, pct = res.second ? (res.second.a === pid ? res.second.pctA : res.second.pctB) : res.first[0].pct;
     var loser = res.second ? (res.second.a === pid ? res.second.b : res.second.a) : null;
@@ -105,7 +106,7 @@
       achievements: {}
     };
     gv.popBonus = Math.round((pct * 100 - popularity(gv)) * 0.6) + C.honeymoon;
-    legislatives(gv, g, null, { margin: gv.margin, loser: loser });
+    if (!opts.manual) legislatives(gv, g, null, { margin: gv.margin, loser: loser });   // v2.4 : sinon, le joueur fait campagne (setLegis à la fin)
     return gv;
   }
   function clamp(x, a, b) { return Math.max(a, Math.min(b, x)); }
@@ -126,11 +127,18 @@
     var partners = (gv.deals || []).map(function (d) { return d.with; });
     if (gv.ally && partners.indexOf(gv.ally) < 0) partners.push(gv.ally);
     var res = LG.run(g, { rng: gv.rng, pres: gv.pid, margin: o.margin, loser: o.loser, partners: partners,
+      allies: gv.manual ? (gv.allies || []) : null,       // v2.4 : après une campagne jouée, tes alliés restent tes alliés
       presMult: popShift || null, dissolution: !!popShift });
     gv.legis = res;
     gv.seats = res.seats;
     gv.allies = res.outcome.camp.filter(function (p) { return p !== gv.pid; });   // la majorité présidentielle
     return res.seats;
+  }
+  /* v2.4 : le résultat des législatives jouées par le joueur (alliances, campagne, entre-deux-tours) */
+  function setLegis(gv, res) {
+    gv.legis = res; gv.seats = res.seats; gv.manual = true;
+    gv.allies = res.outcome.camp.filter(function (p) { return p !== gv.pid; });
+    return res;
   }
   function isAlly(gv, gid) { return gid === gv.ally || (gv.allies || []).indexOf(gid) >= 0; }
   function blocSeats(gv) { var s = gv.seats[gv.pid] || 0; Object.keys(gv.seats).forEach(function (id) { if (id !== gv.pid && isAlly(gv, id)) s += gv.seats[id]; }); return s; }
@@ -287,7 +295,7 @@
   }
 
   var API = { C: C, BUDGET_CARDS: BUDGET_CARDS, EVENTS: EVENTS, create: create, popularity: popularity, legislatives: legislatives, blocSeats: blocSeats,
-    majorityType: majorityType, isAlly: isAlly, stance: stance, vote: vote, frondeurs: frondeurs, censure: censure, referendum: referendum, adopt: adopt, reject: reject,
+    majorityType: majorityType, isAlly: isAlly, setLegis: setLegis, stance: stance, vote: vote, frondeurs: frondeurs, censure: censure, referendum: referendum, adopt: adopt, reject: reject,
     governmentFalls: governmentFalls, canDissolve: canDissolve, dissolveMult: dissolveMult, dissolve: dissolve, applyFinancing: applyFinancing, canReferendum: canReferendum, drawCards: drawCards, applyOpt: applyOpt, drawEvent: drawEvent, endYear: endYear, verdict: verdict, addSat: addSat };
   if (node) module.exports = API; else root.PolitikGov = API;
 })(this);

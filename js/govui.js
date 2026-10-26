@@ -97,14 +97,14 @@
   document.getElementById('btn-govern').addEventListener('click', function () {
     g = U.game(); me = U.me();
     if (!g || g.winner !== me) return;
-    gv = G.create(g, me); learned = {}; step = -1; lawsThisYear = 0;
-    legisNight({ onDone: function () { step = 0; U.go('gov'); render(); } });
+    gv = G.create(g, me, { manual: true }); learned = {}; step = -1; lawsThisYear = 0;
+    startLegis();   // v2.4 : ta campagne des législatives
   });
   $('gov-next').addEventListener('click', function () {
     if (!gv) return;
     if (gv.over) return finalBilan();
     var s = current();
-    if (s === 'legislatives') return legisNight({ onDone: function () { step = 0; U.go('gov'); render(); } });
+    if (s === 'legislatives') return gv.legis ? legisNight({ onDone: function () { step = 0; U.go('gov'); render(); } }) : startLegis();
     if (s === 'loi') return chooseLaw();
     if (s === 'evenement') return showEvent();
     if (s === 'budget') return budget();
@@ -125,19 +125,24 @@
   });
   function next() { step = step + 1; if (step >= STEPS.length) { step = 0; } render(); }
 
-  /* ---------- v2.3 : la soirée des législatives ----------
-     1. Le 1er tour : les scores par bloc, les élus dès le 1er tour (déjà assis dans l'hémicycle), duels et triangulaires.
-     2. Le 2nd tour : l'hémicycle se remplit région par région, la barre de ton camp avance vers 289.
-     3. Le verdict : majorité absolue, relative, sans majorité ou cohabitation. */
+  /* ---------- v2.3-2.4 : les législatives ----------
+     A. Ta campagne (v2.4) : former ton camp (alliances), 2 tours d'actions sur la carte des circonscriptions disputées.
+     B. La soirée du 1er tour : scores par bloc, élus du soir, duels, triangulaires.
+     C. Ton entre-deux-tours (v2.4) : te maintenir ou te désister, pacte de désistement, consigne de vote.
+     D. Le 2nd tour : l'hémicycle se remplit région par région, puis le verdict. */
+  var LMAP = window.PolitikMap, LCP = D.LEGIS.campaign;
   var lgTimers = [];
   function lgLater(fn, ms) { lgTimers.push(setTimeout(fn, ms)); }
   function lgStop() { lgTimers.forEach(clearTimeout); lgTimers = []; }
+  function presScore(pid) { var x = (g.result.first || []).filter(function (y) { return y.pid === pid; })[0]; return x ? x.pct : 0; }
   function blocName(b) { return b.id === 'pres' ? (gv.pid === me ? 'Ton camp' : 'Majorité présidentielle') : b.id === me ? 'Toi' : b.name; }
   function blocColor(b) {
     if (b.id === 'pres') return party(gv.pid).color;
-    var best = b.parties[0], res = gv.legis; b.parties.forEach(function (p) { if ((res.seats[p] || 0) > (res.seats[best] || 0)) best = p; });
+    var best = b.parties[0]; b.parties.forEach(function (p) { if (presScore(p) > presScore(best)) best = p; });
     return party(best).color;
   }
+  function blocDot(b) { return '<i class="lc-dot" style="background:' + blocColor(b) + '"></i>'; }
+  function sv(tag, attrs) { var e = document.createElementNS('http://www.w3.org/2000/svg', tag); Object.keys(attrs).forEach(function (k) { e.setAttribute(k, attrs[k]); }); return e; }
   /* Les places de l'hémicycle : de gauche à droite, chaque parti occupe sa part (comme hemicycle()) */
   function hemiLayout(seats) {
     var order = D.PARTIES.slice().sort(function (a, b) { return a.pos - b.pos; }).map(function (p) { return p.id; }).filter(function (id) { return seats[id] != null; });
@@ -150,20 +155,233 @@
     var j = 0; order.forEach(function (id) { for (var k = 0; k < seats[id]; k++) { pts[j].pid = id; pts[j].k = k; j++; } });
     return pts;
   }
-  function legisNight(o) {
+
+  /* ===== A. La campagne des législatives ===== */
+  var lc = null, lsel = null, lproj = null, lctx = null, lr1 = null, ldec = null, lpactTried = false;
+  function startLegis() {
+    lc = LG.newCampaign(g, { pres: me, margin: gv.margin, loser: gv.loser });
+    lsel = null; lctx = null; lr1 = null; ldec = null; lpactTried = false;
+    U.go('lcamp'); renderCamp();
+    allianceSheet(true);
+  }
+  function campOf(l) { return [me].concat(l.allies); }
+  /* Former son camp : candidatures communes dès le 1er tour */
+  function allianceSheet(first) {
+    var others = g.players.map(function (p) { return p.id; }).filter(function (p) { return p !== me && lc.allies.indexOf(p) < 0; })
+      .sort(function (a, b) { return E.dist(a, me) - E.dist(b, me) || presScore(b) - presScore(a); });
+    var html = (first ? '<p>Dans chaque circonscription, une seule candidature par camp : tes alliés te laissent la place ici, tu leur laisses ailleurs. Seul, ton parti affronte tout le monde.</p>' : '') +
+      '<div class="lc-camp">' + campOf(lc).map(function (p) { return '<span class="lc-chip" style="--c:' + party(p).color + '">' + (p === me ? 'Toi' : esc(party(p).short)) + '</span>'; }).join('') + '</div>' +
+      '<p class="hint">' + (lc.offersLeft ? 'Encore <b>' + lc.offersLeft + ' proposition' + (lc.offersLeft > 1 ? 's' : '') + '</b>. Plus un parti est proche de toi, plus il dit oui ; ses électeurs suivent aussi mieux.' : 'Plus de proposition possible.') + '</p>' +
+      '<div class="pick">' + others.map(function (p) {
+        var ch = LG.allyChance(g, me, p, lc.tries[p]), d = E.dist(p, me), P = party(p);
+        return '<button type="button" class="pick-row lc-ally" data-ally="' + p + '"' + (lc.offersLeft ? '' : ' disabled') + '><span class="who" style="background:' + P.color + ';color:' + P.ink + '">' + p + '</span><span class="pick-txt"><b>' + esc(P.short) + '</b><small>' +
+          (d <= 1 ? 'ton camp' : d === 2 ? 'proche' : d === 3 ? 'l\'autre camp' : 'très loin de toi') + ' · ' + (100 * presScore(p)).toFixed(0) + ' % à la présidentielle' + (lc.refused[p] ? ' · a refusé' : '') + '</small></span><b class="lc-pct">' + Math.round(100 * ch) + ' %</b></button>';
+      }).join('') + '</div>';
+    modal({ kicker: 'Législatives · avant le 1er tour', title: 'Former ton camp', html: html,
+      buttons: [{ label: first ? 'Partir en campagne' : 'Retour à la carte', primary: true, onClick: renderCamp }],
+      onOpen: function () {
+        Array.prototype.forEach.call(document.querySelectorAll('[data-ally]'), function (b) {
+          b.addEventListener('click', function () {
+            var p = b.getAttribute('data-ally'), r = LG.offerAlly(g, lc, p);
+            if (!r.ok) return toast(r.text);
+            toast(r.accepted ? '🤝 ' + party(p).short + ' rejoint ton camp !' : '❌ ' + party(p).short + ' refuse.');
+            allianceSheet(first);
+          });
+        });
+      } });
+  }
+  function regColor(rc) { return rc.seats ? (rc.safe + rc.open / 2) / rc.seats : 0; }
+  function renderCamp() {
+    lproj = LG.projection(g, lc);
+    var cls = lproj.cls, seats = lproj.res.outcome.campSeats, P = party(me);
+    $('lc-title').textContent = 'Tour ' + lc.turn + ' sur ' + LCP.turns;
+    $('lc-left').textContent = lc.left + ' action' + (lc.left > 1 ? 's' : '');
+    $('lc-camp').innerHTML = campOf(lc).map(function (p) { return '<span class="lc-chip" style="--c:' + party(p).color + '">' + (p === me ? 'Toi' : esc(party(p).short)) + '</span>'; }).join('') +
+      (lc.offersLeft ? '<button type="button" class="lc-chip lc-add" id="lc-add">+ allié</button>' : '');
+    if ($('lc-add')) $('lc-add').onclick = function () { allianceSheet(false); };
+    $('lc-proj').innerHTML = '<div class="lc-pl"><span>Projection</span><b>' + seats + ' sièges</b></div>' +
+      '<div class="lg-bar lc-bar"><i style="background:' + P.color + ';width:' + Math.min(100, 100 * seats / 400).toFixed(1) + '%"></i><span class="lg-maj" style="left:' + (100 * 289 / 400).toFixed(1) + '%"></span></div>' +
+      '<div class="lc-cls"><span>🟢 <b>' + cls.safe + '</b> sûres</span><span>⚖️ <b>' + cls.open + '</b> disputées</span><span>🔴 <b>' + cls.lost + '</b> perdues</span></div>';
+    // la carte : plus la région est à toi, plus elle prend ta couleur ; le badge compte ses circonscriptions disputées
+    var s = $('lc-map'); s.innerHTML = '';
+    D.REGIONS.forEach(function (r) {
+      var rc = cls.regions[r.id], p = sv('path', { d: LMAP.regions[r.id].d, fill: P.color, 'fill-opacity': (0.12 + 0.8 * regColor(rc)).toFixed(2), stroke: '#FAFAF6', 'stroke-width': 1.6, 'stroke-linejoin': 'round', class: 'lc-reg', 'data-rid': r.id });
+      p.addEventListener('click', function () { lsel = r.id; renderCamp(); });
+      s.appendChild(p);
+    });
+    if (lsel) s.appendChild(sv('path', { d: LMAP.regions[lsel].d, class: 'sel' }));
+    D.REGIONS.forEach(function (r) {
+      var rc = cls.regions[r.id], m = LMAP.regions[r.id]; if (!rc.open) return;
+      var gb = sv('g', { class: 'lc-badge' });
+      gb.appendChild(sv('circle', { cx: m.x, cy: m.y, r: 10 }));
+      var t = sv('text', { x: m.x, y: m.y + 3.5 }); t.textContent = rc.open; gb.appendChild(t);
+      gb.addEventListener('click', function () { lsel = r.id; renderCamp(); });
+      s.appendChild(gb);
+    });
+    // la région choisie et les actions
+    var info = $('lc-info');
+    if (!lsel) info.innerHTML = '<p class="lc-hint">Touche une région : les chiffres ⚖️ comptent ses circonscriptions <b>disputées</b>, celles qui peuvent basculer.</p>';
+    else { var rc = cls.regions[lsel]; info.innerHTML = '<span><b>' + esc(E.REG[lsel].name) + '</b> · ' + rc.seats + ' sièges</span><small>🟢 ' + rc.safe + ' sûres · ⚖️ ' + rc.open + ' disputées · 🔴 ' + rc.lost + ' perdues</small>'; }
+    var acts = [
+      { type: 'meeting', icon: '📣', name: 'Le président en meeting', sub: 'use ta popularité (−' + LCP.meetingPop + ')' },
+      { type: 'vedette', icon: '🌟', name: 'Investir une vedette', sub: (LCP.vedetteMax - lc.vedettes) + ' vedette' + (LCP.vedetteMax - lc.vedettes > 1 ? 's' : '') + ' en réserve' },
+      { type: 'mobilise', icon: '🚪', name: 'Mobiliser', sub: 'porte-à-porte, surtout là où l\'on vote peu' },
+      { type: 'clip', icon: '📺', name: 'Clip national', sub: 'un peu partout' }
+    ];
+    $('lc-acts').innerHTML = acts.map(function (a) {
+      var err = LG.actError(g, lc, { type: a.type, rid: lsel }), gain = !err ? previewGain(a.type) : null;
+      return '<button type="button" class="lc-act" data-act="' + a.type + '"' + (err ? ' disabled' : '') + '><span class="lc-ai">' + a.icon + '</span><span class="lc-at"><b>' + a.name + '</b><small>' +
+        (err ? esc(err) : (gain > 0 ? '≈ +' + gain + ' siège' + (gain > 1 ? 's' : '') : 'peu d\'effet ici') + ' · ' + esc(a.sub)) + '</small></span></button>';
+    }).join('');
+    Array.prototype.forEach.call(document.querySelectorAll('[data-act]'), function (b) { b.addEventListener('click', function () { doAct(b.getAttribute('data-act')); }); });
+    $('lc-advisor').innerHTML = '<span class="adv-face">' + A.advisor() + '</span><p><b>Lulu :</b> ' + esc(campAdvice(seats, cls)) + '</p>';
+    $('lc-next').textContent = lc.left > 0 ? 'Fin du tour (' + lc.left + ' action' + (lc.left > 1 ? 's' : '') + ' perdue' + (lc.left > 1 ? 's' : '') + ')' : lc.turn < LCP.turns ? 'Tour suivant' : 'Aller voter';
+    if (lc.left === 0) $('lc-next').textContent = lc.turn < LCP.turns ? 'Tour suivant' : 'Le 1er tour';
+    else $('lc-next').textContent = 'Fin du tour';
+  }
+  /* Combien de sièges rapporterait une action (projection avec l'action jouée) */
+  function previewGain(type) {
+    if (type !== 'clip' && !lsel) return 0;
+    var copy = JSON.parse(JSON.stringify(lc)), r = LG.act(g, copy, { type: type, rid: lsel });
+    if (!r.ok) return 0;
+    return LG.projection(g, copy).res.outcome.campSeats - lproj.res.outcome.campSeats;
+  }
+  function campAdvice(seats, cls) {
+    if (!lc.allies.length) return 'Seul, ton parti affronte tout le monde dans 577 circonscriptions. Propose des alliances aux partis proches : touche « + allié ».';
+    if (seats < 289) return 'Il te manque ' + (289 - seats) + ' sièges. Vise les régions avec beaucoup de circonscriptions disputées (⚖️) : c\'est là que tout se joue.';
+    if (cls.open > 40) return 'Tu es en route pour la majorité, mais ' + cls.open + ' circonscriptions restent disputées. Rien n\'est joué avant le vote.';
+    return 'La majorité se dessine. Garde le rythme jusqu\'au bout !';
+  }
+  function doAct(type) {
+    if (type !== 'clip' && !lsel) return toast('Touche d\'abord une région.');
+    var before = lproj.res.outcome.campSeats, r = LG.act(g, lc, { type: type, rid: lsel });
+    if (!r.ok) return toast(r.text);
+    if (r.pop) gv.popBonus += r.pop;
+    renderCamp();
+    var d = lproj.res.outcome.campSeats - before;
+    toast(d > 0 ? '+' + d + ' siège' + (d > 1 ? 's' : '') + ' dans la projection' : 'La projection ne bouge presque pas');
+  }
+  $('lc-next').addEventListener('click', function () {
+    if (!lc) return;
+    var before = lproj.res.outcome.campSeats, moves = LG.endTurn(g, lc), last = lc.turn > LCP.turns;
+    if (last) lc.turn = LCP.turns;
+    lproj = LG.projection(g, lc);
+    var after = lproj.res.outcome.campSeats, seen = {};
+    var html = '<div class="brief">' + moves.filter(function (m) { var k = m.u; if (seen[k]) return false; seen[k] = 1; return true; }).slice(0, 4).map(function (m) {
+      var u = lproj.res.unions.filter(function (x) { return x.id === m.u; })[0];
+      return line(blocDot(u), '<b>' + esc(blocName(u)) + '</b> fait campagne en ' + esc(E.REG[m.r].name) + '.');
+    }).join('') + '</div><p>Projection : <b>' + after + ' sièges</b> pour ton camp (' + (after - before >= 0 ? '+' : '') + (after - before) + ').</p>';
+    modal({ kicker: 'Législatives', title: last ? 'Fin de la campagne' : 'Les autres font campagne', html: html,
+      buttons: [{ label: last ? 'Le 1er tour' : 'Tour ' + lc.turn, primary: true, onClick: function () { if (last) vote1(); else renderCamp(); } }] });
+  });
+  function vote1() {
+    lctx = LG.prepare(g, LG.optsOf(lc, { rng: g.rng }));
+    lr1 = LG.round1(lctx);
+    night1({ unions: lctx.unions, votes1: lr1.votes1, participation1: lr1.participation1, circs: lr1.circs, regions: null }, { btn: 'Ton entre-deux-tours', next: betweenScreen });
+  }
+
+  /* ===== C. Ton entre-deux-tours ===== */
+  function betweenScreen() {
+    lgStop();
+    if (!ldec) ldec = { withdraw: {}, pact: null, barrage: null };
+    var choices = LG.campChoices(lctx, lr1), projCtx = Object.assign({}, lctx, { opts: Object.assign({}, lctx.opts, { project: true }) });
+    var proj = LG.round2(projCtx, lr1, ldec), seats = proj.outcome.campSeats;
+    $('lb-proj').innerHTML = '<div class="lc-pl"><span>Projection du 2nd tour</span><b>' + seats + ' sièges</b></div>' +
+      '<div class="lg-bar lc-bar"><i style="background:' + party(me).color + ';width:' + Math.min(100, 100 * seats / 400).toFixed(1) + '%"></i><span class="lg-maj" style="left:' + (100 * 289 / 400).toFixed(1) + '%"></span></div>';
+    var U2 = lctx.unions, byId = {}; U2.forEach(function (u) { byId[u.id] = u; });
+    // 1. Tes triangulaires
+    $('lb-tri').hidden = !choices.length;
+    $('lb-tri').innerHTML = '<div class="kicker">Tes triangulaires · ' + choices.length + '</div><p class="hint">Ton candidat est 3e. Te maintenir, c\'est garder tes chances ; te désister, c\'est aider un candidat plus proche de toi à battre le premier.</p>' +
+      choices.slice(0, 12).map(function (c) {
+        var mine = c.q.filter(function (x) { return x.u === 'pres'; })[0], lead = c.q[0], out = !!ldec.withdraw[c.i];
+        return '<div class="lb-row"><span class="lb-txt"><b>' + esc(E.REG[c.r].name) + '</b><small>toi ' + Math.round(100 * mine.v) + ' % · ' + c.q.filter(function (x) { return x !== mine; }).map(function (x) { return esc(blocName(byId[x.u])) + ' ' + Math.round(100 * x.v) + ' %'; }).join(' · ') + '</small></span>' +
+          '<span class="seg2"><button type="button" data-w="' + c.i + '" data-v="0" aria-pressed="' + !out + '">Rester</button><button type="button" data-w="' + c.i + '" data-v="1" aria-pressed="' + out + '">Se retirer</button></span></div>';
+      }).join('') + (choices.length > 12 ? '<p class="hint">… et ' + (choices.length - 12) + ' autres, réglées comme la dernière.</p>' : '');
+    // 2. Le pacte « je me retire ici, tu te retires là »
+    var rivals = U2.filter(function (u) { return !u.pres && (lr1.votes1[u.id] || 0) > 0.04 * lr1.exprimes1; })
+      .sort(function (a, b) { return LG.pactChance(lctx, b.id) - LG.pactChance(lctx, a.id); });
+    $('lb-pact').innerHTML = '<div class="kicker">Pacte de désistement</div><p class="hint">« Je me retire ici, tu te retires là » : dans vos triangulaires communes, le moins bien placé se retire et appelle à voter pour l\'autre. Une seule tentative.</p>' +
+      (ldec.pact ? '<p>🤝 Pacte conclu avec <b>' + esc(blocName(byId[ldec.pact])) + '</b>.</p>' : lpactTried ? '<p>❌ Ta proposition a été refusée.</p>' :
+        '<div class="pick">' + rivals.slice(0, 4).map(function (u) {
+          return '<button type="button" class="pick-row lc-ally" data-pact="' + u.id + '">' + blocDot(u) + '<span class="pick-txt"><b>' + esc(blocName(u)) + '</b><small>' + fr(100 * (lr1.votes1[u.id] || 0) / lr1.exprimes1, 1) + ' % au 1er tour</small></span><b class="lc-pct">' + Math.round(100 * LG.pactChance(lctx, u.id)) + ' %</b></button>';
+        }).join('') + '</div>');
+    // 3. La consigne de vote là où ton camp n'est plus en lice
+    var targets = rivals.filter(function (u) { return u.id !== ldec.pact; }).sort(function (a, b) { return (lr1.votes1[b.id] || 0) - (lr1.votes1[a.id] || 0); }).slice(0, 4);
+    $('lb-cons').innerHTML = '<div class="kicker">Ta consigne de vote</div><p class="hint">Là où ton camp est éliminé, tes électeurs t\'écoutent un peu : appelle-les à faire barrage à un bloc.</p><div class="lb-chips">' +
+      '<button type="button" data-bar="" aria-pressed="' + !ldec.barrage + '">Aucune consigne</button>' + targets.map(function (u) {
+        return '<button type="button" data-bar="' + u.id + '" aria-pressed="' + (ldec.barrage === u.id) + '">Barrage à ' + esc(blocName(u)) + '</button>';
+      }).join('') + '</div>';
+    Array.prototype.forEach.call(document.querySelectorAll('[data-w]'), function (b) { b.addEventListener('click', function () { ldec.withdraw[+b.getAttribute('data-w')] = b.getAttribute('data-v') === '1'; betweenScreen(); }); });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-bar]'), function (b) { b.addEventListener('click', function () { ldec.barrage = b.getAttribute('data-bar') || null; betweenScreen(); }); });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-pact]'), function (b) {
+      b.addEventListener('click', function () {
+        var id = b.getAttribute('data-pact'), ch = LG.pactChance(lctx, id); lpactTried = true;
+        if (g.rng() < ch) { ldec.pact = id; toast('🤝 Pacte conclu avec ' + blocName(byId[id]) + ' !'); } else toast('❌ ' + blocName(byId[id]) + ' refuse ton pacte.');
+        betweenScreen();
+      });
+    });
+    U.go('lbtw');
+  }
+  $('lb-go').addEventListener('click', function () {
+    if (!lctx) return;
+    var res = LG.round2(lctx, lr1, ldec);
+    G.setLegis(gv, res);
+    night2({ onDone: function () { step = 0; U.go('gov'); render(); } });
+  });
+
+  /* ===== B. La soirée du 1er tour ===== */
+  /* s : unions, votes1, participation1, circs (status, winner, q) — o : dissolution, btn, next */
+  function night1(s, o) {
+    lgStop(); $('toast').hidden = true;
+    var lead = {}; s.circs.forEach(function (c) { var p = c.c1[0].pid; lead[p] = (lead[p] || 0) + 1; });
+    g.players.forEach(function (p) { if (lead[p.id] == null) lead[p.id] = 0; });
+    var layout = hemiLayout(lead), e1 = {}, n1 = 0, duels = 0, tri = 0;
+    s.circs.forEach(function (c) { if (c.status === 'elu1') { e1[c.winner] = (e1[c.winner] || 0) + 1; n1++; } else if (c.q && c.q.length >= 3) tri++; else duels++; });
+    $('lg-kicker').textContent = o.dissolution ? 'Législatives anticipées' : 'Juin · Élections législatives';
+    $('lg-title').textContent = o.dissolution ? 'Les Français revotent' : 'Le 1er tour';
+    var shown = {};
+    $('lg-hemi').innerHTML = '<svg viewBox="0 0 200 110" aria-label="Hémicycle de l\'Assemblée nationale">' + layout.map(function (pt) {
+      var on = pt.pid && (shown[pt.pid] = (shown[pt.pid] || 0)) < (e1[pt.pid] || 0); if (on) shown[pt.pid]++;
+      return '<circle cx="' + pt.x.toFixed(1) + '" cy="' + pt.y.toFixed(1) + '" r="2.3" fill="' + (on ? party(pt.pid).color : '#3A3560') + '"/>';
+    }).join('') + '<text x="100" y="100" text-anchor="middle" class="hemi-n">' + n1 + '</text><text x="100" y="108" text-anchor="middle" class="hemi-l">élus dès ce soir</text></svg>';
+    var camp1 = 0; s.circs.forEach(function (c) { if (c.status === 'elu1' && c.c1[0].u === 'pres') camp1++; });
+    $('lg-camp').innerHTML = campBar(camp1);
+    var tot1 = 0; Object.keys(s.votes1).forEach(function (k) { tot1 += s.votes1[k]; });
+    var bl = s.unions.map(function (u) { return Object.assign({ pct: (s.votes1[u.id] || 0) / tot1 }, u); }).sort(function (a, b) { return b.pct - a.pct; });
+    var top = bl.slice(0, 4), rest = 1 - top.reduce(function (a, b) { return a + b.pct; }, 0), maxp = top[0].pct;
+    $('lg-stage').innerHTML =
+      '<div class="night-turnout"><span>Participation <b>' + fr(100 * s.participation1, 1) + ' %</b></span><span>' + (top[0].pres && gv.pid === me ? 'Ton camp arrive en tête' : esc(blocName(top[0])) + ' en tête') + '</span></div>' +
+      top.map(function (b) {
+        return '<div class="nb-row"><span class="nb-lbl">' + esc(blocName(b)) + '</span><span class="nb-bar"><i style="background:' + blocColor(b) + ';width:' + (100 * b.pct / maxp).toFixed(0) + '%"></i></span><b>' + fr(100 * b.pct, 1) + ' %</b></div>';
+      }).join('') + '<div class="nb-row"><span class="nb-lbl">Autres partis</span><span class="nb-bar"><i style="background:#8E8AA8;width:' + (100 * rest / maxp).toFixed(0) + '%"></i></span><b>' + fr(100 * rest, 1) + ' %</b></div>' +
+      '<div class="lg-counts"><span class="lg-count"><b>' + n1 + '</b>élus dès ce soir</span><span class="lg-count"><b>' + duels + '</b>duels</span><span class="lg-count"><b>' + tri + '</b>triangulaires</span></div>' +
+      '<button type="button" class="lg-more" id="lg-learn1">📚 Comment on devient député</button>';
+    $('lg-learn1').onclick = learnLegis;
+    $('lg-btn').textContent = o.btn || 'Le second tour';
+    $('lg-btn').onclick = function () { lgStop(); o.next(); };
+    U.go('legis');
+  }
+  function campBar(cs) {
+    return '<div class="lg-campline"><span>' + (gv.pid === me ? 'Ton camp' : 'Majorité présidentielle') + '</span><b id="lg-cs">' + cs + '</b></div>' +
+      '<div class="lg-bar"><i id="lg-cbar" style="background:' + party(gv.pid).color + ';width:' + Math.min(100, 100 * cs / 400).toFixed(1) + '%"></i><span class="lg-maj" style="left:' + (100 * 289 / 400).toFixed(1) + '%"></span></div>';
+  }
+  function learnLegis() {
+    var L1 = D.LEARN.scrutin_legis, L2 = D.LEARN.locomotive;
+    modal({ kicker: 'Le saviez-vous ?', title: L1.title, html: '<p>' + esc(L1.text) + '</p>' + srcHtml(L1) + '<h3>' + esc(L2.title) + '</h3><p>' + esc(L2.text) + '</p>' + srcHtml(L2) });
+  }
+
+  /* ===== D. Le 2nd tour et le verdict (résultat dans gv.legis) — o : dissolution, before, onDone ===== */
+  function night2(o) {
     lgStop();
     var res = gv.legis, out = res.outcome, layout = hemiLayout(res.seats), shown = {}, campSet = {};
     out.camp.forEach(function (p) { campSet[p] = true; });
     Object.keys(res.seats).forEach(function (p) { shown[p] = 0; });
-    $('lg-kicker').textContent = o.dissolution ? 'Législatives anticipées' : 'Juin · Élections législatives';
-    $('lg-title').textContent = o.dissolution ? 'Les Français revotent' : 'Le 1er tour';
+    $('lg-kicker').textContent = (o.dissolution ? 'Législatives anticipées' : 'Juin · Élections législatives') + ' · 2nd tour';
+    $('lg-title').textContent = 'L\'Assemblée se remplit';
     $('lg-hemi').innerHTML = '<svg viewBox="0 0 200 110" aria-label="Hémicycle de l\'Assemblée nationale">' + layout.map(function (pt, i) {
       return '<circle id="lgd' + i + '" cx="' + pt.x.toFixed(1) + '" cy="' + pt.y.toFixed(1) + '" r="2.3" fill="#3A3560"/>';
     }).join('') + '<text x="100" y="100" text-anchor="middle" class="hemi-n" id="lg-n">0</text><text x="100" y="108" text-anchor="middle" class="hemi-l">députés élus</text></svg>';
-    var campColor = party(gv.pid).color;
-    $('lg-camp').innerHTML = '<div class="lg-campline"><span>' + (gv.pid === me ? 'Ton camp' : 'Majorité présidentielle') + '</span><b id="lg-cs">0</b></div>' +
-      '<div class="lg-bar"><i id="lg-cbar" style="background:' + campColor + '"></i><span class="lg-maj" style="left:' + (100 * 289 / 400).toFixed(1) + '%"></span></div>';
-    // places déjà pourvues : on allume les points de chaque parti jusqu'à son nombre de sièges
+    $('lg-camp').innerHTML = campBar(0);
     function seat(pid, n) {
       for (var i = 0; i < layout.length; i++) {
         var pt = layout[i]; if (pt.pid !== pid || pt.k < shown[pid] || pt.k >= shown[pid] + n) continue;
@@ -176,46 +394,25 @@
       $('lg-n').textContent = tot; $('lg-cs').textContent = cs;
       $('lg-cbar').style.width = Math.min(100, 100 * cs / 400) + '%';
     }
-    // 1. Le 1er tour
-    var tot1 = 0; Object.keys(res.votes1).forEach(function (k) { tot1 += res.votes1[k]; });
-    var bl = out.blocs.map(function (b) { return Object.assign({ pct: (res.votes1[b.id] || 0) / tot1 }, b); }).sort(function (a, b) { return b.pct - a.pct; });
-    var top = bl.slice(0, 4), rest = 1 - top.reduce(function (a, b) { return a + b.pct; }, 0), maxp = top[0].pct;
+    // les élus du 1er tour sont déjà assis
     var e1 = {}; res.circs.forEach(function (c) { if (c.status === 'elu1') e1[c.winner] = (e1[c.winner] || 0) + 1; });
-    Object.keys(e1).forEach(function (p) { seat(p, e1[p]); });
-    refresh();
-    var lead = top[0];
-    $('lg-stage').innerHTML =
-      '<div class="night-turnout"><span>Participation <b>' + fr(100 * res.participation1, 1) + ' %</b></span><span>' + (lead.id === 'pres' && gv.pid === me ? 'Ton camp arrive en tête' : esc(blocName(lead)) + ' en tête') + '</span></div>' +
-      top.map(function (b) {
-        return '<div class="nb-row"><span class="nb-lbl">' + esc(blocName(b)) + '</span><span class="nb-bar"><i style="background:' + blocColor(b) + ';width:' + (100 * b.pct / maxp).toFixed(0) + '%"></i></span><b>' + fr(100 * b.pct, 1) + ' %</b></div>';
-      }).join('') + '<div class="nb-row"><span class="nb-lbl">Autres partis</span><span class="nb-bar"><i style="background:#8E8AA8;width:' + (100 * rest / maxp).toFixed(0) + '%"></i></span><b>' + fr(100 * rest, 1) + ' %</b></div>' +
-      '<div class="lg-counts"><span class="lg-count"><b>' + res.counts.elu1 + '</b>élus dès ce soir</span><span class="lg-count"><b>' + res.counts.duel + '</b>duels</span><span class="lg-count"><b>' + res.counts.tri + '</b>triangulaires' + (res.counts.desist ? ' · ' + res.counts.desist + ' désistement' + (res.counts.desist > 1 ? 's' : '') : '') + '</span></div>' +
-      '<button type="button" class="lg-more" id="lg-regions">Région par région ›</button>';
-    $('lg-regions').onclick = regionsDetail;
-    $('lg-btn').textContent = 'Le second tour';
-    $('lg-btn').onclick = round2;
+    Object.keys(e1).forEach(function (p) { seat(p, e1[p]); }); refresh();
+    $('lg-stage').innerHTML = '<p class="lg-ticker" id="lg-tick">Les bureaux ferment…</p>';
+    var order = D.REGIONS.slice().sort(function (a, b) { return a.seats - b.seats; }), done = {};
+    $('lg-btn').textContent = 'Passer';
+    $('lg-btn').onclick = function () { lgStop(); order.forEach(fill); verdict(); };
     U.go('legis');
-    // 2. Le 2nd tour, région par région (des plus petites à l'Île-de-France)
-    function round2() {
-      $('lg-kicker').textContent = (o.dissolution ? 'Législatives anticipées' : 'Juin · Élections législatives') + ' · 2nd tour';
-      $('lg-title').textContent = 'L\'Assemblée se remplit';
-      $('lg-stage').innerHTML = '<p class="lg-ticker" id="lg-tick">Les bureaux ferment…</p>';
-      $('lg-btn').textContent = 'Passer';
-      $('lg-btn').onclick = function () { lgStop(); order.forEach(fill); verdict(); };
-      var order = D.REGIONS.slice().sort(function (a, b) { return a.seats - b.seats; }), done = {};
-      function fill(r) {
-        if (done[r.id]) return; done[r.id] = true;
-        var add = {}, camp = 0;
-        res.circs.forEach(function (c) { if (c.r === r.id && c.status !== 'elu1') add[c.winner] = (add[c.winner] || 0) + 1; });
-        Object.keys(add).forEach(function (p) { seat(p, add[p]); });
-        Object.keys(res.regions[r.id].seats).forEach(function (p) { if (campSet[p]) camp += res.regions[r.id].seats[p]; });
-        refresh();
-        var t = $('lg-tick'); if (t) { t.innerHTML = '<b>' + esc(r.name) + '</b> : ' + (gv.pid === me ? 'ton camp' : 'la majorité') + ' ' + camp + ' sur ' + r.seats; FX.replay(t, 'bump'); }
-      }
-      order.forEach(function (r, i) { lgLater(function () { fill(r); }, 500 + i * 560); });
-      lgLater(verdict, 500 + order.length * 560 + 500);
+    function fill(r) {
+      if (done[r.id]) return; done[r.id] = true;
+      var add = {}, camp = 0;
+      res.circs.forEach(function (c) { if (c.r === r.id && c.status !== 'elu1') add[c.winner] = (add[c.winner] || 0) + 1; });
+      Object.keys(add).forEach(function (p) { seat(p, add[p]); });
+      Object.keys(res.regions[r.id].seats).forEach(function (p) { if (campSet[p]) camp += res.regions[r.id].seats[p]; });
+      refresh();
+      var t = $('lg-tick'); if (t) { t.innerHTML = '<b>' + esc(r.name) + '</b> : ' + (gv.pid === me ? 'ton camp' : 'la majorité') + ' ' + camp + ' sur ' + r.seats; FX.replay(t, 'bump'); }
     }
-    // 3. Le verdict
+    order.forEach(function (r, i) { lgLater(function () { fill(r); }, 500 + i * 560); });
+    lgLater(verdict, 500 + order.length * 560 + 500);
     function verdict() {
       lgStop(); refresh();
       var t = out.type, cs = out.campSeats, riv = out.rival;
@@ -232,13 +429,15 @@
       }).join('') + '</div>' + '<button type="button" class="lg-more" id="lg-regions">Région par région ›</button>' +
         '<button type="button" class="lg-more" id="lg-learn">📚 Comment on devient député</button>';
       $('lg-regions').onclick = regionsDetail;
-      $('lg-learn').onclick = function () {
-        var L1 = D.LEARN.scrutin_legis, L2 = D.LEARN.locomotive;
-        modal({ kicker: 'Le saviez-vous ?', title: L1.title, html: '<p>' + esc(L1.text) + '</p>' + srcHtml(L1) + '<h3>' + esc(L2.title) + '</h3><p>' + esc(L2.text) + '</p>' + srcHtml(L2) });
-      };
+      $('lg-learn').onclick = learnLegis;
       $('lg-btn').textContent = 'Au travail !';
       $('lg-btn').onclick = function () { lgStop(); o.onDone && o.onDone(); };
     }
+  }
+  /* Les législatives jouées sans campagne (dissolution) : 1er tour puis 2nd tour, à partir de gv.legis */
+  function legisNight(o) {
+    var res = gv.legis;
+    night1({ unions: res.unions, votes1: res.votes1, participation1: res.participation1, circs: res.circs }, { dissolution: o.dissolution, next: function () { night2(o); } });
   }
   /* Le détail, région par région : élus au 1er tour, duels, triangulaires et sièges de chaque bloc */
   function regionsDetail() {

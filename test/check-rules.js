@@ -314,5 +314,37 @@ section('Législatives');
   ok(o.type === 'relative', 'premier bloc sans 289 sièges : majorité relative');
 })();
 
+/* ---------- v2.4 : la campagne des législatives ---------- */
+section('Campagne des législatives');
+(function () {
+  var LG = require('../js/legis.js'), L = D.LEGIS;
+  var g = E.createGame('EM', { seed: 21 });
+  ok(LG.allyChance(g, 'EM', 'MD') > LG.allyChance(g, 'EM', 'UG') && LG.allyChance(g, 'EM', 'UG') > LG.allyChance(g, 'EM', 'FI'), 'alliance : plus facile avec un parti proche');
+  ok(LG.allyChance(g, 'EM', 'MN') < 0.2 && LG.allyChance(g, 'UG', 'MN') >= 0.5, 'cordon : En Mouvement et Mouvement National se méfient, l\'Union Gaulliste beaucoup moins');
+  ok(LG.allyChance(g, 'SM', 'UG') > 0.2, 'une alliance entre gauche modérée et droite reste possible');
+  var lc = LG.newCampaign(g, { pres: 'EM', margin: 0.05 }), p0 = LG.projection(g, lc).res.outcome.campSeats;
+  lc.allies = ['MD', 'HZ'];
+  var p1 = LG.projection(g, lc).res.outcome.campSeats;
+  ok(p1 > p0, 'des alliés rapportent des sièges (' + p0 + ' → ' + p1 + ')');
+  ok(LG.projection(g, lc).res.outcome.campSeats === p1, 'la projection ne dépend pas du hasard (même carte des circonscriptions)');
+  var rid = 'idf', r = LG.act(g, lc, { type: 'meeting', rid: rid });
+  ok(r.ok && r.pop < 0 && LG.projection(g, lc).res.outcome.campSeats >= p1, 'le président en meeting : effet sur la projection, coût en popularité');
+  ok(!LG.act(g, lc, { type: 'meeting', rid: 'ara' }).ok, 'un seul meeting du président par tour');
+  ok(LG.actionGain(g, lc, 'vedette', rid) < L.campaign.vedette, 'une même région rapporte moins à chaque nouvelle action');
+  LG.act(g, lc, { type: 'clip' }); LG.act(g, lc, { type: 'clip' });
+  ok(lc.left === 0 && !LG.act(g, lc, { type: 'clip' }).ok, '3 actions par tour');
+  LG.endTurn(g, lc); ok(lc.turn === 2 && lc.left === 3 && Object.keys(lc.others).length > 0, 'fin du tour : les autres blocs font campagne');
+  // l'entre-deux-tours : les choix du joueur sont respectés
+  var ctx = LG.prepare(g, LG.optsOf(lc, { rng: E.makeRng(9) })), r1 = LG.round1(ctx), ch = LG.campChoices(ctx, r1);
+  var all = {}; ch.forEach(function (c) { all[c.i] = true; });
+  var res = LG.round2(ctx, r1, { withdraw: all });
+  var bad = 0; ch.forEach(function (c) { var cc = res.circs[c.i]; if (cc.q.some(function (x) { return x.u === 'pres'; })) bad++; });
+  ok(bad === 0, 'désistement : le camp se retire bien des ' + ch.length + ' triangulaires choisies');
+  var keep = LG.round2(ctx, r1, { withdraw: {} }), bad2 = 0;
+  ch.forEach(function (c) { if (!keep.circs[c.i].q.some(function (x) { return x.u === 'pres'; })) bad2++; });
+  ok(bad2 === 0, 'maintien : le camp reste en lice là où il l\'a décidé');
+  var n = 0; res.circs.forEach(function (c) { n++; }); ok(n === 577, 'toujours 577 circonscriptions');
+})();
+
 console.log('\n' + passes + ' vérifications réussies, ' + fails + ' en échec.');
 process.exit(fails ? 1 : 0);

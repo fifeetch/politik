@@ -609,7 +609,26 @@
     withdrawFar: 3, withdrawNear: 2, withdrawChance: 0.8,
     /* Reports de voix au 2nd tour selon la distance politique (0 = même famille) */
     transfer2: { 0: 0.85, 1: 0.72, 2: 0.55, 3: 0.3, 4: 0.17, 5: 0.1 },
-    turnout2: 0.97                             // un peu moins de votants au 2nd tour
+    turnout2: 0.97,                            // un peu moins de votants au 2nd tour
+    /* v2.4 : ta campagne des législatives */
+    allyKeep: { 1: 0.92, 2: 0.82, 3: 0.65, 4: 0.5, 5: 0.4 },    // part des électeurs d'un allié qui suivent la candidature commune, selon sa distance au président
+    /* chance qu'un parti accepte une alliance, selon l'écart sur l'axe gauche-droite : facile dans son camp, possible au-delà
+       (gauche modérée, écologistes et droite par exemple), presque impossible aux deux bouts */
+    allyAccept: [{ gap: 0.8, p: 0.85 }, { gap: 1.6, p: 0.6 }, { gap: 2.4, p: 0.35 }, { gap: 3.2, p: 0.15 }, { gap: 99, p: 0.05 }],
+    cordon: { parties: ['MN', 'RQ'], below: 5, factor: 0.4 },   // le « cordon sanitaire » : la droite nationale et ceux qui sont loin d'elle se méfient les uns des autres
+    allyDealBonus: 0.15,                       // +15 % s'il t'a soutenu au 2nd tour de la présidentielle
+    allyOffers: 3,                             // propositions d'alliance avant la campagne
+    campaign: { turns: 2, actions: 3,
+      meeting: 0.1, meetingPop: 2, meetingMax: 1,    // le président en meeting : +10 % pour ton camp dans la région, −2 de popularité, une fois par tour
+      vedette: 0.08, vedetteMax: 2,                  // investir une vedette : +8 % dans la région, 2 vedettes en tout
+      mobilise: 0.04, mobiliseLow: 0.03,             // mobiliser : +4 %, +3 % de plus là où l'on vote peu
+      clip: 0.02,                                    // le clip national : +2 % partout
+      repeat: 0.6,                                   // une même région rapporte moins à chaque nouvelle action (×0,6)
+      aiBoost: 0.05, aiRegions: 2 },                 // les autres blocs font campagne : +5 % dans 2 régions par tour
+    safeMargin: 0.05,                          // au-delà de 5 points d'avance (ou de retard) projetés, une circonscription est sûre (ou perdue)
+    pactBonus: 0.05,                           // un pacte de désistement est un peu plus facile à obtenir qu'une alliance (même calcul, +5 points)
+    pactGive: 0.1,                             // les électeurs du partenaire de pacte : +10 points de report vers toi
+    barrageCut: 0.5, barrageGive: 0.1          // ta consigne de barrage : moitié moins vers le bloc visé, +10 points vers l'autre
   };
 
   /* ---------- v0.6 : le débat télévisé ----------

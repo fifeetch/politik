@@ -1005,3 +1005,54 @@ button { font-family: inherit; color: inherit; }
 @media (max-height: 700px) { .lg-hemi svg { max-height: 150px; } .lg-title { font-size: 22px; } }
 .lg-seg i { display: block; height: 100%; }
 .legis .nb-bar i { transition: none; }
+
+/* ---------- v2.4 : la campagne des législatives ---------- */
+.lcamp { gap: 8px; background: var(--paper); padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+.lc-top { display: flex; justify-content: space-between; align-items: flex-end; gap: 8px; }
+.lc-h1 { font-size: 30px; margin: 0; }
+.lc-campline { display: flex; flex-wrap: wrap; gap: 6px; }
+.lc-camp { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0; }
+.lc-chip { display: inline-flex; align-items: center; gap: 5px; font: 700 13px var(--body); padding: 4px 10px 4px 8px; border-radius: 999px; background: var(--sheet); border: 1.5px solid var(--ink); color: var(--ink); }
+.lc-chip::before { content: ''; width: 10px; height: 10px; border-radius: 50%; background: var(--c, var(--ink)); }
+.lc-add { cursor: pointer; border-style: dashed; background: transparent; }
+.lc-add::before { display: none; }
+.lc-proj { display: flex; flex-direction: column; gap: 4px; }
+.lc-pl { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; color: var(--ink-2); }
+.lc-pl b { font-family: var(--display); font-weight: 800; font-size: 22px; color: var(--ink); }
+.lc-bar { background: var(--rule); }
+.lc-bar .lg-maj { background: var(--ink); }
+.lc-bar .lg-maj::after { color: var(--ink-2); }
+.lc-cls { display: flex; justify-content: space-between; gap: 6px; font-size: 13px; color: var(--ink-2); }
+.lc-cls b { color: var(--ink); }
+.lc-map { width: 100%; max-height: 34vh; }
+.lc-reg { cursor: pointer; }
+.lc-badge { cursor: pointer; }
+.lc-badge circle { fill: var(--ink); stroke: #FAFAF6; stroke-width: 1.5; }
+.lc-badge text { font: 700 10px var(--body); fill: #fff; text-anchor: middle; }
+.lc-info { min-height: 38px; display: flex; flex-direction: column; font-size: 14px; }
+.lc-info small { color: var(--ink-2); font-size: 12.5px; }
+.lc-hint { margin: 0; font-size: 13px; color: var(--ink-2); line-height: 1.35; }
+.lc-acts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.lc-act { display: flex; align-items: flex-start; gap: 6px; text-align: left; min-height: 62px; padding: 7px 8px; border: 1.5px solid var(--ink); border-radius: 12px; background: var(--sheet); color: var(--ink); font: inherit; cursor: pointer; box-shadow: 0 3px 0 var(--ink); }
+.lc-act:not(:disabled):active { transform: translateY(2px); box-shadow: 0 1px 0 var(--ink); }
+.lc-act:disabled { opacity: .45; box-shadow: none; cursor: default; }
+.lc-ai { font-size: 20px; line-height: 1.1; }
+.lc-at { display: flex; flex-direction: column; gap: 1px; }
+.lc-at b { font-size: 13.5px; line-height: 1.15; }
+.lc-at small { font-size: 11.5px; color: var(--ink-2); line-height: 1.25; }
+.lc-adv { margin: 0; }
+.lcamp #lc-next { margin-top: auto; }
+.lc-pct { font-family: var(--display); font-size: 18px; margin-left: auto; }
+.lc-dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+.pick-row:disabled { opacity: .5; cursor: default; }
+.lbtw { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+.lb-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 0; border-top: 1px solid var(--rule); }
+.lb-txt { display: flex; flex-direction: column; font-size: 13.5px; min-width: 0; }
+.lb-txt small { color: var(--ink-2); font-size: 12px; }
+.seg2 { display: inline-flex; border: 1.5px solid var(--ink); border-radius: 10px; overflow: hidden; flex-shrink: 0; }
+.seg2 button, .lb-chips button { font: 700 12.5px var(--body); padding: 7px 9px; border: 0; background: var(--sheet); color: var(--ink); cursor: pointer; }
+.seg2 button[aria-pressed="true"], .lb-chips button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+.lb-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.lb-chips button { border: 1.5px solid var(--ink); border-radius: 999px; }
+.lbtw #lb-go { margin-top: auto; }
+.lc-bar { margin-top: 14px; }

@@ -60,3 +60,48 @@ console.log('Par circonscription (moyenne) : élus au 1er tour ' + Math.round(su
 console.log('Duels face au MN : le centre gagne ' + (mnDuels.nc ? Math.round(100 * mnDuels.centreWins / mnDuels.nc) : '-') + ' % (' + mnDuels.nc + '), la gauche ' + (mnDuels.ng ? Math.round(100 * mnDuels.gaucheWins / mnDuels.ng) : '-') + ' % (' + mnDuels.ng + ')');
 console.log('Par président :', Object.keys(byPres).sort().map(function (k) { var b = byPres[k]; return k + ' ×' + b.n + ' abs ' + Math.round(100 * b.abs / b.n) + ' % (' + Math.round(b.seats / b.n) + ')'; }).join(' · '));
 console.log('Dissolution (popularité:issue) :', JSON.stringify(diss.out));
+
+/* ---------- v2.4 : le chemin du joueur (alliances, campagne, entre-deux-tours) ----------
+   « actif » : propose 3 alliances aux partis les plus proches, joue ses 6 actions là où il y a le plus de circonscriptions
+   disputées, se désiste face à un rival lointain, passe un pacte avec le bloc le plus proche et fait barrage au plus lointain.
+   « alliances » : les mêmes alliances, sans campagne ni consigne. « passif » : aucune alliance, aucune action, aucune consigne. */
+function playerPath(g, active, allyOnly) {
+  var pres = g.winner, res2 = g.result, pct = res2.second ? (res2.second.a === pres ? res2.second.pctA : res2.second.pctB) : res2.first[0].pct;
+  var lc = LG.newCampaign(g, { pres: pres, margin: pct - 0.5, loser: res2.second ? (res2.second.a === pres ? res2.second.b : res2.second.a) : null });
+  if (active) {
+    var cands = g.players.map(function (p) { return p.id; }).filter(function (p) { return p !== pres; }).sort(function (a, b) { return LG.allyChance(g, pres, b) - LG.allyChance(g, pres, a); });
+    for (var k = 0; k < cands.length && lc.offersLeft > 0; k++) LG.offerAlly(g, lc, cands[k]);
+    for (var t = 0; t < D.LEGIS.campaign.turns; t++) {
+      if (allyOnly) { LG.endTurn(g, lc); continue; }
+      var cls = LG.projection(g, lc).cls, regs = D.REGIONS.slice().sort(function (a, b) { return cls.regions[b.id].open - cls.regions[a.id].open; });
+      ['meeting', 'vedette', 'mobilise'].forEach(function (ty, i) {
+        var a = { type: ty, rid: regs[i].id }; if (LG.actError(g, lc, a)) a = { type: 'mobilise', rid: regs[i].id };
+        if (LG.actError(g, lc, a)) a = { type: 'clip' };
+        LG.act(g, lc, a);
+      });
+      LG.endTurn(g, lc);
+    }
+  } else { LG.endTurn(g, lc); LG.endTurn(g, lc); }
+  var ctx = LG.prepare(g, LG.optsOf(lc, { rng: g.rng })), r1 = LG.round1(ctx), dec = null;
+  if (active && !allyOnly) {
+    dec = { withdraw: {}, pact: null, barrage: null };
+    LG.campChoices(ctx, r1).forEach(function (c) { if (E.dist(c.q[0].pid, pres) >= 3) dec.withdraw[c.i] = true; });
+    var others = ctx.unions.filter(function (u) { return !u.pres; }).map(function (u) { var d = 9; u.parties.forEach(function (p) { d = Math.min(d, E.dist(p, pres)); }); return { id: u.id, d: d, v: r1.votes1[u.id] }; });
+    var near = others.slice().sort(function (a, b) { return a.d - b.d || b.v - a.v; })[0];
+    if (near && g.rng() < LG.pactChance(ctx, near.id)) dec.pact = near.id;
+    var far = others.filter(function (o) { return o.v > 0.1 * r1.exprimes1; }).sort(function (a, b) { return b.d - a.d; })[0];
+    if (far) dec.barrage = far.id;
+  }
+  return LG.round2(ctx, r1, dec);
+}
+var paths = { actif: {}, alliances: {}, passif: {} }, pSeats = { actif: 0, alliances: 0, passif: 0 }, P2 = Math.min(M, 120);
+for (var i2 = 0; i2 < P2; i2++) {
+  var g2 = play(7000 + i2);
+  ['actif', 'alliances', 'passif'].forEach(function (k) {
+    var gg = Object.assign({}, g2, { rng: E.makeRng(31 + i2) });
+    var r = playerPath(gg, k !== 'passif', k === 'alliances'); paths[k][r.outcome.type] = (paths[k][r.outcome.type] || 0) + 1; pSeats[k] += r.outcome.campSeats;
+  });
+}
+['actif', 'alliances', 'passif'].forEach(function (k) {
+  console.log('Joueur ' + k + ' (' + P2 + ' parties) : ' + Object.keys(paths[k]).map(function (t) { return t + ' ' + Math.round(100 * paths[k][t] / P2) + ' %'; }).join(' · ') + ' · camp ' + Math.round(pSeats[k] / P2) + ' sièges');
+});
