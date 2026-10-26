@@ -431,7 +431,7 @@
       force: 'La France des clochers : un Meeting rapporte 1 soutien de plus en région rurale.',
       weakness: 'Petit budget : la Télé coûte 1 € de plus.',
       cards: ['appel18', 'plateau_tele'] },
-    { id: 'RQ', sigle: 'REC', pos: 6.7, name: 'Regrets Éternels Compris', short: 'Regrets Éternels', family: 'Droite identitaire',
+    { id: 'RQ', sigle: 'REC', pos: 6.7, name: 'Rétroconquête', short: 'Rétroconquête', family: 'Droite identitaire',
       candidate: 'Éric Zéronuance', candTitle: 'le polémiste sans nuance', programme: ['regroupement', 'controles', 'referendum', 'planchers', 'fraude'], financing: ['trainvie', 'chomage'],
       color: '#3B3B3B', ink: '#FFFFFF', money: 6, infl: 3, bases: ['pac', 'idf'],
       cred: { immigration: 2, securite: 2, pouvoir: 0, emploi: 0, services: 0, ecologie: 0 },
