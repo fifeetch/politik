@@ -197,6 +197,11 @@ Quand tu gagnes la présidentielle, le bouton « 🏛️ Gouverner le pays » ou
 - Une légende explique la carte (couleur = région qui penche pour ton camp, pastilles = circonscriptions disputées), et une fiche « Ta campagne en 2 tours » au début.
 - Quand les 3 actions sont jouées, un message le dit clairement au lieu de boutons grisés.
 
+## v2.9 — fait : les nouvelles lois
+- Au printemps, « Ta loi de l'année » propose tes promesses **et** une nouvelle loi, en trois familles : faire rentrer de l'argent (8 mesures), réduire les dépenses (7 mesures), autres idées (le reste du catalogue). Toutes ont déjà leur fiche sourcée.
+- Chaque texte : ce qu'il rapporte ou coûte en Md€ et en points de déficit, les groupes contents ou fâchés, le pronostic du vote ; même vote, négociation, 49.3 et référendum que pour une promesse (pas de référendum sur un impôt).
+- Une loi nouvelle ne compte pas dans les promesses tenues ; rejetée : −1 de popularité (contre −2 pour une promesse) et on peut la représenter. Trophée « Réformateur » à partir de 2 lois nouvelles adoptées. Lulu suggère une loi de recettes ou d'économies quand le déficit dérape.
+
 ## À venir (pistes du bêta-testeur)
 - **Mécaniques débloquées au fil des parties** : scandales et dilemmes, puis le programme détaillé, puis les alliances et la phase « gouverner ».
 - **Dilemmes en cartes à glisser** (à la manière de Reigns).

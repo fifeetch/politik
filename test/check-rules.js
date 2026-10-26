@@ -472,5 +472,22 @@ section('Campagne éclair et sauvegarde');
   E.setFormat('classique');
 })();
 
+/* ---------- v2.9 : les nouvelles lois ---------- */
+section('Les nouvelles lois');
+(function () {
+  var G = require('../js/govern.js');
+  var g = E.createGame('SM', { seed: 61 }); E.setProgramme(g, 'SM', E.PARTY.SM.programme, E.PARTY.SM.financing);
+  g.result = { first: E.poll(g), second: { a: 'SM', b: 'MN', pctA: 0.56, pctB: 0.44 } }; g.winner = 'SM';
+  var gv = G.create(g, 'SM'), cat = G.lawCatalog(gv);
+  ok(cat.recettes.length >= 4 && cat.economies.length >= 4 && cat.autres.length >= 5, 'trois familles de lois nouvelles : recettes, économies, autres idées');
+  ok(cat.recettes.concat(cat.economies, cat.autres).every(function (id) { return E.PARTY.SM.programme.indexOf(id) < 0 && (gv.financing || []).indexOf(id) < 0; }), 'le catalogue exclut tes promesses et tes financements déjà prévus');
+  ok(cat.recettes.every(function (id) { return E.measure(id).cost < 0; }) && cat.economies.every(function (id) { return E.measure(id).cost < 0; }), 'recettes et économies font baisser le déficit');
+  var id = cat.recettes[0], d0 = gv.deficit; G.addExtra(gv, id); G.adopt(gv, id, false);
+  ok(gv.deficit < d0 && G.itemOf(gv, id).status === 'adopted' && G.lawCatalog(gv).recettes.indexOf(id) < 0, 'une loi nouvelle adoptée : le déficit baisse et elle sort du catalogue');
+  ok(G.verdict(gv).adopted === 0, 'elle ne compte pas dans les promesses tenues');
+  var id2 = cat.economies[0]; G.addExtra(gv, id2); var p0 = gv.popBonus; G.reject(gv, id2);
+  ok(gv.popBonus === p0 - 1 && G.lawCatalog(gv).economies.indexOf(id2) >= 0, 'une loi nouvelle rejetée : −1 de popularité, on peut la représenter');
+})();
+
 console.log('\n' + passes + ' vérifications réussies, ' + fails + ' en échec.');
 process.exit(fails ? 1 : 0);

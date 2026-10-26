@@ -75,6 +75,10 @@
       var M = E.measure(m.id), st = m.status === 'adopted' ? (m.amended ? '✅ adoptée (amendée)' : '✅ adoptée') : m.status === 'rejected' ? '❌ rejetée' : '⏳ à faire voter';
       return '<div class="gp-row ' + m.status + '"><span>' + esc(M.name) + '</span><small>' + st + '</small></div>';
     }).join('');
+    var ex = (gv.extra || []).filter(function (x) { return x.status !== 'pending'; });
+    if (ex.length) $('gov-prog').innerHTML += '<div class="kicker" style="margin-top:8px">Tes nouvelles lois</div>' + ex.map(function (x) {
+      return '<div class="gp-row ' + x.status + '"><span>' + esc(E.measure(x.id).name) + '</span><small>' + (x.status === 'adopted' ? (x.amended ? '✅ adoptée (amendée)' : '✅ adoptée') : '❌ rejetée') + '</small></div>';
+    }).join('');
     if (gv.deals && gv.deals.length) $('gov-prog').innerHTML += '<div class="kicker" style="margin-top:8px">Engagements d\'entre-deux-tours</div>' + gv.deals.map(function (d) {
       return '<div class="gp-row"><span>' + esc(E.measure(d.measure).name) + '</span><small>🤝 promis à ' + esc(E.PARTY[d.with].short) + ' · engagement de campagne, sans vote ni soutien automatique à l\'Assemblée</small></div>';
     }).join('');
@@ -86,7 +90,7 @@
     var pop = G.popularity(gv), tgt = G.C.target(gv.year), pend = gv.measures.filter(function (m) { return m.status === 'pending'; }).length;
     if (gv.over) return 'Cinq ans déjà ! Voyons ce que les Français retiendront de ton mandat.';
     if (current() === 'legislatives') return 'D\'abord, les législatives : sans majorité à l\'Assemblée, impossible de tenir tes promesses.';
-    if (gv.deficit > tgt + 1) return 'Le déficit dérape (' + fr(gv.deficit, 1) + ' % pour un objectif de ' + fr(tgt, 1) + ' %). Les marchés vont s\'énerver : cet automne, il faudra des économies.';
+    if (gv.deficit > tgt + 1) return 'Le déficit dérape (' + fr(gv.deficit, 1) + ' % pour un objectif de ' + fr(tgt, 1) + ' %). Au printemps, une nouvelle loi peut faire rentrer de l\'argent ou réduire les dépenses.';
     if (pop < 30) return 'La rue gronde, ta popularité est à ' + pop + ' %. Évite les mesures choc et fais un geste pour les groupes les plus mécontents.';
     if (G.blocSeats(gv) < 289 && current() === 'loi') return 'Pas de majorité absolue : pour faire passer ta loi, il faudra négocier avec un groupe… ou tenter le 49.3, au risque de la censure.';
     if (pend > 0 && current() === 'loi') return 'Il te reste ' + pend + ' promesse' + (pend > 1 ? 's' : '') + ' à faire voter. Les Français s\'en souviendront à la prochaine élection.';
@@ -618,27 +622,56 @@
   }
 
   /* ---------- Printemps : la loi de l'année ---------- */
+  /* v2.9 : ta loi de l'année : une promesse du programme… ou une nouvelle loi (recettes, économies, autres idées) */
+  var LAW_FAM = {
+    recettes: { icon: '💶', name: 'Faire rentrer de l\'argent', text: 'Impôts, taxes, lutte contre la fraude : le déficit baisse, mais certains Français paient plus.' },
+    economies: { icon: '✂️', name: 'Réduire les dépenses', text: 'Économies sur l\'État et les prestations : le déficit baisse, mais certains Français y perdent.' },
+    autres: { icon: '📜', name: 'Autres idées', text: 'Les mesures du catalogue qui n\'étaient pas dans ton programme.' }
+  };
+  function moneyTxt(M) {
+    if (!M.cost) return 'ne coûte rien';
+    var pts = fr(Math.abs(M.cost) / G.C.mdPerPoint, 2);
+    var md = Math.abs(M.cost), mdTxt = md % 1 ? fr(md, 1) : String(md);
+    return M.cost > 0 ? 'coûte ' + mdTxt + ' Md€ · déficit +' + pts + ' pt' : 'rapporte ' + mdTxt + ' Md€ · déficit −' + pts + ' pt';
+  }
+  function fansTxt(M) {
+    var up = [], down = [];
+    D.SEGMENTS.forEach(function (sg) { var v = (M.fans || {})[sg.id] || 0; if (v > 0) up.push(sg.icon); if (v < 0) down.push(sg.icon); });
+    return (up.length ? ' · 👍 ' + up.join('') : '') + (down.length ? ' · 👎 ' + down.join('') : '');
+  }
+  function lawRow(mid, attr) {
+    var M = E.measure(mid), v = G.vote(gv, mid);
+    return '<button type="button" class="pick-row" ' + attr + '="' + mid + '"><span class="pick-txt"><b>' + esc(M.name) + '</b><small>' + moneyTxt(M) + fansTxt(M) +
+      '</small><small>pronostic : ' + (v.passed ? '<b>adoptée</b>' : '<b>rejetée</b>') + ' (' + v.pour + ' pour, ' + v.contre + ' contre)</small></span></button>';
+  }
   function chooseLaw() {
-    var pend = gv.measures.filter(function (m) { return m.status === 'pending'; });
-    if (!pend.length) {
-      modal({ kicker: 'Printemps', title: 'Toutes tes promesses sont votées', html: '<p>Ton programme est entièrement passé devant l\'Assemblée. Place à l\'actualité !</p>', buttons: [{ label: 'Continuer', primary: true, onClick: next }] });
-      return;
-    }
-    var html = '<p>Quelle promesse de ton programme présentes-tu au Parlement cette année ?' + (gv.year === 1 ? ' <b>État de grâce</b> : cette première année, tu peux en faire voter deux.' : '') + '</p><div class="pick">' +
-      pend.map(function (m) {
-        var M = E.measure(m.id), v = G.vote(gv, m.id);
-        return '<button type="button" class="pick-row" data-m="' + m.id + '"><span class="pick-txt"><b>' + esc(M.name) + '</b><small>' + (M.cost > 0 ? 'coûte ' + M.cost + ' Md€' : M.cost < 0 ? 'rapporte ' + (-M.cost) + ' Md€' : 'ne coûte rien') +
-          ' · pronostic : ' + (v.passed ? '<b>adoptée</b>' : '<b>rejetée</b>') + ' (' + v.pour + ' pour, ' + v.contre + ' contre)</small></span></button>';
+    var pend = gv.measures.filter(function (m) { return m.status === 'pending'; }), cat = G.lawCatalog(gv);
+    var html = '<p>Quel texte présentes-tu au Parlement cette année ?' + (gv.year === 1 ? ' <b>État de grâce</b> : cette première année, tu peux en faire voter deux.' : '') + '</p>' +
+      (pend.length ? '<div class="kicker">Tes promesses</div><div class="pick">' + pend.map(function (m) { return lawRow(m.id, 'data-m'); }).join('') + '</div>' : '<p class="hint">✅ Toutes tes promesses sont passées devant l\'Assemblée.</p>') +
+      '<div class="kicker">Une nouvelle loi</div><div class="pick">' + Object.keys(LAW_FAM).filter(function (k) { return cat[k].length; }).map(function (k) {
+        var F = LAW_FAM[k]; return '<button type="button" class="pick-row" data-fam="' + k + '"><span class="lc-ai">' + F.icon + '</span><span class="pick-txt"><b>' + esc(F.name) + '</b><small>' + esc(F.text) + '</small></span><span class="end-chev">›</span></button>';
       }).join('') + '</div>';
     modal({ kicker: 'Printemps · Année ' + gv.year, title: 'Ta loi de l\'année', html: html, buttons: [{ label: 'Ne rien présenter cette année', onClick: function () { lawsThisYear = 0; next(); } }],
       onOpen: function () {
         Array.prototype.forEach.call(document.querySelectorAll('[data-m]'), function (b) { b.addEventListener('click', function () { closeModal(); lawScreen(b.getAttribute('data-m'), null); }); });
+        Array.prototype.forEach.call(document.querySelectorAll('[data-fam]'), function (b) { b.addEventListener('click', function () { lawFamily(b.getAttribute('data-fam')); }); });
+      } });
+  }
+  function lawFamily(k) {
+    var F = LAW_FAM[k], list = G.lawCatalog(gv)[k];
+    if (k !== 'autres') list.sort(function (a, b) { return E.measure(a).cost - E.measure(b).cost; });   // ce qui rapporte le plus d'abord
+    var html = '<p class="hint">' + esc(F.text) + ' Cette loi ne figurait pas dans ton programme : elle ne compte pas dans tes promesses tenues.</p><div class="pick">' + list.map(function (id) { return lawRow(id, 'data-nl'); }).join('') + '</div>';
+    modal({ kicker: F.icon + ' Une nouvelle loi', title: F.name, html: html, buttons: [{ label: '‹ Retour', onClick: chooseLaw }],
+      onOpen: function () {
+        Array.prototype.forEach.call(document.querySelectorAll('[data-nl]'), function (b) { b.addEventListener('click', function () { var id = b.getAttribute('data-nl'); G.addExtra(gv, id); closeModal(); lawScreen(id, null); }); });
       } });
   }
   function stancesOf(v) { var m = {}; v.groups.forEach(function (x) { m[x.id] = x; }); return m; }
   function lawScreen(mid, negotiated) {
     var M = E.measure(mid), v = G.vote(gv, mid, negotiated);
-    var html = '<div class="law-head"><b>' + esc(M.name) + '</b><small>' + (M.cost > 0 ? 'coûte ' + M.cost + ' Md€ par an' : M.cost < 0 ? 'rapporte ' + (-M.cost) + ' Md€ par an' : 'ne coûte rien') + '</small></div>' +
+    var isNew = !gv.measures.some(function (x) { return x.id === mid; });
+    var html = '<div class="law-head"><b>' + esc(M.name) + '</b><small>' + (isNew ? 'nouvelle loi · ' : '') + moneyTxt(M) + ' par an' + fansTxt(M) + '</small></div>' +
+      (isNew && M.edu ? '<p class="hint">' + esc(M.edu.what) + '</p>' : '') +
       hemicycle(gv.seats, stancesOf(v), true) +
       '<div class="tally"><span class="t-pour">✅ Pour <b>' + v.pour + '</b></span><span class="t-contre">❌ Contre <b>' + v.contre + '</b></span><span class="t-abst">➖ Abstention <b>' + v.abst + '</b></span></div>' +
       '<div class="brief">' + v.groups.filter(function (x) { return x.seats > 0; }).map(function (x) {
@@ -677,7 +710,7 @@
   function afterLaw() {
     lawsThisYear += 1;
     render();
-    if (gv.year === 1 && lawsThisYear < 2 && gv.measures.some(function (m) { return m.status === 'pending'; })) return chooseLaw();
+    if (gv.year === 1 && lawsThisYear < 2) return chooseLaw();
     lawsThisYear = 0; next();
   }
   function use493(mid, negotiated) {

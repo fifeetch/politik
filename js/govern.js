@@ -240,18 +240,45 @@
      ou environnementale. Le droit pénal en est exclu, et une mesure qui rapporte de l'argent (un impôt) aussi dans le jeu. */
   function canReferendum(mid) { var m = E.measure(mid); return !!m.theme && !m.penal && m.cost >= 0; }
   /* Une mesure du programme est adoptée (amendée ou non) */
+  /* ---------- v2.9 : les nouvelles lois, au-delà du programme ----------
+     Trois familles : faire rentrer de l'argent (impôts, taxes, lutte contre la fraude), réduire les dépenses (économies),
+     et les autres mesures du catalogue. Une loi hors programme se vote comme une promesse, mais ne compte pas dans
+     « promesses tenues ». Les mesures de financement déjà prévues au premier budget en sont exclues. */
+  var NEW_LAWS = {
+    recettes: ['isf', 'heritage', 'niches', 'fraudefisc', 'superprofits', 'jets', 'tvaplus', 'csg'],
+    economies: ['trainvie', 'fraude', 'gelpoint', 'gelpensions', 'chomage', 'nonremplacement', 'retraites']
+  };
+  function itemOf(gv, mid) { return gv.measures.filter(function (x) { return x.id === mid; })[0] || (gv.extra || []).filter(function (x) { return x.id === mid; })[0]; }
+  function lawCatalog(gv) {
+    var taken = {};
+    gv.measures.forEach(function (x) { taken[x.id] = true; });
+    (gv.financing || []).forEach(function (id) { taken[id] = true; });
+    (gv.extra || []).forEach(function (x) { if (x.status === 'adopted') taken[x.id] = true; });
+    var out = { recettes: NEW_LAWS.recettes.filter(function (id) { return !taken[id] && E.measure(id); }),
+                economies: NEW_LAWS.economies.filter(function (id) { return !taken[id] && E.measure(id); }) };
+    var fin = NEW_LAWS.recettes.concat(NEW_LAWS.economies);
+    out.autres = D.MEASURES.map(function (m) { return m.id; }).filter(function (id) { return !taken[id] && fin.indexOf(id) < 0; });
+    return out;
+  }
+  /* Présenter une nouvelle loi : elle entre dans la liste des textes du mandat */
+  function addExtra(gv, mid) {
+    gv.extra = gv.extra || [];
+    var it = (gv.extra).filter(function (x) { return x.id === mid; })[0];
+    if (it) it.status = 'pending'; else gv.extra.push({ id: mid, status: 'pending', amended: false, year: gv.year });
+    return it;
+  }
   function adopt(gv, mid, amended) {
     var m = E.measure(mid), k = amended ? C.amendFactor : 1;
-    var it = gv.measures.filter(function (x) { return x.id === mid; })[0];
+    var it = itemOf(gv, mid);
     it.status = 'adopted'; it.amended = !!amended;
     gv.deficit += k * m.cost / C.mdPerPoint;
     var q = gv.cabinet ? 1 + MIN.compSat * (compOf(minister(gv, postFor(mid))) - 2) : 1;   // v2.6 : un ministre compétent fait mieux passer la mesure
     addSat(gv, m.fans, C.satPerFan * k * q);
   }
   function reject(gv, mid) {
-    var it = gv.measures.filter(function (x) { return x.id === mid; })[0];
+    var it = itemOf(gv, mid);
     it.status = 'rejected';
-    gv.popBonus -= 2;
+    gv.popBonus -= it.year ? 1 : 2;   // une promesse rejetée déçoit plus qu'une loi nouvelle
   }
   /* Le gouvernement est renversé : le président nomme un nouveau Premier ministre */
   function governmentFalls(gv) { gv.fell += 1; gv.popBonus -= 4; return 'nouveau'; }
@@ -320,6 +347,8 @@
     if (!gv.used493) ach.push('🕊️ L\'art du compromis : jamais de 49.3');
     if (gv.deficit <= 3) ach.push('🇪🇺 Cap des 3 % atteint');
     if (gv.debt < C.debt0) ach.push('📉 Désendetteur : la dette a baissé');
+    var nx = (gv.extra || []).filter(function (x) { return x.status === 'adopted'; }).length;
+    if (nx >= 2) ach.push('🛠️ Réformateur : ' + nx + ' lois nouvelles adoptées');
     if (gv.survived) ach.push('😅 Rescapé de la censure');
     if (pop >= 50) ach.push('⭐ Toujours populaire en fin de mandat');
     var v = pop >= 45 && score >= 60 ? 'reelu' : pop >= 32 ? 'serre' : 'battu';
@@ -328,7 +357,7 @@
   }
 
   var API = { C: C, BUDGET_CARDS: BUDGET_CARDS, EVENTS: EVENTS, create: create, popularity: popularity, legislatives: legislatives, blocSeats: blocSeats,
-    majorityType: majorityType, isAlly: isAlly, setLegis: setLegis, setLegisCohab: setLegisCohab, postFor: postFor, minister: minister, compOf: compOf, stance: stance, vote: vote, frondeurs: frondeurs, censure: censure, referendum: referendum, adopt: adopt, reject: reject,
+    majorityType: majorityType, isAlly: isAlly, setLegis: setLegis, NEW_LAWS: NEW_LAWS, lawCatalog: lawCatalog, addExtra: addExtra, itemOf: itemOf, setLegisCohab: setLegisCohab, postFor: postFor, minister: minister, compOf: compOf, stance: stance, vote: vote, frondeurs: frondeurs, censure: censure, referendum: referendum, adopt: adopt, reject: reject,
     governmentFalls: governmentFalls, canDissolve: canDissolve, dissolveMult: dissolveMult, dissolve: dissolve, applyFinancing: applyFinancing, canReferendum: canReferendum, drawCards: drawCards, applyOpt: applyOpt, drawEvent: drawEvent, endYear: endYear, verdict: verdict, addSat: addSat };
   if (node) module.exports = API; else root.PolitikGov = API;
 })(this);
