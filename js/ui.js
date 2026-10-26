@@ -17,6 +17,33 @@
   var gameMode = 'reel';   // v1.1 : 'reel' (Réaliste) ou 'egal' (Simulation : égalité des chances)
   var gameBase = 'e2024';  // v1.2 : point de départ du mode Réaliste : 'p2022', 'e2024' ou 'sond'
   try { if (localStorage.getItem('politik_mode') === 'egal') gameMode = 'egal'; var sb = localStorage.getItem('politik_base'); if (D.BASES[sb]) gameBase = sb; } catch (e) {}
+  var gameFormat = 'classique';   // v2.8 : 'classique' (8 tours) ou 'eclair' (3 tours)
+  try { if (localStorage.getItem('politik_format') === 'eclair') gameFormat = 'eclair'; } catch (e) {}
+  /* v2.8 : la sauvegarde automatique, au début de chaque tour de campagne */
+  var SAVE = 'politik_save';
+  function saveNow() {
+    try { localStorage.setItem(SAVE, JSON.stringify({ v: 1, when: Date.now(), game: E.saveGame(g), me: me, quick: quickGame, perso: perso, founded: founded, lead: leadOn,
+      foundedOn: !!(founded && me === founded.sigle) })); } catch (e) {}
+  }
+  function clearSave() { try { localStorage.removeItem(SAVE); } catch (e) {} renderResume(); }
+  function readSave() { try { var x = JSON.parse(localStorage.getItem(SAVE) || 'null'); return x && x.v === 1 ? x : null; } catch (e) { return null; } }
+  function renderResume() {
+    var sv = readSave(), b = $('btn-resume'); if (!b) return;
+    if (!sv) { b.hidden = true; return; }
+    var gg = JSON.parse(sv.game), P = E.PARTY[sv.me] || (sv.founded && sv.founded.sigle === sv.me ? sv.founded : null);
+    b.hidden = !P;
+    if (P) b.innerHTML = '↻ Reprendre ta partie<small>' + esc(P.name || P.short) + ' · tour ' + (gg.turn + 1) + ' sur ' + (D.FORMATS[gg.format] || D.FORMATS.classique).turns + '</small>';
+  }
+  function resumeGame() {
+    var sv = readSave(); if (!sv) return;
+    perso = sv.perso; founded = sv.founded; leadOn = sv.lead;
+    PS.reset(A);
+    if (sv.foundedOn && founded) PS.found(founded, perso, A);
+    else if (leadOn && perso && perso.name) PS.lead(sv.me, perso, A);
+    g = E.loadGame(sv.game); me = sv.me; quickGame = sv.quick; selected = null; queue = []; theme = null; themePicked = false; advisorHidden = false;
+    go('game'); nextTurn();
+    toast('Partie reprise au tour ' + g.turn + '.');
+  }
   var justAdded = -1;                      // v1.4 : la dernière carte posée, qui se retourne
   var theme = null, themePicked = false;   // v0.3 : le message (thème) choisi pour les actions
   var advisorHidden = false;               // v0.7 : la conseillère, masquée pour ce tour
@@ -77,10 +104,12 @@
     $('screen-' + name).classList.add('active');
     if (name === 'choose') renderChoose();
     if (name === 'setup') renderSetup();
+    if (name === 'title') renderResume();
   }
   document.addEventListener('click', function (e) {
     var h = e.target.closest('[data-action="tuto"]'); if (h) { forceTuto = true; quick = true; go('choose'); return; }
-    var pl = e.target.closest('[data-action="play"]'); if (pl) { quick = true; go('choose'); return; }
+    var pl = e.target.closest('[data-action="play"]'); if (pl) { gameFormat = 'classique'; try { localStorage.setItem('politik_format', 'classique'); } catch (er) {} quick = true; go('choose'); return; }
+    var ec = e.target.closest('[data-action="eclair"]'); if (ec) { gameFormat = 'eclair'; try { localStorage.setItem('politik_format', 'eclair'); } catch (er) {} quick = true; go('choose'); return; }
     var t = e.target.closest('[data-go]'); if (t) go(t.getAttribute('data-go'));
     var a = e.target.closest('[data-action="rules"]'); if (a) showRules();
   });
@@ -144,6 +173,9 @@
       return '<button type="button" role="radio" class="mode-btn' + (gameMode === m[0] ? ' on' : '') + '" data-mode="' + m[0] + '" aria-checked="' + (gameMode === m[0]) + '"><b>' + m[1] + '</b><small>' + m[2] + '</small></button>';
     }).join('');
     $('base-wrap').hidden = gameMode !== 'reel';
+    $('format-pick').innerHTML = ['classique', 'eclair'].map(function (k) {
+      var F = D.FORMATS[k]; return '<button type="button" role="radio" class="mode-btn' + (gameFormat === k ? ' on' : '') + '" data-format="' + k + '" aria-checked="' + (gameFormat === k) + '"><b>' + (k === 'eclair' ? '⚡ ' : '') + esc(F.name) + '</b><small>' + esc(F.text) + '</small></button>';
+    }).join('');
     $('base-pick').innerHTML = ['p2022', 'e2024', 'sond'].map(function (k) {
       var B = D.BASES[k], on = gameBase === k, more = '';
       if (on && k === 'sond') {
@@ -166,6 +198,9 @@
       : '<div class="prev-bars">' + parts.map(function (p) {
           return '<div class="prev-row"><span>' + esc(p.short) + '</span><span class="prev-track"><i style="width:' + (100 * sc[p.id] / max) + '%;background:' + p.color + '"></i></span><b>' + pctFr(sc[p.id] / 100, 1) + ' %</b></div>';
         }).join('') + '</div><p class="hint">Score national. Le reste va aux petites listes, qui comptent sous « Autres » dans les sondages du jeu.</p>');
+    Array.prototype.forEach.call(document.querySelectorAll('[data-format]'), function (b) {
+      b.addEventListener('click', function () { gameFormat = b.getAttribute('data-format'); try { localStorage.setItem('politik_format', gameFormat); } catch (e) {} renderSetup(); });
+    });
     Array.prototype.forEach.call(document.querySelectorAll('[data-mode]'), function (b) {
       b.addEventListener('click', function () { gameMode = b.getAttribute('data-mode'); try { localStorage.setItem('politik_mode', gameMode); } catch (e) {} renderSetup(); });
     });
@@ -179,7 +214,7 @@
   function renderChoose() {
     PS.reset(A);   // v2.5 : les partis retrouvent leurs candidats, le parti fondé n'est pas encore en lice
     renderPersoStrip();
-    $('choose-kicker').textContent = quick ? 'Touche un parti, puis lance-toi' : gameMode === 'egal' ? 'Simulation : tout le monde part à égalité' : 'Réaliste : départ « ' + D.BASES[gameBase].short + ' »';
+    $('choose-kicker').textContent = gameFormat === 'eclair' ? '⚡ Campagne éclair : 3 tours' : quick ? 'Touche un parti, puis lance-toi' : gameMode === 'egal' ? 'Simulation : tout le monde part à égalité' : 'Réaliste : départ « ' + D.BASES[gameBase].short + ' »';
     $('screen-choose').classList.toggle('quick', quick);
     $('choose-back').setAttribute('data-go', quick ? 'title' : 'setup');
     $('choose-back').textContent = quick ? '‹ Accueil' : '‹ Paramètres de la partie';
@@ -503,7 +538,7 @@
 
   /* ---------- Partie ---------- */
   function startGame(pid, prog, fin) {
-    g = E.createGame(pid, { mode: gameMode, base: gameBase }); me = pid; selected = null; queue = []; theme = null; themePicked = false; advisorHidden = false;
+    g = E.createGame(pid, { mode: gameMode, base: gameBase, format: gameFormat }); me = pid; selected = null; queue = []; theme = null; themePicked = false; advisorHidden = false;
     quickGame = quick;
     E.setProgramme(g, pid, prog || party(pid).programme, fin || party(pid).financing);
     go('game');
@@ -512,7 +547,7 @@
   function mePl() { return E.player(g, me); }
   /* Raccourci : la campagne se joue toute seule, et tu l'emportes de justesse au second tour */
   function skipCampaign(pid, prog, fin) {
-    g = E.createGame(pid, { mode: gameMode, base: gameBase }); me = pid;
+    g = E.createGame(pid, { mode: gameMode, base: gameBase, format: gameFormat }); me = pid;
     E.setProgramme(g, pid, prog, fin);
     while (!g.over) {
       var info = E.startTurn(g);
@@ -539,6 +574,7 @@
   }
 
   function nextTurn() {
+    saveNow();   // v2.8 : on peut reprendre la partie à ce tour
     var info = E.startTurn(g);
     queue = []; themePicked = false; theme = E.bestTheme(g, me, selected); advisorHidden = false; advReact = null;
     // les affaires et le dilemme des IA se règlent tout de suite ; les tiens t'attendent après le journal
@@ -1762,6 +1798,7 @@
      2. Le compte à rebours de 20h, face aux deux finalistes dans l'ombre.
      3. 20h : le visage de l'élu apparaît, puis les vrais résultats. */
   function electionNight() {
+    clearSave();   // v2.8 : la campagne est finie
     $('toast').hidden = true;
     var res = g.result, win = g.winner, P = party(win);
     var pct = res.direct ? res.first[0].pct : (res.second.a === win ? res.second.pctA : res.second.pctB);
@@ -1960,7 +1997,7 @@
     $('parti-body').innerHTML = '<span class="kicker">Ton parti</span><h1 class="h1 tab-title">' + esc(p.name) + '</h1>' + html +
       '<div class="stack parti-btns"><button type="button" class="btn" id="pb-lib">📚 Comprendre la politique</button><button type="button" class="btn" id="pb-rules">Règles du jeu</button><button type="button" class="btn btn-ghost" id="pb-quit">Abandonner la partie</button></div>';
     $('pb-lib').addEventListener('click', library); $('pb-rules').addEventListener('click', showRules);
-    $('pb-quit').addEventListener('click', function () { modal({ title: 'Abandonner la partie ?', html: '<p>Ta campagne sera perdue.</p>', buttons: [{ label: 'Abandonner', primary: true, onClick: function () { go('title'); } }, { label: 'Continuer à jouer' }] }); });
+    $('pb-quit').addEventListener('click', function () { modal({ title: 'Abandonner la partie ?', html: '<p>Ta campagne sera perdue.</p>', buttons: [{ label: 'Abandonner', primary: true, onClick: function () { clearSave(); go('title'); } }, { label: 'Continuer à jouer' }] }); });
   }
   $('btn-menu').addEventListener('click', function () { showTab(activeTab === 'parti' ? 'carte' : 'parti'); });
   /* La bibliothèque : toutes les fiches « Le saviez-vous ? » */
@@ -2038,6 +2075,8 @@
     game: function () { return g; }, me: function () { return me; } };
   renderTitleMap();
   renderChoose();
+  renderResume();
+  $('btn-resume').addEventListener('click', resumeGame);
   /* v1.9 : l'écran d'ouverture du studio disparaît tout seul (ou d'un toucher) */
   (function () {
     var sp = $('splash'); if (!sp) return;

@@ -499,6 +499,13 @@
     { id: 'corse',      name: 'Au-delà de l\'Hexagone',   text: 'Contrôler la Corse, l\'outre-mer et les Français de l\'étranger', bonus: 3 }
   ];
 
+  /* v2.8 : les formats de campagne. Le format éclair remplace ces règles le temps d'une partie (voir E.setFormat). */
+  var FORMATS = {
+    classique: { name: 'Classique', turns: 8, text: '8 tours, une vingtaine de minutes.' },
+    eclair: { name: 'Éclair', turns: 3, text: '3 tours, une partie dans le métro.',
+      rules: { maxTurns: 3, debateTurns: [3], crisisStart: [1, 1], registerTurns: 1, othersKeep: 0.5,
+               novelty: { turns: 2, strongTurns: 1, start: 3 }, incomeMoney: 6, formeRegen: 3 } }
+  };
   var RULES = {
     maxTurns: 8,
     actionsPerTurn: 3,
@@ -811,7 +818,7 @@
 
   var DATA = { REFERENCE_2027: REFERENCE_2027, POLLS: POLLS, BASES: BASES, REGIONS: REGIONS, PROFILES: PROFILES, THEMES: THEMES, HEADLINES: HEADLINES, PARTIES: PARTIES, ACTIONS: ACTIONS,
                CARDS: CARDS, EVENTS: EVENTS, DILEMMAS: DILEMMAS, CRISES: CRISES, REPLIES: REPLIES, TEMPERS: TEMPERS,
-               MEASURES: MEASURES, FUNDING: FUNDING, SEGMENTS: SEGMENTS, VOTE_PROP: VOTE_PROP, SEGMENTS_SRC: SEGMENTS_SRC, AFFAIRS: AFFAIRS, LEARN: LEARN, BUDGET_AFFAIR: BUDGET_AFFAIR, REACTIONS: REACTIONS, ADVISOR: ADVISOR, OBJECTIVES: OBJECTIVES, RULES: RULES, LEGIS: LEGIS, MINISTRY: MINISTRY, OPPO: OPPO, validate: validate };
+               MEASURES: MEASURES, FUNDING: FUNDING, SEGMENTS: SEGMENTS, VOTE_PROP: VOTE_PROP, SEGMENTS_SRC: SEGMENTS_SRC, AFFAIRS: AFFAIRS, LEARN: LEARN, BUDGET_AFFAIR: BUDGET_AFFAIR, REACTIONS: REACTIONS, ADVISOR: ADVISOR, OBJECTIVES: OBJECTIVES, RULES: RULES, FORMATS: FORMATS, LEGIS: LEGIS, MINISTRY: MINISTRY, OPPO: OPPO, validate: validate };
   if (typeof module !== 'undefined' && module.exports) module.exports = DATA;
   else root.PolitikData = DATA;
 })(this);

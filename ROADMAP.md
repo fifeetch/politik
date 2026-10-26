@@ -184,7 +184,12 @@ Quand tu gagnes la présidentielle, le bouton « 🏛️ Gouverner le pays » ou
 - 2 fiches « Le saviez-vous ? » : le jour réservé à l'opposition (article 48), la cohabitation (articles 5, 8, 12, 15, 20, 52 ; 1986, 1993, 1997).
 - Simulation (`node test/oppo-sim.js 100`) : cohabitation directe environ 1 fois sur 20 ; après 5 ans d'opposition active, ton parti gagne environ 4 points, finit favori environ 4 fois sur 10 ; environ un gouvernement renversé par mandat.
 
+## v2.8 — fait : campagne éclair et sauvegarde
+- **Campagne éclair** (3 tours) : bouton sur l'écran titre et choix « Durée de la campagne » dans la partie personnalisée. Règles adaptées : un débat au tour 3, crise dès le tour 1, inscriptions possibles au tour 1 seulement, petites listes qui fondent plus vite, revenus de 6 € et +3 ⚡ par tour, effet nouveauté sur 2 tours.
+- **Sauvegarde automatique** au début de chaque tour de campagne (le hasard du jeu est sauvegardé aussi : la partie reprend à l'identique) ; « Reprendre ta partie » sur l'écran titre ; la sauvegarde s'efface à la soirée électorale ou si tu abandonnes.
+- Simulation (`FORMAT=eclair node test/simulate.js 400`) : aucune erreur ; en mode Réaliste, le parti qui part en tête (Mouvement National) gagne plus souvent qu'en 8 tours (45 % contre 32 %) : moins de temps pour remonter. À surveiller.
+- Pas encore sauvegardés : l'entre-deux-tours, les législatives et le quinquennat (on reprend au début du dernier tour de campagne).
+
 ## À venir (pistes du bêta-testeur)
-- **Campagne éclair** : un format court en 3 tours, et une sauvegarde automatique pour reprendre une partie.
 - **Mécaniques débloquées au fil des parties** : scandales et dilemmes, puis le programme détaillé, puis les alliances et la phase « gouverner ».
 - **Dilemmes en cartes à glisser** (à la manière de Reigns).

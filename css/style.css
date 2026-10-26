@@ -1140,3 +1140,7 @@ button { font-family: inherit; color: inherit; }
 /* v2.7 : l'opposition */
 .oppo .gauge small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .end-bars { display: flex; flex-direction: column; gap: 6px; }
+
+/* v2.8 : reprendre une partie */
+.btn-resume { flex-direction: column; gap: 2px; }
+.btn-resume small { font: 600 12.5px var(--body); opacity: .75; }

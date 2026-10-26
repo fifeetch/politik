@@ -7,12 +7,30 @@
   /* ---------- Outils ---------- */
   function makeRng(seed) {
     var a = (seed >>> 0) || 1;
-    return function () {
+    var f = function () {
       a |= 0; a = (a + 0x6D2B79F5) | 0;
       var t = Math.imul(a ^ (a >>> 15), 1 | a);
       t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
       return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     };
+    f.getState = function () { return a; };            // v2.8 : pour sauvegarder la partie
+    f.setState = function (x) { a = x | 0; };
+    return f;
+  }
+  /* v2.8 : le format de la campagne (classique ou éclair) : on remet les règles d'origine, puis on applique celles du format */
+  var BASE_RULES = JSON.parse(JSON.stringify(D.RULES));
+  function setFormat(name) {
+    var F = D.FORMATS[name] || D.FORMATS.classique;
+    Object.keys(BASE_RULES).forEach(function (k) { D.RULES[k] = JSON.parse(JSON.stringify(BASE_RULES[k])); });
+    Object.keys(F.rules || {}).forEach(function (k) { D.RULES[k] = JSON.parse(JSON.stringify(F.rules[k])); });
+    return D.FORMATS[name] ? name : 'classique';
+  }
+  /* v2.8 : la sauvegarde : tout l'état de la partie, plus l'état du hasard */
+  function saveGame(g) { var s = JSON.stringify(g, function (k, v) { return typeof v === 'function' ? undefined : v; }); var o = JSON.parse(s); o.rngState = g.rng.getState(); return JSON.stringify(o); }
+  function loadGame(str) {
+    var g = JSON.parse(str); setFormat(g.format);
+    g.rng = makeRng(1); g.rng.setState(g.rngState); delete g.rngState;
+    return g;
   }
   function shuffle(arr, rng) {
     var a = arr.slice();
@@ -315,6 +333,7 @@
   /* ---------- Création ---------- */
   function createGame(humanParty, opts) {
     opts = opts || {};
+    var format = setFormat(opts.format);
     var seed = opts.seed != null ? opts.seed : Math.floor(Math.random() * 1e9);
     var rng = makeRng(seed);
     var others = D.PARTIES.map(function (p) { return p.id; }).filter(function (id) { return id !== humanParty; });
@@ -322,7 +341,7 @@
     var ids = humanParty ? [humanParty].concat(ai) : ai;
     var objs = shuffle(D.OBJECTIVES.map(function (o) { return o.id; }), rng);
     var g = {
-      seed: seed, rng: rng, mode: opts.mode === 'egal' ? 'egal' : 'reel', base: D.BASES[opts.base] ? opts.base : 'e2024', turn: 0, phase: 'setup', winner: null, over: false, result: null,
+      seed: seed, rng: rng, format: format, mode: opts.mode === 'egal' ? 'egal' : 'reel', base: D.BASES[opts.base] ? opts.base : 'e2024', turn: 0, phase: 'setup', winner: null, over: false, result: null,
       alliances: {}, betrayed: {}, offers: [], hot: [], nextHot: [], news: null,
       bases: {}, pending: [], markers: [], crisis: null, dilemma: null, dilemmas: [], lastPoll: null,
       affairs: [], nextAffairs: [], affairDeck: [], affairIdx: 0,
@@ -1262,7 +1281,7 @@
     resolveAffair: resolveAffair, enqueteChance: enqueteChance, affairDef: affairDef,
     resolveDilemma: resolveDilemma, dilemmaDef: dilemmaDef, applyFx: applyFx, markerAt: markerAt, hotHere: hotHere, crisisAct: crisisAct,
     impact: impact, cred: cred, isHot: isHot, concerns: concerns, bestTheme: bestTheme, terrainCubes: terrainCubes, mediaCubes: mediaCubes,
-    REG: REG, PARTY: PARTY, THEME: THEME, makeRng: makeRng, registerParty: registerParty, unregisterParty: unregisterParty
+    REG: REG, PARTY: PARTY, THEME: THEME, makeRng: makeRng, setFormat: setFormat, saveGame: saveGame, loadGame: loadGame, registerParty: registerParty, unregisterParty: unregisterParty
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;
   else root.PolitikEngine = API;

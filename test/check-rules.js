@@ -447,5 +447,30 @@ section('L\'opposition et la cohabitation');
   CB.start(gv); ok(gv.cabinet.posts.pm && gv.cabinet.posts.pm.origin === 'toi', 'cohabitation : Matignon, c\'est toi');
 })();
 
+/* ---------- v2.8 : campagne éclair et sauvegarde ---------- */
+section('Campagne éclair et sauvegarde');
+(function () {
+  var AI = require('../js/ai.js');
+  var g = E.createGame('VP', { seed: 51, format: 'eclair' });
+  ok(g.format === 'eclair' && D.RULES.maxTurns === 3 && D.RULES.debateTurns.join() === '3', 'éclair : 3 tours, un débat au dernier');
+  ok(g.crisis.start === 1, 'éclair : la crise commence dès le tour 1');
+  var g2 = E.createGame('VP', { seed: 51 });
+  ok(g2.format === 'classique' && D.RULES.maxTurns === 8 && D.RULES.othersKeep === 0.82, 'une partie classique retrouve toutes les règles d\'origine');
+  // la sauvegarde : reprendre une partie donne exactement la même suite
+  function turn(gg) {
+    var info = E.startTurn(gg);
+    info.affairs.forEach(function (a) { E.resolveAffair(gg, a.pid, AI.chooseReaction(gg, a.pid)); });
+    if (info.dilemma) E.resolveDilemma(gg, info.dilemma.pid, AI.chooseDilemma(gg, info.dilemma.pid));
+    var pl = {}; gg.players.forEach(function (p) { pl[p.id] = AI.plan(gg, p.id); }); E.resolveActions(gg, pl); E.endTurn(gg);
+  }
+  var a = E.createGame(null, { seed: 77 }); turn(a); turn(a);
+  var saved = E.saveGame(a), b = E.loadGame(saved);
+  turn(a); turn(b);
+  ok(JSON.stringify(E.poll(a)) === JSON.stringify(E.poll(b)) && a.rng() === b.rng(), 'sauvegarder puis reprendre : la partie continue à l\'identique');
+  var c = E.loadGame(E.saveGame(E.createGame(null, { seed: 5, format: 'eclair' })));
+  ok(c.format === 'eclair' && D.RULES.maxTurns === 3, 'reprendre une partie éclair remet les règles éclair');
+  E.setFormat('classique');
+})();
+
 console.log('\n' + passes + ' vérifications réussies, ' + fails + ' en échec.');
 process.exit(fails ? 1 : 0);

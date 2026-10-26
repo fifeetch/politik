@@ -40,7 +40,9 @@
       <p class="tagline">Fais campagne. Gagne la France.</p>
     </div>
     <div class="stack">
+      <button class="btn btn-yellow btn-big btn-resume" id="btn-resume" type="button" hidden>↻ Reprendre ta partie</button>
       <button class="btn btn-yellow btn-big btn-play" data-action="play">▶ Jouer</button>
+      <button class="btn btn-ghost-light" data-action="eclair">⚡ Campagne éclair · 3 tours</button>
       <button class="btn btn-ghost-light" data-go="setup">Partie personnalisée</button>
       <button class="btn btn-ghost-light" data-action="rules">Règles du jeu</button>
       <button class="btn btn-ghost-light" id="btn-install" type="button" hidden>📲 Installer l'application</button>
@@ -55,6 +57,8 @@
       <span class="kicker">Nouvelle partie</span>
       <h1 class="h1">Paramètre ta partie</h1>
     </div>
+    <h2 class="setup-h">Durée de la campagne</h2>
+    <div id="format-pick" class="mode-pick" role="radiogroup" aria-label="Durée de la campagne"></div>
     <h2 class="setup-h">Mode de jeu</h2>
     <div id="mode-pick" class="mode-pick" role="radiogroup" aria-label="Mode de jeu"></div>
     <div id="base-wrap">
