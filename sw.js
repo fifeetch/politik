@@ -1,6 +1,6 @@
 /* Politik — service worker : rend le jeu installable et jouable sans internet.
    À chaque nouvelle version du jeu, changer VERSION pour que les téléphones se mettent à jour. */
-var VERSION = 'politik-v3.6.2';
+var VERSION = 'politik-v3.6.3';
 var FILES = [
   './', 'index.html', 'manifest.webmanifest', 'css/style.css', 'css/debate-clarity.css', 'css/desktop.css',
   'js/data.js', 'js/map.js', 'js/art.js', 'js/press.js', 'js/fx.js', 'js/engine.js', 'js/perso.js', 'js/ai.js', 'js/legis.js', 'js/govern.js', 'js/cabinet.js', 'js/oppo.js', 'js/cards.js', 'js/tuto.js', 'js/ui.js', 'js/govui.js',

@@ -1445,7 +1445,7 @@
       var big = selected ? '+' + bigGain(act) : '—';
       var b = el('button', { class: 'tile', type: 'button', 'data-act': type, 'aria-label': def.name + ', ' + costLabel(act) },
         '<span class="tile-n">' + def.name + '</span><span class="tile-mid"><span class="tile-i">' + def.icon + '</span><span class="tile-big">' + big + '</span></span>' +
-        (selected && tiring(act) && !canQueue(act) ? '<span class="tile-cost tile-warn">⚠️ risque de gaffe</span>' : '<span class="tile-cost">' + costLabel(act, true) + '</span>'));
+        (selected && tiring(act) && !canQueue(act) ? '<span class="tile-cost tile-warn">⚠️ risque de gaffe</span>' : '<span class="tile-cost' + (selected && /argent|influence|épuisé/.test(canQueue(act) || '') ? ' tile-cost-no' : '') + '">' + costLabel(act, true) + '</span>'));
       if (!selected) b.disabled = true;
       else if (canQueue(act)) b.classList.add('dim');
       b.addEventListener('click', function () { addAction(act); });
@@ -2203,7 +2203,7 @@
       axisHtml(me || chosen) +
       '<p><b>Partis proches :</b> quand tu fais un Meeting ou passes à la Télé là où un parti voisin sur l\'axe est présent, tu lui prends 1 électeur (distance 2 : sur un dé de 4 à 6).</p>' +
       '<p><b>🤝 Pas d\'alliance avant le 1er tour :</b> chaque parti fait campagne seul. Les accords se négocient <b>entre les deux tours</b> (voir plus bas).</p>' +
-      '<p><b>Chaque tour :</b> revenus (4 € + 1 € par région contrôlée, max +3 ; +2 ★), un événement, puis <b>3 actions secrètes</b>. Tout le monde choisit en secret, puis les plans sont joués <b>chacun son tour</b> : l\'action 1 de chaque parti, puis l\'action 2, puis la 3. Le parti qui commence change à chaque tour (l\'ordre est affiché dans le flash info). Une action peut donc échouer si un rival a changé la situation juste avant : le flash info te dit pourquoi.</p>' +
+      '<p><b>Chaque tour :</b> revenus (' + R.incomeMoney + ' € + 1 € par région contrôlée, max +3 ; +2 ★), un événement, puis <b>3 actions secrètes</b>. Tout le monde choisit en secret, puis les plans sont joués <b>chacun son tour</b> : l\'action 1 de chaque parti, puis l\'action 2, puis la 3. Le parti qui commence change à chaque tour (l\'ordre est affiché dans le flash info). Une action peut donc échouer si un rival a changé la situation juste avant : le flash info te dit pourquoi.</p>' +
       '<p><b>Ton message.</b> Meeting, Télé, Buzz et Faire la une portent un <b>thème</b> (💶 🏭 🏥 🌿 🚓 🛂). Son <b>impact</b>, de 0 à 4 = ta crédibilité sur le thème (0 à 2) + 1 si la région s\'en préoccupe + 1 si le thème fait l\'actu. Le bon message au bon endroit rapporte deux fois plus.</p>' +
       '<p><b>Les actions :</b></p><ul class="rules-acts">' +
         '<li>📣 <b>Meeting</b> (2 €) : des soutiens dans la région. <b>Base</b> de 1 à 4 selon l\'impact du message (de 2 à 5 en campagne éclair), <b>plus les bonus</b> : mesure phare +1, région de cœur +1 (hostile −1), dynamique ±1, et pour le Parti Survivant +1 là où il a déjà 5 soutiens. Le détail s\'affiche quand tu touches une région. Une région compte au plus 10 soutiens par parti.</li>' +

@@ -263,3 +263,7 @@ Avant, en Réaliste, tous les partis convergeaient vers ~8 % : Lutte Obstinée d
 - Sans accord, la consigne d'un parti éliminé est « du bout des lèvres » (suivie à moitié) ; un accord la rend franche (+ bonus de concession). Avant, l'estimation comptait déjà la consigne et l'accord ne changeait presque rien.
 - Après chaque action, un message sépare **l'effet de ton action** et **la réponse du rival** (avant, la réponse du rival faisait croire que « Mobiliser » faisait baisser).
 - Face à un joueur humain, l'ordinateur n'a que 3 actions (4 pour toi). Simulation d'un joueur qui choisit au mieux (Réaliste 2024) : contre le RN, PS 51 % de victoires, RE 75 % ; LFI reste à 0 % (départ trop bas, ~41 %).
+
+## v3.6.3 — fait : de quoi jouer 3 actions
+- Revenu de base 6 € par tour (4 avant ; 8 en campagne éclair). En Réaliste, le RN tient presque toutes les régions : les autres partis ne touchaient que 4 € et ne pouvaient jouer qu'une ou deux actions.
+- Le coût d'une action s'affiche en rouge quand l'argent, l'influence ou la forme manquent.

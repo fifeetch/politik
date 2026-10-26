@@ -647,7 +647,7 @@
     classique: { name: 'Classique', turns: 8, text: '8 tours, une vingtaine de minutes.' },
     eclair: { name: 'Éclair', turns: 3, text: '3 tours, une partie dans le métro.',
       rules: { maxTurns: 3, debateTurns: [3], crisisStart: [1, 1], registerTurns: 1, othersKeep: 0.5, primaireTurns: [], microTurns: [2], hiddenMiss: 0.25,
-               novelty: { turns: 2, strongTurns: 1, start: 3 }, incomeMoney: 6,
+               novelty: { turns: 2, strongTurns: 1, start: 3 }, incomeMoney: 8,
                /* v2.8.1 : rééquilibrage. En 3 tours, le parti qui part en tête n'avait pas le temps d'être rattrapé :
                   chaque Meeting et chaque passage Télé rapporte plus, les cagnottes de départ se rapprochent,
                   et l'usure d'En Mouvement frappe au tour 2. (1 200 parties simulées, voir ROADMAP) */
@@ -665,7 +665,7 @@
     moneyBlend: 0,               // 0 = chaque parti garde sa cagnotte de départ ; 1 = tout le monde part avec 5 €
     actionsPerTurn: 3,
     debateTurns: [3, 6, 8],
-    incomeMoney: 4, incomePerRegion: 1, incomeRegionMax: 3, incomeInfl: 2,
+    incomeMoney: 6, incomePerRegion: 1, incomeRegionMax: 3, incomeInfl: 2,   // v3.6.3 : 6 € par tour (4 avant) : 3 vraies actions même sans région
     minControl: 3, maxCubes: 10, startCubes: 3,
     socle: 0.5,                    // v3.2 : en Réaliste, la moitié des électeurs vote par fidélité (socle électoral)
     weightMin: 0.1, weightMax: 3,    // v3.2 : poids électoral d'un soutien en mode Réaliste (bornes)
