@@ -6,7 +6,7 @@
   var E = node ? require('./engine.js') : root.PolitikEngine;
 
   function clone(g) {
-    var c = { turn: g.turn, mods: g.mods, hot: g.hot, nextHot: g.nextHot, markers: g.markers, bases: Object.assign({}, g.bases), rng: g.rng, alliances: Object.assign({}, g.alliances), betrayed: g.betrayed, offers: [], players: g.players.map(function (p) { return Object.assign({}, p, { cards: p.cards.slice() }); }), regions: {} };
+    var c = { turn: g.turn, nost: Object.assign({}, g.nost), petals: g.petals, micro: g.micro, hidden: g.hidden, eclatUntil: g.eclatUntil, bingo: g.bingo, mods: g.mods, hot: g.hot, nextHot: g.nextHot, markers: g.markers, bases: Object.assign({}, g.bases), rng: g.rng, alliances: Object.assign({}, g.alliances), betrayed: g.betrayed, offers: [], players: g.players.map(function (p) { return Object.assign({}, p, { cards: p.cards.slice() }); }), regions: {} };
     Object.keys(g.regions).forEach(function (k) { var o = g.regions[k]; c.regions[k] = { cubes: Object.assign({}, o.cubes), controller: o.controller, ins: o.ins, abst: o.abst, blank: o.blank }; });
     return c;
   }
@@ -31,6 +31,12 @@
       if (E.cred(v, pid, t.id) === 2 && !E.isHot(v, t.id)) list.push({ type: 'imposer', theme: t.id });
     });
     list.push({ type: 'fonds' });
+    // v3.1 : les actions propres à un parti
+    var tr = E.traitOf(pid);
+    if (tr === 'nostalgie') D.REGIONS.forEach(function (r) { list.push({ type: 'nostalgie', region: r.id }); });
+    if (tr === 'rose') list.push({ type: 'rappel' });
+    if (tr === 'centre') list.push({ type: 'fusion' });
+    if (tr === 'transparent') list.push({ type: 'eclat' });
     // enquêter sur un rival qui traîne des casseroles ou qui mène
     // v1.7 : avec 12 partis, on n'enquête que sur les 3 premiers des sondages (sinon chacun enquête sur tout le monde)
     if (v.turn < D.RULES.maxTurns) E.ranking(v).filter(function (id) { return id !== pid; }).slice(0, 3).forEach(function (id) {
@@ -102,6 +108,24 @@
         var chance = E.acceptChance(v, act.target, pid);
         val += chance * (E.dist(pid, act.target) === 1 ? 6 : 4.5) * (v.turn >= 3 ? 1 : 0.6);
         break; }
+      case 'nostalgie': {
+        var nv = E.nostalgiaPreview(v, pid, act.region);
+        if (!nv || nv.stone) return null;   // l'ordinateur ne va jamais jusqu'à l'âge de pierre
+        boost(act.region, nv.n);
+        if (nv.war) eff.push([act.region, pid === 'MN' ? 'RQ' : 'MN', -1]);
+        val -= nv.youth * 1.3;
+        break; }
+      case 'rappel': {
+        var RL = D.RULES;
+        val += RL.rappelChance * (RL.rappelSwing * 1.6 + 1) - (1 - RL.rappelChance) * RL.rappelCas * (0.7 + pl.cas * 0.25);
+        if (E.lostPetals(v).length === 1) val += 1.2;   // la rose peut refleurir
+        break; }
+      case 'fusion': E.bestRegions(v, pid, D.RULES.fusionGain, null, 1).forEach(function (rid) { boost(rid, 1); }); val += 1.6; break;
+      case 'eclat': {
+        if (!v.hidden) return null;
+        E.bestRegions(v, pid, D.RULES.eclatGain, null, 1).forEach(function (rid) { boost(rid, 1); });
+        val += 2.4 * Math.min(3, D.RULES.maxTurns - v.turn + 1) / 3;
+        break; }
       case 'fonds': val += (pl.money < 3 ? 4 : pl.money < 6 ? 1.5 : 0.2) + (E.fundsGain(pid).infl ? (pl.infl < 3 ? 2.5 : 1) : 0); break;
       case 'card': {
         var c = act.card;
@@ -128,7 +152,7 @@
   function plan(g, pid) {
     var v = clone(g), out = [], rng = g.rng;
     var debate = E.isDebateTurn(g);
-    for (var s = 0; s < D.RULES.actionsPerTurn; s++) {
+    for (var s = 0; s < E.actionsFor(g, pid); s++) {
       var best = null;
       candidates(v, pid, g.turn).forEach(function (act) {
         var e = evaluate(v, pid, act, rng);
@@ -143,6 +167,10 @@
       if (best.act.type === 'fonds') { pl.money += E.fundsGain(pid).money; pl.infl += E.fundsGain(pid).infl; }
       if (best.act.type === 'enquete') { v.enq = v.enq || {}; v.enq[pid + best.act.target] = 1; }
       if (best.act.type === 'alliance') { v.alliances[pid] = best.act.target; v.alliances[best.act.target] = pid; }
+      if (best.act.type === 'nostalgie') { v.nost[pid] = (v.nost[pid] || 0) + 1; pl.nostTurn = g.turn; }
+      if (best.act.type === 'rappel') pl.rappelTurn = g.turn;
+      if (best.act.type === 'fusion') v.micro = null;
+      if (best.act.type === 'eclat') { v.hidden = false; v.eclatUntil = g.turn + D.RULES.eclatTurns - 1; }
       if (best.act.type === 'card') pl.cards = pl.cards.filter(function (k) { return k !== best.act.card; });
       best.eff.forEach(function (e) { add(v, e[0], e[1], e[2]); });
       Object.keys(v.regions).forEach(function (rid) { recompute(v, rid); });
@@ -173,8 +201,11 @@
     if (E.player(g, opp).cas > 0) w.attaque += 2;
     var keys = Object.keys(w), sum = 0; keys.forEach(function (k) { sum += w[k]; });
     var r = g.rng() * sum;
-    for (var i = 0; i < keys.length; i++) { r -= w[keys[i]]; if (r <= 0) return keys[i]; }
-    return 'esquive';
+    var pick = 'esquive';
+    for (var i = 0; i < keys.length; i++) { r -= w[keys[i]]; if (r <= 0) { pick = keys[i]; break; } }
+    // v3.1 : La France Indignée ressort souvent son disque rayé
+    if (pid === 'FI' && pick === 'emotion' && !E.isHot(g, theme) && g.rng() < 0.6) pick = 'disque';
+    return pick;
   }
   function payspotlight(g, pid) { return E.player(g, pid).infl >= 4; }
 

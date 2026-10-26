@@ -362,10 +362,10 @@
       cards: ['marche_pop', 'censure'] },
     { id: 'SM', sigle: 'PS', pos: 3, name: 'Le Parti Survivant', short: 'Parti Survivant', family: 'Centre gauche',
       candidate: 'Raphaël Grandsmots', candTitle: 'le beau parleur européen', programme: ['classes', 'apprentissage', 'cheque', 'proximite', 'plastique'], financing: ['fraudefisc', 'niches'],
-      color: '#E07AA0', ink: '#1B1F3B', money: 4, infl: 3, bases: ['naq', 'cvl'],
+      color: '#E07AA0', ink: '#1B1F3B', money: 6, infl: 3, bases: ['naq', 'cvl'],
       cred: { services: 2, emploi: 1, pouvoir: 1, securite: 1, ecologie: 1, immigration: 0 },
       force: "Réseau d'élus : +1 soutien en Meeting là où il a déjà 5 soutiens ou plus.",
-      weakness: "Peu d'argent au départ.",
+      weakness: 'Primaire perpétuelle : au tour 4 (format classique), perdre une action ou voir un courant claquer la porte (voir 🌹).',
       cards: ['fete_rose', 'primaire'] },
     { id: 'VP', sigle: 'LE', pos: 2, name: 'Les Enracinés', short: 'Les Enracinés', family: 'Écologie',
       candidate: 'Marine Tournesol', candTitle: 'l\'écolo qui suit le soleil', programme: ['renovation', 'train1', 'sp20', 'cheque', 'plastique'], financing: ['heritage', 'isf'],
@@ -453,7 +453,12 @@
     militants:{ name: 'Militants',      icon: '👥', cost: { money: 3, infl: 0 }, target: 'region', text: 'Implante une équipe de militants : +1 soutien ici au début de chaque tour (3 équipes au plus)' },
     enquete:  { name: 'Enquêter',       icon: '🔎', cost: { money: 1, infl: 1 }, target: 'party', text: 'Fouiller le passé d\'un rival : si tu trouves quelque chose, une affaire lui tombe dessus au prochain tour' },
     alliance: { name: 'Alliance',       cost: { money: 0, infl: 1 }, target: 'party',  text: "Proposer une alliance à un parti proche (distance 2 au plus)" },
-    rupture:  { name: 'Rupture',        cost: { money: 0, infl: 0 }, target: null,     text: "Rompre ton alliance : −2 ★, et ton ex-allié ne te reportera presque rien au second tour" }
+    rupture:  { name: 'Rupture',        cost: { money: 0, infl: 0 }, target: null,     text: "Rompre ton alliance : −2 ★, et ton ex-allié ne te reportera presque rien au second tour" },
+    /* v3.1 : les actions propres à un parti (voir TRAITS) */
+    nostalgie:{ name: 'C\u2019était mieux avant', icon: '⏪', only: ['MN', 'RQ'], cost: { money: 2, infl: 0, forme: 1 }, target: 'region', text: 'Promettre le retour du passé : plaît aux retraités, fait fuir les jeunes à mesure qu\u2019on recule' },
+    rappel:   { name: 'Rappeler un ancien', icon: '📞', only: ['SM'], cost: { money: 1, infl: 1 }, target: null, text: 'François Hésitant sort de sa retraite : il ramène un pétale… ou sort un livre qui règle ses comptes' },
+    fusion:   { name: 'Fusionner',      icon: '🧲', only: ['EM', 'MD', 'HZ'], cost: { money: 1, infl: 2 }, target: null, text: 'Absorber le micro-parti centriste du moment' },
+    eclat:    { name: 'Le coup d\u2019éclat', icon: '💥', only: ['UG'], cost: { money: 3, infl: 2 }, target: null, text: 'Faire parler de soi : les caméras reviennent pour 3 tours' }
   };
 
   /* Cartes spéciales : 1 utilisation par partie, prend 1 action. */
@@ -471,6 +476,57 @@
     plateau_tele:  { name: 'Plateau télé',         target: null, text: '+2 soutiens dans 3 régions rurales ou industrielles.' },
     grand_meeting: { name: 'Grand meeting',        target: 'region', text: '+4 soutiens dans une région.' }
   };
+
+  /* v3.1 : les traits satiriques. Chaque trait a un avantage ET un coût : le gag se joue de l'intérieur.
+     Les chiffres sont réglés par simulation (test/simulate.js). */
+  var TRAITS = {
+    nostalgie: { parties: ['MN', 'RQ'], icon: '⏪', name: 'La machine à remonter le temps',
+      plus: 'Action « C’était mieux avant » (2 € + 1 ⚡, une fois par tour) : 3 soutiens sans choisir de thème, 4 à partir de 1962, +1 dans les régions de retraités.',
+      minus: 'Chaque usage recule l’année rêvée. Dès 1962, les jeunes fuient (−1 soutien dans 1 à 3 régions étudiantes). À l’âge de pierre : fou rire général. Et les deux nostalgiques se volent les mêmes électeurs.',
+      learn: 'Les retraités votent beaucoup plus que les jeunes : les séduire rapporte. Mais promettre le passé a une limite.' },
+    rose: { parties: ['SM'], icon: '🌹', name: 'La rose qui perd ses pétales',
+      plus: 'Action « Rappeler un ancien » (1 € + 1 ★) : 2 fois sur 3, un pétale revient et ramène des électeurs partis chez un voisin. Rose complète : elle refleurit (bonus).',
+      minus: 'Sinon, l’ancien sort un livre qui règle ses comptes (+2 casseroles). Et la primaire perpétuelle (au tour 4 en format classique) : soit tu perds une action, soit tu tranches et un courant claque la porte.',
+      learn: 'Depuis 2017, une partie des électeurs socialistes est partie vers le centre, les écologistes ou la gauche radicale. Les querelles internes coûtent cher.' },
+    centre: { parties: ['EM', 'MD', 'HZ'], icon: '🚦', name: 'L’embouteillage au milieu',
+      plus: 'Action « Fusionner » (1 € + 2 ★) : absorber le micro-parti et récupérer ses militants (+1 soutien dans 3 régions). Mais les deux autres partis du centre en profitent aussi, gratuitement.',
+      minus: 'Là où les trois partis du centre ont chacun 4 soutiens ou plus, un Meeting rapporte 1 soutien de moins. Et en cours de campagne naît un micro-parti centriste qui grignote une part des voix de chacun, tant que personne ne l’absorbe.',
+      learn: 'Quand plusieurs partis proposent presque la même chose, ils se partagent les mêmes électeurs. D’où l’appel au « vote utile ».' },
+    transparent: { parties: ['UG'], icon: '🔍', name: 'Avis de recherche',
+      plus: 'Quand personne ne te regarde, on ne tire pas non plus sur toi : une attaque ne te fait perdre qu’un soutien. Action « Le coup d’éclat » (3 € + 2 ★) : +1 soutien dans 3 régions et les caméras reviennent pour 3 tours.',
+      minus: 'Quand le Rassemblement Nostalgique et Réforme Encore sont devant toi et que tu n’es pas dans le trio de tête, tu deviens transparent : une fois sur deux (une sur quatre en format éclair), ta Télé et tes Buzz tombent dans le vide.',
+      learn: 'Coincée entre deux pôles plus forts, une famille politique peut disparaître des écrans : c’est la « tripartition ».' },
+    disque: { parties: ['FI'], icon: '📀', name: 'Le disque rayé',
+      plus: 'Chaque message coche un mot du bingo. Une ligne complète : les militants s’enflamment (+1 soutien dans chaque région où tu as 3 soutiens ou plus). En débat, la réplique « Comme je le disais déjà… ».',
+      minus: 'Après un bingo, les indécis zappent : jusqu’à la fin du tour suivant, Meeting et Télé rapportent 1 soutien de moins là où tu as 3 soutiens ou moins.',
+      learn: 'Parler à sa base mobilise les convaincus ; répéter les mêmes mots lasse les indécis. Tout l’art est d’élargir sans se renier.' }
+  };
+  /* ⏪ Les crans de la machine à remonter le temps (le 6e est l'âge de pierre) */
+  var NOSTALGIA = [
+    { year: '1990', thing: 'le Minitel', what: 'le retour du Minitel' },
+    { year: '1975', thing: 'le franc', what: 'le retour du franc et du téléphone à cadran' },
+    { year: '1962', thing: 'l\u2019ORTF', what: 'le retour de l’ORTF et de la chaîne unique' },
+    { year: '1905', thing: 'une diligence', what: 'le retour de la diligence' },
+    { year: '1515', thing: 'une chandelle', what: 'le retour de la chandelle et des châteaux forts' },
+    { year: 'l’âge de pierre', thing: 'une massue', what: 'le retour du feu de bois et de la massue' }
+  ];
+  /* 🌹 Les 5 pétales de la rose et le parti voisin vers lequel chacun peut partir (null : les fidèles ne partent jamais) */
+  var PETALS = [
+    { id: 'soclib', name: 'les sociaux-libéraux', to: 'EM', start: false },
+    { id: 'gauche', name: 'l’aile gauche', to: 'FI', start: false },
+    { id: 'eco', name: 'les écolos du parti', to: 'VP', start: true },
+    { id: 'elus', name: 'les élus locaux', to: 'MD', start: true },
+    { id: 'fideles', name: 'les fidèles', to: null, start: true }
+  ];
+  /* 🚦 Les micro-partis centristes qui naissent en cours de campagne */
+  var MICRO = ['Ensemble Mais Séparés', 'Le Mouvement du Juste Équilibre Modéré', 'Renaissance Bis', 'Agir Peut-Être', 'Le Centre du Centre', 'Les Raisonnables Unis'];
+  /* 📀 Le bingo de La France Indignée : 9 mots, la plupart liés à un thème (les autres se cochent à défaut) */
+  var BINGO = [
+    { w: '6e République' }, { w: 'les riches', th: 'pouvoir' }, { w: 'insoumission' },
+    { w: 'l’hôpital', th: 'services' }, { w: 'le peuple' }, { w: 'planification écologique', th: 'ecologie' },
+    { w: 'les patrons voyous', th: 'emploi' }, { w: 'la police', th: 'securite' }, { w: 'l’accueil digne', th: 'immigration' }
+  ];
+  var BINGO_LINES = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]];
 
   var EVENTS = [
     { id: 'crise', theme: 'pouvoir',      title: 'Crise économique',         text: 'Chaque parti perd 2 €.' },
@@ -505,7 +561,7 @@
   var FORMATS = {
     classique: { name: 'Classique', turns: 8, text: '8 tours, une vingtaine de minutes.' },
     eclair: { name: 'Éclair', turns: 3, text: '3 tours, une partie dans le métro.',
-      rules: { maxTurns: 3, debateTurns: [3], crisisStart: [1, 1], registerTurns: 1, othersKeep: 0.5,
+      rules: { maxTurns: 3, debateTurns: [3], crisisStart: [1, 1], registerTurns: 1, othersKeep: 0.5, primaireTurns: [], microTurns: [2], hiddenMiss: 0.25,
                novelty: { turns: 2, strongTurns: 1, start: 3 }, incomeMoney: 6,
                /* v2.8.1 : rééquilibrage. En 3 tours, le parti qui part en tête n'avait pas le temps d'être rattrapé :
                   chaque Meeting et chaque passage Télé rapporte plus, les cagnottes de départ se rapprochent,
@@ -514,6 +570,12 @@
   };
   var RULES = {
     maxTurns: 8,
+    /* v3.1 : traits satiriques */
+    nostalgieGain: [3, 3, 4, 4, 4], nostalgieYouth: [0, 0, 1, 2, 3],
+    rappelChance: 0.65, rappelSwing: 3, rappelCas: 2, primaireTurns: [4], primaireCut: 3,
+    jamMin: 4, microTurns: [4], microCut: 0.06, fusionGain: 3,
+    eclatTurns: 3, eclatGain: 3, hiddenMiss: 0.5,
+    bingoZap: 2, bingoBoostMin: 3, bingoZapMax: 3,
     wearTurn: 5,                 // En Mouvement : l'usure du pouvoir frappe à ce tour
     moneyBlend: 0,               // 0 = chaque parti garde sa cagnotte de départ ; 1 = tout le monde part avec 5 €
     actionsPerTurn: 3,
@@ -731,7 +793,8 @@
     attaque:  { name: 'Attaque',  icon: '🥊', beats: 'emotion',  hint: 'Bat l\'émotion. +1 si ton rival traîne des casseroles.' },
     chiffres: { name: 'Chiffres', icon: '📊', beats: 'attaque',  hint: 'Bat l\'attaque. +1 si c\'est ton point fort, −1 si ce n\'est pas ton sujet.' },
     emotion:  { name: 'Émotion',  icon: '❤️', beats: 'chiffres', hint: 'Bat les chiffres. +1 si le thème fait l\'actu.' },
-    esquive:  { name: 'Esquive',  icon: '🙃', beats: null,       hint: 'Match nul assuré : 1 point chacun.' }
+    esquive:  { name: 'Esquive',  icon: '🙃', beats: null,       hint: 'Match nul assuré : 1 point chacun.' },
+    disque:   { name: 'Comme je le disais déjà…', icon: '📀', beats: 'chiffres', only: 'FI', hint: 'Compte comme l\u2019émotion (bat les chiffres), sans le bonus de l\u2019actu. Coche 2 mots du bingo.' }
   };
   /* Tempérament de chaque parti en débat : probabilité de chaque réplique (l'IA s'adapte aussi au thème) */
   var TEMPERS = {
@@ -841,7 +904,7 @@
   }
 
   var DATA = { REFERENCE_2027: REFERENCE_2027, POLLS: POLLS, BASES: BASES, REGIONS: REGIONS, PROFILES: PROFILES, THEMES: THEMES, HEADLINES: HEADLINES, PARTIES: PARTIES, ACTIONS: ACTIONS,
-               CARDS: CARDS, EVENTS: EVENTS, DILEMMAS: DILEMMAS, CRISES: CRISES, REPLIES: REPLIES, TEMPERS: TEMPERS,
+               CARDS: CARDS, EVENTS: EVENTS, DILEMMAS: DILEMMAS, CRISES: CRISES, REPLIES: REPLIES, TEMPERS: TEMPERS, TRAITS: TRAITS, NOSTALGIA: NOSTALGIA, PETALS: PETALS, MICRO: MICRO, BINGO: BINGO, BINGO_LINES: BINGO_LINES,
                MEASURES: MEASURES, FUNDING: FUNDING, SEGMENTS: SEGMENTS, VOTE_PROP: VOTE_PROP, SEGMENTS_SRC: SEGMENTS_SRC, AFFAIRS: AFFAIRS, LEARN: LEARN, BUDGET_AFFAIR: BUDGET_AFFAIR, REACTIONS: REACTIONS, ADVISOR: ADVISOR, OBJECTIVES: OBJECTIVES, RULES: RULES, FORMATS: FORMATS, LEGIS: LEGIS, MINISTRY: MINISTRY, OPPO: OPPO, validate: validate };
   if (typeof module !== 'undefined' && module.exports) module.exports = DATA;
   else root.PolitikData = DATA;

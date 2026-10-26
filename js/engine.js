@@ -30,6 +30,7 @@
   function loadGame(str) {
     var g = JSON.parse(str); setFormat(g.format);
     g.rng = makeRng(1); g.rng.setState(g.rngState); delete g.rngState;
+    ensureTraits(g);   // v3.1 : une partie sauvegardée avant les traits les reçoit à la reprise
     return g;
   }
   function shuffle(arr, rng) {
@@ -50,6 +51,110 @@
   function dist(a, b) { if (a === b) return 0; return Math.min(5, Math.max(1, Math.round(Math.abs(PARTY[a].pos - PARTY[b].pos)))); }
   /* Ce que rapporte une Collecte : 3 € en général, 4 € et 1 ★ pour En Mouvement, 2 € pour les petits partis */
   function fundsGain(pid) { return pid === 'EM' ? { money: 4, infl: 1 } : pid === 'VP' || pid === 'PC' || pid === 'MD' ? { money: 2, infl: 0 } : { money: 3, infl: 0 }; }
+  /* ---------- v3.1 : les traits satiriques (voir D.TRAITS) ---------- */
+  var TRAIT_OF = {}; Object.keys(D.TRAITS).forEach(function (k) { D.TRAITS[k].parties.forEach(function (pid) { TRAIT_OF[pid] = k; }); });
+  var CENTRE = D.TRAITS.centre.parties;
+  function traitOf(pid) { return TRAIT_OF[pid] || null; }
+  function initTraits(g) {
+    g.nost = {}; g.petals = {}; g.roseBloom = false; g.micro = null; g.microIdx = 0; g.microDone = 0;
+    g.eclatUntil = 0; g.hidden = false; g.bingo = { ticks: [false, false, false, false, false, false, false, false, false], lines: 0, zapUntil: 0 };
+    D.TRAITS.nostalgie.parties.forEach(function (pid) { g.nost[pid] = 0; });
+    D.PETALS.forEach(function (pt) { g.petals[pt.id] = pt.start; });
+  }
+  function ensureTraits(g) { if (!g.bingo) initTraits(g); }   // parties sauvegardées avant la v3.1
+  function petalsCount(g) { return D.PETALS.filter(function (pt) { return g.petals[pt.id]; }).length; }
+  function lostPetals(g) { return D.PETALS.filter(function (pt) { return !g.petals[pt.id]; }); }
+  function centrists(g) { return CENTRE.filter(function (pid) { return !!player(g, pid); }); }
+  /* 🚦 Embouteillage : les trois partis du centre sont bien implantés ici */
+  function jammed(g, pid, rid) {
+    if (CENTRE.indexOf(pid) < 0) return false;
+    var others = CENTRE.filter(function (o) { return o !== pid; });
+    return others.every(function (o) { return player(g, o) && cubes(g, rid, o) >= R.jamMin; }) && cubes(g, rid, pid) >= R.jamMin;
+  }
+  /* 📀 Les indécis zappent après un bingo, là où La France Indignée est faible */
+  function zapped(g, pid, rid) { return pid === 'FI' && g.bingo && g.bingo.zapUntil >= g.turn && cubes(g, rid, pid) <= R.bingoZapMax; }
+  /* 🔍 Les Rescapés deviennent transparents, coincés entre le Rassemblement Nostalgique et Réforme Encore */
+  function computeHidden(g) {
+    if (g.turn < 2 || !player(g, 'UG') || !player(g, 'MN') || !player(g, 'EM') || g.eclatUntil >= g.turn) return false;
+    var rk = ranking(g), u = rk.indexOf('UG');
+    return u >= 3 && rk.indexOf('MN') < u && rk.indexOf('EM') < u;
+  }
+  function isHidden(g, pid) { return pid === 'UG' && !!g.hidden; }
+  function retireeRegion(rid) { return REG[rid].pop.ret >= 30; }
+  function nostalgiaPreview(g, pid, rid) {
+    var k = (g.nost && g.nost[pid]) || 0;
+    if (k >= D.NOSTALGIA.length) return null;
+    if (k === D.NOSTALGIA.length - 1) return { k: k, n: 0, youth: 0, stone: true };
+    var n = R.nostalgieGain[k] + (rid && retireeRegion(rid) ? 1 : 0);
+    var other = pid === 'MN' ? 'RQ' : 'MN', war = !!(rid && player(g, other) && cubes(g, rid, other) > 0);
+    return { k: k, n: Math.max(0, n - (war ? 1 : 0)), youth: R.nostalgieYouth[k], war: war, stone: false };
+  }
+  function youngRegions(g, pid, n, except) {
+    return D.REGIONS.filter(function (r) { return r.id !== except && cubes(g, r.id, pid) > 0; })
+      .sort(function (a, b) { return b.pop.sae - a.pop.sae; }).slice(0, n).map(function (r) { return r.id; });
+  }
+  /* Déplace des électeurs d'un parti à l'autre dans les 3 régions où « from » en a le plus */
+  function swing(g, from, to, n) {
+    var moved = [];
+    var regs = from && player(g, from) ? D.REGIONS.filter(function (r) { return cubes(g, r.id, from) > 0; }).sort(function (a, b) { return cubes(g, b.id, from) - cubes(g, a.id, from); }).slice(0, n).map(function (r) { return r.id; })
+                                       : bestRegions(g, to, n, null, 1);
+    regs.forEach(function (rid) {
+      var got = to ? addCubes(g, rid, to, 1) : 0;
+      if (from && player(g, from) && (got || !to)) addCubes(g, rid, from, -1);
+      if (got || !to) moved.push(rid);
+    });
+    return moved;
+  }
+  /* 📀 coche des mots du bingo ; renvoie la description du bingo s'il y en a un */
+  function tickBingo(g, th, n) {
+    var b = g.bingo, out = null;
+    for (var i = 0; i < n; i++) {
+      var idx = -1;
+      D.BINGO.forEach(function (w, j) { if (idx < 0 && th && w.th === th && !b.ticks[j]) idx = j; });
+      if (idx < 0) D.BINGO.forEach(function (w, j) { if (idx < 0 && !w.th && !b.ticks[j]) idx = j; });
+      if (idx < 0) D.BINGO.forEach(function (w, j) { if (idx < 0 && !b.ticks[j]) idx = j; });
+      if (idx < 0) break;
+      b.ticks[idx] = true;
+      var line = D.BINGO_LINES.filter(function (L) { return L.every(function (j) { return b.ticks[j]; }); })[0];
+      if (line) {
+        var regs = D.REGIONS.filter(function (r) { return cubes(g, r.id, 'FI') >= R.bingoBoostMin; }).map(function (r) { return r.id; });
+        regs = regs.filter(function (rid) { return addCubes(g, rid, 'FI', 1) > 0; });
+        b.lines += 1; b.zapUntil = g.turn + R.bingoZap - 1;
+        out = { words: line.map(function (j) { return D.BINGO[j].w; }), regions: regs };
+        b.ticks = b.ticks.map(function () { return false; });
+        break;
+      }
+    }
+    return out;
+  }
+  /* 🌹 La primaire perpétuelle : 0 = laisser débattre (une action de moins), 1 = trancher (un courant claque la porte) */
+  function resolvePrimaire(g, choice) {
+    var pr = g.primaire; if (!pr || pr.done) return null;
+    pr.done = true; pr.choice = choice;
+    var pl = player(g, 'SM'), res = { choice: choice, text: '' };
+    if (choice === 0) { g.mods.fewer = g.mods.fewer || {}; g.mods.fewer.SM = 1; res.text = 'Le débat interne s\u2019éternise : 2 actions seulement ce tour.'; }
+    else {
+      var can = D.PETALS.filter(function (pt) { return g.petals[pt.id] && pt.to; });
+      if (!can.length) { var lost = Math.min(pl.infl, 2); pl.infl -= lost; res.text = 'Plus personne pour claquer la porte… mais la séance coûte ' + lost + ' ★.'; }
+      else {
+        var pt = can[Math.floor(g.rng() * can.length)];
+        g.petals[pt.id] = false; res.petal = pt.id;
+        var moved = swing(g, 'SM', player(g, pt.to) ? pt.to : null, R.primaireCut);
+        res.text = (pl.human ? 'Tu tranches. ' : 'La direction tranche. ') + 'Vexés, ' + pt.name + ' claquent la porte' + (player(g, pt.to) ? ' et partent chez ' + PARTY[pt.to].short : '') + ' : −1 soutien en ' + moved.map(function (r) { return REG[r].name; }).join(', ') + '.';
+      }
+    }
+    g.log.push({ pid: 'SM', text: 'Primaire : ' + res.text });
+    updateAllControl(g);
+    return res;
+  }
+  /* L'ordinateur tranche quand il a des pétales à perdre et que ses actions valent cher */
+  function autoPrimaire(g) {
+    var pl = player(g, 'SM'), petals = D.PETALS.filter(function (pt) { return g.petals[pt.id] && pt.to; }).length;
+    var choice = petals === 0 ? (pl.infl >= 4 ? 1 : 0) : (g.rng() < 0.25 ? 1 : 0);
+    return resolvePrimaire(g, choice);
+  }
+  function actionsFor(g, pid) { return R.actionsPerTurn - ((g.mods && g.mods.fewer && g.mods.fewer[pid]) || 0); }
+
   function allyOf(g, pid) { return (g.alliances && g.alliances[pid]) || null; }
 
   /* ---------- Thèmes (v0.3) ---------- */
@@ -177,6 +282,8 @@
     var e = pl && pl.programme ? echoBonus(g, pid, rid) : 0;   // v0.8 : le programme plaît (ou déplaît) aux habitants
     if (e) parts.push({ k: 'echo', label: e > 0 ? 'région de cœur' : 'région hostile', n: e });
     if (pl && pl.momentum) parts.push({ k: 'dyn', label: pl.momentum > 0 ? 'dynamique' : 'passage à vide', n: pl.momentum });
+    if (g.bingo && jammed(g, pid, rid)) parts.push({ k: 'jam', label: 'embouteillage au centre', n: -1 });
+    if (g.bingo && zapped(g, pid, rid)) parts.push({ k: 'zap', label: 'les indécis zappent', n: -1 });
     // v2.5 : un parti tout neuf attire la curiosité au début de la campagne, puis l'effet s'use
     if (pl && PARTY[pid] && PARTY[pid].novelty && g.turn <= R.novelty.turns) parts.push({ k: 'neuf', label: 'effet nouveauté', n: g.turn <= R.novelty.strongTurns ? 2 : 1 });
     var tot = 0; parts.forEach(function (x) { tot += x.n; });
@@ -193,6 +300,7 @@
     var n = R.mediaCubes[impact(g, pid, rid, th)], prof = REG[rid].profile;
     if (n > 0 && pid === 'VP' && prof === 'urbaine') n++;
     if (n > 0 && pid === 'MN' && prof === 'industrielle') n++;
+    if (n > 0 && g.bingo && zapped(g, pid, rid)) n--;
     return n;
   }
   /* Nouveau tour : un thème fait l'actu (celui de l'événement, sinon au hasard), plus les thèmes imposés */
@@ -276,6 +384,8 @@
       g.players.forEach(function (p) { w[p.id] = cubes(g, r.id, p.id) * (reg.controller === p.id ? R.incumbentBonus : 1); T += w[p.id]; });
       if (T > 0) g.players.forEach(function (p) { v[p.id] += ex * (1 - o) * w[p.id] / T; });
     });
+    // v3.1 : un micro-parti centriste grignote une part des voix de chaque parti du centre
+    if (g.micro) CENTRE.forEach(function (pid) { if (v[pid] != null) { var cut = v[pid] * R.microCut; v[pid] -= cut; v._autres = (v._autres || 0) + cut; } });
     // v1.5 : plus de multiplicateur caché en mode Simulation (avant : FI et MN ×1,18). Départ strictement égal.
     // Objectif secret réussi : des voix en plus le jour du scrutin (pas dans les sondages, voir objectiveShare)
     if (withObjectives) g.players.forEach(function (p) {
@@ -399,6 +509,7 @@
     // v0.5 : une crise en 3 actes, et un paquet de dilemmes
     var cr = D.CRISES[Math.floor(rng() * D.CRISES.length)];
     g.crisis = { id: cr.id, start: R.crisisStart[0] + Math.floor(rng() * (R.crisisStart[1] - R.crisisStart[0] + 1)) };
+    initTraits(g);
     g.dilemmas = shuffle(D.DILEMMAS.map(function (d) { return d.id; }), rng);
     g.affairDeck = shuffle(D.AFFAIRS.map(function (a) { return a.id; }), rng);
     g.lastPoll = pollMap(g);
@@ -415,7 +526,8 @@
 
   /* ---------- Début de tour : revenus, usure, événement ---------- */
   function startTurn(g) {
-    g.turn += 1; g.mods = {}; g.cancel = {}; g.log = [];
+    ensureTraits(g);
+    g.turn += 1; g.mods = {}; g.cancel = {}; g.log = []; g.primaire = null;
     var out = { income: [], usure: null, event: null, crisis: null, militants: [], later: [], affairs: [], dilemma: null, programmes: null };
     if (g.turn === 1) out.programmes = applyProgrammes(g);
     // marqueurs expirés
@@ -442,7 +554,8 @@
       // v0.7 : les affaires (dossiers des rivaux, programme non financé, casseroles, Le Canard)
       var list = g.nextAffairs.slice(); g.nextAffairs = [];
       g.players.forEach(function (pl) {
-        if (pl.cas > 0 && g.rng() < pl.cas * R.affairPerCasserole && !list.some(function (x) { return x.pid === pl.id; })) list.push({ pid: pl.id, src: 'casseroles' });
+        var risk = pl.cas * R.affairPerCasserole;
+        if (pl.cas > 0 && g.rng() < risk && !list.some(function (x) { return x.pid === pl.id; })) list.push({ pid: pl.id, src: 'casseroles' });
       });
       if (!list.length && g.rng() < R.canardChance) {
         var tot = 0; g.players.forEach(function (p) { tot += p.cas + 1; });
@@ -486,6 +599,19 @@
     g.dilemma = { pid: dp.id, id: did };
     out.dilemma = g.dilemma;
     updateAllControl(g);
+    // v3.1 : les traits satiriques du tour
+    if (R.microTurns.indexOf(g.turn) >= 0 && !g.micro && centrists(g).length >= 2) {
+      g.micro = { name: D.MICRO[g.microIdx++ % D.MICRO.length], since: g.turn };
+      out.micro = g.micro.name;
+    }
+    var wasHidden = g.hidden;
+    g.hidden = computeHidden(g);
+    if (g.hidden) out.hidden = { fresh: !wasHidden };
+    if (player(g, 'SM') && R.primaireTurns.indexOf(g.turn) >= 0 && g.turn < R.maxTurns + 1) {
+      g.primaire = { pid: 'SM', done: false };
+      if (player(g, 'SM').human) out.primaire = { pid: 'SM' };
+      else out.primaire = Object.assign({ pid: 'SM', ai: true }, autoPrimaire(g));
+    }
     g.phase = 'actions';
     return out;
   }
@@ -654,7 +780,17 @@
       return null;
     }
     var def = D.ACTIONS[act.type];
+    if (!def) return 'Action inconnue.';
+    if (def.only && def.only.indexOf(pid) < 0) return 'Action réservée à un autre parti.';
     if (def.target === 'region' && !act.region) return 'Choisis une région.';
+    if (act.type === 'nostalgie' && (g.nost[pid] || 0) >= D.NOSTALGIA.length) return 'La machine à remonter le temps est cassée : plus personne n\u2019y croit.';
+    if (act.type === 'nostalgie' && player(g, pid).nostTurn === g.turn) return 'Un seul retour en arrière par tour : le public a besoin de digérer.';
+    if (act.type === 'rappel') {
+      if (!lostPetals(g).length) return 'Ta rose a toutes ses pétales.';
+      if (player(g, pid).rappelTurn === g.turn) return 'François Hésitant ne décroche qu\u2019une fois par tour.';
+    }
+    if (act.type === 'fusion' && !g.micro) return 'Aucun micro-parti à absorber pour l\u2019instant.';
+    if (act.type === 'eclat' && g.eclatUntil >= g.turn) return 'Les caméras sont déjà braquées sur toi.';
     if (def.theme && !THEME[act.theme]) return 'Choisis un thème.';
     if (act.type === 'imposer' && g.turn >= R.maxTurns) return 'Plus de tour suivant : la campagne est finie.';
     if (act.type === 'mobiliser' && regionVoters(g, act.region).abst <= 1 - R.turnoutMax) return 'Presque tout le monde vote déjà ici.';
@@ -784,6 +920,7 @@
         mediaRegions(g, pid, act.region, act.theme).forEach(function (rid) {
           var n = mediaCubes(g, pid, rid, act.theme);
           if (!n) { t.push('0 ' + REG[rid].name + ' (message inaudible)'); return; }
+          if (isHidden(g, pid) && g.rng() < R.hiddenMiss) { entry.hidden = true; t.push('0 ' + REG[rid].name + ' (la caméra est partie chez le voisin)'); return; }
           n = addCubes(g, rid, pid, n);
           var pc2 = poach(g, pid, rid, false);
           t.push('+' + n + ' ' + REG[rid].name + (pc2 ? ' (+1 de ' + pc2 + ')' : ''));
@@ -794,12 +931,15 @@
         var m = d === 1 ? -1 : d <= 3 ? 1 : d <= 5 ? 2 : 4;
         if (isHot(g, act.theme)) m += R.socialHotBonus;
         if (pid === 'RQ' && act.theme === 'immigration') m += 1;   // v1.7 : polémiques
+        var unseen = isHidden(g, pid) && m > 0 && g.rng() < R.hiddenMiss;
+        if (unseen) { entry.hidden = true; m = 0; }
         var got = addCubes(g, act.region, pid, m);
-        t.push('dé ' + d + (d === 6 ? ' VIRAL' : d === 1 ? ' bad buzz' : '') + ' : ' + (got >= 0 ? '+' : '') + got + ' en ' + rn); break; }
+        t.push('dé ' + d + (d === 6 ? ' VIRAL' : d === 1 ? ' bad buzz' : '') + ' : ' + (got >= 0 ? '+' : '') + got + ' en ' + rn + (unseen ? ' (personne n\u2019a vu la vidéo)' : '')); break; }
       case 'contre': {
         var rival = rivalIn(g, act.region, pid);
         var n2 = 2;
         if (rival === 'UG' && REG[act.region].profile === 'historique') n2 = Math.max(0, Math.min(2, cubes(g, act.region, 'UG') - 2));
+        if (isHidden(g, rival)) n2 = Math.min(n2, 1);   // v3.1 : on ne tire pas sur une ambulance
         var lost = -addCubes(g, act.region, rival, -n2);
         g.regions[act.region].blank += R.attackBlank; g.regions[act.region].abst += R.attackAbst;   // une campagne négative écœure
         pl.cas = Math.min(R.casseroleMax, pl.cas + 1);
@@ -833,6 +973,52 @@
         var prof2 = REG[act.region].profile;
         D.REGIONS.forEach(function (r) { if (r.profile === prof2) { var x = addCubes(g, r.id, pid, 1); if (x) t.push('+1 ' + r.name); } });
         break; }
+      case 'nostalgie': {
+        var nv = nostalgiaPreview(g, pid, act.region), step = D.NOSTALGIA[nv.k];
+        g.nost[pid] = nv.k + 1; pl.nostTurn = g.turn; entry.nost = { k: nv.k, year: step.year, what: step.what };
+        if (nv.stone) {
+          var hit = [];
+          for (var q = 0; q < 3; q++) { var sr = strongestRegion(g, pid, function (r) { return hit.indexOf(r.id) < 0; }); if (sr) { addCubes(g, sr, pid, -1); hit.push(sr); } }
+          pl.cas = Math.min(R.casseroleMax, pl.cas + 1);
+          t.push('« ' + step.what + ' » : fou rire général · −1 en ' + hit.map(function (r) { return REG[r].name; }).join(', ') + ' · +1 casserole');
+          break;
+        }
+        if (nv.war) { var oth = pid === 'MN' ? 'RQ' : 'MN'; addCubes(g, act.region, oth, -1); entry.war = oth; }
+        var gotN = addCubes(g, act.region, pid, nv.n);
+        t.push('retour en ' + step.year + ' : +' + gotN + ' en ' + rn + (retireeRegion(act.region) ? ' (les retraités adorent)' : '') + (nv.war ? ' · guerre des nostalgies avec ' + PARTY[entry.war].short + ' (−1 chacun)' : ''));
+        if (nv.youth) {
+          var yr = youngRegions(g, pid, nv.youth, act.region);
+          yr.forEach(function (rid) { addCubes(g, rid, pid, -1); });
+          if (yr.length) t.push('les jeunes fuient : −1 en ' + yr.map(function (r) { return REG[r].name; }).join(', '));
+        }
+        break; }
+      case 'rappel': {
+        pl.rappelTurn = g.turn;
+        var lp = lostPetals(g)[0];
+        if (g.rng() < R.rappelChance) {
+          g.petals[lp.id] = true; entry.petal = lp.id;
+          var mv = swing(g, player(g, lp.to) ? lp.to : null, pid, R.rappelSwing);
+          t.push('François Hésitant ramène ' + lp.name + ' : +1 en ' + mv.map(function (r) { return REG[r].name; }).join(', ') + (player(g, lp.to) ? ' (repris à ' + PARTY[lp.to].short + ')' : ''));
+          if (petalsCount(g) === D.PETALS.length && !g.roseBloom) {
+            g.roseBloom = true; entry.bloom = true; pl.infl += 2;
+            var bl = bestRegions(g, pid, 3, null, 1); bl.forEach(function (rid) { addCubes(g, rid, pid, 1); });
+            t.push('🌹 la rose refleurit ! +2 ★ et +1 en ' + bl.map(function (r) { return REG[r].name; }).join(', '));
+          }
+        } else {
+          pl.cas = Math.min(R.casseroleMax, pl.cas + R.rappelCas); entry.book = true;
+          t.push('François Hésitant sort un livre qui règle ses comptes : +' + R.rappelCas + ' casseroles');
+        }
+        break; }
+      case 'fusion': {
+        var mname = g.micro.name; g.micro = null; g.microDone += 1; entry.micro = mname;
+        var fr = bestRegions(g, pid, R.fusionGain, null, 1); fr.forEach(function (rid) { addCubes(g, rid, pid, 1); });
+        t.push('absorbe « ' + mname + ' » : ses militants rejoignent le parti, +1 en ' + fr.map(function (r) { return REG[r].name; }).join(', '));
+        break; }
+      case 'eclat': {
+        g.eclatUntil = g.turn + R.eclatTurns - 1; g.hidden = false; entry.eclat = true;
+        var er = bestRegions(g, pid, R.eclatGain, null, 1); er.forEach(function (rid) { addCubes(g, rid, pid, 1); });
+        t.push(PARTY[pid].candidate + ' sort la tronçonneuse : les caméras reviennent · +1 en ' + er.map(function (r) { return REG[r].name; }).join(', '));
+        break; }
       case 'card': t = resolveCard(g, pid, act); pl.cards = pl.cards.filter(function (k) { return k !== act.card; }); break;
       case 'alliance': {
         var to = player(g, act.target);
@@ -857,6 +1043,10 @@
       }
     }
     if (entry.credUp) t.push('devient crédible sur ' + THEME[entry.credUp].name);
+    if (pid === 'FI' && act.theme && g.bingo) {   // v3.1 : chaque message coche un mot du bingo
+      var bg = tickBingo(g, act.theme, 1);
+      if (bg) { entry.bingo = bg; t.push('📀 BINGO (« ' + bg.words.join(' », « ') + ' ») : les militants s\u2019enflamment, +1 en ' + (bg.regions.length ? bg.regions.map(function (r) { return REG[r].name; }).join(', ') : 'aucune région') + ' · les indécis zappent'); }
+    }
     entry.text = t.join(' · ');
     updateAllControl(g);
     return entry;
@@ -903,7 +1093,7 @@
     for (var s = 0; s < R.actionsPerTurn; s++) {
       order.forEach(function (pid) {
         var act = (plans[pid] || [])[s];
-        if (act) log.push(resolveOne(g, pid, act));
+        if (act && s < actionsFor(g, pid)) log.push(resolveOne(g, pid, act));
       });
     }
     g.phase = isDebateTurn(g) ? 'debate' : 'spotlight';
@@ -934,6 +1124,7 @@
   /* Points d'une réplique : 2 si elle bat celle d'en face, 1 si nul, 0 si battue, + bonus */
   function replyPoints(g, me, mine, opp, theirs, theme) {
     var R2 = D.REPLIES, pts, notes = [];
+    var mineRaw = mine; mine = mine === 'disque' ? 'emotion' : mine; theirs = theirs === 'disque' ? 'emotion' : theirs;
     if (mine === 'esquive' || theirs === 'esquive' || mine === theirs) pts = 1;
     else pts = R2[mine].beats === theirs ? 2 : 0;
     if (mine === 'attaque' && player(g, opp).cas > 0) { pts += 1; notes.push('ressort ses casseroles'); }
@@ -942,7 +1133,8 @@
       if (c === 2) { pts += 1; notes.push('maîtrise le sujet'); }
       if (c === 0) { pts -= 1; notes.push('s’emmêle dans les chiffres'); }
     }
-    if (mine === 'emotion' && isHot(g, theme)) { pts += 1; notes.push('le sujet brûlant touche'); }
+    if (mine === 'emotion' && isHot(g, theme) && mineRaw !== 'disque') { pts += 1; notes.push('le sujet brûlant touche'); }
+    if (mineRaw === 'disque') notes.push('« comme je le disais déjà en 2017, en 2022 et en 2027… »');
     return { pts: Math.max(0, pts), notes: notes };
   }
   function duelResult(g, d, ra, rb) {
@@ -957,14 +1149,16 @@
       p.infl -= b; tot[p.id] = b;
     });
     var prepSpent = Object.assign({}, tot);
+    var bingoDeb = null;
     g.debate.duels.forEach(function (d, i) {
       var r = duelResult(g, d, picks[i].ra, picks[i].rb);
       tot[d.a] += r.pa; tot[d.b] += r.pb; duels.push(r);
+      if (g.bingo && ((d.a === 'FI' && picks[i].ra === 'disque') || (d.b === 'FI' && picks[i].rb === 'disque'))) bingoDeb = tickBingo(g, d.theme, 2) || bingoDeb;
     });
     var list = g.players.map(function (p) { return { pid: p.id, score: tot[p.id], prep: prepSpent[p.id] }; })
       .sort(function (a, b) { return b.score - a.score; });
     var mult = g.turn === R.maxTurns ? 2 : 1;
-    var res = { ranking: list, duels: duels, rewards: [], grand: mult === 2 };
+    var res = { ranking: list, duels: duels, rewards: [], grand: mult === 2, bingo: bingoDeb };
     function reward(pid, n) {
       var regs = bestRegions(g, pid, n, null, 1);
       regs.forEach(function (rid) { addCubes(g, rid, pid, mult); });
@@ -1283,6 +1477,7 @@
     resolveAffair: resolveAffair, enqueteChance: enqueteChance, affairDef: affairDef,
     resolveDilemma: resolveDilemma, dilemmaDef: dilemmaDef, applyFx: applyFx, markerAt: markerAt, hotHere: hotHere, crisisAct: crisisAct,
     impact: impact, cred: cred, isHot: isHot, concerns: concerns, bestTheme: bestTheme, terrainCubes: terrainCubes, mediaCubes: mediaCubes,
+    traitOf: traitOf, nostalgiaPreview: nostalgiaPreview, petalsCount: petalsCount, lostPetals: lostPetals, jammed: jammed, zapped: zapped, isHidden: isHidden, retireeRegion: retireeRegion, resolvePrimaire: resolvePrimaire, actionsFor: actionsFor, centrists: centrists, tickBingo: tickBingo, ensureTraits: ensureTraits,
     REG: REG, PARTY: PARTY, sigle: sigle, THEME: THEME, makeRng: makeRng, setFormat: setFormat, saveGame: saveGame, loadGame: loadGame, registerParty: registerParty, unregisterParty: unregisterParty
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;

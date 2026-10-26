@@ -318,6 +318,43 @@
     var byParty = {};
     field.filter(function (a) { if (byParty[a.pid]) return false; byParty[a.pid] = 1; return true; }).slice(0, 5).forEach(function (a) { arts.push(a); });
 
+    // 3 bis. v3.1 : les gags des partis (au plus 3 articles)
+    var gags = [];
+    (ctx.log || []).forEach(function (l) {
+      if (!l.ok) return;
+      var p = P(l.pid), mine = l.pid === me;
+      if (l.nost) {
+        var stone = l.nost.k === D.NOSTALGIA.length - 1;
+        gags.push({ id: 'gag-nost-' + l.pid, rub: 'Rétro', pid: l.pid, mine: mine,
+          title: stone ? p.candidate + ' promet le retour du feu de bois : fou rire général' : p.candidate + ' promet ' + l.nost.what,
+          text: stone ? 'Cette fois, c\u2019est allé trop loin. Devant un parterre médusé, ' + p.candidate + ' a vanté « la simplicité de l\u2019âge de pierre ». Les retraités eux-mêmes ont ri. Sur les réseaux, les montages pleuvent.'
+            : (l.nost.k ? 'Nouvelle étape dans la grande marche arrière : après avoir promis de revenir à ' + D.NOSTALGIA[l.nost.k - 1].year + ', ' + p.candidate + ' vise désormais ' + l.nost.year + '.' : 'C\u2019est le début d\u2019une grande marche arrière : ' + p.candidate + ' veut ramener la France en ' + l.nost.year + ', « quand tout allait mieux ».') + ' Dans les clubs du troisième âge, on applaudit. Chez les étudiants, on cherche sur Internet ce qu\u2019est ' + D.NOSTALGIA[l.nost.k].thing + '.' +
+              (l.war ? ' Petit problème : ' + P(l.war).short + ' pêche dans le même étang, et les deux partis se sont volé des électeurs.' : '') });
+      }
+      if (l.petal || l.book) gags.push({ id: 'gag-rose', rub: 'Coulisses', pid: l.pid, mine: mine,
+        title: l.book ? 'François Hésitant publie « Ce que je n\u2019ai jamais osé dire » : le ' + p.short + ' en sueur' : 'François Hésitant sort de sa retraite et ramène des brebis égarées au ' + p.short,
+        text: l.book ? 'Appelé à la rescousse, l\u2019ancien président a préféré régler ses comptes : 400 pages, des noms, des dates. Au siège du ' + p.short + ', on parle déjà d\u2019une affaire.'
+          : 'Coup de téléphone, déjeuner discret, photo sur le marché : François Hésitant a convaincu d\u2019anciens électeurs de revenir.' + (l.bloom ? ' Avec ce retour, la rose a retrouvé tous ses pétales : au siège, on sort le champagne.' : '') });
+      if (l.micro) gags.push({ id: 'gag-fusion', rub: 'Centre', pid: l.pid, mine: mine,
+        title: p.short + ' absorbe « ' + l.micro + ' »',
+        text: 'Fin de l\u2019aventure pour « ' + l.micro + ' », créé il y a quelques semaines à peine. Ses 300 militants rejoignent ' + p.short + '. Les deux autres partis du centre, qui n\u2019ont rien payé, s\u2019en frottent les mains. Les paris sont ouverts sur le nom du prochain.' });
+      if (l.eclat) gags.push({ id: 'gag-eclat', rub: 'Médias', pid: l.pid, mine: mine,
+        title: p.candidate + ' sort la tronçonneuse : les caméras reviennent',
+        text: 'Après des semaines d\u2019oubli, ' + p.candidate + ' a enfin fait parler de lui : coup de gueule, décor de chantier et tronçonneuse en main. Les chaînes d\u2019info ont rebranché leurs caméras.' });
+      if (l.bingo) gags.push({ id: 'gag-bingo', rub: 'Meeting', pid: l.pid, mine: mine,
+        title: 'Bingo ! ' + p.candidate + ' place « ' + l.bingo.words.join(' », « ') + ' »',
+        text: 'Les militants l\u2019attendaient, ils ont été servis : en un seul discours, ' + p.candidate + ' a coché ' + l.bingo.words.length + ' cases de son bingo préféré. La salle exulte. Chez les indécis, en revanche, on a changé de chaîne.' });
+    });
+    if (info.micro) gags.push({ id: 'gag-micro', rub: 'Centre', title: 'Naissance de « ' + info.micro + ' », nouveau parti du centre',
+      text: 'Ils étaient trois au centre, les voici quatre. « Nous ne sommes ni pour ni contre, bien au contraire », explique le fondateur de « ' + info.micro + ' ». Chacun des grands partis du centre y perdra quelques électeurs, sauf si l\u2019un d\u2019eux se dévoue pour l\u2019absorber.' });
+    if (info.hidden && E.player(g, 'UG')) gags.push({ id: 'gag-avis', rub: 'Avis de recherche', pid: 'UG', mine: me === 'UG',
+      title: 'Avez-vous vu ' + P('UG').candidate + ' ?',
+      text: 'Signalement : costume bleu, rabot à la main, dernière apparition télévisée il y a plusieurs semaines. Coincés entre ' + P('MN').short + ' et ' + P('EM').short + ', ' + P('UG').short + ' ne passent plus à l\u2019antenne. Toute information est à transmettre au siège du parti, qui promet une récompense.' });
+    if (info.primaire && info.primaire.ai && info.primaire.text) gags.push({ id: 'gag-prim', rub: 'Coulisses', pid: 'SM',
+      title: 'Primaire au ' + P('SM').short + ' : ' + (info.primaire.choice === 0 ? 'le débat interne s\u2019éternise' : 'un courant claque la porte'),
+      text: 'Encore une primaire, encore des motions, encore des nuits blanches rue de Solférino. ' + info.primaire.text });
+    gags.sort(function (x, y) { return (y.mine ? 1 : 0) - (x.mine ? 1 : 0); }).slice(0, 3).forEach(function (a) { arts.push(a); });
+
     // 4. Les affaires du matin
     (ctx.aiAff || []).forEach(function (x) {
       arts.push({ id: 'aff-' + x.pid, rub: 'Affaires', pid: x.pid, title: 'Affaire « ' + x.title + ' » : ' + P(x.pid).short + ' choisit de ' + lc(x.reaction),

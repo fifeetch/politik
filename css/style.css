@@ -1190,3 +1190,25 @@ button { font-family: inherit; color: inherit; }
 .sw-in { animation: sw-in .4s cubic-bezier(.2,1.4,.4,1); }
 @keyframes sw-in { from { transform: translateY(40px) scale(.9); opacity: 0; } to { transform: none; opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .sw-in { animation: none; } }
+
+/* ---------- v3.1 : les traits satiriques ---------- */
+.trait-box { background: var(--sheet); border: 2px solid var(--ink); border-radius: 14px; padding: 10px 12px; margin: 10px 0; box-shadow: 3px 3px 0 var(--violet); display: flex; flex-direction: column; gap: 6px; }
+.trait-box p { margin: 0; font-size: 14px; line-height: 1.4; }
+.trait-h { font-family: var(--display); font-size: 17px; letter-spacing: .01em; }
+.trait-learn { color: var(--muted); font-size: 13px !important; }
+.trait-now { background: var(--hot); border-radius: 8px; padding: 5px 8px; }
+.trait-tag { display: inline-block; margin-left: 4px; padding: 0 6px; border-radius: 999px; background: var(--violet-2); color: var(--violet); font-size: 11px; font-weight: 700; }
+.years { display: flex; flex-wrap: wrap; align-items: center; gap: 3px; font-size: 12px; }
+.years i { color: var(--muted); font-style: normal; }
+.yr { padding: 2px 6px; border-radius: 6px; border: 1.5px solid var(--rule); background: #fff; }
+.yr.done { background: var(--ink); color: var(--paper); border-color: var(--ink); text-decoration: line-through; }
+.yr.next { border-color: var(--violet); color: var(--violet); font-weight: 700; }
+.yr.stone { border-style: dashed; }
+.rose { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+.petal { display: flex; flex-direction: column; align-items: center; font-size: 22px; opacity: .45; filter: grayscale(1); }
+.petal.on { opacity: 1; filter: none; }
+.petal small { font-size: 10px; line-height: 1.1; text-align: center; color: var(--ink-2); }
+.bingo { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+.bc { border: 1.5px solid var(--rule); border-radius: 8px; padding: 6px 4px; font-size: 11.5px; line-height: 1.2; text-align: center; background: #fff; min-height: 40px; display: flex; align-items: center; justify-content: center; }
+.bc.on { background: var(--red); color: #fff; border-color: var(--red); font-weight: 700; transform: rotate(-1.5deg); }
+.slot-lock { border-style: solid; border-color: var(--red); color: var(--red); background: var(--red-2); }

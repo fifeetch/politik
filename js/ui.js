@@ -250,7 +250,7 @@
  ((p.pos <= 1 || p.pos >= 6) ? '<div><b>Au bout de l\'axe.</b> Au second tour, les reports de voix seront plus durs à obtenir : il faudra bien négocier entre les deux tours.</div>' : '') +
       '<div><b>Force.</b> ' + esc(p.force) + '</div><div><b>Faiblesse.</b> ' + esc(p.weakness) +
       '</div><div><b>Bases.</b> ' + p.bases.map(function (r) { return E.REG[r].name; }).join(', ') +
-      '</div><div><b>Cartes.</b> ' + p.cards.map(function (c) { return D.CARDS[c].name; }).join(' · ') + '</div>';
+      '</div><div><b>Cartes.</b> ' + p.cards.map(function (c) { return D.CARDS[c].name; }).join(' · ') + '</div>' + traitHtml(p.id, false);
   }
   /* v2.0 : en partie rapide, le programme conseillé du parti est pris d'office */
   $('btn-start').addEventListener('click', function () {
@@ -584,7 +584,8 @@
     if (info.dilemma && info.dilemma.pid !== me) aiDil = E.resolveDilemma(g, info.dilemma.pid, AI.chooseDilemma(g, info.dilemma.pid));
     render();
     var mine = g.affairs.filter(function (a) { return a.pid === me; });
-    var waits = mine.length || (g.dilemma && g.dilemma.pid === me);
+    var myPrim = g.primaire && !g.primaire.done && g.primaire.pid === me;
+    var waits = mine.length || (g.dilemma && g.dilemma.pid === me) || myPrim;
     var alerts = [];
     if (info.crisis) alerts.push('CRISE · ' + info.crisis.title);
     mine.forEach(function (a) { alerts.push('AFFAIRE · Toi : ' + a.title); });
@@ -601,7 +602,8 @@
     if (g.turn === 1 && quickGame && !waits) return startActions();
     showPaper(paper, mine.length ? 'Une affaire te tombe dessus →' : waits ? 'Une décision t’attend →' : 'À mes actions', function () {
       chain([function (next) { mine.length ? showAffair(next) : next(); },
-             function (next) { g.dilemma && g.dilemma.pid === me ? showDilemma(next) : next(); }], startActions);
+             function (next) { g.dilemma && g.dilemma.pid === me ? showDilemma(next) : next(); },
+             function (next) { g.primaire && !g.primaire.done && g.primaire.pid === me ? showPrimaire(next) : next(); }], startActions);
     });
   }
   function chain(steps, done) {
@@ -918,8 +920,10 @@
   }
   function canQueue(act) {
     if (g.phase !== 'actions') return 'Ce n’est pas le moment.';
-    if (queue.length >= R.actionsPerTurn) return 'Tes 3 actions sont déjà choisies.';
+    if (queue.length >= E.actionsFor(g, me)) return 'Tes ' + E.actionsFor(g, me) + ' actions sont déjà choisies.';
     if (act.type === 'card' && queue.some(function (q) { return q.card === act.card; })) return 'Carte déjà programmée.';
+    if (['rappel', 'fusion', 'eclat'].indexOf(act.type) >= 0 && queue.some(function (q) { return q.type === act.type; })) return 'Déjà programmé ce tour.';
+    if (act.type === 'nostalgie' && queue.some(function (q) { return q.type === 'nostalgie'; })) return 'Un seul retour en arrière par tour.';
     var err = E.checkAction(g, me, act); if (err) return err;
     var c = E.actionCost(g, me, act), pr = projected();
     if (pr.money < c.money) return 'Pas assez d’argent.';
@@ -933,7 +937,7 @@
     var wasTiring = tiring(act);
     queue.push(act); justAdded = queue.length - 1;
     luluSay(luluLine(act, wasTiring));
-    render(); T.notify(queue.length >= R.actionsPerTurn ? 'full' : 'queue');
+    render(); T.notify(queue.length >= E.actionsFor(g, me) ? 'full' : 'queue');
   }
 
   /* ---------- v1.8 : les onglets ---------- */
@@ -966,12 +970,59 @@
     }).join('');
     Array.prototype.forEach.call(document.querySelectorAll('[data-party]'), function (b) { b.addEventListener('click', function () { partyCard(b.getAttribute('data-party')); }); });
   }
+  /* ---------- v3.1 : les traits satiriques ---------- */
+  function traitKey(pid) { return E.traitOf(pid); }
+  /* L'état du trait pendant la partie (année rêvée, pétales, micro-parti, visibilité, bingo) */
+  function traitState(pid) {
+    var k = traitKey(pid); if (!k || !g || !g.bingo) return '';
+    if (k === 'nostalgie') {
+      var n = g.nost[pid] || 0;
+      return '<div class="years">' + D.NOSTALGIA.map(function (y, i) { return '<span class="yr' + (i < n ? ' done' : '') + (i === n ? ' next' : '') + (i === D.NOSTALGIA.length - 1 ? ' stone' : '') + '">' + esc(y.year) + '</span>'; }).join('<i>›</i>') + '</div>' +
+        '<small class="muted">' + (n === 0 ? 'Pas encore de retour en arrière.' : n >= D.NOSTALGIA.length ? 'La machine est cassée.' : 'Année rêvée : ' + esc(D.NOSTALGIA[n - 1].year) + '. Prochain cran : ' + esc(D.NOSTALGIA[n].year) + '.') + '</small>';
+    }
+    if (k === 'rose') {
+      return '<div class="rose">' + D.PETALS.map(function (pt) {
+        var on = g.petals[pt.id];
+        return '<span class="petal' + (on ? ' on' : '') + '" title="' + esc(pt.name) + '">' + (on ? '🌹' : '🥀') + '<small>' + esc(pt.name) + (on || !pt.to ? '' : ' → ' + esc(E.sigle(pt.to))) + '</small></span>';
+      }).join('') + '</div><small class="muted">' + E.petalsCount(g) + ' pétales sur ' + D.PETALS.length + (g.roseBloom ? ' · la rose a refleuri' : '') + '.</small>';
+    }
+    if (k === 'centre') return g.micro ? '<p class="trait-now">🐣 « <b>' + esc(g.micro.name) + '</b> » grignote des voix aux trois partis du centre. Qui va payer pour l\u2019absorber ?</p>' : '<p class="muted">Pas de micro-parti en ce moment.' + (g.microDone ? ' (' + g.microDone + ' absorbé' + (g.microDone > 1 ? 's' : '') + ')' : '') + '</p>';
+    if (k === 'transparent') return g.hidden ? '<p class="trait-now">🔍 <b>Avis de recherche</b> : tu es transparent ce tour.</p>' : g.eclatUntil >= g.turn ? '<p class="trait-now">🎥 Les caméras sont là jusqu\u2019au tour ' + g.eclatUntil + '.</p>' : '<p class="muted">On te voit, pour l\u2019instant.</p>';
+    if (k === 'disque') {
+      return '<div class="bingo">' + D.BINGO.map(function (w, i) { return '<span class="bc' + (g.bingo.ticks[i] ? ' on' : '') + '">' + (w.th ? th(w.th).icon + ' ' : '') + esc(w.w) + '</span>'; }).join('') + '</div>' +
+        '<small class="muted">' + g.bingo.lines + ' bingo' + (g.bingo.lines > 1 ? 's' : '') + ' depuis le début' + (g.bingo.zapUntil >= g.turn ? ' · <b>les indécis zappent</b> jusqu\u2019à la fin du tour ' + g.bingo.zapUntil : '') + '.</small>';
+    }
+    return '';
+  }
+  function traitHtml(pid, withState) {
+    var k = traitKey(pid); if (!k) return '';
+    var t = D.TRAITS[k];
+    return '<div class="trait-box"><div class="trait-h">' + t.icon + ' <b>' + esc(t.name) + '</b></div>' + (withState ? traitState(pid) : '') +
+      '<p><b>👍</b> ' + esc(t.plus) + '</p><p><b>👎</b> ' + esc(t.minus) + '</p><p class="trait-learn">💡 ' + esc(t.learn) + '</p></div>';
+  }
+  /* 🌹 La primaire du Parti Survivant (quand c'est toi) */
+  function showPrimaire(then) {
+    var can = D.PETALS.filter(function (pt) { return g.petals[pt.id] && pt.to; });
+    var html = '<div class="learn">' + A.portrait(me) + '<p>Les courants du parti exigent un grand débat interne. Encore. Comme à chaque fois.</p></div><div class="pick">' +
+      '<button type="button" class="pick-row" data-p="0"><span class="pick-i">🗣️</span><span class="pick-txt"><b>Laisser débattre</b><small>Tout le monde garde sa place, mais tu n\u2019as que 2 actions ce tour.</small></span></button>' +
+      '<button type="button" class="pick-row" data-p="1"><span class="pick-i">✂️</span><span class="pick-txt"><b>Trancher</b><small>' + (can.length ? 'Tu gardes tes 3 actions, mais un courant claque la porte : un pétale part, avec ' + R.primaireCut + ' soutiens, chez un voisin.' : 'Plus personne ne peut partir… mais la séance coûte 2 ★.') + '</small></span></button></div>';
+    modal({ kicker: '🌹 Primaire perpétuelle', title: 'Le parti se déchire', html: html, buttons: [],
+      onOpen: function () {
+        Array.prototype.forEach.call(document.querySelectorAll('[data-p]'), function (b) {
+          b.addEventListener('click', function () {
+            var res = E.resolvePrimaire(g, +b.getAttribute('data-p'));
+            render();
+            modal({ kicker: 'Primaire', title: res.choice === 0 ? 'Débat interminable' : 'Porte claquée', html: '<p>' + esc(res.text) + '</p>', buttons: [{ label: 'Continuer', primary: true, onClick: then }] });
+          });
+        });
+      } });
+  }
   function partyCard(pid) {
     var P = party(pid), regs = D.REGIONS.filter(function (r) { return g.regions[r.id].controller === pid; });
     modal({ kicker: P.family, title: pid === me ? 'Toi · ' + P.name : P.name,
       html: '<div class="cand-line">' + A.portrait(pid) + '<div><b class="cand-name">' + esc(P.candidate) + '</b><span>' + esc(P.candTitle) + '</span></div></div>' + axisHtml(pid) +
         '<p><b>Régions tenues :</b> ' + (regs.length ? regs.map(function (r) { return esc(r.name); }).join(', ') : 'aucune') + '</p>' +
-        '<p><b>Force :</b> ' + esc(P.force) + '</p><p><b>Faiblesse :</b> ' + esc(P.weakness) + '</p>' + (pid !== me ? '<p class="muted">Débat : tempérament ' + esc(D.TEMPERS[pid].label) + '.</p>' : '') });
+        '<p><b>Force :</b> ' + esc(P.force) + '</p><p><b>Faiblesse :</b> ' + esc(P.weakness) + '</p>' + traitHtml(pid, true) + (pid !== me ? '<p class="muted">Débat : tempérament ' + esc(D.TEMPERS[pid].label) + '.</p>' : '') });
   }
   var lastJournal = '';
   function renderActu() {
@@ -1213,6 +1264,7 @@
     var box = $('queue-slots'); box.innerHTML = '';
     for (var i = 0; i < R.actionsPerTurn; i++) {
       var a = queue[i];
+      if (!a && i >= E.actionsFor(g, me)) { box.appendChild(el('div', { class: 'slot slot-lock', title: 'Perdue à cause de la primaire' }, '🌹 Primaire')); continue; }
       if (!a) { box.appendChild(el('div', { class: 'slot' }, 'Action ' + (i + 1))); continue; }
       var name = a.type === 'card' ? D.CARDS[a.card].name : D.ACTIONS[a.type].name;
       var sub = (a.theme ? th(a.theme).icon + ' ' : '') + (a.region ? SHORT[a.region] : a.target ? a.target : a.theme ? th(a.theme).short : '✕ retirer');
@@ -1222,7 +1274,8 @@
       box.appendChild(b);
     }
     justAdded = -1;
-    $('btn-validate').textContent = queue.length < R.actionsPerTurn ? 'Valider ' + queue.length + '/3' : 'Valider';
+    var maxA = E.actionsFor(g, me);
+    $('btn-validate').textContent = queue.length < maxA ? 'Valider ' + queue.length + '/' + maxA : 'Valider';
     $('btn-validate').disabled = g.phase !== 'actions';
   }
   function costLabel(act, compact) {
@@ -1255,6 +1308,19 @@
       case 'contre': return 'rival en tête <b>−2 soutiens</b> · +1 🍳';
       case 'militants': return '<b>+1 soutien</b> ici à chaque tour · ' + (R.militantsMax - mePl().militants) + ' équipe' + (R.militantsMax - mePl().militants > 1 ? 's' : '') + ' dispo';
       case 'fonds': return '<b>+' + E.fundsGain(me).money + ' €' + (E.fundsGain(me).infl ? ' +' + E.fundsGain(me).infl + ' ★' : '') + '</b>';
+      case 'nostalgie': {
+        var k0 = g.nost[me] || 0;
+        if (k0 >= D.NOSTALGIA.length) return 'la machine est cassée';
+        var step = D.NOSTALGIA[k0];
+        if (k0 === D.NOSTALGIA.length - 1) return 'retour à <b>' + esc(step.year) + '</b> : fou rire général, −1 soutien dans 3 régions';
+        if (!r) return 'retour en <b>' + esc(step.year) + '</b> · choisis d\u2019abord une région';
+        var pv = E.nostalgiaPreview(g, me, r), gainN = Math.max(0, R.nostalgieGain[k0] + (E.retireeRegion(r) ? 1 : 0) - (pv.war ? 1 : 0)), yth = R.nostalgieYouth[k0];
+        return 'retour en <b>' + esc(step.year) + '</b> (' + esc(step.what) + ') : <b>+' + gainN + '</b> ici' + (E.retireeRegion(r) ? ' (retraités ❤️)' : '') + (pv.war ? ' · guerre des nostalgies' : '') + (yth ? ' · les jeunes fuient : −1 dans ' + yth + ' région' + (yth > 1 ? 's' : '') : ''); }
+      case 'rappel': {
+        var lp = E.lostPetals(g)[0];
+        return lp ? Math.round(R.rappelChance * 100) + ' % : ' + esc(lp.name) + ' reviennent (+' + R.rappelSwing + ' soutiens' + (lp.to ? ' repris à ' + esc(party(lp.to).short) : '') + ') · sinon un livre, <b>+' + R.rappelCas + ' 🍳</b>' : 'la rose est complète'; }
+      case 'fusion': return g.micro ? 'absorbe « ' + esc(g.micro.name) + ' » : <b>+1 soutien</b> dans ' + R.fusionGain + ' régions' : 'aucun micro-parti à absorber';
+      case 'eclat': return '<b>+1 soutien</b> dans ' + R.eclatGain + ' régions · les caméras reviennent ' + R.eclatTurns + ' tours';
       case 'reforme':
         if (!r) return '+1 soutien dans des régions';
         if (g.regions[r].controller !== me) return 'région à toi requise';
@@ -1305,7 +1371,7 @@
       b.addEventListener('click', function () { addAction(act); });
       box.appendChild(b);
     });
-    var more = el('button', { class: 'tile tile-more', type: 'button', id: 'btn-more' }, '<span class="tile-n">Plus</span><span class="tile-mid"><span class="tile-big">⋯</span></span><span class="tile-cost">7 actions</span>');
+    var more = el('button', { class: 'tile tile-more', type: 'button', id: 'btn-more' }, '<span class="tile-n">Plus</span><span class="tile-mid"><span class="tile-big">⋯</span></span><span class="tile-cost">' + (traitKey(me) ? D.TRAITS[traitKey(me)].icon + ' + 7 actions' : '7 actions') + '</span>');
     more.addEventListener('click', moreMenu);
     box.appendChild(more);
   }
@@ -1322,6 +1388,12 @@
       var def = D.ACTIONS[type], act = { type: type, region: def.target === 'region' ? selected : undefined, theme: def.theme ? theme : undefined };
       var err = def.target === 'region' && !selected ? 'choisis d\'abord une région' : canQueue(act);
       items.push({ act: act, icon: def.icon, name: def.name, cost: costLabel(act), fx: effect(act), err: err });
+    });
+    Object.keys(D.ACTIONS).forEach(function (type) {   // v3.1 : les actions propres à ton parti
+      var def = D.ACTIONS[type]; if (!def.only || def.only.indexOf(me) < 0) return;
+      var act = { type: type, region: def.target === 'region' ? selected : undefined };
+      var err = def.target === 'region' && !selected ? 'choisis d\u2019abord une région' : canQueue(act);
+      items.unshift({ act: act, icon: def.icon, name: def.name, cost: costLabel(act), fx: effect(act) + ' <span class="trait-tag">' + D.TRAITS[traitKey(me)].icon + ' ton parti</span>', err: err });
     });
     mePl().cards.forEach(function (k) {
       var def = D.CARDS[k], act = { type: 'card', card: k, region: def.target === 'region' ? selected : undefined };
@@ -1381,7 +1453,7 @@
   /* ---------- Validation et résolution ---------- */
   $('btn-validate').addEventListener('click', function () {
     if (g.phase !== 'actions') return;
-    if (queue.length < R.actionsPerTurn && !T.isActive()) {
+    if (queue.length < E.actionsFor(g, me) && !T.isActive()) {
       modal({ title: 'Valider avec ' + queue.length + ' action' + (queue.length > 1 ? 's' : '') + ' ?', html: '<p>Les actions non utilisées sont perdues.</p>',
               buttons: [{ label: 'Valider quand même', primary: true, onClick: resolve }, { label: 'Retour' }] });
     } else resolve();
@@ -1574,7 +1646,7 @@
       var i = mine[k], d = deb.duels[i], o = d.a === me ? d.b : d.a;
       var h = '<div class="question"><div class="q-face">' + A.portrait(o) + '</div><div><span class="kicker">Question ' + (k + 1) + ' / 3</span><div class="q-theme">' + th(d.theme).icon + ' ' + esc(th(d.theme).name) + '</div>' +
         '<div class="q-vs">Face à <b>' + esc(party(o).candidate) + '</b> (' + esc(party(o).short) + ') · ' + D.TEMPERS[o].label + '</div></div></div><div class="question-guide"><b>À toi</b><span>Choisis la réplique qui te ressemble le plus.</span></div><div class="debate-pick-label">Ta réponse</div><div class="pick">' +
-        ['attaque', 'chiffres', 'emotion', 'esquive'].map(function (key) {
+        ['attaque', 'chiffres', 'emotion', 'esquive'].concat(me === 'FI' ? ['disque'] : []).map(function (key) {
           var r = D.REPLIES[key];
           var bh = bonusHint(key, d, o), txt = bh ? esc(r.hint.split('. ')[0]) + '.' + bh : esc(r.hint);
           return '<button type="button" class="pick-row" data-r="' + key + '"><span class="pick-i">' + r.icon + '</span><span class="pick-txt"><b>' + r.name + '</b><small>' + txt + '</small></span></button>';
@@ -1605,6 +1677,7 @@
         return line(n === 0 && res.winner ? '🏆' : (n + 1) + '.', chip(x.pid) + (x.pid === me ? '<b>Toi</b>' : esc(party(x.pid).short)) + ' — <b>' + x.score + ' pts</b>' + (x.prep ? ' <span class="muted">(dont ' + x.prep + ' de préparation)</span>' : ''));
       }).join('') + '</div>';
       res.rewards.forEach(function (w) { h += '<p>' + chip(w.pid) + ' +' + w.each + ' soutien' + (w.each > 1 ? 's' : '') + ' en ' + w.regions.map(function (x) { return SHORT[x]; }).join(', ') + '</p>'; });
+      if (res.bingo) h += '<p>📀 ' + chip('FI') + ' <b>BINGO en direct</b> (« ' + res.bingo.words.map(esc).join(' », « ') + ' ») : les militants s\u2019enflamment' + (res.bingo.regions.length ? ', +1 en ' + res.bingo.regions.map(function (x) { return SHORT[x]; }).join(', ') : '') + '. Les indécis, eux, zappent.</p>';
       modal({ kicker: 'Débat', title: !res.winner ? 'Égalité en tête' : res.winner === me ? 'Tu remportes le débat !' : party(res.winner).short + ' remporte le débat', html: h,
               buttons: [{ label: 'Fin du tour', primary: true, onClick: spotlight }] });
     }
@@ -1994,7 +2067,7 @@
       line('🍳', '<b>' + pl.cas + ' casserole' + (pl.cas > 1 ? 's' : '') + '</b> — chacune = ' + Math.round(R.affairPerCasserole * 100) + ' % de risque d\'affaire par tour. Attaquer, enquêter, trahir, le 49.3 et certains choix en ajoutent.') +
       line(pl.momentum > 0 ? '↗' : pl.momentum < 0 ? '↘' : '→', pl.momentum > 0 ? '<b>En dynamique</b> : +1 soutien sur tes Meetings.' : pl.momentum < 0 ? '<b>Passage à vide</b> : −1 soutien sur tes Meetings.' : '<b>Dynamique stable.</b> Gagne 1,5 point au sondage en un tour pour être en dynamique.') +
       line('👥', '<b>' + pl.militants + ' / ' + R.militantsMax + ' équipes de militants</b> — chacune rapporte 1 soutien par tour.') +
-      '</div><p><b>Force :</b> ' + esc(p.force) + '</p><p><b>Faiblesse :</b> ' + esc(p.weakness) + '</p>' + credHtml(me);
+      '</div><p><b>Force :</b> ' + esc(p.force) + '</p><p><b>Faiblesse :</b> ' + esc(p.weakness) + '</p>' + traitHtml(me, true) + credHtml(me);
     $('parti-body').innerHTML = '<span class="kicker">Ton parti</span><h1 class="h1 tab-title">' + esc(p.name) + '</h1>' + html +
       '<div class="stack parti-btns"><button type="button" class="btn" id="pb-lib">📚 Comprendre la politique</button><button type="button" class="btn" id="pb-rules">Règles du jeu</button><button type="button" class="btn btn-ghost" id="pb-quit">Abandonner la partie</button></div>';
     $('pb-lib').addEventListener('click', library); $('pb-rules').addEventListener('click', showRules);
@@ -2047,7 +2120,8 @@
       '<p><b>🤔 Les dilemmes.</b> Chaque tour, un parti (à tour de rôle) doit faire un choix. Certains choix ont des <b>conséquences différées</b> qui peuvent ressortir quelques tours plus tard.</p>' +
       '<p><b>Les crises.</b> Chaque partie connaît une crise en 3 actes (krach, grève, été brûlant, désindustrialisation). Les régions touchées sont marquées sur la carte : leur thème y compte comme à la une.</p>' +
       '<p><b>🎙️ Le débat télévisé</b> (tours 3, 6 et 8) : chaque parti affronte 3 adversaires tirés au sort, une question chacun. Choisis ta réplique : 🥊 Attaque bat ❤️ Émotion, ❤️ Émotion bat 📊 Chiffres, 📊 Chiffres bat 🥊 Attaque, 🙃 Esquive = nul. Manche gagnée 2 points, nulle 1. Bonus : 🥊 +1 si le rival a des casseroles, 📊 +1 sur ton point fort (−1 si ce n\'est pas ton sujet), ❤️ +1 si le thème fait l\'actu. Chaque ★ de préparation (3 au plus) = +1 point. Le 1er gagne +1 soutien dans 4 régions, le 2e dans 2 régions (doublé au débat final). Chaque parti a son tempérament : observe-le !</p>' +
-      '<p><b>Sous les projecteurs :</b> le premier des sondages paie 2 ★ ou perd des soutiens à chaque fin de tour.</p>' });
+      '<p><b>Sous les projecteurs :</b> le premier des sondages paie 2 ★ ou perd des soutiens à chaque fin de tour.</p>' +
+      '<p><b>🎭 Les traits satiriques.</b> Huit partis vivent un gag qui se joue de l\u2019intérieur, avec un avantage et un coût : ' + Object.keys(D.TRAITS).map(function (k) { var t = D.TRAITS[k]; return t.icon + ' <b>' + esc(t.name) + '</b> (' + t.parties.map(function (p) { return esc(party(p).short); }).join(', ') + ')'; }).join(' · ') + '. Le détail est dans l\u2019onglet de ton parti, et les actions propres à ton parti dans le menu « Plus ».</p>' });
   }
 
   /* ---------- Installer l'application (PWA) ---------- */
