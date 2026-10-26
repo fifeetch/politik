@@ -1165,3 +1165,28 @@ button { font-family: inherit; color: inherit; }
 .lc-legend span { flex: 1; }
 .lcamp > * { flex-shrink: 0; }
 .lcamp { overflow-y: auto; }
+
+/* ---------- v3.0 : les cartes à glisser ---------- */
+.swipe { position: absolute; inset: 0; z-index: 15; background: #1D1A33; color: var(--paper); display: flex; flex-direction: column; padding: max(14px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom)); gap: 10px; overflow: hidden; }
+.swipe[hidden] { display: none; }
+.sw-top { display: flex; flex-direction: column; gap: 8px; align-items: center; }
+.sw-top .kicker { color: #C8C2EA; }
+.sw-gauges { display: flex; gap: 22px; }
+.sw-g { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.sw-g i { font-style: normal; font-size: 26px; }
+.sw-g b { width: 8px; height: 8px; border-radius: 50%; background: transparent; transition: all .2s; }
+.sw-g b.small { background: var(--paper); }
+.sw-g b.big { width: 14px; height: 14px; background: var(--paper); }
+.sw-stage { flex: 1; display: flex; align-items: center; justify-content: center; min-height: 0; }
+.sw-card { position: relative; width: min(100%, 330px); background: var(--bg); color: var(--ink); border-radius: 22px; padding: 22px 18px 20px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; box-shadow: 0 18px 50px #0008; touch-action: none; user-select: none; cursor: grab; }
+.sw-face { width: 132px; }
+.sw-who { font-family: var(--display); font-weight: 800; font-size: 19px; line-height: 1.1; }
+.sw-text { margin: 0; font-size: 16.5px; line-height: 1.4; }
+.sw-choice { position: absolute; top: 14px; font: 800 15px var(--body); background: var(--ink); color: var(--paper); padding: 6px 10px; border-radius: 8px; opacity: 0; transition: opacity .15s; max-width: 46%; }
+.sw-l { left: 12px; transform: rotate(-6deg); } .sw-r { right: 12px; transform: rotate(6deg); }
+.sw-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.sw-btns .btn { background: transparent; color: var(--paper); border-color: #6A64A0; box-shadow: none; font-size: 14px; min-height: 52px; line-height: 1.2; }
+.sw-hint { margin: 0; text-align: center; font-size: 12px; color: #C8C2EA; }
+.sw-in { animation: sw-in .4s cubic-bezier(.2,1.4,.4,1); }
+@keyframes sw-in { from { transform: translateY(40px) scale(.9); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .sw-in { animation: none; } }

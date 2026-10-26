@@ -1,6 +1,6 @@
 /* Politik — v1.0 : l'écran « Gouverner » (le quinquennat). S'appuie sur js/govern.js pour les règles. */
 (function () {
-  var D = window.PolitikData, E = window.PolitikEngine, G = window.PolitikGov, LG = window.PolitikLegis, FX = window.PolitikFX, CB = window.PolitikCabinet, OP = window.PolitikOppo, A = window.PolitikArt, U = window.PolitikUI;
+  var D = window.PolitikData, E = window.PolitikEngine, G = window.PolitikGov, LG = window.PolitikLegis, FX = window.PolitikFX, CB = window.PolitikCabinet, OP = window.PolitikOppo, CD = window.PolitikCards, A = window.PolitikArt, U = window.PolitikUI;
   var modal = U.modal, closeModal = U.closeModal, toast = U.toast, esc = U.esc, line = U.line, srcHtml = U.srcHtml;
   var gv = null, g = null, me = null, learned = {}, step = 0, lawsThisYear = 0;
   function $(id) { return document.getElementById(id); }
@@ -110,10 +110,11 @@
     if (gv.over) return finalBilan();
     var s = current();
     if (s === 'legislatives') return gv.legis ? legisNight({ onDone: function () { step = 0; U.go('gov'); render(); } }) : startLegis();
-    if (s === 'loi') return chooseLaw();
-    if (s === 'evenement') return showEvent();
-    if (s === 'budget') return budget();
-    if (s === 'bilan') return yearEnd();
+    // v3.0 : chaque saison s'ouvre sur une carte à glisser
+    var run = s === 'loi' ? chooseLaw : s === 'evenement' ? showEvent : s === 'budget' ? budget : yearEnd;
+    if (gv.cardDone === gv.year * 10 + step) return run();
+    gv.cardSlot = step;
+    swipeCard(function () { gv.cardDone = gv.year * 10 + step; render(); run(); });
   });
   /* ---------- Dissoudre l'Assemblée (article 12) ---------- */
   $('gov-dissolve').addEventListener('click', function () {
@@ -506,6 +507,63 @@
     modal({ kicker: 'Législatives', title: 'Région par région', html: html });
   }
 
+
+
+  /* ===== v3.0 : les cartes à glisser ===== */
+  var SEASON = ['🌸 Printemps', '☀️ Été', '🍂 Automne', '❄️ Hiver'];
+  function swipeCard(then) {
+    var c = CD.draw(gv);
+    if (!c) return then();
+    c = CD.judged(gv, c);
+    var el = $('swipe'), tl = CD.touches(c.left), tr = CD.touches(c.right);
+    function dots(side) {
+      var t = side === 'left' ? tl : tr;
+      return ['budget', 'pop', 'assemblee', 'suite'].map(function (k) { return '<span class="sw-g"><i>' + { budget: '💶', pop: '😊', assemblee: '🏛️', suite: '⏳' }[k] + '</i><b class="' + (t[k] || '') + '"></b></span>'; }).join('');
+    }
+    el.innerHTML = '<div class="sw-top"><span class="kicker">' + SEASON[step] + ' · année ' + gv.year + (c.follow ? ' · <b>la suite</b>' : '') + '</span>' +
+      '<div class="sw-gauges" id="sw-gauges">' + dots('none') + '</div></div>' +
+      '<div class="sw-stage"><div class="sw-card" id="sw-card" style="--bg:' + (CD.KIND[c.kind] || '#E3E0D6') + '">' +
+        '<span class="sw-choice sw-l" id="sw-l">' + esc(c.left.label) + '</span><span class="sw-choice sw-r" id="sw-r">' + esc(c.right.label) + '</span>' +
+        '<div class="sw-face">' + (c.kind === 'lulu' ? A.advisor() : A.face(CD.faceOf(c))) + '</div><b class="sw-who">' + esc(c.who) + '</b><p class="sw-text">' + esc(c.text) + '</p></div></div>' +
+      '<div class="sw-btns"><button type="button" class="btn" id="sw-bl">← ' + esc(c.left.label) + '</button><button type="button" class="btn" id="sw-br">' + esc(c.right.label) + ' →</button></div>' +
+      '<p class="sw-hint">Glisse la carte, ou touche un choix. Les points montrent ce qui va bouger : 💶 budget, 😊 popularité, 🏛️ ta majorité, ⏳ une suite plus tard.</p>';
+    el.hidden = false; FX.replay($('sw-card'), 'sw-in');
+    var card = $('sw-card'), x0 = null, dx = 0, done = false;
+    function show(side) {
+      $('sw-gauges').innerHTML = dots(side || 'none');
+      $('sw-l').style.opacity = side === 'left' ? 1 : 0; $('sw-r').style.opacity = side === 'right' ? 1 : 0;
+    }
+    function decide(side) {
+      if (done) return; done = true;
+      card.style.transition = 'transform .35s ease-in, opacity .35s';
+      card.style.transform = 'translateX(' + (side === 'left' ? -140 : 140) + '%) rotate(' + (side === 'left' ? -18 : 18) + 'deg)'; card.style.opacity = 0;
+      var o = side === 'left' ? c.left : c.right, pop0 = G.popularity(gv), def0 = gv.deficit, r = CD.apply(gv, c, side);
+      setTimeout(function () {
+        el.hidden = true; el.innerHTML = '';
+        var dp = G.popularity(gv) - pop0, dd = gv.deficit - def0, bits = [];
+        if (dp) bits.push('popularité ' + (dp > 0 ? '+' : '') + dp);
+        if (Math.abs(dd) >= 0.005) bits.push('déficit ' + (dd > 0 ? '+' : '−') + fr(Math.abs(dd), 2) + ' pt');
+        if (o.fronde) bits.push('ton camp grogne');
+        if (o.later) bits.push('ça pourrait revenir…');
+        render();
+        toast('« ' + o.label + ' »' + (bits.length ? ' : ' + bits.join(' · ') : '') + (r.notes.length ? ' · ' + r.notes.join(' ') : ''));
+        then();
+      }, 360);
+    }
+    card.addEventListener('pointerdown', function (e) { x0 = e.clientX; card.setPointerCapture(e.pointerId); card.style.transition = 'none'; });
+    card.addEventListener('pointermove', function (e) {
+      if (x0 == null || done) return; dx = e.clientX - x0;
+      card.style.transform = 'translateX(' + dx + 'px) rotate(' + (dx / 18) + 'deg)';
+      show(dx < -30 ? 'left' : dx > 30 ? 'right' : null);
+    });
+    card.addEventListener('pointerup', function () {
+      if (x0 == null || done) return; x0 = null;
+      if (Math.abs(dx) > 90) return decide(dx < 0 ? 'left' : 'right');
+      card.style.transition = 'transform .25s'; card.style.transform = ''; show(null); dx = 0;
+    });
+    $('sw-bl').onmouseenter = function () { show('left'); }; $('sw-br').onmouseenter = function () { show('right'); };
+    $('sw-bl').onclick = function () { decide('left'); }; $('sw-br').onclick = function () { decide('right'); };
+  }
 
   /* ===== v2.6 : le gouvernement ===== */
   var POSTS = D.MINISTRY.posts, TRAITS = D.MINISTRY.traits, gform = {};

@@ -489,5 +489,25 @@ section('Les nouvelles lois');
   ok(gv.popBonus === p0 - 1 && G.lawCatalog(gv).economies.indexOf(id2) >= 0, 'une loi nouvelle rejetée : −1 de popularité, on peut la représenter');
 })();
 
+/* ---------- v3.0 : les cartes à glisser ---------- */
+section('Les cartes à glisser');
+(function () {
+  var G = require('../js/govern.js'), CD = require('../js/cards.js');
+  ok(CD.CARDS.length >= 30 && CD.FOLLOW.length >= 8, 'au moins 30 cartes et 8 suites (' + CD.CARDS.length + ' + ' + CD.FOLLOW.length + ')');
+  var bad = CD.CARDS.concat(CD.FOLLOW).filter(function (c) { return !c.judge && (!c.left || !c.right || !c.left.label || !c.right.label || !c.text); });
+  ok(bad.length === 0, 'chaque carte a un texte et deux choix');
+  var laters = []; CD.CARDS.concat(CD.FOLLOW).forEach(function (c) { [c.left, c.right].forEach(function (o) { if (o && o.later) laters.push(o.later.id); }); });
+  ok(laters.every(function (id) { return CD.BY[id] && CD.BY[id].follow; }), 'chaque suite annoncée existe');
+  var g = E.createGame('SM', { seed: 71 }); E.setProgramme(g, 'SM', E.PARTY.SM.programme, E.PARTY.SM.financing);
+  g.result = { first: E.poll(g), second: { a: 'SM', b: 'MN', pctA: 0.56, pctB: 0.44 } }; g.winner = 'SM';
+  var gv = G.create(g, 'SM'), seen = {}, rep = 0;
+  for (var y = 1; y <= 5; y++) { gv.year = y; for (var q = 0; q < 4; q++) { gv.cardSlot = q; var c = CD.draw(gv); if (!c) continue; if (seen[c.id] && !c.follow) rep++; seen[c.id] = true; CD.apply(gv, CD.judged(gv, c), 'right'); } }
+  ok(rep === 0 && Object.keys(seen).length >= 15, 'un mandat : une carte par saison, jamais deux fois la même (' + Object.keys(seen).length + ' cartes)');
+  var gv2 = G.create(g, 'SM'); gv2.year = 1; gv2.cardSlot = 0; gv2.rng = function () { return 0; };
+  CD.apply(gv2, CD.BY.cheminots, 'right'); gv2.cardSlot = 1;
+  ok(CD.draw(gv2).id === 'raffineries', 'une suite revient à la saison prévue (la grève s\'étend aux raffineries)');
+  var t = CD.touches(CD.BY.patronat.right); ok(t.budget && t.pop && !t.assemblee, 'les points indiquent les jauges touchées');
+})();
+
 console.log('\n' + passes + ' vérifications réussies, ' + fails + ' en échec.');
 process.exit(fails ? 1 : 0);

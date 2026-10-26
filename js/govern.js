@@ -193,6 +193,7 @@
       if (pm && pm.loy <= 1) share += MIN.compFronde;
       share += gv.cabinet.fronde || 0;
     }
+    share += gv.fronde || 0;   // v3.0 : les cartes du quinquennat peuvent fâcher ton camp
     if (mid) { var m = E.measure(mid); if (m.choc || Math.abs(m.cost) >= 15) share += 0.15; }
     else if (gv.deficit > C.target(gv.year) + 0.5) share += 0.1;
     if (pop < 45) share += 0.1;
@@ -320,6 +321,7 @@
   function endYear(gv) {
     var out = { year: gv.year };
     if (gv.cabinet) { gv.deficit -= MIN.ecoDeficit * (compOf(minister(gv, 'eco')) - 2); gv.cabinet.fronde = 0; }   // v2.6 : la gestion de Bercy
+    gv.fronde = 0;
     gv.deficit += C.debtCharge + Math.max(0, gv.debt - C.debt0) * C.interest;   // la charge de la dette
     gv.deficit = Math.round(gv.deficit * 100) / 100;
     gv.debt = Math.round((gv.debt + gv.deficit - C.debtDrift) * 10) / 10;

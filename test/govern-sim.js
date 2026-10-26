@@ -1,6 +1,7 @@
 /* Simule des quinquennats complets (après une campagne IA contre IA) pour vérifier les ordres de grandeur.
    Usage : node test/govern-sim.js [nombre] [stratégie : a = dépensière, b = économe, c = équilibrée] */
-var D = require('../js/data.js'), E = require('../js/engine.js'), AI = require('../js/ai.js'), G = require('../js/govern.js'), CB = require('../js/cabinet.js');
+var D = require('../js/data.js'), E = require('../js/engine.js'), AI = require('../js/ai.js'), G = require('../js/govern.js'), CB = require('../js/cabinet.js'), CD = require('../js/cards.js');
+var useCards = process.argv[5] !== 'sanscartes';   // v3.0 : une carte à glisser par saison (choix au hasard)
 var useCab = process.argv[4] !== 'sans';   // v2.6 : avec un gouvernement (proposition de Lulu), sauf « sans »
 var N = parseInt(process.argv[2] || '300', 10), strat = process.argv[3] || 'a';
 function val(o) { var v = -(o.def || 0) * 25 + (o.pop || 0); Object.keys(o.sat || {}).forEach(function (k) { v += o.sat[k] * E.NATPOP[k] / 100 * 3; }); return v; }
@@ -26,6 +27,7 @@ for (var i = 0; i < N; i++) {
   if (useCab) { CB.start(gv); CB.form(gv, CB.suggest(gv)); }
   maj[G.majorityType(gv)] = (maj[G.majorityType(gv)] || 0) + 1;
   while (!gv.over) {
+    if (useCards) for (var q = 0; q < 4; q++) { gv.cardSlot = q; var cd = CD.draw(gv); if (cd) { cd = CD.judged(gv, cd); CD.apply(gv, cd, gv.rng() < 0.5 ? 'left' : 'right'); sum.cards = (sum.cards || 0) + 1; } }
     var pend = gv.measures.filter(function (m) { return m.status === 'pending'; });
     if (pend.length) {
       var mid = pend[0].id, v = G.vote(gv, mid);
@@ -52,4 +54,5 @@ console.log('Majorité après les législatives :', JSON.stringify(maj));
 console.log('Fin de mandat (moyennes) : déficit ' + (sum.def / N).toFixed(2) + ' % · dette ' + (sum.debt / N).toFixed(1) + ' % · popularité ' + (sum.pop / N).toFixed(0) + ' % · mesures adoptées ' + (sum.adopted / N).toFixed(1) + ' / 5');
 console.log('49.3 par mandat : ' + (sum.d493 / N).toFixed(2) + ' · gouvernements renversés : ' + (sum.fell / N).toFixed(2) + ' · dissolutions : ' + (sum.diss / N).toFixed(2));
 console.log('Verdicts :', JSON.stringify(ver));
+if (useCards) console.log('Cartes jouées : ' + ((sum.cards || 0) / N).toFixed(1) + ' par mandat');
 if (useCab) console.log('Gouvernement : ' + ((sum.minEv || 0) / N).toFixed(1) + ' événements de ministres par mandat');
