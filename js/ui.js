@@ -21,8 +21,12 @@
   try { if (localStorage.getItem('politik_format') === 'eclair') gameFormat = 'eclair'; } catch (e) {}
   /* v2.8 : la sauvegarde automatique, au début de chaque tour de campagne */
   var SAVE = 'politik_save';
+  /* v3.3 : la photo de la partie au début du tour. Le bouton « Sauvegarder » la réécrit : reprendre en plein tour
+     rejouerait le journal et les événements, on reprend donc toujours au début du tour en cours. */
+  var turnSnap = null, turnSnapTurn = 0;
   function saveNow() {
-    try { localStorage.setItem(SAVE, JSON.stringify({ v: 1, when: Date.now(), game: E.saveGame(g), me: me, quick: quickGame, perso: perso, founded: founded, lead: leadOn,
+    if (g) { turnSnap = E.saveGame(g); turnSnapTurn = g.turn + 1; }
+    try { localStorage.setItem(SAVE, JSON.stringify({ v: 1, when: Date.now(), game: turnSnap || E.saveGame(g), me: me, quick: quickGame, perso: perso, founded: founded, lead: leadOn,
       foundedOn: !!(founded && me === founded.sigle) })); } catch (e) {}
   }
   function clearSave() { try { localStorage.removeItem(SAVE); } catch (e) {} renderResume(); }
@@ -2093,7 +2097,15 @@
       line('👥', '<b>' + pl.militants + ' / ' + R.militantsMax + ' équipes de militants</b> — chacune rapporte 1 soutien par tour.') +
       '</div><p><b>Force :</b> ' + esc(p.force) + '</p><p><b>Faiblesse :</b> ' + esc(p.weakness) + '</p>' + traitHtml(me, true) + credHtml(me);
     $('parti-body').innerHTML = '<span class="kicker">Ton parti</span><h1 class="h1 tab-title">' + esc(p.name) + '</h1>' + html +
-      '<div class="stack parti-btns"><button type="button" class="btn" id="pb-lib">📚 Comprendre la politique</button><button type="button" class="btn" id="pb-rules">Règles du jeu</button><button type="button" class="btn btn-ghost" id="pb-quit">Abandonner la partie</button></div>';
+      '<div class="stack parti-btns">' + (g && !g.over && g.phase !== 'between' && turnSnap ? '<button type="button" class="btn btn-ink" id="pb-save">💾 Sauvegarder la partie</button>' : '') + '<button type="button" class="btn" id="pb-lib">📚 Comprendre la politique</button><button type="button" class="btn" id="pb-rules">Règles du jeu</button><button type="button" class="btn btn-ghost" id="pb-quit">Abandonner la partie</button></div>';
+    if ($('pb-save')) $('pb-save').addEventListener('click', function () {
+      try {
+        localStorage.setItem(SAVE, JSON.stringify({ v: 1, when: Date.now(), game: turnSnap, me: me, quick: quickGame, perso: perso, founded: founded, lead: leadOn,
+          foundedOn: !!(founded && me === founded.sigle) }));
+        renderResume();
+        toast('💾 Partie sauvegardée (début du tour ' + turnSnapTurn + '). « Reprendre » sur l\u2019écran d\u2019accueil.');
+      } catch (e) { toast('Sauvegarde impossible sur cet appareil.'); }
+    });
     $('pb-lib').addEventListener('click', library); $('pb-rules').addEventListener('click', showRules);
     $('pb-quit').addEventListener('click', function () { modal({ title: 'Abandonner la partie ?', html: '<p>Ta campagne sera perdue.</p>', buttons: [{ label: 'Abandonner', primary: true, onClick: function () { clearSave(); go('title'); } }, { label: 'Continuer à jouer' }] }); });
   }

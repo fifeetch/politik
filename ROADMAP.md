@@ -234,3 +234,6 @@ Avant, en Réaliste, tous les partis convergeaient vers ~8 % : Lutte Obstinée d
 - Mode Simulation inchangé (vérifié : résultats identiques sur 600 parties).
 - Simulation (150 parties, base 2024, départ → 1er tour) : RN 33,5 → 25,6 % · PS 13,5 → 14,1 · RE 10,9 → 15,4 · LFI 10,2 → 12,2 · LO 0,7 → 0,8 · PCF 2,2 → 2,4. En rejouant 2022 : RE gagne 55 % des parties, RN 45 %.
 - À surveiller : en Réaliste (base 2024), l'ordinateur RN gagne environ 3 parties sur 4. Les petits partis n'ont quasiment aucune chance de victoire : idée à creuser, un objectif « réaliste » adapté (battre son score historique, peser au second tour).
+
+## v3.3 — fait : bouton de sauvegarde
+- 💾 « Sauvegarder la partie » dans l'onglet Mon parti, pendant la campagne. La sauvegarde reprend au début du tour en cours (reprendre en plein tour rejouerait le journal et les événements). La sauvegarde automatique à chaque tour est conservée ; « Reprendre » sur l'écran d'accueil.
