@@ -247,3 +247,8 @@ Avant, en Réaliste, tous les partis convergeaient vers ~8 % : Lutte Obstinée d
 - Test `test/check-laws.js` (catalogue, vote, amendement, 49.3, censure, déficit, retour d'une loi rejetée), ajouté à la vérification automatique ; `govern-sim.js` présente une loi de recettes par an (stratégies b et c).
 - **Ministres** : après un limogeage ou une démission, tu choisis le remplaçant (l'expert proposé ou un autre profil), hors remaniement annuel. « L'affaire du ministre » vise désormais un vrai ministre.
 - **Journal de l'année** : le 31 décembre, Le Quotidien National raconte chaque fait de l'année (cartes, actualité, ministres, lois, budget) avec son effet chiffré (popularité, déficit, majorité).
+
+## v3.5 — fait : la version PC
+- Même jeu, même code : sur un écran de 1024 px de large ou plus (css/desktop.css), la campagne passe en trois colonnes : sondage toujours visible à gauche, carte en grand et actions au centre, actualité ou ton parti à droite (deux onglets).
+- Les fenêtres de choix deviennent des boîtes centrées ; le journal et les cartes à glisser s'affichent en page centrée sur fond sombre ; les autres écrans (accueil, programme, quinquennat, soirée électorale) sont centrés sur 760 px.
+- Survol à la souris sur les boutons. Le téléphone n'est pas modifié.

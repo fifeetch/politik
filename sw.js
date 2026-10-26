@@ -1,8 +1,8 @@
 /* Politik — service worker : rend le jeu installable et jouable sans internet.
    À chaque nouvelle version du jeu, changer VERSION pour que les téléphones se mettent à jour. */
-var VERSION = 'politik-v3.4';
+var VERSION = 'politik-v3.5';
 var FILES = [
-  './', 'index.html', 'manifest.webmanifest', 'css/style.css', 'css/debate-clarity.css',
+  './', 'index.html', 'manifest.webmanifest', 'css/style.css', 'css/debate-clarity.css', 'css/desktop.css',
   'js/data.js', 'js/map.js', 'js/art.js', 'js/press.js', 'js/fx.js', 'js/engine.js', 'js/perso.js', 'js/ai.js', 'js/legis.js', 'js/govern.js', 'js/cabinet.js', 'js/oppo.js', 'js/cards.js', 'js/tuto.js', 'js/ui.js', 'js/govui.js',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-192.png', 'icons/icon-maskable-512.png',
   'icons/apple-touch-icon.png', 'icons/favicon.png',

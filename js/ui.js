@@ -947,7 +947,30 @@
 
   /* ---------- v1.8 : les onglets ---------- */
   var activeTab = 'carte', journalSeen = '';
+  /* v3.5 : la version PC. Sur grand écran, le sondage reste affiché à gauche et la colonne de droite montre
+     l'actualité ou ton parti (voir css/desktop.css). */
+  var DESK = window.matchMedia ? window.matchMedia('(min-width: 1024px) and (min-height: 560px)') : { matches: false };
+  var rightTab = 'actu';
+  function isDesk() { return !!DESK.matches; }
+  function deskLayout() {
+    if (!g || !isDesk()) return;
+    $('tab-sondage').hidden = false; renderPollTab();
+    ['actu', 'parti'].forEach(function (k) { $('tab-' + k).hidden = k !== rightTab; });
+    if (rightTab === 'actu') renderActu(); else renderParti();
+    Array.prototype.forEach.call(document.querySelectorAll('.tabbar [data-tab]'), function (b) {
+      if (b.getAttribute('data-tab') === rightTab) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+    });
+  }
+  if (DESK.addEventListener) DESK.addEventListener('change', function () { if (!g) return; if (isDesk()) deskLayout(); else showTab('carte', true); });
   function showTab(name, fromBack) {
+    if (isDesk()) {   // grand écran : seule la colonne de droite change
+      if (name === 'actu' || name === 'parti') rightTab = name;
+      activeTab = 'carte';
+      deskLayout();
+      if (name === 'actu') { journalSeen = g.turn + ''; $('tab-actu-dot').hidden = true; }
+      T.notify('tab');
+      return;
+    }
     // v3.3.2 : le bouton « retour » du téléphone ramène à la carte au lieu de quitter le jeu
     if (!fromBack) {
       var inTab = history.state && history.state.politikTab;
@@ -1074,7 +1097,8 @@
     $('race-status').innerHTML = st.length ? st.join('') : '50 % : élu dès le 1er tour';
     var rk = 1 + E.poll(g).findIndex(function (x) { return x.pid === me; });
     $('tab-sondage-label').textContent = 'Sondage · ' + ordinal(rk);
-    if (activeTab === 'sondage') renderPollTab();
+    if (activeTab === 'sondage' || isDesk()) renderPollTab();
+    if (isDesk() && rightTab === 'parti' && !$('tab-parti').hidden) renderParti();
     renderRace(); renderNews(); renderAdvisor(); renderMap(); renderRegion(); renderQueue(); renderMessage(); renderActions();
   }
   /* v1.4 : on garde les mêmes barres d'un tour à l'autre pour qu'elles glissent vers leur nouvelle valeur,
