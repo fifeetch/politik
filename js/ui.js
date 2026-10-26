@@ -401,15 +401,15 @@
     aiAff.forEach(function (x) { alerts.push('AFFAIRE · ' + party(x.pid).short + ' : ' + x.title); });
     info.later.forEach(function (x) { if (x.hit) alerts.push(x.title + (x.pid === me ? '' : ' (' + party(x.pid).short + ')')); });
     FX.breaking('Alerte info', alerts);
-    lastJournal = journalHtml(info, aiDil, aiAff).replace('paper paper-spin', 'paper');
+    var jp = journalParts(info, aiDil, aiAff);
+    lastJournal = jp.front.replace('np np-in', 'np') + jp.inside;
     showTab('carte'); $('tab-actu-dot').hidden = false;
     // v2.0 : en partie rapide, le premier tour démarre directement sur la carte (le journal reste dans l'onglet Actu)
     if (g.turn === 1 && quickGame && !waits) return startActions();
-    modal({ kicker: 'Tour ' + g.turn + ' / ' + R.maxTurns, title: g.turn === 1 ? 'La campagne commence' : 'Le journal du matin', html: journalHtml(info, aiDil, aiAff),
-            buttons: [{ label: mine.length ? 'Une affaire te tombe dessus →' : waits ? 'Une décision t’attend →' : 'À mes actions', primary: true, onClick: function () {
-              chain([function (next) { mine.length ? showAffair(next) : next(); },
-                     function (next) { g.dilemma && g.dilemma.pid === me ? showDilemma(next) : next(); }], startActions);
-            } }] });
+    showJournal(jp, g.turn === 1 ? 'La campagne commence' : 'Le journal du matin', mine.length ? 'Une affaire te tombe dessus →' : waits ? 'Une décision t’attend →' : 'À mes actions', function () {
+      chain([function (next) { mine.length ? showAffair(next) : next(); },
+             function (next) { g.dilemma && g.dilemma.pid === me ? showDilemma(next) : next(); }], startActions);
+    });
   }
   function chain(steps, done) {
     var i = 0;
@@ -458,53 +458,77 @@
     return best;
   }
   function line(icon, html) { return '<div class="brief-row"><span class="brief-i">' + icon + '</span><span>' + html + '</span></div>'; }
-  /* Le journal du tour : la une, puis « en bref » (seulement ce qui compte) */
-  function journalHtml(info, aiDil, aiAff) {
-    var vk = info.crisis ? g.news.theme : g.news.theme;
-    var h = '<div class="paper paper-spin"><div class="paper-mast">LE QUOTIDIEN NATIONAL <span>· Tour ' + g.turn + '</span></div>' +
-      (A.hasVignette(vk) ? '<div class="paper-vign">' + A.vignette(vk) + '</div>' : '');
-    if (info.crisis) {
-      h += '<div class="paper-crisis">Crise · ' + esc(info.crisis.name) + ' · ' + (info.crisis.index + 1) + '/3</div>' +
-        '<div class="paper-head">' + esc(info.crisis.title) + '</div><div class="paper-text">' + esc(info.crisis.text) + '</div>';
-    } else {
-      var ev = D.EVENTS.filter(function (e) { return e.id === info.event.id; })[0];
-      h += '<div class="paper-head">' + esc(ev.title) + '</div><div class="paper-text">' + esc(ev.text) + '</div>';
-      if (!ev.theme) h += '<div class="paper-text"><i>Aussi :</i> ' + esc(g.news.headline) + '</div>';
-    }
-    h += '<div class="paper-foot">🔥 À la une : ' + g.hot.map(function (x) { return th(x).icon + ' <b>' + esc(th(x).name) + '</b>'; }).join(' + ') +
-      ' <span class="muted">(+1 d\'impact)</span></div></div>';
-    var b = [];
+  /* v2.1 : le journal du matin en deux temps.
+     La une (front) : le gros titre et 2 ou 3 brèves, rien de plus.
+     Les pages intérieures (inside) : tout le détail, rangé par rubriques, qu'on ouvre si on veut. */
+  var JOUR = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
+  function journalParts(info, aiDil, aiAff) {
+    var vk = g.news.theme, crisis = info.crisis;
+    var ev = crisis ? null : D.EVENTS.filter(function (e) { return e.id === info.event.id; })[0];
+    var title = crisis ? crisis.title : ev.title, text = crisis ? crisis.text : ev.text;
+    // ---- les rubriques intérieures ----
+    var mine = [], rivals = [];
     var inc = info.income.filter(function (x) { return x.pid === me; })[0];
-    if (inc) b.push(line('💰', 'Ta caisse : <b>+' + inc.money + ' €</b> · <b>+' + inc.infl + ' ★</b>' + (inc.forme ? ' · <b>+' + inc.forme + ' ⚡</b>' : '')));
+    if (inc) mine.push(line('💰', 'Ta caisse : <b>+' + inc.money + ' €</b> · <b>+' + inc.infl + ' ★</b>' + (inc.forme ? ' · <b>+' + inc.forme + ' ⚡</b>' : '')));
     var myMil = info.militants.filter(function (x) { return x.pid === me; });
-    if (myMil.length) b.push(line('👥', 'Tes militants : +1 cube en ' + myMil.map(function (x) { return SHORT[x.rid]; }).join(', ')));
-    if (info.event) info.event.effects.filter(function (f) { return f.pid === me; }).forEach(function (f) { b.push(line('📰', esc(f.text))); });
-    if (info.crisis) info.crisis.effects.forEach(function (t) { b.push(line('📰', esc(t))); });
-    (aiAff || []).forEach(function (x) {
-      b.push(line('💥', '<b>Affaire pour ' + esc(party(x.pid).short) + '</b> : « ' + esc(x.title) + ' ». Réaction : <b>' + esc(x.reaction) + '</b>' + (x.effects.length ? ' — ' + esc(x.effects.join(', ')) : '') + '.'));
-    });
+    if (myMil.length) mine.push(line('👥', 'Tes militants : +1 cube en ' + myMil.map(function (x) { return SHORT[x.rid]; }).join(', ')));
+    if (info.event) info.event.effects.filter(function (f) { return f.pid === me; }).forEach(function (f) { mine.push(line('📰', esc(f.text))); });
+    var myAffairsLater = [];
     if (info.programmes) info.programmes.forEach(function (x) {
       if (x.pid === me) {
-        b.push(line('📋', 'Il te reste <b>' + x.budget + ' Md€</b> à financer : ' + FUND_LABEL[fundingState(x.over)].toLowerCase() + (x.over > 0 ? ', ça va se voir…' : '.') + (x.cas ? ' (+' + x.cas + ' casserole' + (x.cas > 1 ? 's' : '') + ')' : '')));
-        if (x.echo.length) b.push(line('❤️', 'Ton programme fait mouche en ' + x.echo.map(function (r) { return SHORT[r]; }).join(', ') + ' : +1 cube dans chacune.'));
+        mine.push(line('📋', 'Il te reste <b>' + x.budget + ' Md€</b> à financer : ' + FUND_LABEL[fundingState(x.over)].toLowerCase() + (x.over > 0 ? ', ça va se voir…' : '.') + (x.cas ? ' (+' + x.cas + ' casserole' + (x.cas > 1 ? 's' : '') + ')' : '')));
+        if (x.echo.length) mine.push(line('❤️', 'Ton programme fait mouche en ' + x.echo.map(function (r) { return SHORT[r]; }).join(', ') + ' : +1 cube dans chacune.'));
       }
-      else if (x.choc.length) b.push(line('📢', esc(party(x.pid).short) + ' fait parler avec « ' + esc(x.choc[0]) + ' ».'));
+      else if (x.choc.length) rivals.push(line('📢', esc(party(x.pid).short) + ' fait parler avec « ' + esc(x.choc[0]) + ' ».'));
     });
     info.later.forEach(function (x) {
-      if (x.hit) b.push(line('⏳', '<b>' + esc(x.title) + '</b>' + (x.pid === me ? '' : ' (' + esc(party(x.pid).short) + ')') + ' — ' + esc(x.text) + ' ' + esc(x.effects.join(', ')) + '.'));
-      else if (x.pid === me) b.push(line('😮‍💨', '« ' + esc(x.title) + ' » : fausse alerte, l\'affaire ne sort pas.'));
+      var row = x.hit ? line('⏳', '<b>' + esc(x.title) + '</b>' + (x.pid === me ? '' : ' (' + esc(party(x.pid).short) + ')') + ' — ' + esc(x.text) + ' ' + esc(x.effects.join(', ')) + '.')
+        : x.pid === me ? line('😮‍💨', '« ' + esc(x.title) + ' » : fausse alerte, l\'affaire ne sort pas.') : null;
+      if (row) (x.pid === me ? mine : rivals).push(row);
     });
-    if (info.usure) b.push(line('🕰️', 'Usure du pouvoir : En Mouvement perd 1 cube en ' + esc(E.REG[info.usure].name) + '.'));
-    if (aiDil) b.push(line('🤔', esc(party(aiDil.pid).short) + ', face à « ' + esc(aiDil.title) + ' », choisit : <b>' + esc(aiDil.choice) + '</b>' + (aiDil.effects.length ? ' — ' + esc(aiDil.effects.join(', ')) : '') + '.'));
-    if (E.isDebateTurn(g)) b.push(line('🎙️', '<b>Débat télévisé</b> à la fin de ce tour : garde de l\'influence (★) pour miser.'));
-    if (b.length) h += '<div class="brief"><div class="kicker">En bref</div>' + b.join('') + '</div>';
-    if (g.turn === 1) h += learnBox('presidentielle');
-    else if (g.turn === 2) h += learnBox('agenda');
-    else if (g.turn === 4) h += learnBox('sondages');
-    else if (g.turn === 5) h += learnBox('comptes');
-    else if (g.turn === 6) h += learnBox('dette');
-    else if (g.turn === 7) h += learnBox('temps_parole');
-    return h;
+    (aiAff || []).forEach(function (x) {
+      rivals.push(line('💥', '<b>Affaire pour ' + esc(party(x.pid).short) + '</b> : « ' + esc(x.title) + ' ». Réaction : <b>' + esc(x.reaction) + '</b>' + (x.effects.length ? ' — ' + esc(x.effects.join(', ')) : '') + '.'));
+    });
+    if (info.usure) rivals.push(line('🕰️', 'Usure du pouvoir : En Mouvement perd 1 cube en ' + esc(E.REG[info.usure].name) + '.'));
+    if (aiDil) rivals.push(line('🤔', esc(party(aiDil.pid).short) + ', face à « ' + esc(aiDil.title) + ' », choisit : <b>' + esc(aiDil.choice) + '</b>' + (aiDil.effects.length ? ' — ' + esc(aiDil.effects.join(', ')) : '') + '.'));
+    var country = [];
+    if (crisis) crisis.effects.forEach(function (t) { country.push(line('📰', esc(t))); });
+    else if (!ev.theme && g.news.headline) country.push(line('📰', esc(g.news.headline)));
+    country.push(line('🔥', 'À la une : ' + g.hot.map(function (x) { return th(x).icon + ' <b>' + esc(th(x).name) + '</b>'; }).join(' + ') + ' <span class="muted">(+1 d\'impact pour qui en parle)</span>'));
+    var learnKey = { 1: 'presidentielle', 2: 'agenda', 4: 'sondages', 5: 'comptes', 6: 'dette', 7: 'temps_parole' }[g.turn];
+    var learn = learnKey ? learnBox(learnKey) : '';
+    // ---- les 2 ou 3 brèves de la une : seulement ce qui change ton tour ----
+    var briefs = [];
+    if (E.isDebateTurn(g)) briefs.push({ k: 'Ce soir', t: '🎙️ Débat télévisé', s: 'Garde des ★ pour miser.' });
+    var myHit = info.later.filter(function (x) { return x.pid === me && x.hit; })[0];
+    if (myHit) briefs.push({ k: 'Te concerne', t: '⏳ ' + esc(myHit.title), s: esc(myHit.effects.join(', ')) });
+    briefs.push({ k: 'Sujet du jour', t: g.hot.map(function (x) { return th(x).icon + ' ' + esc(th(x).short); }).join(' + '), s: 'Parles-en : +1 d\'impact.' });
+    if (aiAff && aiAff.length) briefs.push({ k: 'Affaires', t: '💥 ' + (aiAff.length > 1 ? aiAff.length + ' rivaux visés' : esc(party(aiAff[0].pid).short)), s: aiAff.length > 1 ? aiAff.map(function (x) { return esc(party(x.pid).short); }).join(', ') : 'Dans la tourmente.' });
+    if (inc) briefs.push({ k: 'Ta caisse', t: '+' + inc.money + ' € · +' + inc.infl + ' ★', s: myMil.length ? '👥 Tes militants rapportent.' : 'De quoi faire campagne.' });
+    briefs = briefs.slice(0, 3);
+    var front = '<div class="np np-in"><div class="np-mast"><span class="np-name">Le Quotidien National</span>' +
+      '<span class="np-date"><span>Tour ' + g.turn + ' sur ' + R.maxTurns + '</span><span>' + JOUR[(g.turn - 1) % 7] + ' · édition du matin</span><span>1,20 €</span></span></div>' +
+      (crisis ? '<div class="np-crisis">Crise · ' + esc(crisis.name) + ' · ' + (crisis.index + 1) + '/3</div>' : '') +
+      '<h3 class="np-head">' + esc(title) + '</h3>' +
+      (A.hasVignette(vk) ? '<div class="np-vign">' + A.vignette(vk) + '</div>' : '') +
+      '<p class="np-lead">' + esc(text) + '</p>' +
+      '<div class="np-cols">' + briefs.map(function (b) { return '<div class="np-brief"><span class="np-k">' + b.k + '</span><b>' + b.t + '</b><small>' + b.s + '</small></div>'; }).join('') + '</div></div>';
+    function rub(name, rows) { return rows.length ? '<section class="np-rub"><h4>' + name + '</h4><div class="np-rows">' + rows.join('') + '</div></section>' : ''; }
+    var inside = '<div class="np np-inside"><div class="np-folio"><span>Le Quotidien National</span><span>Pages intérieures · tour ' + g.turn + '</span></div>' +
+      rub('France', country) + rub('Ta campagne', mine) + rub('Chez les rivaux', rivals) +
+      (learn ? '<section class="np-rub"><h4>Le saviez-vous ?</h4>' + learn + '</section>' : '') + '</div>';
+    return { front: front, inside: inside };
+  }
+  /* La une dans une fenêtre, avec « Ouvrir le journal » pour les pages intérieures */
+  function showJournal(parts, title, contLabel, cont) {
+    $('toast').hidden = true;
+    modal({ kicker: 'Tour ' + g.turn + ' / ' + R.maxTurns, title: title, cls: 'np-modal', html: parts.front,
+      buttons: [{ label: contLabel, primary: true, onClick: cont },
+                { label: '📰 Ouvrir le journal', onClick: function () {
+                  modal({ kicker: 'Le journal du matin', title: 'Les pages intérieures', cls: 'np-modal', html: parts.inside,
+                    onOpen: function () { FX.replay(document.querySelector('.np-inside'), 'np-open'); },
+                    buttons: [{ label: contLabel, primary: true, onClick: cont }, { label: '‹ Revenir à la une', onClick: function () { showJournal(parts, title, contLabel, cont); } }] });
+                } }] });
   }
   /* ---------- v0.7 : Lulu, la directrice de campagne — un conseil clair par tour ---------- */
   function advice() {
@@ -909,7 +933,8 @@
     box.innerHTML = '<div class="region-head"><h2 class="region-name">' + esc(r.name) + '</h2>' +
       (echo > 0 ? '<span class="chip chip-good">❤️ De cœur</span>' : echo < 0 ? '<span class="chip chip-bad">👎 Hostile</span>' : '') + tag + '</div>' +
       '<div class="region-line"><span>' + mio(v.ins) + ' M inscrits · ' + pctFr(v.abst) + ' % d\'abstention · tu es <b>' + rk + (rk === 1 ? 'er' : 'ᵉ') + '</b> ici (' + n + ' cube' + (n > 1 ? 's' : '') + ')</span>' +
-      '<button type="button" class="linkbtn" id="btn-reg-more">Détails</button></div>';
+      '<button type="button" class="linkbtn" id="btn-reg-more">Détails</button></div>' +
+      '<div class="region-concerns"><span>Ce qui les préoccupe :</span>' + concernsHtml(selected) + '</div>';
     $('btn-reg-more').addEventListener('click', regionDetails);
   }
   function regionDetails() {
@@ -1179,41 +1204,77 @@
       });
     })();
   }
+  /* v2.1 : le flash info façon chaîne d'info. À l'écran : la carte des régions qui changent de main,
+     UN gros titre, deux brèves au plus et le bandeau des sondages qui défile. Le reste s'ouvre avec « Tout le détail ». */
   function showFlash(log, before, ctrl0, allies0) {
-    var html = flashHtml(log, before, ctrl0, allies0) +
-      '<details class="details"><summary>Détail des ' + log.length + ' actions</summary><div class="log">' + log.map(function (l) {
-      return '<div class="log-row' + (l.gaffe ? ' gaffe' : l.ok ? '' : ' fail') + (l.credUp && l.pid === me ? ' up' : '') + '">' + chip(l.pid) + '<span><b>' + esc(l.action) + '</b>' + (l.theme ? ' ' + th(l.theme).icon : '') + (l.region ? ' · ' + SHORT[l.region] : '') + ' — ' + esc(l.text) + '</span></div>';
-    }).join('') + '</div></details>';
+    var f = flashData(log, before, ctrl0, allies0);
     var after = E.isDebateTurn(g) ? debate : spotlight;
-    modal({ kicker: 'Tour ' + g.turn + ' · ce soir', title: 'Flash info', html: html,
-            buttons: [{ label: E.isDebateTurn(g) ? 'Place au débat 🎙️' : 'Fin du tour', primary: true, onClick: function () { handleOffers(after); } }] });
+    var contLabel = E.isDebateTurn(g) ? 'Place au débat 🎙️' : 'Fin du tour';
+    function cont() { handleOffers(after); }
+    function open() {
+      modal({ kicker: 'Tour ' + g.turn + ' · 20 h', title: 'Flash info', cls: 'tv-modal', html: tvHtml(f),
+        buttons: [{ label: contLabel, primary: true, onClick: cont }, { label: 'Tout le détail', onClick: detail }] });
+    }
+    function detail() {
+      modal({ kicker: 'Flash info · tour ' + g.turn, title: 'Le détail de la soirée', html: flashDetail(f, log),
+        buttons: [{ label: contLabel, primary: true, onClick: cont }, { label: '‹ Revenir au direct', onClick: open }] });
+    }
+    open();
   }
   function who(pid) { return pid === me ? 'Toi' : party(pid).short; }
-  /* v0.6 : le flash info — 2 à 4 gros titres tirés de ce qui vient de se passer */
-  function flashHtml(log, before, ctrl0, allies0) {
-    var heads = [];
+  /* Les gros titres de la soirée, du plus important au moins important */
+  function flashData(log, before, ctrl0, allies0) {
+    var heads = [], changed = [];
     D.REGIONS.slice().sort(function (a, b) { return b.pts - a.pts; }).forEach(function (r) {
       var c0 = ctrl0[r.id], c1 = g.regions[r.id].controller;
       if (c0 === c1) return;
-      var subj = function (p) { return p === me ? 'Tu' : party(p).short; }, obj = function (p) { return p === me ? 'toi' : party(p).short; };
-      if (c1) heads.push({ w: r.pts + (c1 === me || c0 === me ? 20 : 0), t: '<b>' + esc(subj(c1)) + (c1 === me ? ' prends ' : ' prend ') + esc(r.name) + '</b>' + (c0 ? ' à ' + esc(obj(c0)) : '') + ' !' });
-      else heads.push({ w: r.pts / 2 + (c0 === me ? 20 : 0), t: esc(r.name) + ' n\'a plus de maître : ' + esc(subj(c0)) + (c0 === me ? ' perds' : ' perd') + ' le contrôle.' });
+      changed.push(r.id);
+      var nm = r.id === 'cor' ? 'l\'outre-mer' : r.name;
+      if (c1) heads.push({ w: r.pts + (c1 === me || c0 === me ? 20 : 0), me: c1 === me || c0 === me, t: (c1 === me ? 'Tu prends ' : party(c1).short + ' prend ') + nm + (c0 ? (c0 === me ? ' : tu la perds' : ' à ' + party(c0).short) : '') });
+      else heads.push({ w: r.pts / 2 + (c0 === me ? 20 : 0), me: c0 === me, t: nm + ' : ' + (c0 === me ? 'tu perds' : party(c0).short + ' perd') + ' le contrôle' });
     });
-    log.filter(function (l) { return l.pid === me && !l.ok && !l.gaffe; }).forEach(function (l) { heads.push({ w: 16, t: '❌ <b>Ton action « ' + esc(l.action) + ' » a échoué</b> : ' + esc(l.text.replace(/^Échoue : /, '')) }); });
-    log.filter(function (l) { return l.gaffe; }).forEach(function (l) { heads.push({ w: 15, t: '😬 <b>Gaffe</b> de ' + esc(who(l.pid)) + ' en ' + (l.region ? esc(E.REG[l.region].name) : 'campagne') + ' : le candidat était épuisé.' }); });
+    var fails = log.filter(function (l) { return l.pid === me && !l.ok && !l.gaffe; });
+    if (fails.length) heads.push({ w: 16, me: true, t: '❌ ' + (fails.length > 1 ? fails.length + ' de tes actions échouent' : 'Ton action « ' + fails[0].action + ' » échoue') });
+    log.filter(function (l) { return l.gaffe; }).forEach(function (l) { heads.push({ w: 15, me: l.pid === me, t: '😬 Gaffe de ' + who(l.pid) + (l.region ? ' en ' + SHORT[l.region] : '') }); });
     Object.keys(g.alliances).forEach(function (pid) {
       var o = g.alliances[pid];
-      if (pid < o && allies0[pid] !== o) heads.push({ w: 14, t: '🤝 Alliance surprise entre <b>' + esc(who(pid)) + '</b> et <b>' + esc(who(o)) + '</b>.' });
+      if (pid < o && allies0[pid] !== o) heads.push({ w: 14, t: '🤝 Alliance ' + who(pid) + ' – ' + who(o) });
     });
-    log.filter(function (l) { return l.credUp && l.pid === me; }).forEach(function (l) { heads.push({ w: 9, t: '📈 Tu deviens crédible sur ' + esc(th(l.credUp).name) + '.' }); });
+    log.filter(function (l) { return l.credUp && l.pid === me; }).forEach(function (l) { heads.push({ w: 9, me: true, t: '📈 Tu deviens crédible sur ' + th(l.credUp).name }); });
     heads.sort(function (a, b) { return b.w - a.w; });
-    var h = '<div class="flash"><div class="flash-band"><span class="flash-live">● Direct</span><span class="flash-ch">INFO-CONTINU</span><span class="flash-tag">FLASH INFO</span></div><div class="flash-body">';
-    h += heads.length ? heads.slice(0, 4).map(function (x) { return '<p>' + x.t + '</p>'; }).join('') : '<p>Calme plat : aucune région ne change de main ce soir.</p>';
-    h += '<p class="flash-order">Ordre de jeu ce tour : ' + E.turnOrder(g).map(function (p) { return p === me ? '<b>toi</b>' : esc(party(p).short); }).join(' → ') + ' (action 1 de chacun, puis 2, puis 3)</p>';
-    h += '</div><div class="flash-ticker">' + E.poll(g).map(function (x) {
-      var d = (x.pct - (before[x.pid] || 0)) * 100, arr = d >= 0.5 ? '<i class="up">▲' + d.toFixed(1).replace('.', ',') + '</i>' : d <= -0.5 ? '<i class="down">▼' + (-d).toFixed(1).replace('.', ',') + '</i>' : '<i>=</i>';
-      return '<span class="' + (x.pid === me ? 'me' : '') + '">' + (x.pid === me ? 'Toi' : x.pid) + ' ' + Math.round(x.pct * 100) + ' % ' + arr + '</span>';
+    var poll = E.poll(g).map(function (x) { return { pid: x.pid, pct: x.pct, d: (x.pct - (before[x.pid] || 0)) * 100 }; });
+    var rank = 1 + poll.findIndex(function (x) { return x.pid === me; });
+    return { heads: heads, changed: changed, poll: poll, rank: rank, mine: poll[rank - 1] };
+  }
+  function arrow(d) { return d >= 0.5 ? '<i class="up">▲ ' + d.toFixed(1).replace('.', ',') + '</i>' : d <= -0.5 ? '<i class="down">▼ ' + (-d).toFixed(1).replace('.', ',') + '</i>' : '<i>=</i>'; }
+  function tvHtml(f) {
+    var map = '<svg class="tv-map" viewBox="0 0 370 357" aria-hidden="true">' + D.REGIONS.map(function (r) {
+      var on = f.changed.indexOf(r.id) >= 0, c = g.regions[r.id].controller;
+      return '<path d="' + M.regions[r.id].d + '" class="' + (on ? 'tv-hit' : '') + '" fill="' + (on ? (c ? party(c).color : '#8E8AA8') : '#3A3656') + '"/>';
+    }).join('') + '</svg>';
+    var top = f.heads[0], rest = f.heads.slice(1, 3);
+    var ticker = f.poll.map(function (x) { return '<span class="' + (x.pid === me ? 'me' : '') + '">' + (x.pid === me ? 'TOI' : esc(party(x.pid).short.toUpperCase())) + ' ' + pctFr(x.pct) + ' % ' + arrow(x.d) + '</span>'; }).join('<b>•</b>');
+    return '<div class="tv"><div class="tv-top"><span class="tv-live">● DIRECT</span><span class="tv-ch">INFO-CONTINU</span><span class="tv-clock">20:00</span></div>' +
+      '<div class="tv-studio">' + map + (f.changed.length ? '<span class="tv-count">' + f.changed.length + ' région' + (f.changed.length > 1 ? 's' : '') + '<br>bascule' + (f.changed.length > 1 ? 'nt' : '') + '</span>' : '') + '</div>' +
+      '<div class="tv-lower"><span class="tv-tag">FLASH INFO</span><span class="tv-head">' + esc(top ? top.t : 'Calme plat : aucune région ne bascule') + '</span></div>' +
+      (rest.length ? '<div class="tv-sub">' + rest.map(function (h) { return '<span>' + esc(h.t) + '</span>'; }).join('') + '</div>' : '') +
+      '<div class="tv-ticker"><div class="tv-track"><div>' + ticker + '</div><div aria-hidden="true">' + ticker + '</div></div></div></div>' +
+      '<div class="tv-me"><span>Ta position</span><b>' + ordinal(f.rank) + '</b><span>' + pctFr(f.mine.pct, 1) + ' %</span>' + arrow(f.mine.d) + '</div>';
+  }
+  function flashDetail(f, log) {
+    var h = '';
+    h += '<div class="brief"><div class="kicker">Les titres de la soirée</div>' + (f.heads.length ? f.heads.map(function (x) { return line(x.me ? '👉' : '•', x.me ? '<b>' + esc(x.t) + '</b>' : esc(x.t)); }).join('') : line('•', 'Aucune région ne change de main.')) + '</div>';
+    var mineLog = log.filter(function (l) { return l.pid === me; });
+    if (mineLog.length) h += '<div class="brief"><div class="kicker">Tes actions</div>' + mineLog.map(function (l) {
+      return line(l.gaffe ? '😬' : l.ok ? '✅' : '❌', '<b>' + esc(l.action) + '</b>' + (l.region ? ' · ' + SHORT[l.region] : '') + ' — ' + esc(l.text));
+    }).join('') + '</div>';
+    h += '<div class="brief"><div class="kicker">Le sondage</div><div class="tv-poll">' + f.poll.map(function (x, i) {
+      var P = party(x.pid);
+      return '<div class="' + (x.pid === me ? 'me' : '') + '"><span>' + (i + 1) + '</span>' + chip(x.pid) + '<span class="tp-n">' + (x.pid === me ? 'Toi' : esc(P.short)) + '</span><b>' + pctFr(x.pct, 1) + ' %</b>' + arrow(x.d) + '</div>';
     }).join('') + '</div></div>';
+    h += '<details class="details"><summary>Ordre de jeu et toutes les actions</summary><p class="hint">Ordre ce tour : ' + E.turnOrder(g).map(function (p) { return p === me ? '<b>toi</b>' : esc(party(p).short); }).join(' → ') + ' (action 1 de chacun, puis 2, puis 3).</p><div class="log">' + log.map(function (l) {
+      return '<div class="log-row' + (l.gaffe ? ' gaffe' : l.ok ? '' : ' fail') + '">' + chip(l.pid) + '<span><b>' + esc(l.action) + '</b>' + (l.theme ? ' ' + th(l.theme).icon : '') + (l.region ? ' · ' + SHORT[l.region] : '') + ' — ' + esc(l.text) + '</span></div>';
+    }).join('') + '</div></details>';
     return h;
   }
   function handleOffers(then) {
@@ -1611,6 +1672,11 @@
     };
   }
 
+  var endMore = [];
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-more]'); if (!b) return;
+    var m = endMore[+b.getAttribute('data-more')]; if (m) modal({ kicker: 'Résultats', title: m.label, html: m.html });
+  });
   function endGame() {
     $('toast').hidden = true;
     var res = g.result, win = g.winner;
@@ -1618,26 +1684,40 @@
     $('end-title').textContent = win === me ? 'Tu es élu !' : 'Perdu…';
     $('end-sub').textContent = party(win).name + (res.direct ? ' l\'emporte dès le premier tour.' : ' remporte le second tour.');
     function turnoutLine(st) { return st ? '<p class="turnout">Participation ' + pctFr(st.participation, 1) + ' % · ' + mio(st.votants) + ' millions de votants, dont ' + pctFr(st.blankPct, 1) + ' % de blancs et nuls</p>' : ''; }
-    var h = '<div class="kicker">Premier tour</div>' + turnoutLine(res.stats1) + bars(res.first, res.first[0].pct);
+    // v2.1 : à l'écran, seulement le résultat. Le détail s'ouvre d'un toucher.
+    var h = '', more = [];
     if (res.second) {
       var s = res.second;
-      h += '<div class="kicker" style="margin-top:12px">Second tour</div>' + turnoutLine(s.stats) +
-        bars([{ pid: s.a, pct: s.pctA }, { pid: s.b, pct: s.pctB }].sort(function (x, y) { return y.pct - x.pct; }), Math.max(s.pctA, s.pctB));
-      h += '<div class="transfers">' + s.transfers.map(function (t) {
-        var d = t.deal ? ' · 🤝 accord (« ' + esc(E.measure(t.deal.measure).name) + ' »)' : '';
-        return '<p>' + chip(t.pid) + '<b>' + (t.consigne === 'A' ? 'Consigne : ' + esc(s.a) : t.consigne === 'B' ? 'Consigne : ' + esc(s.b) : 'Aucune consigne') + '</b>' + d + ' → ' + Math.round(100 * t.toA) + ' % ' + s.a + ', ' + Math.round(100 * t.toB) + ' % ' + s.b + ', ' + Math.round(100 * t.blank) + ' % blanc, ' + Math.round(100 * t.abst) + ' % abstention</p>';
-      }).join('') + (res.othersTransfer ? '<p><span class="who" style="background:#C6C9BF">…</span>Autres listes : ' + Math.round(100 * res.othersTransfer.toA) + ' % → ' + s.a + ', ' + Math.round(100 * res.othersTransfer.toB) + ' % → ' + s.b + ', ' + Math.round(100 * res.othersTransfer.abstTotal) + ' % blanc ou abstention</p>' : '') +
-        (s.mob.a || s.mob.b ? '<p>🚪 Mobilisation : ' + s.a + ' ×' + s.mob.a + ', ' + s.b + ' ×' + s.mob.b + ' (+' + pctFr(R.round2.mobilize, 1) + ' % des suffrages à chaque fois)</p>' : '') +
-        s.notes.map(function (n) { return '<p>' + chip(n.pid) + esc(n.text) + '</p>'; }).join('') + '</div>';
+      h += '<div class="kicker">Second tour</div>' + bars([{ pid: s.a, pct: s.pctA }, { pid: s.b, pct: s.pctB }].sort(function (x, y) { return y.pct - x.pct; }), Math.max(s.pctA, s.pctB));
+    }
+    var top = res.first.slice(0, 3), meRow = res.first.filter(function (x) { return x.pid === me; })[0];
+    var meRank = 1 + res.first.indexOf(meRow);
+    h += '<div class="kicker" style="margin-top:12px">Premier tour</div>' + bars(top, res.first[0].pct) +
+      (meRank > 3 ? '<p class="end-me">Toi : <b>' + ordinal(meRank) + '</b> avec ' + pctFr(meRow.pct, 1) + ' %</p>' : '');
+    more.push({ icon: '📊', label: 'Premier tour complet', sub: 'Les ' + res.first.length + ' partis et la participation',
+      html: turnoutLine(res.stats1) + bars(res.first, res.first[0].pct) });
+    if (res.second) {
+      more.push({ icon: '🔁', label: 'Les reports de voix', sub: 'Qui a appelé à voter pour qui',
+        html: turnoutLine(s.stats) + '<div class="transfers">' + s.transfers.map(function (t) {
+          var d = t.deal ? ' · 🤝 accord (« ' + esc(E.measure(t.deal.measure).name) + ' »)' : '';
+          return '<p>' + chip(t.pid) + '<b>' + (t.consigne === 'A' ? 'Consigne : ' + esc(s.a) : t.consigne === 'B' ? 'Consigne : ' + esc(s.b) : 'Aucune consigne') + '</b>' + d + ' → ' + Math.round(100 * t.toA) + ' % ' + s.a + ', ' + Math.round(100 * t.toB) + ' % ' + s.b + ', ' + Math.round(100 * t.blank) + ' % blanc, ' + Math.round(100 * t.abst) + ' % abstention</p>';
+        }).join('') + (res.othersTransfer ? '<p><span class="who" style="background:#C6C9BF">…</span>Autres listes : ' + Math.round(100 * res.othersTransfer.toA) + ' % → ' + s.a + ', ' + Math.round(100 * res.othersTransfer.toB) + ' % → ' + s.b + ', ' + Math.round(100 * res.othersTransfer.abstTotal) + ' % blanc ou abstention</p>' : '') +
+          (s.mob.a || s.mob.b ? '<p>🚪 Mobilisation : ' + s.a + ' ×' + s.mob.a + ', ' + s.b + ' ×' + s.mob.b + ' (+' + pctFr(R.round2.mobilize, 1) + ' % des suffrages à chaque fois)</p>' : '') +
+          s.notes.map(function (n) { return '<p>' + chip(n.pid) + esc(n.text) + '</p>'; }).join('') + '</div>' });
     }
     // v1.5 : du dernier sondage au 1er tour, la seule différence vient des objectifs secrets réussis
     var lastPoll = {}; E.poll(g).forEach(function (x) { lastPoll[x.pid] = x.pct; });
-    h += '<div class="brief" style="margin-top:12px"><div class="kicker">Du dernier sondage au 1er tour</div>' + res.first.map(function (x) {
-      var ol = objLine(x.pid), d = 100 * (x.pct - (lastPoll[x.pid] || 0));
-      return line(ol.met ? '🎯' : '·', chip(x.pid) + (x.pid === me ? '<b>Toi</b>' : esc(party(x.pid).short)) + ' : ' + pctFr(lastPoll[x.pid] || 0, 1) + ' % → <b>' + pctFr(x.pct, 1) + ' %</b> ' +
-        '<span class="muted">(' + (d >= 0 ? '+' : '−') + Math.abs(d).toFixed(1).replace('.', ',') + ' pt · objectif « ' + esc(ol.o.name) + ' » ' + (ol.met ? 'réussi' : 'raté') + ')</span>');
-    }).join('') + '<p class="hint" style="margin:6px 0 0">Un objectif réussi ajoute des voix le jour du vote. Ceux qui ratent le leur baissent donc un peu en proportion.</p></div>';
-    if (win === me) h += '<p style="margin:10px 0 0"><b>Et maintenant, il faut gouverner !</b> Législatives, vote de tes lois, budget, crises : cinq ans pour tenir tes promesses.</p>';
+    var myObj = objLine(me);
+    more.push({ icon: '🎯', label: 'Les objectifs secrets', sub: 'Le tien : « ' + myObj.o.name + ' », ' + (myObj.met ? 'réussi' : 'raté'),
+      html: '<div class="brief">' + res.first.map(function (x) {
+        var ol = objLine(x.pid), d = 100 * (x.pct - (lastPoll[x.pid] || 0));
+        return line(ol.met ? '🎯' : '·', chip(x.pid) + (x.pid === me ? '<b>Toi</b>' : esc(party(x.pid).short)) + ' : ' + pctFr(lastPoll[x.pid] || 0, 1) + ' % → <b>' + pctFr(x.pct, 1) + ' %</b> ' +
+          '<span class="muted">(' + (d >= 0 ? '+' : '−') + Math.abs(d).toFixed(1).replace('.', ',') + ' pt · « ' + esc(ol.o.name) + ' » ' + (ol.met ? 'réussi' : 'raté') + ')</span>');
+      }).join('') + '<p class="hint" style="margin:6px 0 0">Un objectif réussi ajoute des voix le jour du vote : c\'est la seule différence entre le dernier sondage et le 1er tour.</p></div>' });
+    h += '<div class="end-more">' + more.map(function (m, i) {
+      return '<button type="button" class="end-row" data-more="' + i + '"><span class="end-i">' + m.icon + '</span><span><b>' + esc(m.label) + '</b><small>' + esc(m.sub) + '</small></span><span class="end-chev">›</span></button>';
+    }).join('') + '</div>';
+    endMore = more;
     $('end-table').innerHTML = h;
     $('btn-govern').hidden = win !== me;
     go('end');

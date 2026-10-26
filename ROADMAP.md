@@ -131,6 +131,12 @@ Quand tu gagnes la présidentielle, le bouton « 🏛️ Gouverner le pays » ou
 - **Premier tour sans lecture** : pas de journal d'ouverture en partie rapide (il reste dans l'onglet Actu), et le dilemme du joueur passe au tour 2.
 - **Tutoriel en 4 gestes** : Lulu dit une phrase par étape, la meilleure région clignote, et chaque étape attend un geste du joueur. À la fin du tour, une récompense (ta place au sondage) remplace l'écran « Bon à savoir ».
 
+## v2.1 — fait : moins d'infos d'un coup, on va chercher le détail
+- **Journal du matin** : une première page de vrai journal (gros titre, dessin, 3 brèves) qui arrive à l'écran ; « Ouvrir le journal » donne les pages intérieures par rubriques.
+- **Flash info** en direct télé : carte des régions qui basculent, un seul gros titre, deux brèves au plus, bandeau des sondages qui défile ; « Tout le détail » pour le reste.
+- **Résultats** : second tour et podium à l'écran ; premier tour complet, reports de voix et objectifs secrets en sous-menus.
+- **Région touchée** : ses préoccupations s'affichent tout de suite.
+
 ## À venir (pistes du bêta-testeur)
 - **Campagne éclair** : un format court en 3 tours, et une sauvegarde automatique pour reprendre une partie.
 - **Mécaniques débloquées au fil des parties** : scandales et dilemmes, puis le programme détaillé, puis les alliances et la phase « gouverner ».
