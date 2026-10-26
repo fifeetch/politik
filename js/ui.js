@@ -476,7 +476,7 @@
       return '<div class="popbar"><span class="pb-lbl">' + sg.icon + ' ' + esc(sg.name) + '</span><span class="pb-track"><i style="width:' + (v * 2) + '%"></i><em style="left:' + (n * 2) + '%"></em></span><b>' + v.toFixed(1).replace('.', ',') + ' %</b>' +
         (ap ? '<span class="pb-a ' + (a > 0 ? 'up' : a < 0 ? 'down' : '') + '">' + (a > 0 ? '👍' : a < 0 ? '👎' : '·') + '</span>' : '') + '</div>';
     }).join('') + '</div><p class="hint">Le trait rouge = la moyenne nationale. 👍 / 👎 = l\'avis de ce groupe sur ton programme.</p>' +
-      (pl ? '<p>' + (bonus > 0 ? '❤️ <b>Région de cœur</b> pour ton programme : +1 cube sur tes Meetings ici.' : bonus < 0 ? '👎 <b>Région hostile</b> à ton programme : −1 cube sur tes Meetings ici.' : 'Ton programme reçoit ici un accueil moyen.') + '</p>' : '') +
+      (pl ? '<p>' + (bonus > 0 ? '❤️ <b>Région de cœur</b> pour ton programme : +1 soutien sur tes Meetings ici.' : bonus < 0 ? '👎 <b>Région hostile</b> à ton programme : −1 soutien sur tes Meetings ici.' : 'Ton programme reçoit ici un accueil moyen.') + '</p>' : '') +
       learnBox(rid === 'cor' ? 'outremer' : 'abstention') + srcHtml({ src: [D.SEGMENTS_SRC] });
     modal({ kicker: 'Qui vit ici ?', title: r.name, html: html });
   }
@@ -578,14 +578,20 @@
     if (!a) return then();
     var src = a.src === 'budget' ? 'Les économistes ont épluché ton programme.' : a.src === 'casseroles' ? 'À force d\'accumuler les casseroles, ça devait sortir.' :
       a.src === 'canard' ? 'Le Canard Déchaîné sort l\'info en une.' : 'Un rival a fouillé ton passé…';
-    var html = '<div class="paper paper-spin paper-scandal"><div class="paper-mast">' + (a.src === 'canard' ? 'LE CANARD DÉCHAÎNÉ' : 'LE QUOTIDIEN NATIONAL') + ' <span>· Édition spéciale</span></div>' +
-      '<div class="paper-vign">' + A.vignette('scandale') + '</div><div class="paper-head">' + esc(a.title) + '</div></div>' +
-      '<p><b>' + esc(src) + '</b> ' + esc(a.text) + '</p>' + learnBox('affaires') +
+    // v2.5.1 : l'édition spéciale au style de la une (scène plein cadre, mot géant)
+    var word = a.src === 'budget' ? 'Ardoise.' : a.src === 'casseroles' ? 'Casserole.' : a.src === 'canard' ? 'Révélations.' : 'Coup bas.';
+    var canard = a.src === 'canard';
+    var html = '<div class="aff-une">' + Press.scene('scandale') +
+      '<div class="une-top"><span class="une-logo' + (canard ? ' canard' : '') + '"><b>' + (canard ? 'CD' : 'QN') + '</b><span>' + (canard ? 'Le Canard<br>Déchaîné' : 'Le Quotidien<br>National') + '</span></span><span class="aff-tag">Édition spéciale</span></div>' +
+      '<div class="aff-word">' + esc(word) + '</div><p class="aff-title">' + esc(a.title) + '</p></div>' +
+      '<p><b>' + esc(src) + '</b> ' + esc(a.text) + '</p>' +
+      '<button type="button" class="linkbtn" id="aff-learn">📚 Les affaires et la justice</button>' +
       '<div class="pick">' + D.REACTIONS.map(function (rc, i) {
         return '<button type="button" class="pick-row" data-rc="' + i + '"><span class="pick-txt"><b>' + esc(rc.label) + '</b><small>' + esc(rc.hint) + '</small></span></button>';
       }).join('') + '</div>';
     modal({ kicker: '💥 Affaire', title: 'Ça sort dans la presse', cls: 'shake', html: html, buttons: [],
       onOpen: function () {
+        $('aff-learn').addEventListener('click', function () { var L = D.LEARN.affaires; $('aff-learn').outerHTML = '<div class="learn learn-inline">' + A.advisor() + '<div><b>' + esc(L.title) + '</b><p>' + esc(L.text) + '</p>' + srcHtml(L) + '</div></div>'; });
         Array.prototype.forEach.call(document.querySelectorAll('[data-rc]'), function (row) {
           row.addEventListener('click', function () {
             var res = E.resolveAffair(g, me, +row.getAttribute('data-rc'));
@@ -628,13 +634,13 @@
     var inc = info.income.filter(function (x) { return x.pid === me; })[0];
     if (inc) mine.push(line('💰', 'Ta caisse : <b>+' + inc.money + ' €</b> · <b>+' + inc.infl + ' ★</b>' + (inc.forme ? ' · <b>+' + inc.forme + ' ⚡</b>' : '')));
     var myMil = info.militants.filter(function (x) { return x.pid === me; });
-    if (myMil.length) mine.push(line('👥', 'Tes militants : +1 cube en ' + myMil.map(function (x) { return SHORT[x.rid]; }).join(', ')));
+    if (myMil.length) mine.push(line('👥', 'Tes militants : +1 soutien en ' + myMil.map(function (x) { return SHORT[x.rid]; }).join(', ')));
     if (info.event) info.event.effects.filter(function (f) { return f.pid === me; }).forEach(function (f) { mine.push(line('📰', esc(f.text))); });
     var myAffairsLater = [];
     if (info.programmes) info.programmes.forEach(function (x) {
       if (x.pid === me) {
         mine.push(line('📋', 'Il te reste <b>' + x.budget + ' Md€</b> à financer : ' + FUND_LABEL[fundingState(x.over)].toLowerCase() + (x.over > 0 ? ', ça va se voir…' : '.') + (x.cas ? ' (+' + x.cas + ' casserole' + (x.cas > 1 ? 's' : '') + ')' : '')));
-        if (x.echo.length) mine.push(line('❤️', 'Ton programme fait mouche en ' + x.echo.map(function (r) { return SHORT[r]; }).join(', ') + ' : +1 cube dans chacune.'));
+        if (x.echo.length) mine.push(line('❤️', 'Ton programme fait mouche en ' + x.echo.map(function (r) { return SHORT[r]; }).join(', ') + ' : +1 soutien dans chacune.'));
       }
       else if (x.choc.length) rivals.push(line('📢', esc(party(x.pid).short) + ' fait parler avec « ' + esc(x.choc[0]) + ' ».'));
     });
@@ -646,7 +652,7 @@
     (aiAff || []).forEach(function (x) {
       rivals.push(line('💥', '<b>Affaire pour ' + esc(party(x.pid).short) + '</b> : « ' + esc(x.title) + ' ». Réaction : <b>' + esc(x.reaction) + '</b>' + (x.effects.length ? ' — ' + esc(x.effects.join(', ')) : '') + '.'));
     });
-    if (info.usure) rivals.push(line('🕰️', 'Usure du pouvoir : En Mouvement perd 1 cube en ' + esc(E.REG[info.usure].name) + '.'));
+    if (info.usure) rivals.push(line('🕰️', 'Usure du pouvoir : En Mouvement perd 1 soutien en ' + esc(E.REG[info.usure].name) + '.'));
     if (aiDil) rivals.push(line('🤔', esc(party(aiDil.pid).short) + ', face à « ' + esc(aiDil.title) + ' », choisit : <b>' + esc(aiDil.choice) + '</b>' + (aiDil.effects.length ? ' — ' + esc(aiDil.effects.join(', ')) : '') + '.'));
     var country = [];
     if (crisis) crisis.effects.forEach(function (t) { country.push(line('📰', esc(t))); });
@@ -1141,7 +1147,7 @@
     var v = E.regionVoters(g, selected), echo = E.echoBonus(g, me, selected), rk = rankIn(selected, me), n = E.cubes(g, selected, me);
     box.innerHTML = '<div class="region-head"><h2 class="region-name">' + esc(r.name) + '</h2>' +
       (echo > 0 ? '<span class="chip chip-good">❤️ De cœur</span>' : echo < 0 ? '<span class="chip chip-bad">👎 Hostile</span>' : '') + tag + '</div>' +
-      '<div class="region-line"><span>' + mio(v.ins) + ' M inscrits · ' + pctFr(v.abst) + ' % d\'abstention · tu es <b>' + rk + (rk === 1 ? 'er' : 'ᵉ') + '</b> ici (' + n + ' cube' + (n > 1 ? 's' : '') + ')</span>' +
+      '<div class="region-line"><span>' + mio(v.ins) + ' M inscrits · ' + pctFr(v.abst) + ' % d\'abstention · tu es <b>' + rk + (rk === 1 ? 'er' : 'ᵉ') + '</b> ici (' + n + ' soutien' + (n > 1 ? 's' : '') + ')</span>' +
       '<button type="button" class="linkbtn" id="btn-reg-more">Détails</button></div>' +
       '<div class="region-concerns"><span>Ce qui les préoccupe :</span>' + concernsHtml(selected) + '</div>';
     $('btn-reg-more').addEventListener('click', regionDetails);
@@ -1151,17 +1157,17 @@
     var r = E.REG[selected];
     var html = '<div class="chips"><span class="chips-k">Soucis</span>' + r.concerns.map(function (x) { return '<span class="chip chip-theme' + (E.isHot(g, x) ? ' hot' : '') + '">' + th(x).icon + ' ' + esc(th(x).short) + (E.isHot(g, x) ? ' 🔥' : '') + '</span>'; }).join('') + '</div>';
     var rows = g.players.filter(function (p) { return E.cubes(g, selected, p.id) > 0; }).sort(function (a, b) { return E.cubes(g, selected, b.id) - E.cubes(g, selected, a.id); });
-    html += '<div class="kicker">Qui mène ici (cubes = électeurs)</div><div class="brief">' + rows.map(function (p, i) {
+    html += '<div class="kicker">Qui mène ici</div><div class="brief">' + rows.map(function (p, i) {
       var nn = E.cubes(g, selected, p.id);
       return '<div class="vote-row' + (p.id === me ? ' qual' : '') + '"><span class="vote-lbl">' + chip(p.id) + (p.id === me ? 'Toi' : esc(party(p.id).short)) + '</span><span class="vote-bar"><i style="width:' + (10 * nn) + '%;background:' + party(p.id).color + '"></i></span><b>' + nn + '</b></div>';
     }).join('') + '</div>';
     var c = g.regions[selected].controller, need = 0;
     if (c !== me) { var top = rows.length ? E.cubes(g, selected, rows[0].id) : 0; need = Math.max(E.minControl(me), top + 1) - E.cubes(g, selected, me); }
-    if (need > 0) html += '<p>Il te manque <b>' + need + ' cube' + (need > 1 ? 's' : '') + '</b> pour prendre la région (au moins ' + E.minControl(me) + ' et être devant tout le monde).</p>';
+    if (need > 0) html += '<p>Il te manque <b>' + need + ' soutien' + (need > 1 ? 's' : '') + '</b> pour prendre la région (au moins ' + E.minControl(me) + ' et être devant tout le monde).</p>';
     if ((g.bases[selected] || []).indexOf(me) >= 0) html += '<p>👥 Tes militants sont implantés ici : +1 électeur par tour.</p>';
     var bd = E.terrainBreakdown(g, me, selected, theme), room = R.maxCubes - E.cubes(g, selected, me);
     html += '<div class="calc-line">📣 Meeting ici : ' + bd.parts.map(function (x, i) { return (i ? (x.n >= 0 ? ' + ' : ' − ') : '') + esc(x.label) + ' <b>' + (i ? Math.abs(x.n) : x.n) + '</b>'; }).join('') +
-      ' = <b>' + bd.total + ' cube' + (bd.total > 1 ? 's' : '') + '</b>' + (E.poachTarget(g, me, selected, true) ? ' <span class="muted">· et peut-être 1 électeur pris à un parti voisin</span>' : '') + (room < bd.total ? ' <span class="calc-warn">(plafond : +' + Math.max(0, room) + ' seulement)</span>' : '') + '</div>';
+      ' = <b>' + bd.total + ' soutien' + (bd.total > 1 ? 's' : '') + '</b>' + (E.poachTarget(g, me, selected, true) ? ' <span class="muted">· et peut-être 1 électeur pris à un parti voisin</span>' : '') + (room < bd.total ? ' <span class="calc-warn">(plafond : +' + Math.max(0, room) + ' seulement)</span>' : '') + '</div>';
     var mk = E.markerAt(g, selected);
     if (mk) html += '<div class="mk-line">' + mk.icon + ' ' + esc(mk.title) + ' : ici, ' + th(mk.theme).icon + ' ' + esc(th(mk.theme).name) + ' compte comme à la une.</div>';
     modal({ kicker: 'Région', title: r.name, html: html, buttons: [{ label: 'Qui vit ici ?', onClick: function () { popModal(selected); } }, { label: 'Fermer', primary: true }] });
@@ -1198,24 +1204,24 @@
     var r = act.region, n;
     switch (act.type) {
       case 'terrain':
-        if (!r) return 'des cubes dans 1 région';
-        n = E.terrainCubes(g, me, r, act.theme); return '<b>+' + n + ' cube' + (n > 1 ? 's' : '') + '</b> ici';
+        if (!r) return 'des soutiens dans 1 région';
+        n = E.terrainCubes(g, me, r, act.theme); return '<b>+' + n + ' soutien' + (n > 1 ? 's' : '') + '</b> ici';
       case 'medias':
-        if (!r) return 'des cubes dans 3 régions';
+        if (!r) return 'des soutiens dans 3 régions';
         n = 0; E.mediaRegions(g, me, r, act.theme).forEach(function (rid) { n += E.mediaCubes(g, me, rid, act.theme); });
-        return '<b>+' + n + ' cube' + (n > 1 ? 's' : '') + '</b> · 3 régions';
+        return '<b>+' + n + ' soutien' + (n > 1 ? 's' : '') + '</b> · 3 régions';
       case 'mobiliser':
         if (!r) return 'fais voter des abstentionnistes';
-        n = E.mobilizeGain(g, me, r); return '<b>+' + n.n + ' cube' + (n.n > 1 ? 's' : '') + '</b> · des abstentionnistes vont voter';
-      case 'reseaux': return 'dé : <b>−1 à +' + (4 + (E.isHot(g, act.theme) ? 1 : 0)) + '</b> cubes';
+        n = E.mobilizeGain(g, me, r); return '<b>+' + n.n + ' soutien' + (n.n > 1 ? 's' : '') + '</b> · des abstentionnistes vont voter';
+      case 'reseaux': return 'dé : <b>−1 à +' + (4 + (E.isHot(g, act.theme) ? 1 : 0)) + '</b> soutiens';
       case 'imposer': return 'ton thème <b>à la une</b>';
-      case 'contre': return 'rival en tête <b>−2 cubes</b> · +1 🍳';
-      case 'militants': return '<b>+1 cube</b> ici à chaque tour · ' + (R.militantsMax - mePl().militants) + ' équipe' + (R.militantsMax - mePl().militants > 1 ? 's' : '') + ' dispo';
+      case 'contre': return 'rival en tête <b>−2 soutiens</b> · +1 🍳';
+      case 'militants': return '<b>+1 soutien</b> ici à chaque tour · ' + (R.militantsMax - mePl().militants) + ' équipe' + (R.militantsMax - mePl().militants > 1 ? 's' : '') + ' dispo';
       case 'fonds': return '<b>+' + E.fundsGain(me).money + ' €' + (E.fundsGain(me).infl ? ' +' + E.fundsGain(me).infl + ' ★' : '') + '</b>';
       case 'reforme':
-        if (!r) return '+1 cube dans des régions';
+        if (!r) return '+1 soutien dans des régions';
         if (g.regions[r].controller !== me) return 'région à toi requise';
-        return '<b>+1 cube</b> rég. ' + PROF_PLURAL[E.REG[r].profile];
+        return '<b>+1 soutien</b> rég. ' + PROF_PLURAL[E.REG[r].profile];
     }
     return '';
   }
@@ -1513,7 +1519,7 @@
       }).join('') + '</div>' +
       '<p><b>Préparation</b> : chaque ★ dépensée = +1 point.</p>' +
       '<div class="bid"><input id="bid" type="range" min="0" max="' + max + '" value="' + Math.min(1, max) + '" aria-label="Préparation en influence"><output id="bid-out">' + Math.min(1, max) + ' ★</output></div>' +
-      '<p class="hint">Le vainqueur gagne +' + mult + ' cube dans 4 régions, le 2e dans 2 régions.' + (grand ? ' <b>Grand débat final : gains doublés !</b>' : '') + '</p>' + learnBox('debat');
+      '<p class="hint">Le vainqueur gagne +' + mult + ' soutien dans 4 régions, le 2e dans 2 régions.' + (grand ? ' <b>Grand débat final : gains doublés !</b>' : '') + '</p>' + learnBox('debat');
     var prep = {};
     modal({ kicker: grand ? 'Grand débat final' : 'Débat télévisé', title: 'Ce soir, face-à-face !', html: html,
       onOpen: function () { var r = $('bid'); r.addEventListener('input', function () { $('bid-out').textContent = r.value + ' ★'; }); },
@@ -1561,7 +1567,7 @@
       var h = '<div class="brief">' + res.ranking.map(function (x, n) {
         return line(n === 0 && res.winner ? '🏆' : (n + 1) + '.', chip(x.pid) + (x.pid === me ? '<b>Toi</b>' : esc(party(x.pid).short)) + ' — <b>' + x.score + ' pts</b>' + (x.prep ? ' <span class="muted">(dont ' + x.prep + ' de préparation)</span>' : ''));
       }).join('') + '</div>';
-      res.rewards.forEach(function (w) { h += '<p>' + chip(w.pid) + ' +' + w.each + ' cube' + (w.each > 1 ? 's' : '') + ' en ' + w.regions.map(function (x) { return SHORT[x]; }).join(', ') + '</p>'; });
+      res.rewards.forEach(function (w) { h += '<p>' + chip(w.pid) + ' +' + w.each + ' soutien' + (w.each > 1 ? 's' : '') + ' en ' + w.regions.map(function (x) { return SHORT[x]; }).join(', ') + '</p>'; });
       modal({ kicker: 'Débat', title: !res.winner ? 'Égalité en tête' : res.winner === me ? 'Tu remportes le débat !' : party(res.winner).short + ' remporte le débat', html: h,
               buttons: [{ label: 'Fin du tour', primary: true, onClick: spotlight }] });
     }
@@ -1572,15 +1578,15 @@
     if (!t) return finishTurn(null);
     if (t === me) {
       var can = mePl().infl >= R.spotlightCost;
-      modal({ kicker: 'Sous les projecteurs', title: 'Tu es en tête des sondages !', html: '<p>Les médias fouillent ton passé. Paie <b>2 ★</b> pour étouffer l\'affaire, ou perds 1 cube dans tes 2 plus grandes régions.</p>',
+      modal({ kicker: 'Sous les projecteurs', title: 'Tu es en tête des sondages !', html: '<p>Les médias fouillent ton passé. Paie <b>2 ★</b> pour étouffer l\'affaire, ou perds 1 soutien dans tes 2 plus grandes régions.</p>',
         buttons: [{ label: 'Payer 2 ★', primary: true, disabled: !can, onClick: function () { finishTurn(E.applySpotlight(g, me, true)); } },
-                  { label: 'Perdre 2 cubes', onClick: function () { finishTurn(E.applySpotlight(g, me, false)); } }] });
+                  { label: 'Perdre 2 soutiens', onClick: function () { finishTurn(E.applySpotlight(g, me, false)); } }] });
     } else finishTurn(E.applySpotlight(g, t, AI.paySpotlight(g, t)));
   }
 
   function finishTurn(spot) {
     var res = E.endTurn(g); render();
-    if (spot && !spot.paid && spot.pid !== me) toast(party(spot.pid).short + ' sous les projecteurs : −1 cube en ' + spot.regions.map(function (x) { return SHORT[x]; }).join(', '));
+    if (spot && !spot.paid && spot.pid !== me) toast(party(spot.pid).short + ' sous les projecteurs : −1 soutien en ' + spot.regions.map(function (x) { return SHORT[x]; }).join(', '));
     else if (spot && spot.paid && spot.pid !== me) toast(party(spot.pid).short + ' paie 2 ★ pour éviter le scandale');
     if (res.over) return electionNight();
     if (res.between) return betweenScreen();
@@ -1941,14 +1947,14 @@
     var html = '<div class="cand-line">' + A.portrait(me) + '<div><b class="cand-name">' + esc(p.candidate) + '</b><span>' + esc(p.candTitle) + '</span></div></div>' +
       '<p>' + objLine(me).html + '.</p>' +
       '<div class="brief"><div class="kicker">Ton programme · ' + pl.budget + ' Md€</div>' + pl.programme.map(function (id, i) {
-        var m = E.measure(id); return line(i === 0 ? '★' : th(m.theme).icon, esc(m.name) + (i === 0 ? ' <span class="muted">(mesure phare : +1 cube en Meeting sur ' + esc(th(m.theme).name) + ')</span>' : ''));
+        var m = E.measure(id); return line(i === 0 ? '★' : th(m.theme).icon, esc(m.name) + (i === 0 ? ' <span class="muted">(mesure phare : +1 soutien en Meeting sur ' + esc(th(m.theme).name) + ')</span>' : ''));
       }).join('') + (pl.financing || []).map(function (id) { return line('🏦', esc(E.measure(id).name)); }).join('') +
       line('❤️', 'Régions de cœur : ' + E.echoRanks(g, me).good.map(function (r) { return SHORT[r]; }).join(', ') + ' · 👎 hostiles : ' + E.echoRanks(g, me).bad.map(function (r) { return SHORT[r]; }).join(', ')) + '</div>' +
       '<div class="brief"><div class="kicker">Ton candidat</div>' +
       line('⚡', '<b>Forme ' + pl.forme + ' / ' + R.formeMax + '</b> — Meeting et Télé en coûtent 1. À 0, risque de gaffe. +' + (R.formeRegen + (me === 'EM' ? 1 : 0)) + ' par tour.') +
       line('🍳', '<b>' + pl.cas + ' casserole' + (pl.cas > 1 ? 's' : '') + '</b> — chacune = ' + Math.round(R.affairPerCasserole * 100) + ' % de risque d\'affaire par tour. Attaquer, enquêter, trahir, le 49.3 et certains choix en ajoutent.') +
-      line(pl.momentum > 0 ? '↗' : pl.momentum < 0 ? '↘' : '→', pl.momentum > 0 ? '<b>En dynamique</b> : +1 cube sur tes Meetings.' : pl.momentum < 0 ? '<b>Passage à vide</b> : −1 cube sur tes Meetings.' : '<b>Dynamique stable.</b> Gagne 1,5 point au sondage en un tour pour être en dynamique.') +
-      line('👥', '<b>' + pl.militants + ' / ' + R.militantsMax + ' équipes de militants</b> — chacune rapporte 1 cube par tour.') +
+      line(pl.momentum > 0 ? '↗' : pl.momentum < 0 ? '↘' : '→', pl.momentum > 0 ? '<b>En dynamique</b> : +1 soutien sur tes Meetings.' : pl.momentum < 0 ? '<b>Passage à vide</b> : −1 soutien sur tes Meetings.' : '<b>Dynamique stable.</b> Gagne 1,5 point au sondage en un tour pour être en dynamique.') +
+      line('👥', '<b>' + pl.militants + ' / ' + R.militantsMax + ' équipes de militants</b> — chacune rapporte 1 soutien par tour.') +
       '</div><p><b>Force :</b> ' + esc(p.force) + '</p><p><b>Faiblesse :</b> ' + esc(p.weakness) + '</p>' + credHtml(me);
     $('parti-body').innerHTML = '<span class="kicker">Ton parti</span><h1 class="h1 tab-title">' + esc(p.name) + '</h1>' + html +
       '<div class="stack parti-btns"><button type="button" class="btn" id="pb-lib">📚 Comprendre la politique</button><button type="button" class="btn" id="pb-rules">Règles du jeu</button><button type="button" class="btn btn-ghost" id="pb-quit">Abandonner la partie</button></div>';
@@ -1971,7 +1977,7 @@
   }
   function showRules() {
     modal({ kicker: 'Règles v1.5', title: 'Comment gagner', html:
-      '<p><b>But :</b> remporter l\'élection présidentielle à la fin des <b>8 tours de campagne</b>. Chaque région vote selon ses cubes. Elle pèse ses <b>vrais électeurs</b> : ses inscrits (le chiffre sur la carte, en millions), moins ceux qui s\'abstiennent, moins ceux qui votent blanc ou nul. Le parti qui contrôle une région y gagne un petit bonus.</p>' +
+      '<p><b>But :</b> remporter l\'élection présidentielle à la fin des <b>8 tours de campagne</b>. Chaque région vote selon ses soutiens. Elle pèse ses <b>vrais électeurs</b> : ses inscrits (le chiffre sur la carte, en millions), moins ceux qui s\'abstiennent, moins ceux qui votent blanc ou nul. Le parti qui contrôle une région y gagne un petit bonus.</p>' +
       '<p><b>Deux modes de jeu.</b> <b>Réaliste</b> : chaque parti démarre avec ses vrais scores, au choix ceux de la présidentielle 2022, la moyenne des législatives et des européennes 2024, ou la moyenne de 6 sondages d\'octobre 2026 ; les petites listes et les partis absents de ta partie comptent sous « Autres » dans les sondages, et la campagne les réduit peu à peu. <b>Simulation</b> : chaque parti a 2 électeurs dans chaque région et personne ne tient de région : le départ est strictement égal, sans bonus caché. Ensuite, au second tour, les partis du centre de l\'axe reçoivent plus facilement des reports de voix que ceux des extrémités.</p>' +
       '<p><b>L\'abstention :</b> environ un quart des inscrits ne votent pas, et beaucoup plus en outre-mer. Le bouton <b>Abstention</b> au-dessus de la carte la montre. 🚪 <b>Mobiliser</b> fait voter des abstentionnistes ; attaquer ou multiplier les affaires en dégoûte d\'autres.</p>' +
       '<p><b>Premier tour :</b> les ' + D.PARTIES.length + ' partis sont en lice. Plus de 50 % des suffrages exprimés (les blancs ne comptent pas) = élu directement. Sinon, les deux premiers sont qualifiés, et le résultat est figé.</p>' +
@@ -1983,26 +1989,26 @@
       '<p><b>Chaque tour :</b> revenus (4 € + 1 € par région contrôlée, max +3 ; +2 ★), un événement, puis <b>3 actions secrètes</b>. Tout le monde choisit en secret, puis les plans sont joués <b>chacun son tour</b> : l\'action 1 de chaque parti, puis l\'action 2, puis la 3. Le parti qui commence change à chaque tour (l\'ordre est affiché dans le flash info). Une action peut donc échouer si un rival a changé la situation juste avant : le flash info te dit pourquoi.</p>' +
       '<p><b>Ton message.</b> Meeting, Télé, Buzz et Faire la une portent un <b>thème</b> (💶 🏭 🏥 🌿 🚓 🛂). Son <b>impact</b>, de 0 à 4 = ta crédibilité sur le thème (0 à 2) + 1 si la région s\'en préoccupe + 1 si le thème fait l\'actu. Le bon message au bon endroit rapporte deux fois plus.</p>' +
       '<p><b>Les actions :</b></p><ul class="rules-acts">' +
-        '<li>📣 <b>Meeting</b> (2 €) : des cubes dans la région. <b>Base</b> de 1 à 4 selon l\'impact du message, <b>plus les bonus</b> : mesure phare +1, région de cœur +1 (hostile −1), dynamique ±1, et pour Socialisme Modéré +1 là où il a déjà 5 cubes. Le détail s\'affiche quand tu touches une région. Une région compte au plus 10 cubes par parti.</li>' +
-        '<li>📺 <b>Télé</b> (3 € + 1 ★) : ton message passe dans la région et dans les 2 autres régions les plus concernées par le thème. +1 cube dans chacune (+2 si impact 4, rien si impact 0).</li>' +
-        '<li>🚪 <b>Mobiliser</b> (2 €) : du porte-à-porte pour faire voter des abstentionnistes. 1 cube, +1 avec tes militants, +1 si ton programme parle à ceux qui votent peu ici, +1 si la région s\'abstient beaucoup (3 au plus). Jusqu\'au tour 3, tu fais aussi inscrire de nouveaux électeurs.</li>' +
-        '<li>📱 <b>Buzz</b> (1 €, menu Plus) : un coup de dé, de −1 à +4 cubes. +1 si le thème fait l\'actu.</li>' +
+        '<li>📣 <b>Meeting</b> (2 €) : des soutiens dans la région. <b>Base</b> de 1 à 4 selon l\'impact du message, <b>plus les bonus</b> : mesure phare +1, région de cœur +1 (hostile −1), dynamique ±1, et pour Socialisme Modéré +1 là où il a déjà 5 soutiens. Le détail s\'affiche quand tu touches une région. Une région compte au plus 10 soutiens par parti.</li>' +
+        '<li>📺 <b>Télé</b> (3 € + 1 ★) : ton message passe dans la région et dans les 2 autres régions les plus concernées par le thème. +1 soutien dans chacune (+2 si impact 4, rien si impact 0).</li>' +
+        '<li>🚪 <b>Mobiliser</b> (2 €) : du porte-à-porte pour faire voter des abstentionnistes. 1 soutien, +1 avec tes militants, +1 si ton programme parle à ceux qui votent peu ici, +1 si la région s\'abstient beaucoup (3 au plus). Jusqu\'au tour 3, tu fais aussi inscrire de nouveaux électeurs.</li>' +
+        '<li>📱 <b>Buzz</b> (1 €, menu Plus) : un coup de dé, de −1 à +4 soutiens. +1 si le thème fait l\'actu.</li>' +
         '<li>🗞️ <b>Faire la une</b> (2 € + 2 ★) : ton thème fera l\'actu au tour suivant… pour tout le monde.</li>' +
-        '<li>🥊 <b>Attaquer</b> (2 € + 1 ★) : le rival le plus fort de la région perd 2 cubes (il faut y avoir 1 cube).</li>' +
+        '<li>🥊 <b>Attaquer</b> (2 € + 1 ★) : le rival le plus fort de la région perd 2 soutiens (il faut y avoir 1 soutien).</li>' +
         '<li>💰 <b>Collecte</b> (gratuit) : +3 € dans la caisse.</li>' +
-        '<li>📜 <b>Promesse</b> (4 ★) : dans une région que tu tiens, +1 cube dans toutes les régions du même type.</li>' +
-        '<li>👥 <b>Militants</b> (3 €) : une équipe dans la région, +1 cube à chaque début de tour (3 équipes au plus).</li>' +
+        '<li>📜 <b>Promesse</b> (4 ★) : dans une région que tu tiens, +1 soutien dans toutes les régions du même type.</li>' +
+        '<li>👥 <b>Militants</b> (3 €) : une équipe dans la région, +1 soutien à chaque début de tour (3 équipes au plus).</li>' +
         '<li>🃏 2 cartes spéciales par parti.</li></ul>' +
-      '<p><b>⚡ La forme du candidat</b> (4 au plus, +2 par tour). Meeting et Télé coûtent 1 ⚡. Si une action la fait tomber à 0, le candidat épuisé peut faire une <b>gaffe</b> (4 chances sur 10) : aucun cube et une casserole.</p>' +
-      '<p><b>↗ La dynamique.</b> Si tu gagnes 1,5 point au sondage en un tour, tes Meetings rapportent 1 cube de plus au tour suivant. Si tu en perds 1,5, 1 de moins.</p>' +
+      '<p><b>⚡ La forme du candidat</b> (4 au plus, +2 par tour). Meeting et Télé coûtent 1 ⚡. Si une action la fait tomber à 0, le candidat épuisé peut faire une <b>gaffe</b> (4 chances sur 10) : aucun soutien et une casserole.</p>' +
+      '<p><b>↗ La dynamique.</b> Si tu gagnes 1,5 point au sondage en un tour, tes Meetings rapportent 1 soutien de plus au tour suivant. Si tu en perds 1,5, 1 de moins.</p>' +
       '<p><b>Crédibilité qui évolue.</b> Après 3 actions sur un même thème, ta crédibilité dessus augmente (2 au plus). Le bonus compte à partir de l\'action suivante.</p>' +
       '<p><b>🎯 Objectif secret.</b> Chaque parti en reçoit un au hasard (sa progression s\'affiche sous la carte). Réussi à la fin de la campagne, il ajoute environ 3 à 4 % des voix le jour du vote. Ce bonus n\'apparaît pas dans les sondages.</p>' +
-      '<p><b>📋 Ton programme.</b> Avant la campagne, choisis 5 mesures. Chacune te rend plus crédible sur son thème. La 1re est ta <b>mesure phare</b> : +1 cube sur tes Meetings qui en parlent. Il te reste au plus ' + R.budgetCap + ' Md€ à financer : au-delà, le programme est partiellement financé (1 casserole par tranche de ' + R.budgetCasStep + ' Md€) ou non financé, et une affaire tombe au tour 3. Les mesures 💥 choc font parler (+1 cube dans 2 régions) mais ajoutent une casserole.</p>' +
+      '<p><b>📋 Ton programme.</b> Avant la campagne, choisis 5 mesures. Chacune te rend plus crédible sur son thème. La 1re est ta <b>mesure phare</b> : +1 soutien sur tes Meetings qui en parlent. Il te reste au plus ' + R.budgetCap + ' Md€ à financer : au-delà, le programme est partiellement financé (1 casserole par tranche de ' + R.budgetCasStep + ' Md€) ou non financé, et une affaire tombe au tour 3. Les mesures 💥 choc font parler (+1 soutien dans 2 régions) mais ajoutent une casserole.</p>' +
       '<p><b>💥 Les affaires.</b> Chaque casserole 🍳 donne 12 % de risque d\'affaire par tour. Le Canard Déchaîné en sort aussi de temps en temps, et un rival peut <b>🔎 enquêter</b> sur toi. Quand une affaire tombe, tu choisis ta réaction : nier, t\'excuser, sacrifier un collaborateur ou accuser les médias.</p>' +
       '<p><b>🤔 Les dilemmes.</b> Chaque tour, un parti (à tour de rôle) doit faire un choix. Certains choix ont des <b>conséquences différées</b> qui peuvent ressortir quelques tours plus tard.</p>' +
       '<p><b>Les crises.</b> Chaque partie connaît une crise en 3 actes (krach, grève, été brûlant, désindustrialisation). Les régions touchées sont marquées sur la carte : leur thème y compte comme à la une.</p>' +
-      '<p><b>🎙️ Le débat télévisé</b> (tours 3, 6 et 8) : chaque parti affronte 3 adversaires tirés au sort, une question chacun. Choisis ta réplique : 🥊 Attaque bat ❤️ Émotion, ❤️ Émotion bat 📊 Chiffres, 📊 Chiffres bat 🥊 Attaque, 🙃 Esquive = nul. Manche gagnée 2 points, nulle 1. Bonus : 🥊 +1 si le rival a des casseroles, 📊 +1 sur ton point fort (−1 si ce n\'est pas ton sujet), ❤️ +1 si le thème fait l\'actu. Chaque ★ de préparation (3 au plus) = +1 point. Le 1er gagne +1 cube dans 4 régions, le 2e dans 2 régions (doublé au débat final). Chaque parti a son tempérament : observe-le !</p>' +
-      '<p><b>Sous les projecteurs :</b> le premier des sondages paie 2 ★ ou perd des cubes à chaque fin de tour.</p>' });
+      '<p><b>🎙️ Le débat télévisé</b> (tours 3, 6 et 8) : chaque parti affronte 3 adversaires tirés au sort, une question chacun. Choisis ta réplique : 🥊 Attaque bat ❤️ Émotion, ❤️ Émotion bat 📊 Chiffres, 📊 Chiffres bat 🥊 Attaque, 🙃 Esquive = nul. Manche gagnée 2 points, nulle 1. Bonus : 🥊 +1 si le rival a des casseroles, 📊 +1 sur ton point fort (−1 si ce n\'est pas ton sujet), ❤️ +1 si le thème fait l\'actu. Chaque ★ de préparation (3 au plus) = +1 point. Le 1er gagne +1 soutien dans 4 régions, le 2e dans 2 régions (doublé au débat final). Chaque parti a son tempérament : observe-le !</p>' +
+      '<p><b>Sous les projecteurs :</b> le premier des sondages paie 2 ★ ou perd des soutiens à chaque fin de tour.</p>' });
   }
 
   /* ---------- Installer l'application (PWA) ---------- */

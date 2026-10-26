@@ -163,6 +163,10 @@ Quand tu gagnes la présidentielle, le bouton « 🏛️ Gouverner le pays » ou
 - **Équilibre** (`node test/perso-sim.js 200`) : départ entre 2 et 4 %, environ 8 % au 1er tour quand l'ordinateur le mène, victoire 5 à 18 % des parties selon sa place sur l'axe (plus facile au centre, plus dur aux extrêmes).
 - Le gouvernement et l'opposition sont décalés en v2.6 et v2.7.
 
+## v2.5.1 — fait : deux corrections
+- Le mot « cubes » (venu du jeu de plateau) est remplacé par **soutiens** dans tous les textes du jeu.
+- L'affaire qui sort dans la presse adopte le style de la une de la v2.2 (scène plein cadre, mot géant), la fiche « Le saviez-vous ? » s'ouvre d'un toucher.
+
 ## Prochains lots (gouvernement, opposition)
 - **v2.6 — Le gouvernement** : 6 postes, cartes ministres (compétence, loyauté, notoriété, un trait), parité, allié servi, remaniement.
 - **v2.7 — L'opposition** : le perdant (finaliste ou éliminé au 1er tour) continue chef de son parti, à chaque trimestre pendant 5 ans : propositions de loi le jour réservé, coalitions, motions de censure ; chute du gouvernement, dissolution par le président (dès l'année 2), cohabitation où tu deviens Premier ministre.

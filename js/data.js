@@ -282,10 +282,10 @@
   var BUDGET_AFFAIR = { id: 'budget', title: 'Le programme non financé', text: 'Les économistes ont fait les comptes : ton programme coûte bien plus que ce que tu annonces.' };
   /* Les 4 façons de réagir à une affaire */
   var REACTIONS = [
-    { id: 'nier',    label: 'Nier en bloc',                hint: 'Pile ou face : ça passe… ou −3 cubes et +1 casserole', fx: [{ k: 'dice', chance: 0.5, win: [], lose: [{ k: 'strong', n: -3 }, { k: 'cas', n: 1 }] }] },
-    { id: 'excuses', label: 'S\'excuser publiquement',     hint: '−1 cube dans tes 2 meilleures régions, mais −2 casseroles : la page est tournée', fx: [{ k: 'loseTop', n: 1, count: 2 }, { k: 'cas', n: -2 }] },
-    { id: 'fusible', label: 'Sacrifier un collaborateur',  hint: '−1 cube, −1 ★, −1 casserole', fx: [{ k: 'strong', n: -1 }, { k: 'infl', n: -1 }, { k: 'cas', n: -1 }] },
-    { id: 'medias',  label: 'Accuser les médias',          hint: '1 chance sur 3 que ta base se mobilise (+1 cube) ; sinon −2 cubes et +2 casseroles', fx: [{ k: 'dice', chance: 0.34, win: [{ k: 'regions', n: 1, count: 1 }], lose: [{ k: 'strong', n: -2 }, { k: 'cas', n: 2 }] }] }
+    { id: 'nier',    label: 'Nier en bloc',                hint: 'Pile ou face : ça passe… ou −3 soutiens et +1 casserole', fx: [{ k: 'dice', chance: 0.5, win: [], lose: [{ k: 'strong', n: -3 }, { k: 'cas', n: 1 }] }] },
+    { id: 'excuses', label: 'S\'excuser publiquement',     hint: '−1 soutien dans tes 2 meilleures régions, mais −2 casseroles : la page est tournée', fx: [{ k: 'loseTop', n: 1, count: 2 }, { k: 'cas', n: -2 }] },
+    { id: 'fusible', label: 'Sacrifier un collaborateur',  hint: '−1 soutien, −1 ★, −1 casserole', fx: [{ k: 'strong', n: -1 }, { k: 'infl', n: -1 }, { k: 'cas', n: -1 }] },
+    { id: 'medias',  label: 'Accuser les médias',          hint: '1 chance sur 3 que ta base se mobilise (+1 soutien) ; sinon −2 soutiens et +2 casseroles', fx: [{ k: 'dice', chance: 0.34, win: [{ k: 'regions', n: 1, count: 1 }], lose: [{ k: 'strong', n: -2 }, { k: 'cas', n: 2 }] }] }
   ];
   /* La conseillère de campagne */
   var ADVISOR = { name: 'Lulu', title: 'ta directrice de campagne' };
@@ -360,14 +360,14 @@
       candidate: 'Claire Consensus', candTitle: 'la sage du parti', programme: ['classes', 'apprentissage', 'cheque', 'proximite', 'plastique'], financing: ['fraudefisc', 'niches'],
       color: '#E07AA0', ink: '#1B1F3B', money: 4, infl: 3, bases: ['naq', 'cvl'],
       cred: { services: 2, emploi: 1, pouvoir: 1, securite: 1, ecologie: 1, immigration: 0 },
-      force: "Réseau d'élus : +1 cube en Meeting là où il a déjà 5 cubes ou plus.",
+      force: "Réseau d'élus : +1 soutien en Meeting là où il a déjà 5 soutiens ou plus.",
       weakness: "Peu d'argent au départ.",
       cards: ['fete_rose', 'primaire'] },
     { id: 'VP', pos: 2, name: 'Les Verts Pâturages', short: 'Verts Pâturages', family: 'Écologie',
       candidate: 'Capucine Verdure', candTitle: 'l\'écolo à vélo', programme: ['renovation', 'train1', 'sp20', 'cheque', 'plastique'], financing: ['heritage', 'isf'],
       color: '#3E9B5A', ink: '#FFFFFF', money: 6, infl: 3, bases: ['ara', 'cor'],
       cred: { ecologie: 2, services: 1, pouvoir: 1, emploi: 0, securite: 0, immigration: 0 },
-      force: 'À la Télé : +1 cube en plus dans les régions urbaines.',
+      force: 'À la Télé : +1 soutien en plus dans les régions urbaines.',
       weakness: 'Une Collecte ne rapporte que 2 €.',
       cards: ['climat', 'canicule'] },
     { id: 'EM', pos: 4, name: 'En Mouvement', short: 'En Mouvement', family: 'Centre',
@@ -375,21 +375,21 @@
       color: '#F2A93B', ink: '#1B1F3B', money: 8, infl: 4, bases: ['pdl', 'bre'],
       cred: { emploi: 2, securite: 2, ecologie: 1, services: 1, immigration: 1, pouvoir: 0 },
       force: 'Une Collecte rapporte 4 € et 1 ★. Candidat infatigable : récupère 3 ⚡ par tour (au lieu de 2).',
-      weakness: "Usure du pouvoir : au tour 5, perd 1 cube dans sa région la plus forte.",
+      weakness: "Usure du pouvoir : au tour 5, perd 1 soutien dans sa région la plus forte.",
       cards: ['art493', 'remaniement'] },
     { id: 'UG', pos: 5, name: "L'Union Gaulliste", short: 'Union Gaulliste', family: 'Droite',
       candidate: 'Hubert de La Motte', candTitle: 'le notable', programme: ['policiers', 'pme', 'controles', 'tva', 'nonremplacement'], financing: ['trainvie', 'gelpoint', 'chomage'],
       color: '#4A7FD0', ink: '#FFFFFF', money: 5, infl: 4, bases: ['ges', 'nor'],
       cred: { securite: 2, emploi: 2, immigration: 1, pouvoir: 1, services: 1, ecologie: 0 },
-      force: 'Fidélité : en région historique, une attaque ne peut pas le faire descendre sous 2 cubes.',
-      weakness: 'Divisions : les événements « Division » lui coûtent 2 cubes au lieu de 1.',
+      force: 'Fidélité : en région historique, une attaque ne peut pas le faire descendre sous 2 soutiens.',
+      weakness: 'Divisions : les événements « Division » lui coûtent 2 soutiens au lieu de 1.',
       cards: ['appel18', 'rassemblement'] },
     { id: 'MN', pos: 6, name: 'Mouvement National', short: 'Mvt National', family: 'Droite nationale',
       candidate: 'Victor Rempart', candTitle: 'le bulldog', programme: ['referendum', 'planchers', 'tva', 'regroupement', 'video'], financing: ['trainvie'],
       color: '#24325E', ink: '#FFFFFF', money: 7, infl: 3, bases: ['hdf', 'pac'],
       cred: { immigration: 2, securite: 2, pouvoir: 1, emploi: 0, ecologie: 0, services: 0 },
-      force: 'À la Télé : +1 cube en plus dans les régions industrielles.',
-      weakness: 'Peu de relais locaux : il lui faut 4 cubes (au lieu de 3) pour contrôler une région.',
+      force: 'À la Télé : +1 soutien en plus dans les régions industrielles.',
+      weakness: 'Peu de relais locaux : il lui faut 4 soutiens (au lieu de 3) pour contrôler une région.',
       cards: ['plateau_tele', 'grand_meeting'] },
     /* v1.7 : six partis de plus (12 au total). Positions sur l'axe : de 0,3 (extrême gauche) à 6,7 (droite identitaire). */
     { id: 'LO', pos: 0.3, name: 'Lutte Prolétaire', short: 'Lutte Prolétaire', family: 'Extrême gauche',
@@ -403,7 +403,7 @@
       candidate: 'Marcel Faucille', candTitle: 'le camarade bon vivant', programme: ['reindus', 'smic', 'energie', 'lignes', 'superprofits'], financing: ['isf', 'heritage'],
       color: '#E2572B', ink: '#FFFFFF', money: 4, infl: 3, bases: ['hdf', 'idf'],
       cred: { emploi: 2, pouvoir: 2, services: 1, securite: 1, ecologie: 0, immigration: 0 },
-      force: 'Bastions ouvriers : Mobiliser rapporte 1 cube de plus en région industrielle.',
+      force: 'Bastions ouvriers : Mobiliser rapporte 1 soutien de plus en région industrielle.',
       weakness: 'Une Collecte ne rapporte que 2 €.',
       cards: ['marche_pop', 'grand_meeting'] },
     { id: 'MD', pos: 3.6, name: 'Le Juste Milieu', short: 'Juste Milieu', family: 'Centre',
@@ -418,35 +418,35 @@
       color: '#2BA6B8', ink: '#1B1F3B', money: 7, infl: 4, bases: ['nor', 'ara'],
       cred: { emploi: 2, securite: 2, services: 1, immigration: 1, pouvoir: 0, ecologie: 0 },
       force: 'Bâtisseur : une Promesse coûte 3 ★ (au lieu de 4).',
-      weakness: 'Parti jeune, peu implanté : il lui faut 4 cubes (au lieu de 3) pour contrôler une région.',
+      weakness: 'Parti jeune, peu implanté : il lui faut 4 soutiens (au lieu de 3) pour contrôler une région.',
       cards: ['rassemblement', 'remaniement'] },
     { id: 'DL', pos: 5.6, name: 'Toujours Debout', short: 'Toujours Debout', family: 'Souverainistes',
       candidate: 'Aymeric Clocher', candTitle: 'le gaulois réfractaire', programme: ['tva', 'controles', 'lignes', 'planchers', 'energie'], financing: ['trainvie', 'fraudefisc'],
       color: '#7A8FA6', ink: '#FFFFFF', money: 3, infl: 2, bases: ['idf', 'bfc'],
       cred: { immigration: 2, pouvoir: 1, securite: 1, emploi: 1, services: 1, ecologie: 0 },
-      force: 'La France des clochers : un Meeting rapporte 1 cube de plus en région rurale.',
+      force: 'La France des clochers : un Meeting rapporte 1 soutien de plus en région rurale.',
       weakness: 'Petit budget : la Télé coûte 1 € de plus.',
       cards: ['appel18', 'plateau_tele'] },
     { id: 'RQ', pos: 6.7, name: 'La Grande Nostalgie', short: 'Grande Nostalgie', family: 'Droite identitaire',
       candidate: 'Charles Naphtaline', candTitle: 'le polémiste', programme: ['regroupement', 'controles', 'referendum', 'planchers', 'fraude'], financing: ['trainvie', 'chomage'],
       color: '#3B3B3B', ink: '#FFFFFF', money: 6, infl: 3, bases: ['pac', 'idf'],
       cred: { immigration: 2, securite: 2, pouvoir: 0, emploi: 0, services: 0, ecologie: 0 },
-      force: 'Polémiques : un Buzz sur l\'immigration rapporte 1 cube de plus.',
+      force: 'Polémiques : un Buzz sur l\'immigration rapporte 1 soutien de plus.',
       weakness: 'Repoussoir : entre les deux tours, ses accords ont 15 points de chances en moins.',
       cards: ['grand_meeting', 'plateau_tele'] }
   ];
 
   /* Actions de base. cost = { money, infl } ; target : 'region' | 'party' | null ; theme : l'action porte un message (thème) */
   var ACTIONS = {
-    terrain:  { name: 'Meeting',        icon: '📣', cost: { money: 2, infl: 0, forme: 1 }, target: 'region', theme: true, text: 'Autant de cubes que l\'impact du message (1 à 4)' },
+    terrain:  { name: 'Meeting',        icon: '📣', cost: { money: 2, infl: 0, forme: 1 }, target: 'region', theme: true, text: 'Autant de soutiens que l\'impact du message (1 à 4)' },
     medias:   { name: 'Télé',           icon: '📺', cost: { money: 3, infl: 1, forme: 1 }, target: 'region', theme: true, text: 'Le message passe dans cette région et les 2 autres les plus concernées par le thème' },
-    reseaux:  { name: 'Buzz',           icon: '📱', cost: { money: 1, infl: 0 }, target: 'region', theme: true, text: 'Un dé : de −1 à +4 cubes, +1 si le thème fait l\'actu' },
-    contre:   { name: 'Attaquer',       icon: '🥊', cost: { money: 2, infl: 1 }, target: 'region', text: '−2 cubes au rival le plus fort de la région (il faut y avoir 1 cube)' },
+    reseaux:  { name: 'Buzz',           icon: '📱', cost: { money: 1, infl: 0 }, target: 'region', theme: true, text: 'Un dé : de −1 à +4 soutiens, +1 si le thème fait l\'actu' },
+    contre:   { name: 'Attaquer',       icon: '🥊', cost: { money: 2, infl: 1 }, target: 'region', text: '−2 soutiens au rival le plus fort de la région (il faut y avoir 1 soutien)' },
     fonds:    { name: 'Collecte',       icon: '💰', cost: { money: 0, infl: 0 }, target: null,     text: '+3 €' },
-    reforme:  { name: 'Promesse',       icon: '📜', cost: { money: 0, infl: 4 }, target: 'region', text: '+1 cube dans toutes les régions du même profil (région contrôlée)' },
+    reforme:  { name: 'Promesse',       icon: '📜', cost: { money: 0, infl: 4 }, target: 'region', text: '+1 soutien dans toutes les régions du même profil (région contrôlée)' },
     imposer:  { name: 'Faire la une',   icon: '🗞️', cost: { money: 2, infl: 2 }, target: null,     theme: true, text: 'Ton thème fera l\'actu au prochain tour (pour tout le monde !)' },
     mobiliser:{ name: 'Mobiliser',      icon: '🚪', cost: { money: 2, infl: 0 }, target: 'region', text: 'Porte-à-porte : fais voter des abstentionnistes. Plus efficace si ton programme plaît aux groupes qui votent peu ici' },
-    militants:{ name: 'Militants',      icon: '👥', cost: { money: 3, infl: 0 }, target: 'region', text: 'Implante une équipe de militants : +1 cube ici au début de chaque tour (3 équipes au plus)' },
+    militants:{ name: 'Militants',      icon: '👥', cost: { money: 3, infl: 0 }, target: 'region', text: 'Implante une équipe de militants : +1 soutien ici au début de chaque tour (3 équipes au plus)' },
     enquete:  { name: 'Enquêter',       icon: '🔎', cost: { money: 1, infl: 1 }, target: 'party', text: 'Fouiller le passé d\'un rival : si tu trouves quelque chose, une affaire lui tombe dessus au prochain tour' },
     alliance: { name: 'Alliance',       cost: { money: 0, infl: 1 }, target: 'party',  text: "Proposer une alliance à un parti proche (distance 2 au plus)" },
     rupture:  { name: 'Rupture',        cost: { money: 0, infl: 0 }, target: null,     text: "Rompre ton alliance : −2 ★, et ton ex-allié ne te reportera presque rien au second tour" }
@@ -454,36 +454,36 @@
 
   /* Cartes spéciales : 1 utilisation par partie, prend 1 action. */
   var CARDS = {
-    marche_pop:    { name: 'Marche populaire',     target: 'region', profiles: ['urbaine'], text: '+3 cubes dans une région urbaine.' },
+    marche_pop:    { name: 'Marche populaire',     target: 'region', profiles: ['urbaine'], text: '+3 soutiens dans une région urbaine.' },
     censure:       { name: 'Motion de censure',    target: null, text: 'Chaque adversaire perd 1 ★.' },
-    fete_rose:     { name: 'Fête de la Rose',      target: 'region', text: '+2 cubes dans cette région et dans une autre où tu es présent.' },
+    fete_rose:     { name: 'Fête de la Rose',      target: 'region', text: '+2 soutiens dans cette région et dans une autre où tu es présent.' },
     primaire:      { name: 'Primaire',             target: null, text: '+3 ★.' },
-    climat:        { name: 'Marche pour le climat', target: 'region', profiles: ['rurale', 'urbaine'], text: '+3 cubes dans une région rurale ou urbaine.' },
-    canicule:      { name: 'Canicule',             target: null, text: 'Chaque adversaire perd 1 cube dans ses 2 régions les plus fortes.' },
+    climat:        { name: 'Marche pour le climat', target: 'region', profiles: ['rurale', 'urbaine'], text: '+3 soutiens dans une région rurale ou urbaine.' },
+    canicule:      { name: 'Canicule',             target: null, text: 'Chaque adversaire perd 1 soutien dans ses 2 régions les plus fortes.' },
     art493:        { name: '49.3',                 target: null, text: "Annule la prochaine action du rival en tête ce tour." },
-    remaniement:   { name: 'Remaniement',          target: 'region', text: "Déplace 2 cubes de ta région la plus forte vers celle-ci." },
-    appel18:       { name: 'Appel du 18 juin',     target: null, text: '+1 cube dans chaque région historique.' },
+    remaniement:   { name: 'Remaniement',          target: 'region', text: "Déplace 2 soutiens de ta région la plus forte vers celle-ci." },
+    appel18:       { name: 'Appel du 18 juin',     target: null, text: '+1 soutien dans chaque région historique.' },
     rassemblement: { name: 'Rassemblement',        target: null, text: '+3 € et +1 ★.' },
-    plateau_tele:  { name: 'Plateau télé',         target: null, text: '+2 cubes dans 3 régions rurales ou industrielles.' },
-    grand_meeting: { name: 'Grand meeting',        target: 'region', text: '+4 cubes dans une région.' }
+    plateau_tele:  { name: 'Plateau télé',         target: null, text: '+2 soutiens dans 3 régions rurales ou industrielles.' },
+    grand_meeting: { name: 'Grand meeting',        target: 'region', text: '+4 soutiens dans une région.' }
   };
 
   var EVENTS = [
     { id: 'crise', theme: 'pouvoir',      title: 'Crise économique',         text: 'Chaque parti perd 2 €.' },
     { id: 'greve', theme: 'services',      title: 'Grève des transports',     text: 'Ce tour, les Meetings coûtent 1 € de plus.' },
-    { id: 'scandale',   title: 'Scandale !',               text: 'Le parti en tête perd 2 cubes dans sa plus grande région.' },
+    { id: 'scandale',   title: 'Scandale !',               text: 'Le parti en tête perd 2 soutiens dans sa plus grande région.' },
     { id: 'buzz',       title: 'Trend viral',              text: 'Ce tour, les Buzz sont gratuits.' },
     { id: 'sondage',    title: 'Sondage surprise',         text: 'Le dernier au classement gagne 2 ★.' },
     { id: 'fete',       title: 'Fête nationale',           text: 'Tous les partis gagnent 1 ★.' },
-    { id: 'division',   title: 'Guerre des chefs',         text: "Division : chaque parti perd 1 cube dans sa région la plus forte (2 pour l'Union Gaulliste)." },
+    { id: 'division',   title: 'Guerre des chefs',         text: "Division : chaque parti perd 1 soutien dans sa région la plus forte (2 pour l'Union Gaulliste)." },
     { id: 'fuite',      title: 'Fuite de documents',       text: 'Chaque parti perd 1 ★.' },
-    { id: 'salon', theme: 'ecologie',      title: "Salon de l'agriculture",   text: 'Chaque parti gagne 1 cube dans la région rurale où il est le plus fort.' },
-    { id: 'usine', theme: 'emploi',      title: "Fermeture d'usine",        text: 'Dans les régions industrielles, le parti qui contrôle perd 1 cube.' },
-    { id: 'patrimoine', title: 'Journées du patrimoine',   text: 'Chaque parti gagne 1 cube dans la région historique où il est le plus fort.' },
+    { id: 'salon', theme: 'ecologie',      title: "Salon de l'agriculture",   text: 'Chaque parti gagne 1 soutien dans la région rurale où il est le plus fort.' },
+    { id: 'usine', theme: 'emploi',      title: "Fermeture d'usine",        text: 'Dans les régions industrielles, le parti qui contrôle perd 1 soutien.' },
+    { id: 'patrimoine', title: 'Journées du patrimoine',   text: 'Chaque parti gagne 1 soutien dans la région historique où il est le plus fort.' },
     { id: 'mecene',     title: 'Mécène généreux',          text: 'Le dernier au classement gagne 3 €.' },
-    { id: 'bouchons', title: 'Bouchons sur le périph',   text: "Le parti qui contrôle l'Île-de-France perd 1 cube." },
+    { id: 'bouchons', title: 'Bouchons sur le périph',   text: "Le parti qui contrôle l'Île-de-France perd 1 soutien." },
     { id: 'calme',      title: 'Rentrée tranquille',       text: 'Il ne se passe rien. Profitez-en.' },
-    { id: 'division2',  title: 'Congrès houleux',          text: "Division : chaque parti perd 1 cube dans sa région la plus forte (2 pour l'Union Gaulliste)." }
+    { id: 'division2',  title: 'Congrès houleux',          text: "Division : chaque parti perd 1 soutien dans sa région la plus forte (2 pour l'Union Gaulliste)." }
   ];
 
   var OBJECTIVES = [
@@ -667,39 +667,39 @@
      later {turns, chance, title, text, fx} : conséquence qui peut ressortir plus tard */
   var DILEMMAS = [
     { id: 'notes', title: 'Notes de frais', text: 'Le Canard Déchaîné révèle les notes de frais de ton trésorier : 12 000 € de dîners en un mois.', options: [
-      { label: 'Nier en bloc', hint: 'Pile ou face : l\'affaire s\'éteint… ou −3 cubes et +1 casserole', fx: [{ k: 'dice', chance: 0.5, win: [], lose: [{ k: 'strong', n: -3 }, { k: 'cas', n: 1 }] }] },
-      { label: 'S\'excuser à la télé', hint: '−2 ★, mais +1 cube : on salue ta franchise', fx: [{ k: 'infl', n: -2 }, { k: 'strong', n: 1 }] },
-      { label: 'Contre-attaquer', hint: '−1 ★, le rival en tête perd 2 cubes… mais +2 casseroles', fx: [{ k: 'infl', n: -1 }, { k: 'rival', n: 2 }, { k: 'cas', n: 2 }] } ] },
+      { label: 'Nier en bloc', hint: 'Pile ou face : l\'affaire s\'éteint… ou −3 soutiens et +1 casserole', fx: [{ k: 'dice', chance: 0.5, win: [], lose: [{ k: 'strong', n: -3 }, { k: 'cas', n: 1 }] }] },
+      { label: 'S\'excuser à la télé', hint: '−2 ★, mais +1 soutien : on salue ta franchise', fx: [{ k: 'infl', n: -2 }, { k: 'strong', n: 1 }] },
+      { label: 'Contre-attaquer', hint: '−1 ★, le rival en tête perd 2 soutiens… mais +2 casseroles', fx: [{ k: 'infl', n: -1 }, { k: 'rival', n: 2 }, { k: 'cas', n: 2 }] } ] },
     { id: 'mecene', title: 'Le mécène généreux', text: 'Un riche industriel propose de financer ta campagne. Il ne demande rien… pour l\'instant.', options: [
       { label: 'Accepter l\'argent', hint: '+5 € et +1 casserole… et ça pourrait ressortir', fx: [{ k: 'money', n: 5 }, { k: 'cas', n: 1 },
         { k: 'later', turns: 3, chance: 0.5, title: 'L\'affaire du mécène', text: 'Les juges s\'intéressent aux dons de ton mécène.', fx: [{ k: 'strong', n: -2 }, { k: 'cas', n: 1 }] }] },
       { label: 'Refuser poliment', hint: '+1 ★ : l\'intégrité, ça se remarque', fx: [{ k: 'infl', n: 1 }] } ] },
     { id: 'derapage', title: 'Dérapage sur les réseaux', text: 'Un de tes militants publie un message très maladroit qui devient viral.', options: [
-      { label: 'L\'exclure du parti', hint: '−1 cube, mais −1 casserole', fx: [{ k: 'strong', n: -1 }, { k: 'cas', n: -1 }] },
-      { label: 'Le défendre', hint: 'Ta base apprécie : +1 cube. Mais +1 casserole', fx: [{ k: 'strong', n: 1 }, { k: 'cas', n: 1 }] },
+      { label: 'L\'exclure du parti', hint: '−1 soutien, mais −1 casserole', fx: [{ k: 'strong', n: -1 }, { k: 'cas', n: -1 }] },
+      { label: 'Le défendre', hint: 'Ta base apprécie : +1 soutien. Mais +1 casserole', fx: [{ k: 'strong', n: 1 }, { k: 'cas', n: 1 }] },
       { label: 'Ne rien dire', hint: 'Pile ou face : ça passe, ou −2 ★', fx: [{ k: 'dice', chance: 0.5, win: [], lose: [{ k: 'infl', n: -2 }] }] } ] },
     { id: 'emission', title: 'Le talk-show du dimanche', text: 'L\'émission la plus regardée du pays t\'invite. Ambiance survoltée garantie.', options: [
-      { label: 'Y aller', hint: '−1 ⚡ · 2 chances sur 3 : +1 cube dans 3 régions ; sinon gaffe', fx: [{ k: 'forme', n: -1 }, { k: 'dice', chance: 0.67, win: [{ k: 'regions', n: 1, count: 3 }], lose: [{ k: 'strong', n: -1 }, { k: 'cas', n: 1 }] }] },
-      { label: 'Envoyer ton porte-parole', hint: '+1 cube dans ta meilleure région, sans risque', fx: [{ k: 'regions', n: 1, count: 1 }] },
+      { label: 'Y aller', hint: '−1 ⚡ · 2 chances sur 3 : +1 soutien dans 3 régions ; sinon gaffe', fx: [{ k: 'forme', n: -1 }, { k: 'dice', chance: 0.67, win: [{ k: 'regions', n: 1, count: 3 }], lose: [{ k: 'strong', n: -1 }, { k: 'cas', n: 1 }] }] },
+      { label: 'Envoyer ton porte-parole', hint: '+1 soutien dans ta meilleure région, sans risque', fx: [{ k: 'regions', n: 1, count: 1 }] },
       { label: 'Décliner et te reposer', hint: '+1 ⚡', fx: [{ k: 'forme', n: 1 }] } ] },
     { id: 'transfuge', title: 'Un ancien ministre veut te rejoindre', text: 'Connu de tous, il apporte ses réseaux… et sa réputation.', options: [
-      { label: 'L\'accueillir', hint: '+1 cube dans 3 régions, +1 casserole. Restera-t-il fidèle ?', fx: [{ k: 'regions', n: 1, count: 3 }, { k: 'cas', n: 1 },
+      { label: 'L\'accueillir', hint: '+1 soutien dans 3 régions, +1 casserole. Restera-t-il fidèle ?', fx: [{ k: 'regions', n: 1, count: 3 }, { k: 'cas', n: 1 },
         { k: 'later', turns: 2, chance: 0.35, title: 'Le transfuge claque la porte', text: 'Ton nouvel allié repart avec fracas, et ses électeurs avec lui.', fx: [{ k: 'strong', n: -2 }] }] },
       { label: 'Refuser', hint: '+1 ★ auprès de tes militants', fx: [{ k: 'infl', n: 1 }] } ] },
     { id: 'promesse', title: 'La promesse qui fâche', text: 'Tes conseillers veulent promettre une baisse d\'impôts massive. Ça plaît… mais c\'est finançable ?', options: [
-      { label: 'Promettre', hint: '+1 cube dans 3 régions, mais les économistes vont faire les comptes', fx: [{ k: 'regions', n: 1, count: 3 },
+      { label: 'Promettre', hint: '+1 soutien dans 3 régions, mais les économistes vont faire les comptes', fx: [{ k: 'regions', n: 1, count: 3 },
         { k: 'later', turns: 2, chance: 0.8, title: 'Les économistes font les comptes', text: 'Ta promesse coûterait 40 milliards. Les plateaux télé se régalent.', fx: [{ k: 'infl', n: -2 }, { k: 'cas', n: 1 }] }] },
       { label: 'Rester sérieux', hint: '+1 ★', fx: [{ k: 'infl', n: 1 }] } ] },
     { id: 'enregistrement', title: 'L\'enregistrement volé', text: 'Un enregistrement de toi en privé circule. Tu y parles de tes électeurs avec… un certain mépris.', options: [
-      { label: 'Démentir', hint: 'Pile ou face : ça passe, ou −2 cubes et +2 casseroles', fx: [{ k: 'dice', chance: 0.5, win: [], lose: [{ k: 'strong', n: -2 }, { k: 'cas', n: 2 }] }] },
-      { label: 'Assumer et t\'excuser', hint: '−1 cube dans tes 2 meilleures régions, −1 casserole', fx: [{ k: 'loseTop', n: 1, count: 2 }, { k: 'cas', n: -1 }] } ] },
+      { label: 'Démentir', hint: 'Pile ou face : ça passe, ou −2 soutiens et +2 casseroles', fx: [{ k: 'dice', chance: 0.5, win: [], lose: [{ k: 'strong', n: -2 }, { k: 'cas', n: 2 }] }] },
+      { label: 'Assumer et t\'excuser', hint: '−1 soutien dans tes 2 meilleures régions, −1 casserole', fx: [{ k: 'loseTop', n: 1, count: 2 }, { k: 'cas', n: -1 }] } ] },
     { id: 'concert', title: 'Le concert gratuit', text: 'Une équipe propose un grand concert gratuit pour les jeunes, avec des artistes connus.', options: [
-      { label: 'Organiser le concert', hint: '−3 €, +1 cube dans 2 régions urbaines', fx: [{ k: 'money', n: -3 }, { k: 'regions', n: 1, count: 2, profile: 'urbaine' }] },
+      { label: 'Organiser le concert', hint: '−3 €, +1 soutien dans 2 régions urbaines', fx: [{ k: 'money', n: -3 }, { k: 'regions', n: 1, count: 2, profile: 'urbaine' }] },
       { label: 'Trop cher', hint: 'Rien ne se passe', fx: [] } ] },
     { id: 'sondage_interne', title: 'Le sondage interne', text: 'Ton équipe a commandé un sondage secret. Il est catastrophique sur ton thème fétiche.', options: [
       { label: 'Changer de cap', hint: '−2 € · +2 ★ (on te trouve à l\'écoute)', fx: [{ k: 'money', n: -2 }, { k: 'infl', n: 2 }] },
       { label: 'Garder le cap', hint: '+1 ⚡ : tu restes serein', fx: [{ k: 'forme', n: 1 }] },
-      { label: 'Le faire fuiter… en le truquant', hint: '+1 cube dans 2 régions, mais ça peut se savoir', fx: [{ k: 'regions', n: 1, count: 2 },
+      { label: 'Le faire fuiter… en le truquant', hint: '+1 soutien dans 2 régions, mais ça peut se savoir', fx: [{ k: 'regions', n: 1, count: 2 },
         { k: 'later', turns: 2, chance: 0.5, title: 'Le sondage truqué', text: 'L\'institut dément avoir publié ces chiffres.', fx: [{ k: 'loseTop', n: 1, count: 2 }, { k: 'cas', n: 2 }] }] } ] }
   ];
 
@@ -710,25 +710,25 @@
     { id: 'finance', name: 'Crise financière', acts: [
       { title: 'Rumeurs de krach', text: 'Les marchés tremblent. Chaque parti perd 1 €.', theme: 'pouvoir', fx: [{ k: 'allMoney', n: -1 }] },
       { title: 'Krach boursier !', text: 'Chaque parti perd 2 €. Le pouvoir d\'achat écrase tous les autres sujets.', theme: 'pouvoir', fx: [{ k: 'allMoney', n: -2 }] },
-      { title: 'La reprise', text: 'Chaque parti regagne 2 €. Les partis très crédibles sur le pouvoir d\'achat gagnent 1 cube.', theme: 'pouvoir', fx: [{ k: 'allMoney', n: 2 }, { k: 'credTop', theme: 'pouvoir', n: 1 }] } ] },
+      { title: 'La reprise', text: 'Chaque parti regagne 2 €. Les partis très crédibles sur le pouvoir d\'achat gagnent 1 soutien.', theme: 'pouvoir', fx: [{ k: 'allMoney', n: 2 }, { k: 'credTop', theme: 'pouvoir', n: 1 }] } ] },
     { id: 'greve', name: 'Grève générale', acts: [
       { title: 'Grève dans les transports', text: 'Plus un train en Île-de-France. Là-bas, les services publics sont sur toutes les lèvres.', theme: 'services', markers: [{ rid: 'idf', icon: '✊', theme: 'services', turns: 3 }], fx: [] },
       { title: 'La grève s\'étend', text: 'Le Nord, l\'Est et la Normandie rejoignent le mouvement. Les Meetings coûtent 1 € de plus ce tour.', theme: 'services',
         markers: [{ rid: 'hdf', icon: '✊', theme: 'services', turns: 2 }, { rid: 'ges', icon: '✊', theme: 'services', turns: 2 }, { rid: 'nor', icon: '✊', theme: 'services', turns: 2 }], fx: [{ k: 'mod', key: 'terrainExtra', v: 1 }] },
-      { title: 'Fin du mouvement', text: 'Un accord est trouvé. Les partis très crédibles sur les services publics gagnent 1 cube.', theme: 'services', fx: [{ k: 'credTop', theme: 'services', n: 1 }] } ] },
+      { title: 'Fin du mouvement', text: 'Un accord est trouvé. Les partis très crédibles sur les services publics gagnent 1 soutien.', theme: 'services', fx: [{ k: 'credTop', theme: 'services', n: 1 }] } ] },
     { id: 'ete', name: 'Été brûlant', acts: [
       { title: 'Canicule précoce', text: '42 °C à Marseille. Dans le Sud, l\'écologie s\'invite dans tous les débats.', theme: 'ecologie',
         markers: [{ rid: 'pac', icon: '🔥', theme: 'ecologie', turns: 3 }, { rid: 'occ', icon: '🔥', theme: 'ecologie', turns: 3 }], fx: [] },
-      { title: 'Incendies dans le Sud', text: 'Les forêts brûlent. Dans chaque région touchée, le parti qui la contrôle perd 1 cube : on lui reproche son impréparation.', theme: 'ecologie',
+      { title: 'Incendies dans le Sud', text: 'Les forêts brûlent. Dans chaque région touchée, le parti qui la contrôle perd 1 soutien : on lui reproche son impréparation.', theme: 'ecologie',
         markers: [{ rid: 'naq', icon: '🔥', theme: 'ecologie', turns: 2 }], fx: [{ k: 'controllerLoss', regions: ['pac', 'occ', 'naq'], n: 1 }] },
-      { title: 'Orages et inondations', text: 'Après le feu, l\'eau. Les partis très crédibles sur l\'écologie gagnent 1 cube.', theme: 'ecologie',
+      { title: 'Orages et inondations', text: 'Après le feu, l\'eau. Les partis très crédibles sur l\'écologie gagnent 1 soutien.', theme: 'ecologie',
         markers: [{ rid: 'bre', icon: '🌊', theme: 'ecologie', turns: 2 }, { rid: 'pdl', icon: '🌊', theme: 'ecologie', turns: 2 }], fx: [{ k: 'credTop', theme: 'ecologie', n: 1 }] } ] },
     { id: 'usines', name: 'Désindustrialisation', acts: [
       { title: 'Une usine ferme dans le Nord', text: '800 emplois supprimés. Dans les Hauts-de-France, on ne parle plus que d\'emploi.', theme: 'emploi',
         markers: [{ rid: 'hdf', icon: '🏭', theme: 'emploi', turns: 3 }], fx: [] },
-      { title: 'Plan social dans l\'Est', text: 'Le Grand Est est touché à son tour. Le parti qui contrôle le Nord et l\'Est perd 1 cube dans chacune.', theme: 'emploi',
+      { title: 'Plan social dans l\'Est', text: 'Le Grand Est est touché à son tour. Le parti qui contrôle le Nord et l\'Est perd 1 soutien dans chacune.', theme: 'emploi',
         markers: [{ rid: 'ges', icon: '🏭', theme: 'emploi', turns: 2 }], fx: [{ k: 'controllerLoss', regions: ['hdf', 'ges'], n: 1 }] },
-      { title: 'Plan de relance', text: 'L\'État annonce un plan de relance. Les partis très crédibles sur l\'emploi gagnent 1 cube.', theme: 'emploi', fx: [{ k: 'credTop', theme: 'emploi', n: 1 }] } ] }
+      { title: 'Plan de relance', text: 'L\'État annonce un plan de relance. Les partis très crédibles sur l\'emploi gagnent 1 soutien.', theme: 'emploi', fx: [{ k: 'credTop', theme: 'emploi', n: 1 }] } ] }
   ];
 
   /* v1.5 : contrôle des données. Une erreur ici veut dire qu'une règle annoncée ne pourra pas fonctionner
