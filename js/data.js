@@ -632,6 +632,43 @@
     barrageCut: 0.5, barrageGive: 0.1          // ta consigne de barrage : moitié moins vers le bloc visé, +10 points vers l'autre
   };
 
+
+  /* ---------- v2.6 : le gouvernement ----------
+     6 postes, chacun lié aux thèmes du jeu. Les profils sont des personnages inventés (noms en jeux de mots).
+     Les effets sont des réglages de jeu. */
+  var MINISTRY = {
+    posts: [
+      { id: 'pm',    icon: '🏛️', name: 'Premier ministre',                 short: 'Matignon',   themes: [],                      text: 'Fait voter tes lois. Un fusible que l\'on peut sacrifier pour remonter dans les sondages.' },
+      { id: 'eco',   icon: '💶', name: 'Économie, Finances et Industrie',  short: 'Bercy',      themes: ['pouvoir', 'emploi'],   text: 'Le budget et l\'emploi : un bon ministre fait baisser le déficit.' },
+      { id: 'int',   icon: '🚓', name: 'Intérieur',                         short: 'Intérieur',  themes: ['securite', 'immigration'], text: 'La sécurité et l\'immigration.' },
+      { id: 'sante', icon: '🏥', name: 'Santé',                             short: 'Santé',      themes: ['services'],            text: 'L\'hôpital, les médecins, les épidémies.' },
+      { id: 'educ',  icon: '🎒', name: 'Éducation nationale',               short: 'Éducation',  themes: ['services'],            text: 'L\'école et les enseignants.', measures: ['classes'] },
+      { id: 'eco2',  icon: '🌿', name: 'Transition écologique',             short: 'Écologie',   themes: ['ecologie'],            text: 'Les canicules, l\'énergie, les transports.' }
+    ],
+    traits: {
+      gaffeur:   { name: 'Gaffeur',             icon: '🙊', text: 'Une petite phrase peut lui échapper à tout moment.' },
+      bourreau:  { name: 'Bourreau de travail', icon: '💪', text: 'Ses lois passent mieux et rapportent plus.' },
+      reseau:    { name: 'Réseau à l\'Assemblée', icon: '📇', text: 'Ramène des voix en plus pour tes lois.' },
+      casserole: { name: 'Casserole cachée',    icon: '🍳', text: 'Une vieille affaire peut ressortir.' },
+      ambitieux: { name: 'Ambitieux',           icon: '👑', text: 'Peut te lâcher si tu faiblis, pour préparer sa candidature.' }
+    },
+    names: {
+      f: ['Anne Alyse', 'Claire Voyance', 'Lucie Dité', 'Rose Mérite', 'Annie Versaire', 'Inès Thétique', 'Sophie Losophie', 'Margot Uvernance', 'Laure Atoire', 'Camille Itante', 'Nadia Logue', 'Jade Ministrée'],
+      m: ['Hugo Vernement', 'Bruno Tation', 'Gaston Fiscal', 'Olivier Rapport', 'Jules Ministère', 'Rémi Nistre', 'Paul Itique', 'Max Imum', 'Basile Icone', 'Léon Dégalité', 'Yann Térim', 'Félix Cal']
+    },
+    draw: { parti: 3, allie: 2, expert: 2, ouverture: 1 },
+    parity: 1,               // gouvernement paritaire (3 femmes, 3 hommes) : +1 de popularité ; très déséquilibré (5 ou 6 du même sexe) : −1
+    ouverture: 2,            // une personnalité d'ouverture : +2 de popularité… mais ton camp grogne (frondeurs en plus la 1re année)
+    ouvertureFronde: 0.05,
+    network: 12,             // « Réseau à l'Assemblée » : jusqu'à 12 députés de plus pour une loi de son domaine
+    compSat: 0.05,           // chaque étoile de compétence au-dessus de 2 : +5 % d'effet pour les lois du domaine (−5 % en dessous)
+    compFronde: 0.05,        // un Premier ministre ou un ministre compétent calme les frondeurs (5 points par étoile)
+    ecoDeficit: 0.03,        // un ministre de l'Économie compétent : −0,03 point de déficit par an et par étoile au-dessus de 2
+    eventChance: 0.7,        // chaque été, 7 chances sur 10 qu'un ministre fasse l'actualité
+    fusible: 4,              // changer de Premier ministre : +4 de popularité la première fois, +1 ensuite
+    leaveFronde: 0.1
+  };
+
   /* ---------- v0.6 : le débat télévisé ----------
      Chaque parti affronte chacun des autres sur une question (un thème).
      Attaque bat Émotion, Émotion bat Chiffres, Chiffres bat Attaque. Esquive = match nul.
@@ -751,7 +788,7 @@
 
   var DATA = { REFERENCE_2027: REFERENCE_2027, POLLS: POLLS, BASES: BASES, REGIONS: REGIONS, PROFILES: PROFILES, THEMES: THEMES, HEADLINES: HEADLINES, PARTIES: PARTIES, ACTIONS: ACTIONS,
                CARDS: CARDS, EVENTS: EVENTS, DILEMMAS: DILEMMAS, CRISES: CRISES, REPLIES: REPLIES, TEMPERS: TEMPERS,
-               MEASURES: MEASURES, FUNDING: FUNDING, SEGMENTS: SEGMENTS, VOTE_PROP: VOTE_PROP, SEGMENTS_SRC: SEGMENTS_SRC, AFFAIRS: AFFAIRS, LEARN: LEARN, BUDGET_AFFAIR: BUDGET_AFFAIR, REACTIONS: REACTIONS, ADVISOR: ADVISOR, OBJECTIVES: OBJECTIVES, RULES: RULES, LEGIS: LEGIS, validate: validate };
+               MEASURES: MEASURES, FUNDING: FUNDING, SEGMENTS: SEGMENTS, VOTE_PROP: VOTE_PROP, SEGMENTS_SRC: SEGMENTS_SRC, AFFAIRS: AFFAIRS, LEARN: LEARN, BUDGET_AFFAIR: BUDGET_AFFAIR, REACTIONS: REACTIONS, ADVISOR: ADVISOR, OBJECTIVES: OBJECTIVES, RULES: RULES, LEGIS: LEGIS, MINISTRY: MINISTRY, validate: validate };
   if (typeof module !== 'undefined' && module.exports) module.exports = DATA;
   else root.PolitikData = DATA;
 })(this);

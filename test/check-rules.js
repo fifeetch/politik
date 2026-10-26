@@ -376,5 +376,41 @@ section('Ton personnage et ton parti');
   ok(E.PARTY.SM.candidate === cand && D.TEMPERS.SM.label === 'raisonnable', 'puis le parti retrouve son candidat');
 })();
 
+/* ---------- v2.6 : le gouvernement ---------- */
+section('Le gouvernement');
+(function () {
+  var G = require('../js/govern.js'), CB = require('../js/cabinet.js');
+  var g = E.createGame('EM', { seed: 31 }); E.setProgramme(g, 'EM', E.PARTY.EM.programme, E.PARTY.EM.financing);
+  g.result = { first: E.poll(g), second: { a: 'EM', b: 'MN', pctA: 0.56, pctB: 0.44 } }; g.winner = 'EM';
+  var gv = G.create(g, 'EM'); CB.start(gv);
+  var pool = gv.cabinet.pool;
+  ok(pool.filter(function (x) { return x.origin === 'parti'; }).length === 3 && pool.filter(function (x) { return x.origin === 'expert'; }).length === 2 && pool.filter(function (x) { return x.origin === 'ouverture'; }).length === 1, 'le vivier : 3 de ton parti, 2 experts, 1 ouverture (+ tes alliés)');
+  ok(pool.every(function (x) { return x.comp >= 1 && x.comp <= 3 && x.loy >= 1 && x.loy <= 3 && x.not >= 1 && x.not <= 3 && D.MINISTRY.traits[x.trait]; }), 'chaque profil : 3 jauges de 1 à 3 étoiles et un trait');
+  ok(pool.filter(function (x) { return x.origin === 'expert'; }).every(function (x) { return x.comp === 3 && x.not === 1; }), 'les experts : très compétents, peu connus');
+  ok(pool.filter(function (x) { return x.origin === 'ouverture'; }).every(function (x) { return x.party !== 'EM' && !G.isAlly(gv, x.party); }), 'l\'ouverture vient d\'un parti rival');
+  var team = CB.suggest(gv), ck = CB.check(gv, team);
+  ok(ck.full && ck.unserved.length === 0, 'la proposition de Lulu pourvoit les 6 postes et sert chaque allié');
+  // un allié sans ministère quitte la majorité
+  var allies = (gv.allies || []).filter(function (a) { return gv.seats[a] > 0; });
+  if (allies.length) {
+    var t2 = {}; CB.POSTS.forEach(function (k, i) { t2[k] = pool.filter(function (x) { return x.origin !== 'allie'; })[i]; });
+    var before = G.blocSeats(gv); CB.form(gv, t2);
+    ok(G.blocSeats(gv) < before && !G.isAlly(gv, allies[0]), 'un allié sans ministère quitte la majorité (' + before + ' → ' + G.blocSeats(gv) + ' députés)');
+  }
+  // un ministre compétent et un ministre « réseau » font passer les lois
+  var mid = E.PARTY.EM.programme[0], post = G.postFor(mid);
+  gv.cabinet.posts[post] = { name: 'Test', comp: 1, loy: 3, not: 1, trait: 'gaffeur', face: {} }; gv.cabinet.posts.pm = { name: 'PM', comp: 1, loy: 3, not: 1, trait: 'gaffeur', face: {} };
+  var low = G.frondeurs(gv, mid);
+  gv.cabinet.posts[post] = { name: 'Test', comp: 3, loy: 3, not: 1, trait: 'reseau', face: {} }; gv.cabinet.posts.pm = { name: 'PM', comp: 3, loy: 3, not: 1, trait: 'bourreau', face: {} };
+  ok(G.frondeurs(gv, mid) <= low, 'ministre et Premier ministre compétents : moins de frondeurs');
+  ok((G.vote(gv, mid).network || 0) > 0 || G.vote(gv, mid).abst === 0, '« Réseau à l\'Assemblée » : des voix en plus');
+  // remaniement : une fois par an, le fusible du Premier ministre
+  var p0 = gv.popBonus, nx = CB.reshufflePool(gv)[0], r = CB.reshuffle(gv, 'pm', nx);
+  ok(r.ok && gv.popBonus - p0 === D.MINISTRY.fusible && !CB.canReshuffle(gv), 'remaniement : changer de Premier ministre rapporte ' + D.MINISTRY.fusible + ' de popularité, une fois par an');
+  // les événements de ministres
+  var seen = {}; for (var i = 0; i < 40; i++) { var ev = CB.event(gv); if (ev) seen[ev.id] = true; }
+  ok(Object.keys(seen).length >= 1, 'les ministres font l\'actualité (' + Object.keys(seen).join(', ') + ')');
+})();
+
 console.log('\n' + passes + ' vérifications réussies, ' + fails + ' en échec.');
 process.exit(fails ? 1 : 0);

@@ -167,8 +167,15 @@ Quand tu gagnes la présidentielle, le bouton « 🏛️ Gouverner le pays » ou
 - Le mot « cubes » (venu du jeu de plateau) est remplacé par **soutiens** dans tous les textes du jeu.
 - L'affaire qui sort dans la presse adopte le style de la une de la v2.2 (scène plein cadre, mot géant), la fiche « Le saviez-vous ? » s'ouvre d'un toucher.
 
-## Prochains lots (gouvernement, opposition)
-- **v2.6 — Le gouvernement** : 6 postes, cartes ministres (compétence, loyauté, notoriété, un trait), parité, allié servi, remaniement.
+## v2.6 — fait : le gouvernement (lot 3)
+- **Former ton gouvernement** juste après les législatives : 6 postes liés aux thèmes du jeu, un vivier d'au moins 8 profils inventés (3 députés de ton parti avec leur région, un profil par allié, 2 experts de la société civile, 1 personnalité d'ouverture d'un parti rival), visages dessinés et noms en jeux de mots.
+- **Chaque ministre** : compétence, loyauté, notoriété (1 à 3 étoiles) et un trait. Effets : compétence → lois mieux accueillies (+5 % par étoile) et moins de frondeurs ; Réseau à l'Assemblée → jusqu'à 12 voix de plus ; Bourreau de travail → une étoile de compétence en plus ; un Premier ministre peu loyal attise la fronde ; l'Économie compétente fait baisser le déficit (−0,03 point par an et par étoile).
+- **Équilibres** : parité (+1 de popularité, −1 si très déséquilibré), ouverture (+2, mais plus de frondeurs la 1re année), un allié sans ministère quitte la majorité. « La proposition de Lulu » sert chaque allié et vise la parité.
+- **Pendant le mandat** : chaque été, 7 chances sur 10 qu'un ministre fasse l'actualité (gaffe, affaire, fronde, démission fracassante d'un ambitieux, succès d'un bourreau de travail), avec un choix ; un remaniement par an (changer de Premier ministre : +4 de popularité la première fois, le fusible).
+- **Cohabitation** : le Premier ministre est imposé par la majorité de l'Assemblée.
+- Simulation (`node test/govern-sim.js 150 c`, et `… c sans` pour comparer) : un gouvernement bien composé aide, surtout par l'Économie, environ 3,5 événements de ministres par mandat. Le simulateur, bloqué depuis l'entre-deux-tours, est réparé.
+
+## Prochain lot (opposition)
 - **v2.7 — L'opposition** : le perdant (finaliste ou éliminé au 1er tour) continue chef de son parti, à chaque trimestre pendant 5 ans : propositions de loi le jour réservé, coalitions, motions de censure ; chute du gouvernement, dissolution par le président (dès l'année 2), cohabitation où tu deviens Premier ministre.
 
 ## À venir (pistes du bêta-testeur)

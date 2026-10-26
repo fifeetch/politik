@@ -1,6 +1,6 @@
 /* Politik — v1.0 : l'écran « Gouverner » (le quinquennat). S'appuie sur js/govern.js pour les règles. */
 (function () {
-  var D = window.PolitikData, E = window.PolitikEngine, G = window.PolitikGov, LG = window.PolitikLegis, FX = window.PolitikFX, A = window.PolitikArt, U = window.PolitikUI;
+  var D = window.PolitikData, E = window.PolitikEngine, G = window.PolitikGov, LG = window.PolitikLegis, FX = window.PolitikFX, CB = window.PolitikCabinet, A = window.PolitikArt, U = window.PolitikUI;
   var modal = U.modal, closeModal = U.closeModal, toast = U.toast, esc = U.esc, line = U.line, srcHtml = U.srcHtml;
   var gv = null, g = null, me = null, learned = {}, step = 0, lawsThisYear = 0;
   function $(id) { return document.getElementById(id); }
@@ -66,6 +66,7 @@
       gauge('😊', 'Popularité', pop + ' %', pop >= 45 ? 'soutenu' : pop >= 30 ? 'contesté' : 'impopulaire', pop < 30 ? 'bad' : pop >= 45 ? 'ok' : '') +
       gauge('🏛️', 'Assemblée', bloc + ' / 577', MAJ_LABEL[G.majorityType(gv)], bloc >= 289 ? 'ok' : 'bad');
     $('gov-hemi').innerHTML = hemicycle(gv.seats) + legend(gv.seats);
+    renderTeam();
     $('gov-sat').innerHTML = D.SEGMENTS.map(function (s) {
       var v = gv.sat[s.id], f = v >= 65 ? '😀' : v >= 50 ? '🙂' : v >= 35 ? '😐' : v >= 20 ? '🙁' : '😡';
       return '<span class="satc" title="' + esc(s.full) + ' : ' + Math.round(v) + ' / 100">' + s.icon + f + '</span>';
@@ -326,7 +327,7 @@
     if (!lctx) return;
     var res = LG.round2(lctx, lr1, ldec);
     G.setLegis(gv, res);
-    night2({ onDone: function () { step = 0; U.go('gov'); render(); } });
+    night2({ onDone: function () { step = 0; startCabinet(); } });   // v2.6 : puis tu formes ton gouvernement
   });
 
   /* ===== B. La soirée du 1er tour ===== */
@@ -453,6 +454,121 @@
     modal({ kicker: 'Législatives', title: 'Région par région', html: html });
   }
 
+
+  /* ===== v2.6 : le gouvernement ===== */
+  var POSTS = D.MINISTRY.posts, TRAITS = D.MINISTRY.traits, gform = {};
+  function postDef(id) { return POSTS.filter(function (p) { return p.id === id; })[0]; }
+  function mface(x) { return A.face(Object.assign({}, x.face, { bg: x.party ? PolitikPerso.lighten(party(x.party).color, 0.55) : '#E3E0D6' })); }
+  function starsTxt(n) { return '★★★'.slice(0, n) + '<span class="st-off">' + '★★★'.slice(0, 3 - n) + '</span>'; }
+  function originTxt(x) {
+    return x.origin === 'parti' ? 'Ton parti' + (x.region ? ' · député' + (x.sex === 'f' ? 'e' : '') + ', ' + esc(E.REG[x.region].name) : '') :
+      x.origin === 'allie' ? 'Allié · ' + esc(party(x.party).short) : x.origin === 'expert' ? 'Société civile' : x.origin === 'impose' ? 'Imposé par la majorité · ' + esc(party(x.party).short) : 'Ouverture · ' + esc(party(x.party).short);
+  }
+  function mcard(x, extra) {
+    var t = TRAITS[x.trait];
+    return '<span class="mc-face">' + mface(x) + '</span><span class="mc-txt"><b>' + esc(x.name) + '</b><small class="mc-or">' + originTxt(x) + '</small>' +
+      '<small class="mc-st">Compétence ' + starsTxt(x.comp) + ' · Loyauté ' + starsTxt(x.loy) + ' · Notoriété ' + starsTxt(x.not) + '</small>' +
+      '<small>' + t.icon + ' <b>' + esc(t.name) + '</b> : ' + esc(t.text) + '</small>' + (extra || '') + '</span>';
+  }
+  function startCabinet() {
+    CB.start(gv); gform = Object.assign({}, gv.cabinet.posts);
+    renderForm(); U.go('gform');
+  }
+  function renderForm() {
+    var cab = gv.cabinet, ck = CB.check(gv, gform);
+    $('gf-posts').innerHTML = POSTS.map(function (p) {
+      var x = gform[p.id], locked = cab.imposed && p.id === 'pm';
+      return '<button type="button" class="gf-post' + (x ? ' full' : '') + '" data-post="' + p.id + '"' + (locked ? ' disabled' : '') + '><span class="gf-ic">' + p.icon + '</span><span class="gf-pt"><b>' + esc(p.name) + '</b>' +
+        (x ? '<small>' + esc(x.name) + ' · ' + originTxt(x) + (locked ? ' · imposé' : '') + '</small>' : '<small class="gf-empty">Choisir ›</small>') + '</span>' + (x ? '<span class="gf-face">' + mface(x) + '</span>' : '') + '</button>';
+    }).join('');
+    var allies = (gv.allies || []).filter(function (a) { return gv.seats[a] > 0; });
+    $('gf-check').innerHTML = '<span class="' + (ck.parity === 'ok' ? 'ok' : ck.parity === 'bad' ? 'bad' : '') + '">⚖️ ' + ck.f + ' femme' + (ck.f > 1 ? 's' : '') + ' · ' + ck.m + ' homme' + (ck.m > 1 ? 's' : '') + (ck.parity === 'ok' ? ' : parité' : '') + '</span>' +
+      allies.map(function (a) { var bad = ck.unserved.indexOf(a) >= 0; return '<span class="' + (bad ? 'bad' : 'ok') + '">' + (bad ? '⚠️ ' : '✅ ') + esc(party(a).short) + (bad ? ' : aucun poste, il quittera ta majorité' : ' a son ministère') + '</span>'; }).join('') +
+      (cab.imposed ? '<span class="bad">🏛️ Cohabitation : Matignon revient à la majorité de l\'Assemblée</span>' : '');
+    $('gf-go').disabled = !ck.full;
+    $('gf-go').textContent = ck.full ? 'Nommer le gouvernement' : 'Encore ' + (6 - (ck.f + ck.m)) + ' poste' + (6 - (ck.f + ck.m) > 1 ? 's' : '') + ' à pourvoir';
+    Array.prototype.forEach.call(document.querySelectorAll('[data-post]'), function (b) { b.addEventListener('click', function () { pickMinister(b.getAttribute('data-post')); }); });
+  }
+  function pickMinister(post) {
+    var P = postDef(post), taken = {}; Object.keys(gform).forEach(function (k) { if (k !== post && gform[k]) taken[gform[k].id] = k; });
+    var list = gv.cabinet.pool.filter(function (x) { return post !== 'pm' || x.origin !== 'ouverture'; });
+    var html = '<p class="hint">' + esc(P.text) + '</p><div class="pick">' + list.map(function (x) {
+      var where = taken[x.id];
+      return '<button type="button" class="pick-row mc" data-m="' + x.id + '">' + mcard(x, where ? '<small class="mc-where">déjà à ' + esc(postDef(where).short) + ' : il changera de poste</small>' : '') + '</button>';
+    }).join('') + '</div>';
+    modal({ kicker: P.icon + ' ' + P.name, title: 'Qui nommer ?', html: html, buttons: [{ label: 'Annuler' }],
+      onOpen: function () {
+        Array.prototype.forEach.call(document.querySelectorAll('[data-m]'), function (b) {
+          b.addEventListener('click', function () {
+            var x = gv.cabinet.pool.filter(function (y) { return y.id === b.getAttribute('data-m'); })[0];
+            Object.keys(gform).forEach(function (k) { if (gform[k] === x) delete gform[k]; });
+            gform[post] = x; closeModal(); renderForm();
+          });
+        });
+      } });
+  }
+  $('gf-lulu').addEventListener('click', function () { gform = CB.suggest(gv); renderForm(); toast('Lulu : « Les plus compétents aux postes clés, un ministère pour chaque allié. »'); });
+  $('gf-go').addEventListener('click', function () {
+    var r = CB.form(gv, gform);
+    var html = '<div class="gf-team">' + POSTS.map(function (p) { var x = gv.cabinet.posts[p.id]; return '<div class="gf-mini"><span class="gf-face">' + mface(x) + '</span><small>' + p.icon + ' ' + esc(p.short) + '</small><b>' + esc(x.name) + '</b></div>'; }).join('') + '</div>' +
+      (r.notes.length ? '<div class="brief">' + r.notes.map(function (n) { return line(n.icon, esc(n.text)); }).join('') + '</div>' : '') +
+      '<p class="hint">Un ministre compétent fait mieux passer les lois de son domaine ; un ministre peu loyal peut lancer une fronde ; un ministre connu fait parler de lui, en bien comme en mal. Un remaniement est possible chaque année.</p>';
+    modal({ kicker: 'Le perron de l\'Élysée', title: 'Ton gouvernement est nommé', html: html, buttons: [{ label: 'Au travail !', primary: true, onClick: function () { U.go('gov'); render(); } }] });
+  });
+  /* La ligne « Ton gouvernement » de l'écran principal */
+  function renderTeam() {
+    var el = $('gov-team'); if (!el) return;
+    if (!gv.cabinet || !gv.cabinet.posts.eco) { el.hidden = true; return; }
+    el.hidden = false;
+    el.innerHTML = '<span class="kicker">Ton gouvernement</span><span class="gt-faces">' + POSTS.map(function (p) { var x = gv.cabinet.posts[p.id]; return x ? '<span class="gt-face" title="' + esc(p.short + ' : ' + x.name) + '">' + mface(x) + '</span>' : ''; }).join('') + '</span>' +
+      (CB.canReshuffle(gv) ? '<span class="gt-re">Remanier ›</span>' : '<span class="gt-re off">Voir ›</span>');
+  }
+  document.getElementById('gov-team').addEventListener('click', function () {
+    if (!gv || !gv.cabinet) return;
+    var can = CB.canReshuffle(gv);
+    var html = '<div class="pick">' + POSTS.map(function (p) { var x = gv.cabinet.posts[p.id]; return '<div class="pick-row mc static"><span class="gf-ic">' + p.icon + '</span>' + mcard(x, '<small class="mc-where">' + esc(p.name) + '</small>') + '</div>'; }).join('') + '</div>' +
+      '<p class="hint">' + (can ? 'Un remaniement par an : remplace un ministre. Changer de Premier ministre, c\'est le fusible : ' + (gv.cabinet.fusibleUsed ? '+1' : '+' + D.MINISTRY.fusible) + ' de popularité.' : 'Tu as déjà remanié cette année.') + '</p>';
+    modal({ kicker: 'Le gouvernement', title: 'Ton équipe', html: html, buttons: (can ? [{ label: '🔄 Remanier', primary: true, onClick: reshuffleStep }] : []).concat([{ label: 'Fermer' }]) });
+  });
+  function reshuffleStep() {
+    var html = '<div class="pick">' + POSTS.filter(function (p) { return !(gv.cabinet.imposed && p.id === 'pm'); }).map(function (p) {
+      var x = gv.cabinet.posts[p.id]; return '<button type="button" class="pick-row" data-rp="' + p.id + '"><span class="gf-ic">' + p.icon + '</span><span class="pick-txt"><b>' + esc(p.name) + '</b><small>' + esc(x.name) + ' · compétence ' + starsTxt(x.comp) + ' · loyauté ' + starsTxt(x.loy) + '</small></span></button>';
+    }).join('') + '</div>';
+    modal({ kicker: 'Remaniement', title: 'Quel poste changer ?', html: html, buttons: [{ label: 'Annuler' }],
+      onOpen: function () {
+        Array.prototype.forEach.call(document.querySelectorAll('[data-rp]'), function (b) {
+          b.addEventListener('click', function () {
+            var post = b.getAttribute('data-rp'), pool = CB.reshufflePool(gv);
+            modal({ kicker: 'Remaniement · ' + postDef(post).name, title: 'Qui nommer ?', html: '<div class="pick">' + pool.map(function (x) { return '<button type="button" class="pick-row mc" data-nm="' + x.id + '">' + mcard(x) + '</button>'; }).join('') + '</div>', buttons: [{ label: 'Annuler' }],
+              onOpen: function () {
+                Array.prototype.forEach.call(document.querySelectorAll('[data-nm]'), function (c) {
+                  c.addEventListener('click', function () {
+                    var x = pool.filter(function (y) { return y.id === c.getAttribute('data-nm'); })[0], r = CB.reshuffle(gv, post, x);
+                    render();
+                    modal({ kicker: 'Remaniement', title: post === 'pm' ? 'Nouveau Premier ministre' : 'Nouveau ministre', html: '<p>' + esc(x.name) + ' remplace ' + esc(r.old.name) + ' (' + esc(postDef(post).name) + ').</p><div class="brief">' +
+                      line('😊', (post === 'pm' ? 'Le fusible a sauté : ' : 'Un nouveau souffle : ') + '+' + r.pop + ' de popularité.') + r.notes.map(function (n) { return line(n.icon, esc(n.text)); }).join('') + '</div>' });
+                  });
+                });
+              } });
+          });
+        });
+      } });
+  }
+  /* L'été : un ministre peut faire l'actualité */
+  function ministerEvent(then) {
+    var ev = gv.cabinet ? CB.event(gv) : null;
+    if (!ev) return then();
+    var x = ev.minister, P = postDef(ev.post);
+    var html = '<div class="gf-evt"><span class="gf-face">' + mface(x) + '</span><span><small>' + P.icon + ' ' + esc(P.name) + '</small><b>' + esc(x.name) + '</b></span></div><p>' + esc(ev.text) + '</p><div class="pick">' +
+      ev.opts.map(function (o, i) { return '<button type="button" class="pick-row" data-mo="' + i + '"><span class="pick-txt"><b>' + esc(o.label) + '</b><small>' + (o.pop ? 'popularité ' + (o.pop > 0 ? '+' : '') + o.pop : '') + (o.fronde ? 'plus de frondeurs cette année' : '') + (o.fire ? (o.pop ? ' · ' : '') + 'un expert reprend le poste' : '') + (o.loy ? ' · loyauté ' + (o.loy > 0 ? '+' : '') + o.loy : '') + '</small></span></button>'; }).join('') + '</div>';
+    modal({ kicker: 'Le gouvernement · été', title: ev.title, html: html, buttons: [],
+      onOpen: function () {
+        Array.prototype.forEach.call(document.querySelectorAll('[data-mo]'), function (b) {
+          b.addEventListener('click', function () { var r = CB.applyEvent(gv, ev, ev.opts[+b.getAttribute('data-mo')]); closeModal(); render(); if (r.replacement) toast(r.replacement.name + ' reprend le poste.'); then(); });
+        });
+      } });
+  }
+
   /* ---------- Printemps : la loi de l'année ---------- */
   function chooseLaw() {
     var pend = gv.measures.filter(function (m) { return m.status === 'pending'; });
@@ -561,7 +677,7 @@
     modal({ kicker: 'Été · Année ' + gv.year, title: 'L\'actualité s\'impose', html: html, buttons: [],
       onOpen: function () {
         Array.prototype.forEach.call(document.querySelectorAll('[data-o]'), function (b) {
-          b.addEventListener('click', function () { var o = ev.opts[+b.getAttribute('data-o')]; G.applyOpt(gv, o); closeModal(); next(); });
+          b.addEventListener('click', function () { var o = ev.opts[+b.getAttribute('data-o')]; G.applyOpt(gv, o); closeModal(); ministerEvent(next); });
         });
       } });
   }

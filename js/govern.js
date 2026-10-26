@@ -165,14 +165,32 @@
     if (popularity(gv) < 30) score -= 1;
     return score >= 1.5 ? 'pour' : score >= 0 ? 'abst' : 'contre';
   }
+  /* v2.6 : le ministre chargé d'une mesure (selon son thème) */
+  var MIN = D.MINISTRY;
+  function postFor(mid) {
+    if (!mid) return 'eco';
+    var m = E.measure(mid), ps = MIN.posts.filter(function (p) { return (p.measures || []).indexOf(mid) >= 0; })[0];
+    if (ps) return ps.id;
+    ps = MIN.posts.filter(function (p) { return p.themes.indexOf(m.theme) >= 0; })[0];
+    return ps ? ps.id : 'pm';
+  }
+  function minister(gv, post) { return gv.cabinet && gv.cabinet.posts ? gv.cabinet.posts[post] || null : null; }
+  function compOf(x) { return x ? Math.min(3, x.comp + (x.trait === 'bourreau' ? 1 : 0)) : 2; }
   /* Les frondeurs : une partie de ton groupe refuse une mesure coûteuse, choc ou impopulaire */
   function frondeurs(gv, mid) {
     var pop = popularity(gv), share = 0;
+    // v2.6 : un Premier ministre et un ministre compétents calment les frondeurs ; un ministre peu loyal les attise
+    if (gv.cabinet) {
+      var pm = minister(gv, 'pm'), mn = minister(gv, postFor(mid));
+      share -= MIN.compFronde * ((compOf(pm) - 2) + (compOf(mn) - 2));
+      if (pm && pm.loy <= 1) share += MIN.compFronde;
+      share += gv.cabinet.fronde || 0;
+    }
     if (mid) { var m = E.measure(mid); if (m.choc || Math.abs(m.cost) >= 15) share += 0.15; }
     else if (gv.deficit > C.target(gv.year) + 0.5) share += 0.1;
     if (pop < 45) share += 0.1;
     if (pop < 30) share += 0.1;
-    return Math.round(gv.seats[gv.pid] * share);
+    return Math.round(gv.seats[gv.pid] * Math.max(0, share));
   }
   function vote(gv, mid, negotiated) {
     var r = { pour: 0, contre: 0, abst: 0, groups: [], frondeurs: frondeurs(gv, mid) };
@@ -181,6 +199,12 @@
       if (gid === gv.pid && r.frondeurs) { r.abst += r.frondeurs; n -= r.frondeurs; }
       r[st] += n; r.groups.push({ id: gid, seats: gv.seats[gid], stance: st, frondeurs: gid === gv.pid ? r.frondeurs : 0 });
     });
+    // v2.6 : « Réseau à l'Assemblée » : le ministre (ou le Premier ministre) ramène des voix
+    if (gv.cabinet) {
+      var net = 0; [minister(gv, 'pm'), minister(gv, postFor(mid))].forEach(function (x, i) { if (x && x.trait === 'reseau' && (i === 0 || x !== minister(gv, 'pm'))) net += MIN.network; });
+      var fromAbst = Math.min(net, r.abst), fromContre = Math.min(Math.round((net - fromAbst) / 2), r.contre);
+      r.abst -= fromAbst; r.contre -= fromContre; r.pour += fromAbst + fromContre; r.network = fromAbst + fromContre;
+    }
     r.passed = r.pour > r.contre;           // majorité des suffrages exprimés : les abstentions ne comptent pas
     return r;
   }
@@ -214,7 +238,8 @@
     var it = gv.measures.filter(function (x) { return x.id === mid; })[0];
     it.status = 'adopted'; it.amended = !!amended;
     gv.deficit += k * m.cost / C.mdPerPoint;
-    addSat(gv, m.fans, C.satPerFan * k);
+    var q = gv.cabinet ? 1 + MIN.compSat * (compOf(minister(gv, postFor(mid))) - 2) : 1;   // v2.6 : un ministre compétent fait mieux passer la mesure
+    addSat(gv, m.fans, C.satPerFan * k * q);
   }
   function reject(gv, mid) {
     var it = gv.measures.filter(function (x) { return x.id === mid; })[0];
@@ -260,6 +285,7 @@
   /* ---------- Fin d'année : intérêts, dette, Bruxelles ---------- */
   function endYear(gv) {
     var out = { year: gv.year };
+    if (gv.cabinet) { gv.deficit -= MIN.ecoDeficit * (compOf(minister(gv, 'eco')) - 2); gv.cabinet.fronde = 0; }   // v2.6 : la gestion de Bercy
     gv.deficit += C.debtCharge + Math.max(0, gv.debt - C.debt0) * C.interest;   // la charge de la dette
     gv.deficit = Math.round(gv.deficit * 100) / 100;
     gv.debt = Math.round((gv.debt + gv.deficit - C.debtDrift) * 10) / 10;
@@ -295,7 +321,7 @@
   }
 
   var API = { C: C, BUDGET_CARDS: BUDGET_CARDS, EVENTS: EVENTS, create: create, popularity: popularity, legislatives: legislatives, blocSeats: blocSeats,
-    majorityType: majorityType, isAlly: isAlly, setLegis: setLegis, stance: stance, vote: vote, frondeurs: frondeurs, censure: censure, referendum: referendum, adopt: adopt, reject: reject,
+    majorityType: majorityType, isAlly: isAlly, setLegis: setLegis, postFor: postFor, minister: minister, compOf: compOf, stance: stance, vote: vote, frondeurs: frondeurs, censure: censure, referendum: referendum, adopt: adopt, reject: reject,
     governmentFalls: governmentFalls, canDissolve: canDissolve, dissolveMult: dissolveMult, dissolve: dissolve, applyFinancing: applyFinancing, canReferendum: canReferendum, drawCards: drawCards, applyOpt: applyOpt, drawEvent: drawEvent, endYear: endYear, verdict: verdict, addSat: addSat };
   if (node) module.exports = API; else root.PolitikGov = API;
 })(this);
