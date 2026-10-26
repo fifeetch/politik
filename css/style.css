@@ -27,14 +27,17 @@
 }
 [hidden] { display: none !important; }
 * { box-sizing: border-box; }
-html, body { margin: 0; height: 100%; background: var(--ink); }
+html, body { margin: 0; height: 100%; background: var(--ink); overflow: hidden; overscroll-behavior: none; }
 body { font-family: var(--body); color: var(--ink); -webkit-tap-highlight-color: transparent; font-variant-numeric: tabular-nums; }
 button { font-family: inherit; color: inherit; }
 :focus-visible { outline: 3px solid var(--violet); outline-offset: 2px; }
-#app { max-width: 480px; margin: 0 auto; height: 100dvh; position: relative; overflow: hidden; background: var(--paper); }
+#app { max-width: 480px; margin: 0 auto; height: 100vh; height: 100dvh; position: relative; overflow: hidden; background: var(--paper); }
 
 .screen { display: none; position: absolute; inset: 0; flex-direction: column; padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom)); overflow-y: auto; }
 .screen.active { display: flex; }
+/* Écrans : on défile dedans sans déclencher le « tirer pour rafraîchir » ; rien n'est écrasé */
+.screen { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+:where(.screen) > * { flex-shrink: 0; }
 
 /* ---------- Typographie ---------- */
 .kicker { font-size: 13px; font-weight: 700; color: var(--muted); letter-spacing: .1px; }
@@ -233,7 +236,8 @@ button { font-family: inherit; color: inherit; }
 
 /* Le panneau du bas : la région, puis ta campagne */
 .panel { position: relative; background: var(--sheet); padding: 12px 12px max(12px, env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; border-radius: 20px 20px 0 0; box-shadow: 0 -2px 0 rgba(35,32,58,.08), 0 -10px 24px rgba(35,32,58,.08); }
-.screen-game .panel { max-height: 70%; overflow-y: auto; overscroll-behavior: contain; }
+.screen-game .panel { max-height: 70%; overflow-y: auto; overscroll-behavior: contain; flex-shrink: 1; min-height: 0; }
+.screen-game .map-wrap { min-height: 110px; }
 .screen-game .panel > * { flex-shrink: 0; }
 .region-info { display: flex; flex-direction: column; gap: 7px; padding: 0 2px; }
 .region-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
