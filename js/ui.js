@@ -509,15 +509,15 @@
   /* ---------- v0.7 : Lulu, la directrice de campagne — un conseil clair par tour ---------- */
   function advice() {
     var pl = mePl(), ph = E.measure(pl.phare), hot = g.hot || [];
-    if (g.turn === 1) return 'Bienvenue ! Parle de ta mesure phare (' + th(ph.theme).icon + ' ' + th(ph.theme).short + ') : touche une région qui s\'en soucie, puis 📣 Meeting.';
-    if (E.isDebateTurn(g) && pl.infl < 2) return 'Débat télévisé ce soir 🎙️ et tu n\'as presque plus d\'influence ★. Évite la Télé ce tour-ci pour garder de quoi te préparer.';
-    if (E.isDebateTurn(g)) return 'Débat télévisé ce soir 🎙️ ! Garde 2 ou 3 ★ pour la préparation : chaque ★ vaut 1 point.';
-    if (pl.forme <= 1) return 'Ton candidat est épuisé (⚡ ' + pl.forme + '). Évite Meeting et Télé : 🚪 Mobiliser ou une 💰 Collecte ne le fatiguent pas.';
-    if (pl.cas >= 3) return 'Ça sent le roussi : ' + pl.cas + ' casseroles 🍳. Une affaire peut tomber à tout moment. Évite d\'attaquer ou d\'enquêter ce tour-ci.';
+    if (g.turn === 1) return 'Parle de ta mesure phare (' + th(ph.theme).icon + ' ' + th(ph.theme).short + ') : choisis une région, puis 📣 Meeting.';
+    if (E.isDebateTurn(g) && pl.infl < 2) return 'Débat ce soir 🎙️ et presque plus de ★ : évite la Télé ce tour-ci.';
+    if (E.isDebateTurn(g)) return 'Débat ce soir 🎙️ ! Garde 2 ou 3 ★ : chaque ★ vaut 1 point.';
+    if (pl.forme <= 1) return 'Candidat épuisé (⚡ ' + pl.forme + ') : préfère 🚪 Mobiliser ou 💰 Collecte.';
+    if (pl.cas >= 3) return pl.cas + ' casseroles 🍳 : une affaire peut tomber. N\'attaque pas ce tour-ci.';
     var mineHot = hot.filter(function (t) { return pl.programme.some(function (id) { return E.measure(id).theme === t; }); })[0];
     if (mineHot) {
       var m = pl.programme.map(E.measure).filter(function (x) { return x.theme === mineHot; })[0];
-      return th(mineHot).icon + ' ' + th(mineHot).name + ' fait la une, et c\'est dans ton programme (« ' + m.name + ' ») : c\'est le moment d\'en parler !';
+      return th(mineHot).icon + ' ' + th(mineHot).name + ' fait la une, et c\'est dans ton programme : parles-en !';
     }
     var close = D.REGIONS.filter(function (r) {
       var c = g.regions[r.id].controller, my = E.cubes(g, r.id, me);
@@ -525,17 +525,17 @@
       var top = 0; g.players.forEach(function (p) { if (p.id !== me) top = Math.max(top, E.cubes(g, r.id, p.id)); });
       return top - my <= 1;
     }).sort(function (a, b) { return b.ins - a.ins; })[0];
-    if (close) return 'Tu es tout près de prendre ' + close.name + ' (' + mio(close.ins) + ' millions d\'inscrits) : un Meeting bien ciblé peut suffire.';
-    if (pl.money < 3) return 'Les caisses sont vides. Une 💰 Collecte (menu Plus) renfloue le parti.';
-    if (pl.militants === 0 && g.turn <= 4) return 'Pense aux 👥 militants (menu Plus) : implantés tôt, ils te rapportent des électeurs à chaque tour.';
+    if (close) return 'Tu peux prendre ' + close.name + ' : un Meeting peut suffire.';
+    if (pl.money < 3) return 'Caisses vides : fais une 💰 Collecte (menu Plus).';
+    if (pl.militants === 0 && g.turn <= 4) return 'Implante des 👥 militants (menu Plus) : ils rapportent à chaque tour.';
     var lead = E.ranking(g)[0];
-    if (lead !== me && E.player(g, lead).cas > 0 && E.allyOf(g, me) !== lead) return party(lead).short + ' est en tête et traîne des casseroles : une 🔎 enquête (menu Plus) pourrait le faire trébucher.';
+    if (lead !== me && E.player(g, lead).cas > 0 && E.allyOf(g, me) !== lead) return party(lead).short + ' mène et a des casseroles : 🔎 enquête sur lui (menu Plus).';
     var o = D.OBJECTIVES.filter(function (x) { return x.id === pl.objective; })[0];
     var op = E.objectiveProgress(g, me, pl.objective);
-    if (op.done < op.need) return 'N\'oublie pas ton objectif secret : ' + o.text.charAt(0).toLowerCase() + o.text.slice(1) + ' (' + op.done + '/' + op.need + '). Réussi, il rapporte environ ' + objShare(o) + ' % des voix en plus le jour du vote.';
+    if (op.done < op.need) return 'Objectif secret 🎯 ' + o.name + ' : ' + op.done + '/' + op.need + ' (+' + objShare(o) + ' % des voix).';
     var low = D.REGIONS.slice().sort(function (a, b) { return E.lowTurnoutFit(g, me, b.id) - E.lowTurnoutFit(g, me, a.id); })[0];
-    if (g.turn <= R.registerTurns + 2 && E.lowTurnoutFit(g, me, low.id) >= 0.18) return 'En ' + low.name + ', ton programme parle à ceux qui votent peu : 🚪 Mobiliser y fait voter des abstentionnistes.';
-    return 'Vise les régions qui pèsent lourd : le chiffre sur la carte, c\'est leur nombre d\'inscrits, en millions.';
+    if (g.turn <= R.registerTurns + 2 && E.lowTurnoutFit(g, me, low.id) >= 0.18) return 'En ' + low.name + ', 🚪 Mobiliser fait voter des abstentionnistes pour toi.';
+    return 'Vise les grandes régions : ce sont elles qui pèsent le plus.';
   }
   /* v1.4 : Lulu parle dans une bulle de BD. Elle s'écrit lettre par lettre quand le conseil change,
      et Lulu réagit quelques secondes à chaque action que tu programmes. */
@@ -562,6 +562,7 @@
       advTyper = FX.type(txt, text);
     });
   }
+  document.addEventListener('politik:tuto-end', function () { if (g) renderAdvisor(); });
   function luluSay(text) {
     advReact = text;
     clearTimeout(advReactTimer);

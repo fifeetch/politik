@@ -753,7 +753,8 @@ button { font-family: inherit; color: inherit; }
 .screen-game .advisor { margin: 2px 14px 0; align-items: center; }
 .screen-game .adv-face { width: 34px; }
 .screen-game .adv-bubble { cursor: pointer; padding: 6px 34px 6px 10px; min-height: 0; }
-.screen-game .adv-bubble { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+/* v2.0.1 : le conseil s'affiche en entier (plus de texte coupé), les conseils sont courts */
+.screen-game .adv-bubble { flex-shrink: 0; }
 .screen-game .adv-bubble .adv-txt { display: inline; }
 .screen-game .adv-bubble::before, .screen-game .adv-bubble::after { bottom: 50%; margin-bottom: -7px; }
 .screen-game .advisor .adv-close { top: 50%; margin-top: -16px; }

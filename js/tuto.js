@@ -26,6 +26,7 @@
     active = false; clearFocus();
     if (bubble) bubble.remove(); bubble = null;
     markDone();
+    document.dispatchEvent(new Event('politik:tuto-end'));
   }
   function face() { var A = window.PolitikArt; return A && A.advisor ? A.advisor() : ''; }
   function show() {
