@@ -509,6 +509,42 @@
 
 
 
+  /* ===== v3.3 : le journal de l'année — chaque fait est noté avec son effet ===== */
+  function snap() { return { pop: G.popularity(gv), def: gv.deficit, seats: G.blocSeats(gv) }; }
+  function jot(e, before) {
+    gv.journal = gv.journal || [];
+    e.year = gv.year; if (e.season == null) e.season = step;
+    if (before) { e.dPop = G.popularity(gv) - before.pop; e.dDef = gv.deficit - before.def; e.dSeats = G.blocSeats(gv) - before.seats; }
+    gv.journal.push(e);
+  }
+  function fxTxt(e) {
+    var p = [];
+    if (e.dPop) p.push('popularité ' + (e.dPop > 0 ? '+' : '') + e.dPop);
+    if (e.dDef && Math.abs(e.dDef) >= 0.005) p.push('déficit ' + (e.dDef > 0 ? '+' : '−') + fr(Math.abs(e.dDef), 2) + ' pt');
+    if (e.dSeats) p.push('ta majorité ' + (e.dSeats > 0 ? '+' : '') + e.dSeats + ' députés');
+    (e.notes || []).forEach(function (n) { p.push(n); });
+    return p.join(' · ') || 'pas d\u2019effet immédiat';
+  }
+  var JRUB = { carte: 'Le président', actu: 'Actualité', ministre: 'Gouvernement', loi: 'Assemblée', budget: 'Budget', remaniement: 'Gouvernement' };
+  /* Le Quotidien National du 31 décembre : les faits de l'année, puis le bilan */
+  function yearPaper(y, r) {
+    var list = (gv.journal || []).filter(function (e) { return e.year === y; });
+    var fell = list.some(function (e) { return e.fell; }), popDelta = list.reduce(function (t, e) { return t + (e.dPop || 0); }, 0);
+    var word = r.markets ? 'Panique.' : fell ? 'Renversé.' : r.bruxelles ? 'Recadré.' : popDelta >= 3 ? 'Embellie.' : popDelta <= -3 ? 'Grogne.' : 'Bilan.';
+    var scene = r.markets ? 'caddie' : fell ? 'scandale' : r.bruxelles ? 'ville' : popDelta >= 3 ? 'fete' : popDelta <= -3 ? 'greve' : 'ville';
+    var lead = r.text || ('Déficit à ' + fr(r.deficit, 1) + ' % du PIB, popularité à ' + r.pop + ' % : voici l\u2019année ' + y + ' du quinquennat, saison par saison.');
+    var arts = [{ id: 'main', rub: 'Bilan de l\u2019année ' + y, title: word === 'Bilan.' ? 'Une année de pouvoir, sans tempête' : lead, lead: lead, scene: scene,
+      text: 'Fin d\u2019année à l\u2019Élysée. ' + list.length + ' faits ont marqué ces douze mois. Le déficit public termine à ' + fr(r.deficit, 1) + ' % du PIB pour un objectif de ' + fr(r.target, 1) + ' %, la dette à ' + fr(r.debt, 0) + ' %. ' + (r.text ? r.text + ' ' : '') + 'La popularité du président s\u2019établit à ' + r.pop + ' %.',
+      ruleLabel: 'Les compteurs', rule: 'déficit ' + fr(r.deficit, 1) + ' % (objectif ' + fr(r.target, 1) + ' %) · dette ' + fr(r.debt, 0) + ' % · popularité ' + r.pop + ' %' }];
+    list.forEach(function (e, i) {
+      arts.push({ id: 'y' + y + '-' + i, rub: (SEASON[e.season] || '') + ' · ' + JRUB[e.kind], pid: e.kind === 'loi' || e.kind === 'carte' ? me : null,
+        title: e.title, text: e.text + (e.choice ? ' Décision : « ' + e.choice + ' ».' : ''), ruleLabel: 'Effet', rule: fxTxt(e), weight: Math.abs(e.dPop || 0) + Math.abs(e.dDef || 0) * 10 + (e.fell ? 10 : 0) });
+    });
+    var teasers = arts.slice(1).slice().sort(function (a, b) { return b.weight - a.weight; }).slice(0, 3);
+    arts.forEach(function (a, i) { a.page = i + 1; });
+    return { word: word, scene: scene, day: '31 décembre', when: 'année ' + y + ' sur ' + G.C.years, main: arts[0], articles: arts, teasers: teasers };
+  }
+
   /* ===== v3.0 : les cartes à glisser ===== */
   var SEASON = ['🌸 Printemps', '☀️ Été', '🍂 Automne', '❄️ Hiver'];
   function swipeCard(then) {
@@ -537,7 +573,8 @@
       if (done) return; done = true;
       card.style.transition = 'transform .35s ease-in, opacity .35s';
       card.style.transform = 'translateX(' + (side === 'left' ? -140 : 140) + '%) rotate(' + (side === 'left' ? -18 : 18) + 'deg)'; card.style.opacity = 0;
-      var o = side === 'left' ? c.left : c.right, pop0 = G.popularity(gv), def0 = gv.deficit, r = CD.apply(gv, c, side);
+      var o = side === 'left' ? c.left : c.right, b0 = snap(), pop0 = G.popularity(gv), def0 = gv.deficit, r = CD.apply(gv, c, side);
+      jot({ kind: 'carte', title: c.who + ' : « ' + o.label + ' »', text: c.text, choice: '', notes: r.notes.concat(o.later ? ['ça pourrait revenir…'] : []).concat(o.fronde ? ['ton camp grogne'] : []) }, b0);
       setTimeout(function () {
         el.hidden = true; el.innerHTML = '';
         var dp = G.popularity(gv) - pop0, dd = gv.deficit - def0, bits = [];
@@ -653,7 +690,8 @@
               onOpen: function () {
                 Array.prototype.forEach.call(document.querySelectorAll('[data-nm]'), function (c) {
                   c.addEventListener('click', function () {
-                    var x = pool.filter(function (y) { return y.id === c.getAttribute('data-nm'); })[0], r = CB.reshuffle(gv, post, x);
+                    var x = pool.filter(function (y) { return y.id === c.getAttribute('data-nm'); })[0], b0 = snap(), oldName = gv.cabinet.posts[post] ? gv.cabinet.posts[post].name : '', r = CB.reshuffle(gv, post, x);
+                    if (r.ok) jot({ kind: 'remaniement', title: 'Remaniement : ' + x.name + ' remplace ' + oldName, text: 'Le président change de ' + postDef(post).name + '.', notes: r.notes.map(function (n) { return n.text; }) }, b0);
                     render();
                     modal({ kicker: 'Remaniement', title: post === 'pm' ? 'Nouveau Premier ministre' : 'Nouveau ministre', html: '<p>' + esc(x.name) + ' remplace ' + esc(r.old.name) + ' (' + esc(postDef(post).name) + ').</p><div class="brief">' +
                       line('😊', (post === 'pm' ? 'Le fusible a sauté : ' : 'Un nouveau souffle : ') + '+' + r.pop + ' de popularité.') + r.notes.map(function (n) { return line(n.icon, esc(n.text)); }).join('') + '</div>' });
@@ -664,17 +702,41 @@
         });
       } });
   }
+  /* v3.3 : un ministre est parti (limogé ou démission) : tu choisis qui le remplace. Ce n'est pas ton remaniement de l'année. */
+  function chooseReplacement(post, gone, expert, then) {
+    var P = postDef(post), pool = CB.reshufflePool(gv).filter(function (x) { return x !== expert && (post !== 'pm' || x.origin !== 'ouverture'); }).slice(0, 3);
+    var html = '<p>' + esc(gone.name) + ' quitte le poste de ' + esc(P.name) + '. Qui le remplace ? <span class="muted">Ce choix ne compte pas comme ton remaniement de l\u2019année.</span></p><div class="pick">' +
+      '<button type="button" class="pick-row mc" data-rep="expert">' + mcard(expert, '<small class="mc-where">l\u2019expert proposé par Matignon</small>') + '</button>' +
+      pool.map(function (x) { return '<button type="button" class="pick-row mc" data-rep="' + x.id + '">' + mcard(x) + '</button>'; }).join('') + '</div>';
+    modal({ kicker: P.icon + ' ' + P.name, title: 'Nommer un remplaçant', html: html, buttons: [],
+      onOpen: function () {
+        Array.prototype.forEach.call(document.querySelectorAll('[data-rep]'), function (b) {
+          b.addEventListener('click', function () {
+            var id = b.getAttribute('data-rep'), who = expert;
+            if (id !== 'expert') { who = pool.filter(function (y) { return y.id === id; })[0]; CB.replacePost(gv, post, who); }
+            closeModal(); render(); toast(who.name + ' est nommé(e) : ' + P.name + '.');
+            then(who);
+          });
+        });
+      } });
+  }
   /* L'été : un ministre peut faire l'actualité */
   function ministerEvent(then) {
     var ev = gv.cabinet ? CB.event(gv) : null;
     if (!ev) return then();
     var x = ev.minister, P = postDef(ev.post);
     var html = '<div class="gf-evt"><span class="gf-face">' + mface(x) + '</span><span><small>' + P.icon + ' ' + esc(P.name) + '</small><b>' + esc(x.name) + '</b></span></div><p>' + esc(ev.text) + '</p><div class="pick">' +
-      ev.opts.map(function (o, i) { return '<button type="button" class="pick-row" data-mo="' + i + '"><span class="pick-txt"><b>' + esc(o.label) + '</b><small>' + (o.pop ? 'popularité ' + (o.pop > 0 ? '+' : '') + o.pop : '') + (o.fronde ? 'plus de frondeurs cette année' : '') + (o.fire ? (o.pop ? ' · ' : '') + 'un expert reprend le poste' : '') + (o.loy ? ' · loyauté ' + (o.loy > 0 ? '+' : '') + o.loy : '') + '</small></span></button>'; }).join('') + '</div>';
+      ev.opts.map(function (o, i) { return '<button type="button" class="pick-row" data-mo="' + i + '"><span class="pick-txt"><b>' + esc(o.label) + '</b><small>' + (o.pop ? 'popularité ' + (o.pop > 0 ? '+' : '') + o.pop : '') + (o.fronde ? 'plus de frondeurs cette année' : '') + (o.fire ? (o.pop ? ' · ' : '') + 'tu choisis son remplaçant' : '') + (o.loy ? ' · loyauté ' + (o.loy > 0 ? '+' : '') + o.loy : '') + '</small></span></button>'; }).join('') + '</div>';
     modal({ kicker: 'Le gouvernement · été', title: ev.title, html: html, buttons: [],
       onOpen: function () {
         Array.prototype.forEach.call(document.querySelectorAll('[data-mo]'), function (b) {
-          b.addEventListener('click', function () { var r = CB.applyEvent(gv, ev, ev.opts[+b.getAttribute('data-mo')]); closeModal(); render(); if (r.replacement) toast(r.replacement.name + ' reprend le poste.'); then(); });
+          b.addEventListener('click', function () {
+            var o = ev.opts[+b.getAttribute('data-mo')], b0 = snap(), r = CB.applyEvent(gv, ev, o);
+            var entry = { kind: 'ministre', title: ev.title, text: ev.text, choice: o.label, notes: [] };
+            closeModal(); render();
+            if (!r.replacement) { jot(entry, b0); return then(); }
+            chooseReplacement(ev.post, x, r.replacement, function (who) { entry.notes.push(who.name + ' reprend le poste'); jot(entry, b0); then(); });
+          });
         });
       } });
   }
@@ -729,7 +791,9 @@
     var M = E.measure(mid), v = G.vote(gv, mid, negotiated);
     var isNew = !gv.measures.some(function (x) { return x.id === mid; });
     var html = '<div class="law-head"><b>' + esc(M.name) + '</b><small>' + (isNew ? 'nouvelle loi · ' : '') + moneyTxt(M) + ' par an' + fansTxt(M) + '</small></div>' +
-      (isNew && M.edu ? '<p class="hint">' + esc(M.edu.what) + '</p>' : '') +
+      (isNew && M.edu ? '<p class="hint">' + esc(M.edu.what) + '</p>' +
+        '<details class="law-more"><summary>👍 👎 Pour, contre et sources</summary><div class="brief">' + line('👍', esc(M.edu.pro)) + line('👎', esc(M.edu.con)) +
+        (M.vrai ? line('🇫🇷', '<b>En vrai :</b> ' + esc(M.vrai)) : '') + '</div>' + (M.src ? srcHtml(M) : '') + '</details>' : '') +
       hemicycle(gv.seats, stancesOf(v), true) +
       '<div class="tally"><span class="t-pour">✅ Pour <b>' + v.pour + '</b></span><span class="t-contre">❌ Contre <b>' + v.contre + '</b></span><span class="t-abst">➖ Abstention <b>' + v.abst + '</b></span></div>' +
       '<div class="brief">' + v.groups.filter(function (x) { return x.seats > 0; }).map(function (x) {
@@ -752,8 +816,9 @@
       buttons: cands.map(function (x) { return { label: party(x.id).short + ' · ' + x.seats + ' députés', onClick: function () { lawScreen(mid, x.id); } }; }).concat([{ label: 'Annuler', onClick: function () { lawScreen(mid, null); } }]) });
   }
   function lawResult(mid, passed, negotiated, how, v) {
-    var M = E.measure(mid);
+    var M = E.measure(mid), b0 = snap();
     if (passed) G.adopt(gv, mid, !!negotiated); else G.reject(gv, mid);
+    jot({ kind: 'loi', title: '« ' + M.name + ' » ' + (passed ? 'adoptée' : 'rejetée') + ' par l\u2019Assemblée', text: passed ? (negotiated ? 'Le texte passe, amendé par ' + party(negotiated).short + '.' : 'Le texte est voté.') : 'Les députés ont dit non.' + (v ? ' ' + v.pour + ' pour, ' + v.contre + ' contre.' : '') }, b0);
     var html = (v ? '<div class="vote-anim">' + hemicycle(gv.seats, stancesOf(v), true) + '</div><div class="tally big"><span class="t-pour">✅ <b>' + v.pour + '</b></span><span class="t-contre">❌ <b>' + v.contre + '</b></span></div>' : '') +
       '<p>' + (passed ? '« ' + esc(M.name) + ' » est <b>adoptée</b>' + (negotiated ? ', amendée par ' + esc(party(negotiated).short) + '.' : '.') : '« ' + esc(M.name) + ' » est <b>rejetée</b> par l\'Assemblée. Une promesse qui tombe à l\'eau…') + '</p>' + effectsHtml(M, passed ? (negotiated ? 0.5 : 1) : 0);
     modal({ kicker: how === 'vote' ? 'Résultat du vote' : 'Résultat', title: passed ? 'Loi adoptée !' : 'Loi rejetée', html: html, buttons: [{ label: 'Continuer', primary: true, onClick: afterLaw }] });
@@ -773,7 +838,7 @@
   }
   function use493(mid, negotiated) {
     gv.used493 = true; gv.used493y = true;
-    var c = G.censure(gv, negotiated), M = E.measure(mid);
+    var c = G.censure(gv, negotiated), M = E.measure(mid), b0 = snap();
     var st = {}; c.groups.forEach(function (x) { st[x.id] = { stance: x.stance === 'pour' ? 'pour' : x.stance === 'contre' ? 'contre' : 'abst' }; });
     var html = '<p>Ton Premier ministre engage la responsabilité du gouvernement. L\'opposition dépose une <b>motion de censure</b> : si 289 députés la votent, le gouvernement tombe.</p>' +
       hemicycle(gv.seats, st, true) + '<div class="tally"><span class="t-contre">Pour la censure <b>' + c.pour + '</b></span><span>Il en faut <b>289</b></span></div>' + learn('art49_3') + learn('censure');
@@ -787,15 +852,17 @@
       html += '<p>😅 <b>La censure échoue</b> (' + c.pour + ' voix sur 289 nécessaires). « ' + esc(M.name) + ' » est adoptée sans vote. Mais l\'opinion n\'aime pas trop : −2 de popularité.</p>' + effectsHtml(M, negotiated ? 0.5 : 1);
       gv.popBonus -= 2;
     }
+    jot({ kind: 'loi', fell: c.passed, title: c.passed ? '49.3 : le gouvernement renversé' : '49.3 : « ' + M.name + ' » passe en force', text: c.passed ? 'La motion de censure réunit ' + c.pour + ' voix : « ' + M.name + ' » est enterrée et le Premier ministre tombe.' : 'La censure échoue (' + c.pour + ' voix sur 289). La loi est adoptée sans vote, au prix d\u2019un peu d\u2019impopularité.' }, b0);
     modal({ kicker: 'Article 49.3', title: c.passed ? 'Gouvernement renversé !' : 'Le 49.3 passe', html: html, buttons: [{ label: 'Continuer', primary: true, onClick: afterLaw }] });
   }
   function doReferendum(mid) {
-    var M = E.measure(mid), r = G.referendum(gv, mid);
+    var M = E.measure(mid), r = G.referendum(gv, mid), b0 = snap();
     var html = '<p>Tu soumets « ' + esc(M.name) + ' » directement aux Français. Attention : on vote aussi un peu… pour ou contre le président.</p>';
     if (r.censured) { G.reject(gv, mid); html += '<p class="verdict-bad">⚖️ Le <b>Conseil constitutionnel</b> juge que ce sujet n\'entre pas dans le champ du référendum (article 11). La consultation est annulée, et ta mesure avec.</p>'; }
     else if (r.passed) { G.adopt(gv, mid, false); gv.popBonus += 2; html += '<div class="refbar"><i style="width:' + r.yes + '%"></i><span>OUI ' + fr(r.yes, 1) + ' %</span></div><p>🎉 <b>Le oui l\'emporte !</b> La mesure est adoptée telle quelle, et ta légitimité sort renforcée.</p>' + effectsHtml(M, 1); }
     else { G.reject(gv, mid); gv.popBonus -= 6; html += '<div class="refbar no"><i style="width:' + r.yes + '%"></i><span>OUI ' + fr(r.yes, 1) + ' %</span></div><p class="verdict-bad">😬 <b>Le non l\'emporte.</b> Ta mesure est enterrée et ton autorité ébranlée (−6 de popularité). En 1969, un président a démissionné après un référendum perdu.</p>'; }
     html += learn('referendum');
+    jot({ kind: 'loi', title: r.censured ? 'Référendum annulé par le Conseil constitutionnel' : 'Référendum : le ' + (r.passed ? 'oui' : 'non') + ' l\u2019emporte', text: 'Les Français étaient appelés à se prononcer sur « ' + M.name + ' ».' + (r.censured ? '' : ' Oui : ' + fr(r.yes, 1) + ' %.') }, b0);
     modal({ kicker: 'Référendum', title: r.censured ? 'Référendum annulé' : r.passed ? 'Le oui gagne' : 'Le non gagne', html: html, buttons: [{ label: 'Continuer', primary: true, onClick: afterLaw }] });
   }
 
@@ -805,18 +872,36 @@
     if (o.def) p.push('déficit ' + (o.def > 0 ? '+' : '−') + fr(Math.abs(o.def), 2) + ' pt' + (o.once ? ', une seule année' : ''));
     if (o.debt) p.push('dette +' + o.debt + ' pts');
     if (o.pop) p.push('popularité ' + (o.pop > 0 ? '+' : '') + o.pop);
+    if (o.fire) p.push('tu choisis son remplaçant');
     Object.keys(o.sat || {}).forEach(function (s) { p.push(seg(s).icon + ' ' + (o.sat[s] > 0 ? '+' : '') + o.sat[s]); });
     return p.join(' · ') || 'aucun effet immédiat';
   }
   function showEvent() {
     var ev = G.drawEvent(gv);
+    // v3.4 : « L'affaire du ministre » vise un vrai ministre de ton gouvernement (hors Premier ministre)
+    var target = null;
+    if (ev.id === 'ministre' && gv.cabinet) {
+      var cands = CB.POSTS.filter(function (k) { return k !== 'pm' && gv.cabinet.posts[k]; });
+      cands.sort(function (a, b) { var x = gv.cabinet.posts[a], y = gv.cabinet.posts[b]; return (y.trait === 'casserole' ? 2 : 0) - (x.trait === 'casserole' ? 2 : 0) || x.loy - y.loy; });
+      if (cands.length) target = { post: cands[0], x: gv.cabinet.posts[cands[0]] };
+      if (target) ev = Object.assign({}, ev, { text: target.x.name + ' (' + postDef(target.post).name + ') est accusé(e) d\u2019avoir menti sur son patrimoine.' });
+    }
     var html = '<div class="paper"><div class="paper-mast">LE QUOTIDIEN NATIONAL <span>· Été, année ' + gv.year + '</span></div><div class="paper-head">' + esc(ev.title) + '</div><div class="paper-text">' + esc(ev.text) + '</div></div>' +
       (ev.id === 'cour' ? learn('cour') : '') + '<div class="pick">' +
       ev.opts.map(function (o, i) { return '<button type="button" class="pick-row" data-o="' + i + '"><span class="pick-txt"><b>' + esc(o.label) + '</b><small>' + optHtml(o) + '</small></span></button>'; }).join('') + '</div>';
     modal({ kicker: 'Été · Année ' + gv.year, title: 'L\'actualité s\'impose', html: html, buttons: [],
       onOpen: function () {
         Array.prototype.forEach.call(document.querySelectorAll('[data-o]'), function (b) {
-          b.addEventListener('click', function () { var o = ev.opts[+b.getAttribute('data-o')]; G.applyOpt(gv, o); closeModal(); ministerEvent(next); });
+          b.addEventListener('click', function () {
+            var o = ev.opts[+b.getAttribute('data-o')], b0 = snap(); G.applyOpt(gv, o);
+            var entry = { kind: 'actu', title: ev.title, text: ev.text, choice: o.label, notes: [] };
+            closeModal();
+            if (o.fire && target) {   // limogé : tu choisis le remplaçant
+              var expert = CB.replaceWithExpert(gv, target.post); render();
+              return chooseReplacement(target.post, target.x, expert, function (who) { entry.notes.push(who.name + ' reprend le poste'); jot(entry, b0); ministerEvent(next); });
+            }
+            jot(entry, b0); ministerEvent(next);
+          });
         });
       } });
   }
@@ -824,6 +909,7 @@
   /* ---------- Automne : le budget ---------- */
   function budget() {
     var cards = G.drawCards(gv), i = 0, def0 = gv.deficit;
+    budgetSnap = snap(); budgetPicks = [];
     if (gv.year === 1 && !gv.financingDone) {
       var fin = G.applyFinancing(gv); render();
       if (fin.length) {
@@ -845,11 +931,12 @@
       modal({ kicker: 'Automne · Le projet de loi de finances', title: 'Les arbitrages', html: html, buttons: [],
         onOpen: function () {
           Array.prototype.forEach.call(document.querySelectorAll('[data-o]'), function (b) {
-            b.addEventListener('click', function () { G.applyOpt(gv, c.opts[+b.getAttribute('data-o')]); closeModal(); render(); i++; oneCard(); });
+            b.addEventListener('click', function () { var o = c.opts[+b.getAttribute('data-o')]; G.applyOpt(gv, o); budgetPicks.push(c.title + ' : ' + o.label); closeModal(); render(); i++; oneCard(); });
           });
         } });
     }
   }
+  var budgetSnap = null, budgetPicks = [];
   function budgetVote(def0) {
     var tgt = G.C.target(gv.year), v = G.vote(gv, null), favorable = gv.deficit <= tgt + 0.2;
     var html = '<div class="brief">' + line('💶', 'Déficit prévu : <b>' + fr(gv.deficit, 1) + ' %</b> du PIB (objectif de l\'année : ' + fr(tgt, 1) + ' %).') +
@@ -877,6 +964,7 @@
       } else { gv.survived = true; done('😅 Le 49.3 passe : la censure ne recueille que ' + c.pour + ' voix. Budget adopté sans vote.'); }
     }
     function done(txt, bad) {
+      jot({ kind: 'budget', fell: !!bad, title: bad ? 'Budget : le gouvernement tombe' : 'Le budget ' + (gv.year + 1) + ' est adopté', text: txt.replace(/^[^A-Za-zÀ-ÿ«]+/, '') + (budgetPicks.length ? ' Les arbitrages : ' + budgetPicks.join(' ; ') + '.' : '') }, budgetSnap);
       modal({ kicker: 'Le budget', title: bad ? 'Crise politique' : 'Budget adopté', html: '<p' + (bad ? ' class="verdict-bad"' : '') + '>' + txt + '</p>',
         buttons: [{ label: 'Continuer', primary: true, onClick: next }] });
     }
@@ -891,8 +979,12 @@
       (r.text ? '<p class="verdict-bad">' + esc(r.text) + '</p>' : '<p>Les comptes tiennent la route. Bruxelles ne dit rien… pour l\'instant.</p>') +
       (y === 1 ? learn('trois_pourcent') : y === 2 ? learn('dette') : '');
     step = 0;
+    var paper = yearPaper(y, r);
+    U.showPaper(paper, 'Le bilan de l\u2019année →', function () { bilanModal(); });
+    function bilanModal() {
     modal({ kicker: 'Hiver · Bilan de l\'année ' + y, title: gv.over ? 'Le mandat s\'achève' : 'Une année de passée', html: html,
       buttons: [{ label: gv.over ? 'Voir le bilan du mandat' : 'Année ' + gv.year, primary: true, onClick: function () { render(); if (gv.over) finalBilan(); else if (gv.cohab && presidentDissolves()) cohabDissolve(); } }] });
+    }
     render();
   }
   /* v2.7 : en cohabitation, le président peut dissoudre (pas dans l'année qui suit des législatives) quand tu faiblis */

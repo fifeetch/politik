@@ -143,6 +143,13 @@
   }
   /* Remplacer un ministre parti (démission) : un expert prend le poste, sans remaniement */
   function replaceWithExpert(gv, post) { var x = draw(gv, { expert: 1 })[0]; x.comp = 2; gv.cabinet.posts[post] = x; return x; }
+  /* v3.3 : après un limogeage ou une démission, tu choisis le remplaçant (ne compte pas comme le remaniement de l'année) */
+  function replacePost(gv, post, prof) {
+    var cab = gv.cabinet, old = cab.posts[post];
+    cab.posts[post] = prof; cab.pool = cab.pool.filter(function (p) { return p !== prof; });
+    var ck = check(gv, cab.posts);
+    return { old: old, check: ck };
+  }
 
   /* Les événements de ministres : au plus un par été. Chaque événement propose des choix (même forme que les événements du quinquennat). */
   function event(gv) {
@@ -165,7 +172,7 @@
     if (ch.k === 'affaire') return { id: 'affaire', post: ch.post, minister: x, title: 'L\'affaire ' + x.name.split(' ')[1], text: 'Une vieille affaire ressort : ' + who + ' aurait omis de déclarer une partie de son patrimoine.',
       opts: [{ label: 'Le limoger', pop: -1, fire: true }, { label: 'Le défendre', pop: -2 - k, closed: true }] };
     if (ch.k === 'depart') return { id: 'depart', post: ch.post, minister: x, title: x.name + ' claque la porte', text: who + ' démissionne avec fracas pour « reprendre sa liberté »… et préparer sa propre candidature.',
-      opts: [{ label: 'Nommer un expert à sa place', pop: -1 - k, fire: true }] };
+      opts: [{ label: 'Nommer un remplaçant', pop: -1 - k, fire: true }] };
     if (ch.k === 'fronde') return { id: 'fronde', post: ch.post, minister: x, title: x.name + ' prend ses distances', text: who + ' critique ta politique dans la presse. Des députés de ton camp le suivent.',
       opts: [{ label: 'Le rappeler à l\'ordre', pop: -1, loy: 1 }, { label: 'Laisser dire', fronde: MIN.leaveFronde }] };
     return { id: 'succes', post: ch.post, minister: x, title: 'Le bon élève : ' + x.name, text: who + ' enchaîne les déplacements et les annonces. Les Français saluent le travail accompli.',
@@ -183,6 +190,6 @@
   }
 
   var API = { start: start, draw: draw, suggest: suggest, check: check, form: form, canReshuffle: canReshuffle, reshufflePool: reshufflePool, reshuffle: reshuffle,
-    event: event, applyEvent: applyEvent, replaceWithExpert: replaceWithExpert, POSTS: POSTS };
+    event: event, applyEvent: applyEvent, replaceWithExpert: replaceWithExpert, replacePost: replacePost, POSTS: POSTS };
   if (node) module.exports = API; else root.PolitikCabinet = API;
 })(this);

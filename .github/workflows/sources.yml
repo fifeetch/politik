@@ -20,6 +20,8 @@ jobs:
           node-version: 22
       - name: Règles du jeu (profils, cartes, objectifs, mode Simulation)
         run: node test/check-rules.js
+      - name: Lois de recettes du quinquennat (catalogue, vote, 49.3, déficit)
+        run: node test/check-laws.js
       - name: Contrôle des fiches (hors ligne)
         run: node test/check-sources.js
       - name: Ouverture de chaque lien officiel

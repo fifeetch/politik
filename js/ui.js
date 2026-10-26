@@ -736,7 +736,7 @@
       '<div class="art-rub"><span>' + esc(a.rub) + '</span>' + (a.mine ? '<em>Ton parti</em>' : '') + '<i>p. ' + a.page + '</i></div>' +
       (a.id === 'main' ? '<div class="art-pic">' + Press.scene(a.scene) + '</div>' : '') +
       '<h3>' + esc(a.title) + '</h3>' +
-      (a.rule ? '<p class="art-rule"><b>Pour la campagne :</b> ' + esc(a.rule) + '</p>' : '') +
+      (a.rule ? '<p class="art-rule"><b>' + esc(a.ruleLabel || 'Pour la campagne') + ' :</b> ' + esc(a.rule) + '</p>' : '') +
       '<div class="art-body">' + (p && a.id !== 'main' ? '<span class="art-face" style="--pc:' + p.color + '">' + A.portrait(a.pid) + '</span>' : '') + '<p>' + esc(a.text) + '</p></div></article>';
   }
   function articlesHtml(paper) {
@@ -747,7 +747,7 @@
   function frontHtml(paper) {
     var m = paper.main;
     return '<div class="une-pic">' + Press.scene(paper.scene) + '</div>' +
-      '<div class="une-top"><span class="une-logo"><b>QN</b><span>Le Quotidien<br>National</span></span><span class="une-date">' + paper.day.charAt(0).toUpperCase() + paper.day.slice(1) + '<br>tour ' + g.turn + ' sur ' + R.maxTurns + '</span></div>' +
+      '<div class="une-top"><span class="une-logo"><b>QN</b><span>Le Quotidien<br>National</span></span><span class="une-date">' + paper.day.charAt(0).toUpperCase() + paper.day.slice(1) + '<br>' + esc(paper.when || 'tour ' + g.turn + ' sur ' + R.maxTurns) + '</span></div>' +
       '<div class="une-word">' + esc(paper.word) + '</div>' +
       '<p class="une-sub">' + esc(m.lead || m.title) + '</p>' +
       '<div class="une-teasers">' + paper.teasers.map(function (a) {
@@ -764,7 +764,7 @@
     closeModal(); $('toast').hidden = true;
     paperCont = cont;
     $('paper-front').innerHTML = frontHtml(paper);
-    $('paper-inside').innerHTML = '<div class="pages-head"><button type="button" class="linkbtn" id="paper-back">‹ La une</button><span>Le Quotidien National · tour ' + g.turn + '</span></div>' + articlesHtml(paper);
+    $('paper-inside').innerHTML = '<div class="pages-head"><button type="button" class="linkbtn" id="paper-back">‹ La une</button><span>Le Quotidien National · ' + esc(paper.when || 'tour ' + g.turn) + '</span></div>' + articlesHtml(paper);
     $('paper-inside').hidden = true; $('paper-front').hidden = false;
     $('paper-open').hidden = false;
     $('paper-go').textContent = contLabel;
@@ -2206,7 +2206,7 @@
   });
 
   /* Outils partagés avec la phase « Gouverner » (js/govui.js) */
-  window.PolitikUI = { modal: modal, closeModal: closeModal, toast: toast, go: go, esc: esc, line: line, srcHtml: srcHtml, chip: chip,
+  window.PolitikUI = { showPaper: showPaper, modal: modal, closeModal: closeModal, toast: toast, go: go, esc: esc, line: line, srcHtml: srcHtml, chip: chip,
     game: function () { return g; }, me: function () { return me; } };
   renderTitleMap();
   renderChoose();

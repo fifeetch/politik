@@ -1218,3 +1218,6 @@ button { font-family: inherit; color: inherit; }
 .bc.on { background: var(--red); color: #fff; border-color: var(--red); font-weight: 700; transform: rotate(-1.5deg); }
 .slot-lock { border-style: solid; border-color: var(--red); color: var(--red); background: var(--red-2); }
 .pick-row.mine { border-color: var(--violet); box-shadow: 3px 3px 0 var(--violet-2); }
+.law-more { margin: 6px 0 8px; font-size: 14px; }
+.law-more summary { cursor: pointer; font-weight: 700; color: var(--violet); padding: 4px 0; }
+.law-more .brief { margin-top: 6px; }

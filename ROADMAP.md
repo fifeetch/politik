@@ -237,3 +237,13 @@ Avant, en Réaliste, tous les partis convergeaient vers ~8 % : Lutte Obstinée d
 
 ## v3.3 — fait : bouton de sauvegarde
 - 💾 « Sauvegarder la partie » dans l'onglet Mon parti, pendant la campagne. La sauvegarde reprend au début du tour en cours (reprendre en plein tour rejouerait le journal et les événements). La sauvegarde automatique à chaque tour est conservée ; « Reprendre » sur l'écran d'accueil.
+
+## v3.4 — fait : 20 nouvelles lois de recettes, ministres remplaçables, journal de l'année
+- **20 lois de recettes** dans FUNDING et NEW_LAWS.recettes (0,4 à 2 Md€ chacune) : très hauts salaires, bilans bancaires, grosses assurances-vie, données, publicité numérique, cryptomonnaies, TVA de luxe, résidences secondaires de luxe, bureaux vacants, concessions, grands voyageurs aériens, importations carbonées, emballages non recyclables, artificialisation, terrains constructibles non bâtis, aides publiques indues, brevets dormants, intérêts intragroupe, carried interest, écarts de rémunération. Chacune : explication, pour/contre, source officielle, ligne « En vrai ».
+- **Camp politique** de chaque loi (gauche, écologie, souverain, anti-optimisation) : un bonus ou malus au vote de chaque groupe, en plus de la distance politique.
+- **Ras-le-bol fiscal** : chaque nouvel impôt hors programme coûte de la popularité (−1,5, −3, −4,5…). Sans lui, la stratégie équilibrée était réélue 295 fois sur 300.
+- Ministère porteur : Bercy, ou Transition écologique pour les taxes vertes.
+- Fiche de loi : « Pour, contre et sources » dépliable.
+- Test `test/check-laws.js` (catalogue, vote, amendement, 49.3, censure, déficit, retour d'une loi rejetée), ajouté à la vérification automatique ; `govern-sim.js` présente une loi de recettes par an (stratégies b et c).
+- **Ministres** : après un limogeage ou une démission, tu choisis le remplaçant (l'expert proposé ou un autre profil), hors remaniement annuel. « L'affaire du ministre » vise désormais un vrai ministre.
+- **Journal de l'année** : le 31 décembre, Le Quotidien National raconte chaque fait de l'année (cartes, actualité, ministres, lois, budget) avec son effet chiffré (popularité, déficit, majorité).

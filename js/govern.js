@@ -16,6 +16,7 @@
     interest: 0,               // (déjà compris dans debtCharge : on ne compte pas les intérêts deux fois)
     marketPenalty: 4,          // déficit bien au-dessus de la trajectoire : les taux grimpent, la popularité baisse
     target: function (year) { return Math.max(3, 5.0 - 0.45 * year); },   // trajectoire vers 3 %
+    taxFatigue: 1.5,           // v3.4 : ras-le-bol fiscal, −1,5 de popularité au 1er nouvel impôt, −3 au 2e, −4,5 au 3e…
     amendFactor: 0.5,          // une mesure amendée garde la moitié de ses effets
     satPerFan: 7,              // un groupe qui aime une mesure adoptée : +7 de satisfaction par point
     honeymoon: 6               // l'état de grâce de la première année
@@ -71,7 +72,7 @@
     { id: 'marches', title: 'Les marchés s\'inquiètent', text: 'Les taux d\'intérêt de la dette française grimpent. Les agences de notation menacent.', opts: [
       { label: 'Plan d\'économies d\'urgence', def: -0.15, pop: -4, sat: { pi: -3, ret: -3 } }, { label: 'Rassurer sans rien changer', def: 0, debt: 2, pop: 0 }] },
     { id: 'ministre', title: 'L\'affaire du ministre', text: 'Un de tes ministres est accusé d\'avoir menti sur son patrimoine.', opts: [
-      { label: 'Le limoger', pop: 2 }, { label: 'Le défendre', pop: -5, cas: true }] },
+      { label: 'Le limoger', pop: 2, fire: true }, { label: 'Le défendre', pop: -5, cas: true }] },
     { id: 'bleus', title: 'Les Bleus champions !', text: 'L\'équipe de France remporte la Coupe du monde. Le pays est en liesse.', opts: [
       { label: 'Recevoir l\'équipe à l\'Élysée', pop: 4 }] },
     { id: 'gilets', title: 'Colère des automobilistes', text: 'Des ronds-points occupés dans tout le pays contre le prix du carburant.', opts: [
@@ -159,6 +160,14 @@
 
   /* ---------- Les votes à l'Assemblée ---------- */
   /* Position d'un groupe sur une mesure (ou sur le budget) : pour, abstention ou contre */
+  /* v3.4 : qui soutient une loi selon son « camp » (mesures de data.js qui ont un champ camp).
+     Un bonus ou un malus s'ajoute au score de chaque groupe, comme le fait déjà la présence de la loi dans son programme. */
+  var CAMPS = {
+    gauche:       { FI: 2, PC: 2, LO: 2, VP: 1, SM: 1.5, MD: 0, EM: -1, HZ: -1.5, UG: -1.5, DL: -0.5, MN: -0.5, RQ: -1.5 },
+    eco:          { VP: 2.5, FI: 1, PC: 0.5, LO: 0, SM: 1, MD: 0.5, EM: 0, HZ: -0.5, UG: -1, DL: -1, MN: -1, RQ: -1.5 },
+    souverain:    { FI: 1, PC: 1, LO: 1, VP: 0.5, SM: 1, MD: 0.5, EM: 0, HZ: 0, UG: 0, DL: 1.5, MN: 1.5, RQ: 0.5 },
+    optimisation: { FI: 1, PC: 1, LO: 1, VP: 1, SM: 1, MD: 1, EM: 0.5, HZ: 0, UG: -0.5, DL: 0, MN: 0, RQ: -0.5 }
+  };
   function stance(gv, gid, mid) {
     if (gid === gv.pid) return 'pour';
     if (isAlly(gv, gid)) return mid && E.measure(mid).choc ? 'abst' : 'pour';   // même un allié rechigne devant une mesure choc
@@ -168,6 +177,7 @@
       if (party.programme.indexOf(mid) >= 0 || (party.financing || []).indexOf(mid) >= 0) score += 3;
       if (m.theme && (party.cred[m.theme] || 0) >= 2) score += 1;
       if (m.choc) score -= 1;
+      if (m.camp && CAMPS[m.camp]) score += CAMPS[m.camp][gid] || 0;
     } else score -= 0.5;          // un budget, c'est toujours plus dur à voter pour l'opposition
     if (popularity(gv) < 30) score -= 1;
     return score >= 1.5 ? 'pour' : score >= 0 ? 'abst' : 'contre';
@@ -246,7 +256,11 @@
      et les autres mesures du catalogue. Une loi hors programme se vote comme une promesse, mais ne compte pas dans
      « promesses tenues ». Les mesures de financement déjà prévues au premier budget en sont exclues. */
   var NEW_LAWS = {
-    recettes: ['isf', 'heritage', 'niches', 'fraudefisc', 'superprofits', 'jets', 'tvaplus', 'csg'],
+    recettes: ['isf', 'heritage', 'niches', 'fraudefisc', 'superprofits', 'jets', 'tvaplus', 'csg',
+      // v3.4 : vingt nouvelles recettes (data.js, FUNDING)
+      'executive_pay_tax', 'bank_balance_tax', 'large_life_insurance', 'data_tax', 'digital_ads_tax', 'crypto_tax', 'luxury_vat', 'luxury_homes_tax',
+      'vacant_offices', 'concession_rent', 'flight_frequency_tax', 'carbon_imports', 'nonrecyclable_packaging', 'land_artificialisation',
+      'unused_buildable_land', 'aid_clawback', 'dormant_patents', 'intragroup_debt', 'carried_interest', 'pay_gap_tax'],
     economies: ['trainvie', 'fraude', 'gelpoint', 'gelpensions', 'chomage', 'nonremplacement', 'retraites']
   };
   function itemOf(gv, mid) { return gv.measures.filter(function (x) { return x.id === mid; })[0] || (gv.extra || []).filter(function (x) { return x.id === mid; })[0]; }
@@ -275,6 +289,11 @@
     gv.deficit += k * m.cost / C.mdPerPoint;
     var q = gv.cabinet ? 1 + MIN.compSat * (compOf(minister(gv, postFor(mid))) - 2) : 1;   // v2.6 : un ministre compétent fait mieux passer la mesure
     addSat(gv, m.fans, C.satPerFan * k * q);
+    // v3.4 : le « ras-le-bol fiscal ». Chaque nouvel impôt hors programme coûte de la popularité, de plus en plus.
+    if (m.cost < 0 && NEW_LAWS.recettes.indexOf(mid) >= 0 && !gv.measures.some(function (x) { return x.id === mid; })) {
+      gv.newTaxes = (gv.newTaxes || 0) + 1;
+      gv.popBonus -= C.taxFatigue * gv.newTaxes;
+    }
   }
   function reject(gv, mid) {
     var it = itemOf(gv, mid);
@@ -359,7 +378,7 @@
   }
 
   var API = { C: C, BUDGET_CARDS: BUDGET_CARDS, EVENTS: EVENTS, create: create, popularity: popularity, legislatives: legislatives, blocSeats: blocSeats,
-    majorityType: majorityType, isAlly: isAlly, setLegis: setLegis, NEW_LAWS: NEW_LAWS, lawCatalog: lawCatalog, addExtra: addExtra, itemOf: itemOf, setLegisCohab: setLegisCohab, postFor: postFor, minister: minister, compOf: compOf, stance: stance, vote: vote, frondeurs: frondeurs, censure: censure, referendum: referendum, adopt: adopt, reject: reject,
+    majorityType: majorityType, isAlly: isAlly, setLegis: setLegis, NEW_LAWS: NEW_LAWS, CAMPS: CAMPS, lawCatalog: lawCatalog, addExtra: addExtra, itemOf: itemOf, setLegisCohab: setLegisCohab, postFor: postFor, minister: minister, compOf: compOf, stance: stance, vote: vote, frondeurs: frondeurs, censure: censure, referendum: referendum, adopt: adopt, reject: reject,
     governmentFalls: governmentFalls, canDissolve: canDissolve, dissolveMult: dissolveMult, dissolve: dissolve, applyFinancing: applyFinancing, canReferendum: canReferendum, drawCards: drawCards, applyOpt: applyOpt, drawEvent: drawEvent, endYear: endYear, verdict: verdict, addSat: addSat };
   if (node) module.exports = API; else root.PolitikGov = API;
 })(this);
