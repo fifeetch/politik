@@ -185,7 +185,9 @@
     // la vitesse de défilement ne dépend pas de la longueur du texte
     var secs = Math.max(6, Math.min(16, 3 + text.length / 9));   // environ 9 lettres par seconde : le temps de lire
     b.style.setProperty('--crawl', secs + 's');
-    app().appendChild(b);
+    // v3.6.2 : en partie, le bandeau se pose en bas de la carte (il ne cache plus l'argent, l'influence et la forme en haut)
+    var mw = document.getElementById('map-wrap'), inGame = mw && mw.offsetParent;
+    if (inGame) { b.classList.add('breaking-map'); mw.appendChild(b); } else app().appendChild(b);
     function out() { b.classList.add('out'); setTimeout(function () { b.remove(); }, 400); }
     b.addEventListener('click', out);
     bannerTimer = setTimeout(out, reduced ? 6000 : 1000 * (secs + 0.6));

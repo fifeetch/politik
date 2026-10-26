@@ -1222,3 +1222,10 @@ button { font-family: inherit; color: inherit; }
 .law-more summary { cursor: pointer; font-weight: 700; color: var(--violet); padding: 4px 0; }
 .law-more .brief { margin-top: 6px; }
 .pl-sub { font: 800 13px var(--body); color: var(--violet); text-transform: uppercase; letter-spacing: .04em; padding: 10px 2px 4px; border-bottom: 1.5px solid var(--violet-2); }
+/* v3.6.2 : l'alerte info en bas de la carte, en bandeau fin */
+.breaking.breaking-map { top: auto; bottom: 6px; left: 8px; right: 8px; height: 30px; padding-top: 0; border-radius: 8px; overflow: hidden; z-index: 6; box-shadow: 0 4px 14px rgba(35,32,58,.3); }
+.breaking.breaking-map .breaking-k { font-size: 11px; padding: 0 8px; }
+.breaking.breaking-map { animation: bannerUp .35s ease-out both; }
+.breaking.breaking-map.out { animation: bannerDown .3s ease-in both; }
+@keyframes bannerUp { from { transform: translateY(140%); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes bannerDown { to { transform: translateY(140%); opacity: 0; } }
