@@ -1136,3 +1136,7 @@ button { font-family: inherit; color: inherit; }
 .gf-evt span:last-child { display: flex; flex-direction: column; }
 .gf-evt small { color: var(--ink-2); font-size: 12px; }
 .gf-evt .gf-face { width: 64px; }
+
+/* v2.7 : l'opposition */
+.oppo .gauge small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.end-bars { display: flex; flex-direction: column; gap: 6px; }

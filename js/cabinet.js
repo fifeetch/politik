@@ -56,7 +56,10 @@
   function start(gv) {
     gv.cabinet = { posts: {}, pool: [], used: [], fronde: 0, reshuffledYear: 0, fusibleUsed: false, imposed: null, log: [] };
     gv.cabinet.pool = draw(gv);
-    if (G.majorityType(gv) === 'cohabitation') {
+    if (gv.cohab) {   // v2.7 : en cohabitation, Matignon, c'est toi
+      var P0 = E.PARTY[gv.pid], me = { id: 'toi', name: P0.candidate, sex: 'f', origin: 'toi', party: gv.pid, face: gv.myFace || randomFace(gv.rng, 'm'), comp: 2, loy: 3, not: 3, trait: 'reseau', region: null };
+      gv.cabinet.imposed = me; gv.cabinet.posts.pm = me;
+    } else if (G.majorityType(gv) === 'cohabitation') {
       var rv = gv.legis.outcome.rival, party = rv.parties.slice().sort(function (a, b) { return (gv.seats[b] || 0) - (gv.seats[a] || 0); })[0];
       var pm = profile(gv, gv.rng, 'impose', party, gv.cabinet.used);
       gv.cabinet.imposed = pm; gv.cabinet.posts.pm = pm;

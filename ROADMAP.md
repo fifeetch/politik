@@ -175,8 +175,14 @@ Quand tu gagnes la présidentielle, le bouton « 🏛️ Gouverner le pays » ou
 - **Cohabitation** : le Premier ministre est imposé par la majorité de l'Assemblée.
 - Simulation (`node test/govern-sim.js 150 c`, et `… c sans` pour comparer) : un gouvernement bien composé aide, surtout par l'Économie, environ 3,5 événements de ministres par mandat. Le simulateur, bloqué depuis l'entre-deux-tours, est réparé.
 
-## Prochain lot (opposition)
-- **v2.7 — L'opposition** : le perdant (finaliste ou éliminé au 1er tour) continue chef de son parti, à chaque trimestre pendant 5 ans : propositions de loi le jour réservé, coalitions, motions de censure ; chute du gouvernement, dissolution par le président (dès l'année 2), cohabitation où tu deviens Premier ministre.
+## v2.7 — fait : l'opposition et la cohabitation (lot 4)
+- **La partie continue après une défaite** (finaliste battu ou éliminé au 1er tour) : bouton « Continuer dans l'opposition ».
+- **Législatives d'opposition** : le même moteur, mais centré sur ton camp. Tu proposes tes alliances (sauf au parti du président ; sa famille dit oui deux fois moins souvent), tu fais campagne (« Ton grand meeting » remplace le président en meeting, sans coût en popularité), tu joues ton entre-deux-tours. La majorité présidentielle se forme seule.
+- **Cohabitation** : ton camp a 289 sièges → tu deviens Premier ministre, tu formes ton gouvernement (Matignon, c'est toi) et gouvernes ; pas de 49.3 refusé mais pas de référendum ni de dissolution (pouvoirs du président) ; le président peut dissoudre à partir de l'année suivante si ta popularité baisse.
+- **5 ans d'opposition, 4 trimestres par an** : la loi du gouvernement (tes électeurs l'aiment ou la rejettent : vote en conséquence), l'actualité de l'été, ta proposition de loi le jour réservé (article 48), la motion de censure en hiver (58 signatures, 289 voix ; une proposition de coalition par an). Gouvernement renversé : nouveau Premier ministre, ou dissolution si le président est assez populaire et que l'article 12 le permet.
+- **Bilan** : intentions de vote pour la prochaine présidentielle (favori, dans la course, distancé), tes lois adoptées, les gouvernements renversés.
+- 2 fiches « Le saviez-vous ? » : le jour réservé à l'opposition (article 48), la cohabitation (articles 5, 8, 12, 15, 20, 52 ; 1986, 1993, 1997).
+- Simulation (`node test/oppo-sim.js 100`) : cohabitation directe environ 1 fois sur 20 ; après 5 ans d'opposition active, ton parti gagne environ 4 points, finit favori environ 4 fois sur 10 ; environ un gouvernement renversé par mandat.
 
 ## À venir (pistes du bêta-testeur)
 - **Campagne éclair** : un format court en 3 tours, et une sauvegarde automatique pour reprendre une partie.

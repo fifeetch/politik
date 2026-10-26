@@ -140,6 +140,13 @@
     gv.allies = res.outcome.camp.filter(function (p) { return p !== gv.pid; });
     return res;
   }
+  /* v2.7 : la cohabitation. Ton camp a gagné les législatives contre le président : tu deviens Premier ministre. */
+  function setLegisCohab(gv, res, pres) {
+    gv.legis = res; gv.seats = res.seats; gv.manual = true; gv.cohab = { pres: pres };
+    var u = res.unions.filter(function (x) { return x.id === 'joueur'; })[0];
+    gv.allies = (u ? u.parties : [gv.pid]).filter(function (p) { return p !== gv.pid; });
+    return res;
+  }
   function isAlly(gv, gid) { return gid === gv.ally || (gv.allies || []).indexOf(gid) >= 0; }
   function blocSeats(gv) { var s = gv.seats[gv.pid] || 0; Object.keys(gv.seats).forEach(function (id) { if (id !== gv.pid && isAlly(gv, id)) s += gv.seats[id]; }); return s; }
   /* absolue · relative (premier bloc) · sans (un autre bloc est devant) · cohabitation (un autre bloc a 289 sièges) */
@@ -321,7 +328,7 @@
   }
 
   var API = { C: C, BUDGET_CARDS: BUDGET_CARDS, EVENTS: EVENTS, create: create, popularity: popularity, legislatives: legislatives, blocSeats: blocSeats,
-    majorityType: majorityType, isAlly: isAlly, setLegis: setLegis, postFor: postFor, minister: minister, compOf: compOf, stance: stance, vote: vote, frondeurs: frondeurs, censure: censure, referendum: referendum, adopt: adopt, reject: reject,
+    majorityType: majorityType, isAlly: isAlly, setLegis: setLegis, setLegisCohab: setLegisCohab, postFor: postFor, minister: minister, compOf: compOf, stance: stance, vote: vote, frondeurs: frondeurs, censure: censure, referendum: referendum, adopt: adopt, reject: reject,
     governmentFalls: governmentFalls, canDissolve: canDissolve, dissolveMult: dissolveMult, dissolve: dissolve, applyFinancing: applyFinancing, canReferendum: canReferendum, drawCards: drawCards, applyOpt: applyOpt, drawEvent: drawEvent, endYear: endYear, verdict: verdict, addSat: addSat };
   if (node) module.exports = API; else root.PolitikGov = API;
 })(this);

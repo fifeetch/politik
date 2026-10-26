@@ -412,5 +412,40 @@ section('Le gouvernement');
   ok(Object.keys(seen).length >= 1, 'les ministres font l\'actualité (' + Object.keys(seen).join(', ') + ')');
 })();
 
+/* ---------- v2.7 : l'opposition et la cohabitation ---------- */
+section('L\'opposition et la cohabitation');
+(function () {
+  var LG = require('../js/legis.js'), OP = require('../js/oppo.js'), G = require('../js/govern.js'), CB = require('../js/cabinet.js');
+  var g = E.createGame('SM', { seed: 41 }); E.setProgramme(g, 'SM', E.PARTY.SM.programme, E.PARTY.SM.financing);
+  g.result = { first: E.poll(g), second: { a: 'EM', b: 'SM', pctA: 0.55, pctB: 0.45 } }; g.winner = 'EM';
+  var lc = LG.newCampaign(g, { pres: 'EM', player: 'SM', margin: 0.05, loser: 'SM' });
+  ok(!LG.offerAlly(g, lc, 'EM').ok, 'dans l\'opposition, on ne s\'allie pas avec le parti du président');
+  ok(LG.offerChance(g, lc, 'MD') < LG.allyChance(g, 'SM', 'MD'), 'la famille du président lui reste plutôt fidèle');
+  lc.allies = ['VP', 'FI'];
+  var res = LG.run(g, LG.optsOf(lc, { rng: E.makeRng(3) })), u = res.unions.filter(function (x) { return x.id === 'joueur'; })[0];
+  ok(u && u.parties.join() === 'SM,VP,FI' && res.unions.filter(function (x) { return x.pres; })[0].parties.indexOf('SM') < 0, 'ton camp d\'opposition : toi et tes alliés, hors de la majorité présidentielle');
+  var n = 0; Object.keys(res.seats).forEach(function (k) { n += res.seats[k]; });
+  ok(n === 577 && res.focusSeats === (res.seats.SM + res.seats.VP + res.seats.FI), 'les sièges de ton camp sont bien comptés');
+  ok(LG.actionGain(g, lc, 'meeting', 'idf') === D.LEGIS.campaign.meetingOppo && LG.act(g, lc, { type: 'meeting', rid: 'idf' }).pop === 0, 'ton grand meeting de chef de parti : pas de coût en popularité');
+  var op = OP.create(g, 'SM', 'EM', res);
+  ok(op.myCamp.join() === 'SM,VP,FI' && op.presCamp.indexOf('EM') >= 0, 'l\'opposition : ton camp face à la majorité présidentielle');
+  ok(OP.quarter(op) === 'loi' && OP.govLaw(op), '4 trimestres : d\'abord la loi du gouvernement');
+  // la loi du gouvernement qui divise le plus tes électeurs (ils l'aiment ou la rejettent nettement)
+  var mid = op.govLaws.slice().sort(function (a, b) { return Math.abs(OP.fit(op, b)) - Math.abs(OP.fit(op, a)); })[0], f = OP.fit(op, mid);
+  function twin() { var o = OP.create(g, 'SM', 'EM', res); o.rng = function () { return 0.5; }; o.govLaws = [mid]; return o; }
+  var good = OP.voteGovLaw(twin(), f > 0 ? 'pour' : 'contre').delta, bad = OP.voteGovLaw(twin(), f > 0 ? 'contre' : 'pour').delta;
+  ok(good > bad, 'voter comme le veulent tes électeurs rapporte plus que voter contre eux (' + good.toFixed(2) + ' contre ' + bad.toFixed(2) + ')');
+  ok(!OP.canCensure({ myCamp: ['SM'], seats: { SM: 40 }, coalition: null }) && OP.canCensure({ myCamp: ['SM'], seats: { SM: 60 }, coalition: null }), 'motion de censure : 58 signatures pour la déposer');
+  var cv = OP.censureVote(op); ok(cv.passed === (cv.pour >= 289), 'motion de censure : adoptée seulement avec 289 voix');
+  ok(!OP.canDissolve(op), 'pas de dissolution dans l\'année qui suit des législatives');
+  for (var i = 0; i < 20; i++) OP.next(op);
+  ok(op.over && op.year === 6, '5 ans, 4 trimestres par an');
+  var v = OP.verdict(op); ok(['favori', 'course', 'distance'].indexOf(v.verdict) >= 0 && v.rank >= 1, 'le bilan : ta place pour la prochaine présidentielle (' + v.verdict + ')');
+  // la cohabitation : tu deviens Premier ministre
+  var gv = G.create(g, 'SM', { manual: true }); G.setLegisCohab(gv, res, 'EM');
+  ok(gv.cohab && gv.allies.join() === 'VP,FI', 'cohabitation : ton camp devient la majorité');
+  CB.start(gv); ok(gv.cabinet.posts.pm && gv.cabinet.posts.pm.origin === 'toi', 'cohabitation : Matignon, c\'est toi');
+})();
+
 console.log('\n' + passes + ' vérifications réussies, ' + fails + ' en échec.');
 process.exit(fails ? 1 : 0);

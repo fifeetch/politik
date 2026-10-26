@@ -311,6 +311,8 @@
     legislatives: { title: 'Les élections législatives', text: 'Les 577 députés sont élus dans 577 circonscriptions, au scrutin majoritaire à deux tours, pour 5 ans. Pour gouverner sereinement, le président a besoin d\'une majorité absolue : 289 députés.', src: [{ label: 'Fiche de synthèse n° 3 : l\'élection des députés (Assemblée nationale)', url: 'https://www.assemblee-nationale.fr/dyn/synthese/deputes-groupes-parlementaires/l-election-des-deputes' }] },
     scrutin_legis: { title: 'Comment on devient député', text: 'Dans chaque circonscription, il faut plus de 50 % des voix et au moins 25 % des inscrits pour être élu dès le 1er tour. Sinon, ceux qui ont réuni au moins 12,5 % des inscrits vont au 2nd tour (les deux premiers au minimum). À trois, on parle de triangulaire : le troisième peut se retirer pour faire gagner un candidat proche. Au 2nd tour, le premier l\'emporte.', src: [{ label: 'Fiche de synthèse n° 3 : l\'élection des députés (Assemblée nationale)', url: 'https://www.assemblee-nationale.fr/dyn/synthese/deputes-groupes-parlementaires/l-election-des-deputes' }] },
     locomotive: { title: 'Pourquoi les législatives suivent la présidentielle', text: 'Depuis 2002, les législatives ont lieu quelques semaines après la présidentielle : une loi organique de 2001 a inversé le calendrier, après le passage au quinquennat. Les électeurs confirment souvent leur choix : le président a obtenu une majorité absolue en 2002, 2007, 2012 et 2017, mais seulement une majorité relative en 2022.', src: [{ label: 'Loi organique n° 2001-419 du 15 mai 2001 modifiant la date d\'expiration des pouvoirs de l\'Assemblée nationale (Légifrance)', url: 'https://www.legifrance.gouv.fr/loda/id/JORFTEXT000000404920' }] },
+    jour_opposition: { title: 'Le jour réservé à l\'opposition', text: 'Depuis 2008, la Constitution réserve un jour de séance par mois à un ordre du jour fixé par les groupes d\'opposition et les groupes minoritaires (article 48). C\'est là que l\'opposition fait examiner ses propres propositions de loi. Elles sont rarement adoptées, mais un bon texte peut rassembler au-delà de son camp.', src: [{ label: 'Constitution, article 48 (Conseil constitutionnel)', url: 'https://www.conseil-constitutionnel.fr/le-bloc-de-constitutionnalite/texte-integral-de-la-constitution-du-4-octobre-1958-en-vigueur' }] },
+    cohabitation: { title: 'La cohabitation', text: 'Quand la majorité de l\'Assemblée est opposée au président, celui-ci nomme un Premier ministre issu de cette majorité. Le gouvernement « détermine et conduit la politique de la nation » (article 20) ; le président reste chef des armées et négocie les traités, et il garde le droit de dissoudre l\'Assemblée. La France a connu trois cohabitations : 1986, 1993 et 1997.', src: [{ label: 'Constitution, articles 5, 8, 12, 15, 20 et 52 (Conseil constitutionnel)', url: 'https://www.conseil-constitutionnel.fr/le-bloc-de-constitutionnalite/texte-integral-de-la-constitution-du-4-octobre-1958-en-vigueur' }] },
     majorite: { title: 'Comment une loi est adoptée', text: 'À l\'Assemblée, une loi est adoptée si elle recueille plus de voix « pour » que de voix « contre » : les abstentions ne comptent pas. C\'est la majorité des suffrages exprimés. Sans majorité absolue, il faut convaincre d\'autres groupes, souvent en acceptant des amendements.', src: [{ label: 'Fiche de synthèse n° 56 : les votes à l\'Assemblée nationale', url: 'https://www.assemblee-nationale.fr/dyn/synthese/fonctionnement-assemblee-nationale/travail-legislatif/les-votes-a-l-assemblee-nationale' }] },
     hcfp: { title: 'Le Haut Conseil des finances publiques', text: 'Un organisme indépendant, rattaché à la Cour des comptes, qui vérifie chaque automne si les prévisions du gouvernement sont réalistes et si le budget respecte la trajectoire promise.', src: [{ label: 'Haut Conseil des finances publiques', url: 'https://www.hcfp.fr/' }] },
     trois_pourcent: { title: 'La règle des 3 %', text: 'Les règles européennes demandent de garder le déficit public sous 3 % du PIB. La France fait l\'objet d\'une procédure pour déficit excessif et s\'est engagée à repasser sous 3 % en 2029.', src: [{ label: 'La situation et les perspectives des finances publiques, juin 2026 (Cour des comptes)', url: 'https://www.ccomptes.fr/fr/publications/la-situation-et-les-perspectives-des-finances-publiques-17' }, { label: 'Le nouveau cadre budgétaire européen (Direction générale du Trésor)', url: 'https://www.tresor.economie.gouv.fr/Articles/2026/04/14/le-nouveau-cadre-budgetaire-europeen-de-la-negociation-a-la-mise-en-oeuvre' }] },
@@ -618,9 +620,10 @@
     allyAccept: [{ gap: 0.8, p: 0.85 }, { gap: 1.6, p: 0.6 }, { gap: 2.4, p: 0.35 }, { gap: 3.2, p: 0.15 }, { gap: 99, p: 0.05 }],
     cordon: { parties: ['MN', 'RQ'], below: 5, factor: 0.4 },   // le « cordon sanitaire » : la droite nationale et ceux qui sont loin d'elle se méfient les uns des autres
     allyDealBonus: 0.15,                       // +15 % s'il t'a soutenu au 2nd tour de la présidentielle
-    allyOffers: 3,                             // propositions d'alliance avant la campagne
+    allyOffers: 3,
+    oppoFamilyCut: 0.5,                        // v2.7 : dans l'opposition, un parti de la famille du président dit oui moitié moins souvent                             // propositions d'alliance avant la campagne
     campaign: { turns: 2, actions: 3,
-      meeting: 0.1, meetingPop: 2, meetingMax: 1,    // le président en meeting : +10 % pour ton camp dans la région, −2 de popularité, une fois par tour
+      meeting: 0.1, meetingPop: 2, meetingMax: 1, meetingOppo: 0.07,   // v2.7 : dans l'opposition, c'est ton grand meeting de chef de parti (+7 %, sans coût)    // le président en meeting : +10 % pour ton camp dans la région, −2 de popularité, une fois par tour
       vedette: 0.08, vedetteMax: 2,                  // investir une vedette : +8 % dans la région, 2 vedettes en tout
       mobilise: 0.04, mobiliseLow: 0.03,             // mobiliser : +4 %, +3 % de plus là où l'on vote peu
       clip: 0.02,                                    // le clip national : +2 % partout
@@ -667,6 +670,26 @@
     eventChance: 0.7,        // chaque été, 7 chances sur 10 qu'un ministre fasse l'actualité
     fusible: 4,              // changer de Premier ministre : +4 de popularité la première fois, +1 ensuite
     leaveFronde: 0.1
+  };
+
+
+  /* ---------- v2.7 : l'opposition ----------
+     5 ans, 4 trimestres par an : la loi du gouvernement (printemps), l'actualité (été), le jour réservé à l'opposition
+     (automne, article 48 : un jour de séance par mois), la motion de censure (hiver, article 49 : 58 signatures pour la
+     déposer, 289 voix pour renverser le gouvernement). Les effets sont des réglages de jeu. */
+  var OPPO = {
+    years: 5, signatures: 58, majority: 289,
+    presPop0: 55, presWear: 3,             // la popularité du président : 55 % au départ, −3 par an (l'usure du pouvoir)
+    lawFit: 0.25,                          // soutenir une loi que tes électeurs aiment (ou combattre une loi qu'ils rejettent) : jusqu'à +0,6 point
+    abstain: -0.1,                         // s'abstenir : un peu illisible
+    lawPass: 1, lawFail: -2,               // une loi du gouvernement adoptée / rejetée : popularité du président
+    nichePass: 0.35, nicheClose: 0.15, nicheLost: 0,   // ta proposition de loi : adoptée, battue de peu, battue largement
+    censureFall: 0.3, censureClose: 0.1, censureFlop: -0.4, censurePres: -4,
+    oppoDrift: 0.25,                       // chaque année, l'usure du président fait monter tous les partis d'opposition
+    coalitionFar: -0.3,                    // une coalition avec un groupe éloigné (distance 3 ou plus) déroute tes électeurs
+    crisisHit: 0.2, crisisUnity: 0.1, crisisPlan: 0.15,
+    noise: 0.15,
+    dissolveIfPop: 45                      // gouvernement renversé : le président dissout s'il est à 45 % ou plus (et si c'est permis), sinon il nomme un nouveau Premier ministre
   };
 
   /* ---------- v0.6 : le débat télévisé ----------
@@ -788,7 +811,7 @@
 
   var DATA = { REFERENCE_2027: REFERENCE_2027, POLLS: POLLS, BASES: BASES, REGIONS: REGIONS, PROFILES: PROFILES, THEMES: THEMES, HEADLINES: HEADLINES, PARTIES: PARTIES, ACTIONS: ACTIONS,
                CARDS: CARDS, EVENTS: EVENTS, DILEMMAS: DILEMMAS, CRISES: CRISES, REPLIES: REPLIES, TEMPERS: TEMPERS,
-               MEASURES: MEASURES, FUNDING: FUNDING, SEGMENTS: SEGMENTS, VOTE_PROP: VOTE_PROP, SEGMENTS_SRC: SEGMENTS_SRC, AFFAIRS: AFFAIRS, LEARN: LEARN, BUDGET_AFFAIR: BUDGET_AFFAIR, REACTIONS: REACTIONS, ADVISOR: ADVISOR, OBJECTIVES: OBJECTIVES, RULES: RULES, LEGIS: LEGIS, MINISTRY: MINISTRY, validate: validate };
+               MEASURES: MEASURES, FUNDING: FUNDING, SEGMENTS: SEGMENTS, VOTE_PROP: VOTE_PROP, SEGMENTS_SRC: SEGMENTS_SRC, AFFAIRS: AFFAIRS, LEARN: LEARN, BUDGET_AFFAIR: BUDGET_AFFAIR, REACTIONS: REACTIONS, ADVISOR: ADVISOR, OBJECTIVES: OBJECTIVES, RULES: RULES, LEGIS: LEGIS, MINISTRY: MINISTRY, OPPO: OPPO, validate: validate };
   if (typeof module !== 'undefined' && module.exports) module.exports = DATA;
   else root.PolitikData = DATA;
 })(this);

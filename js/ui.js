@@ -1937,6 +1937,7 @@
     endMore = more;
     $('end-table').innerHTML = h;
     $('btn-govern').hidden = win !== me;
+    $('btn-oppo').hidden = win === me;   // v2.7 : la partie continue dans l'opposition
     go('end');
   }
 

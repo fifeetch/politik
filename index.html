@@ -187,6 +187,7 @@
     <div id="end-table" class="end-table"></div>
     <div class="stack">
       <button class="btn btn-yellow btn-big" id="btn-govern" type="button" hidden>Gouverner le pays</button>
+      <button class="btn btn-yellow btn-big" id="btn-oppo" type="button" hidden>Continuer dans l'opposition</button>
       <button class="btn btn-ghost-light" data-action="play">Rejouer une campagne</button>
       <button class="btn btn-ghost-light" data-go="title">Accueil</button>
     </div>
@@ -225,6 +226,18 @@
     <div class="lg-camp" id="lg-camp"></div>
     <div class="lg-stage" id="lg-stage"></div>
     <button id="lg-btn" class="btn btn-yellow btn-big night-btn" type="button">Continuer</button>
+  </section>
+
+  <!-- v2.7 : l'opposition -->
+  <section id="screen-oppo" class="screen gov oppo">
+    <header class="gov-top">
+      <div class="gov-face" id="op-face"></div>
+      <div><span class="kicker" id="op-kicker">Chef de l'opposition</span><h1 class="h1" id="op-title">Année 1 sur 5</h1><span class="region-sub" id="op-sub"></span></div>
+    </header>
+    <div class="gauges" id="op-gauges"></div>
+    <div class="hemi" id="op-hemi"></div>
+    <div class="advisor" id="op-advisor"></div>
+    <button class="btn btn-ink btn-big" id="op-next" type="button">Continuer</button>
   </section>
 
   <!-- v2.6 : former le gouvernement -->
@@ -286,6 +299,7 @@
 <script src="js/legis.js"></script>
 <script src="js/govern.js"></script>
 <script src="js/cabinet.js"></script>
+<script src="js/oppo.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/govui.js"></script>
 <script>
