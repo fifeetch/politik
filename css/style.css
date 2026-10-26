@@ -1221,3 +1221,4 @@ button { font-family: inherit; color: inherit; }
 .law-more { margin: 6px 0 8px; font-size: 14px; }
 .law-more summary { cursor: pointer; font-weight: 700; color: var(--violet); padding: 4px 0; }
 .law-more .brief { margin-top: 6px; }
+.pl-sub { font: 800 13px var(--body); color: var(--violet); text-transform: uppercase; letter-spacing: .04em; padding: 10px 2px 4px; border-bottom: 1.5px solid var(--violet-2); }

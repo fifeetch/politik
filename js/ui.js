@@ -402,8 +402,9 @@
     D.SEGMENTS.forEach(function (sg) { var v = m.fans[sg.id] || 0; if (v > 0) up.push(v > 1 ? sg.icon + sg.icon : sg.icon); if (v < 0) down.push(v < -1 ? sg.icon + sg.icon : sg.icon); });
     return (up.length ? ' · 👍 ' + up.join('') : '') + (down.length ? ' · 👎 ' + down.join('') : '');
   }
+  var FIN_SAVE = ['gelpensions', 'gelpoint', 'chomage', 'trainvie'];   // les financements qui sont des économies (le reste : des recettes)
   function fiche(m) {
-    var t = th(m.theme);
+    var t = m.theme ? th(m.theme) : { icon: m.cost < 0 ? '🏦' : '💸', name: FIN_SAVE.indexOf(m.id) >= 0 ? 'Financement · économie' : 'Financement · recette' };   // v3.5.3 : les financements n'ont pas de thème
     return '<p class="fiche-what">' + esc(m.edu.what) + '</p><div class="fiche-pc"><div class="fiche-pro"><b>👍 Pour</b>' + esc(m.edu.pro) + '</div><div class="fiche-con"><b>👎 Contre</b>' + esc(m.edu.con) + '</div></div>' +
       '<p class="hint">' + t.icon + ' ' + esc(t.name) + ' · ' + costTxt(m.cost) + (m.choc ? ' · 💥 mesure choc' : '') + '</p>' +
       enVrai(m) + srcHtml(m);
@@ -469,7 +470,14 @@
     });
     // financement : jusqu'à R.fundingMax mesures de recettes ou d'économies
     var fsec = el('div', { class: 'pl-theme pl-fin' }, '<div class="pl-head">🏦 <b>Comment tu finances</b><span class="pl-cred">' + progFin.length + ' / ' + R.fundingMax + ' (facultatif)</span></div>');
-    D.FUNDING.forEach(function (m) {
+    // v3.5.3 : les financements rangés comme les lois du quinquennat : recettes, puis économies (ce qui rapporte le plus d'abord)
+    var finGroups = [{ icon: '💶', name: 'Faire rentrer de l\u2019argent', ids: [] }, { icon: '✂️', name: 'Réduire les dépenses', ids: [] }];
+    D.FUNDING.slice().sort(function (a, b) { return a.cost - b.cost; }).forEach(function (m) { finGroups[FIN_SAVE.indexOf(m.id) >= 0 ? 1 : 0].ids.push(m); });
+    finGroups.forEach(function (gp) {
+      fsec.appendChild(el('div', { class: 'pl-sub' }, gp.icon + ' ' + esc(gp.name)));
+      gp.ids.forEach(finRow);
+    });
+    function finRow(m) {
       var on = progFin.indexOf(m.id) >= 0;
       var row = el('div', { class: 'pl-row' + (on ? ' on' : '') });
       row.innerHTML = '<button type="button" class="pl-pick" aria-pressed="' + on + '">' + (on ? '✓' : '+') + '</button>' +
@@ -483,7 +491,7 @@
       });
       row.querySelector('.pl-info').addEventListener('click', function () { modal({ kicker: 'Le saviez-vous ?', title: m.name, html: fiche(m) }); });
       fsec.appendChild(row);
-    });
+    }
     list.appendChild(fsec);
     $('prog-mini').innerHTML = '<span class="fund-dot fund-' + fundingState(over) + '"></span>' + FUND_LABEL[fundingState(over)] + ' : <b>' + reste + ' Md€</b> à financer · ' + progSel.length + ' / ' + R.programmeSize + ' promesses · ' + progFin.length + ' / ' + R.fundingMax + ' financements';
     $('prog-go').disabled = progSel.length !== R.programmeSize;
