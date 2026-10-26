@@ -1453,7 +1453,7 @@
   /* Les reports d'un parti éliminé vers les deux finalistes, et pourquoi. expected : estimation (consignes pas encore données) */
   function transfersFor(g, e, expected) {
     var b = g.between, A = b.a, B = b.b, dA = dist(e, A), dB = dist(e, B), why = [];
-    var ra = R.transfer[dA] || 0, rb = R.transfer[dB] || 0;
+    var ra = baseTransfer(e, A), rb = baseTransfer(e, B);
     why.push('proximité : ' + Math.round(100 * ra) + ' % vers ' + PARTY[A].short + ', ' + Math.round(100 * rb) + ' % vers ' + PARTY[B].short);
     var c = b.consignes[e] || (expected ? (player(g, e).human ? 'none' : aiConsigne(g, b, e)) : 'none'), deal = b.deals[e] || null;
     if (c === 'A' || c === 'B') {
@@ -1535,7 +1535,15 @@
     var r1 = firstRound(g);
     return { first: r1.first, stats1: r1.stats1, direct: r1.direct, finalists: r1.finalists };
   }
-  function transferRate(g, from, to) { return R.transfer[dist(from, to)] || 0; }
+  function transferRate(g, from, to) { return baseTransfer(from, to); }
+  /* v3.6.4 : report spontané d'un parti éliminé vers un finaliste, selon la distance,
+     avec le « cordon » : la gauche et le centre reportent très peu sur l'extrême droite (2022 : 17 % des électeurs
+     de Mélenchon vers Le Pen, moins de 10 % pour ceux de Jadot, Roussel ou Hidalgo). */
+  function baseTransfer(from, to) {
+    var r = R.transfer[dist(from, to)] || 0, c = R.cordon;
+    if (c && c.parties.indexOf(to) >= 0 && c.parties.indexOf(from) < 0 && PARTY[from].pos < c.below) r *= c.factor;
+    return r;
+  }
   function finalScores(g) {
     return g.players.map(function (p) {
       var o = D.OBJECTIVES.filter(function (x) { return x.id === p.objective; })[0];

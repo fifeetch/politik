@@ -267,3 +267,9 @@ Avant, en Réaliste, tous les partis convergeaient vers ~8 % : Lutte Obstinée d
 ## v3.6.3 — fait : de quoi jouer 3 actions
 - Revenu de base 6 € par tour (4 avant ; 8 en campagne éclair). En Réaliste, le RN tient presque toutes les régions : les autres partis ne touchaient que 4 € et ne pouvaient jouer qu'une ou deux actions.
 - Le coût d'une action s'affiche en rouge quand l'argent, l'influence ou la forme manquent.
+
+## v3.6.4 — fait : la gauche ne se reporte pas sur l'extrême droite
+- Reports spontanés qui chutent plus vite avec la distance (55 / 42 / 25 / 12 / 6 %) : loin de son camp, on s'abstient ou on vote blanc.
+- « Cordon » autour du RN et de Rétroconquête (comme aux législatives) : la gauche et le centre leur reportent ×0,35. PS → RN 9 %, Écologistes 4 %, PCF 2 % (2022 : 17 % des électeurs de Mélenchon vers Le Pen, moins de 10 % pour Jadot, Roussel, Hidalgo).
+- Barrage par indice de rejet ramené à 0,15 (le cordon en fait déjà une partie).
+- Simulation (Réaliste 2024) : PS–RN 53/47, RE–RN 52/48, LFI–RN 45/55.

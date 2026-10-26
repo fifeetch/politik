@@ -683,7 +683,8 @@
     breakCost: 2,
     incumbentBonus: 1.25,        // prime au sortant : les cubes du parti qui contrôle une région comptent ×1,25 dans les votes
     objectiveVotes: 0.6,         // un objectif réussi rapporte bonus × 0,6 « millions » de voix
-    transfer: { 1: 0.50, 2: 0.42, 3: 0.35, 4: 0.30, 5: 0.25 },  // report au 2nd tour selon la distance
+    transfer: { 1: 0.55, 2: 0.42, 3: 0.25, 4: 0.12, 5: 0.06 },  // v3.6.4 : report au 2nd tour selon la distance (loin : on s'abstient plutôt)
+    cordon: { parties: ['MN', 'RQ'], below: 4.5, factor: 0.35 },  // v3.6.4 : gauche et centre (position < 4,5) reportent ×0,35 vers l'extrême droite
     allyTransfer: 0.85,
     edgeMobilization: 1,         // v1.0 : supprimé (aucune source ne le justifie)
     betrayedTransfer: 0.05,
@@ -745,7 +746,7 @@
          en sont proches. Face à deux finalistes aussi rejetés l'un que l'autre, l'effet s'annule. Ordres de grandeur de jeu,
          inspirés des sondages de « vote impossible » : ce ne sont pas des chiffres officiels. */
       reject: { MN: 0.55, RQ: 0.65, FI: 0.55, LO: 0.45, PC: 0.4, DL: 0.4, EM: 0.35, UG: 0.3, SM: 0.3, VP: 0.3, MD: 0.25, HZ: 0.25 },
-      barrage: 0.3,                                            // points de report déplacés = 0,3 × l'écart de rejet entre les finalistes
+      barrage: 0.15,                                           // points de report déplacés = 0,15 × l'écart de rejet (v3.6.4 : le cordon fait déjà une partie du barrage)
       maxUses: 2,
       maxTransfer: 0.95
     }
