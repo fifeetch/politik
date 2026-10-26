@@ -76,37 +76,10 @@
       '<g fill="#B5734F"><circle cx="46" cy="62" r=".9"/><circle cx="49" cy="64" r=".9"/><circle cx="74" cy="62" r=".9"/><circle cx="71" cy="64" r=".9"/></g>' +
       '<path d="M51,69 Q60,76 69,69" fill="none"' + o(2.6) + '/>' + blush(64));
   };
-  /* Socialisme Modéré — Claire Consensus, la sage du parti : carré gris, collier de perles, une rose au revers */
-  P.SM = function () {
-    var sk = '#F2CBA6';
-    return frame('#F3BCD1',
-      '<path d="M30,74 Q24,30 60,24 Q96,30 90,74 L78,74 L78,46 L42,46 L42,74 Z" fill="#C9C9D1"' + o() + '/>' +
-      body('#E07AA0', '#FFFFFF', '<g fill="#fff"' + o(1.2) + '><circle cx="50" cy="90" r="2.2"/><circle cx="55" cy="93" r="2.2"/><circle cx="60" cy="94" r="2.2"/><circle cx="65" cy="93" r="2.2"/><circle cx="70" cy="90" r="2.2"/></g>' +
-        '<circle cx="88" cy="102" r="5" fill="#C8323C"' + o(2) + '/><path d="M86,100 q2,2 4,0" fill="none"' + o(1.4) + '/><path d="M88,107 L86,116" fill="none" stroke="#2E7D46" stroke-width="2.4"/>') +
-      neck(sk) + ears(sk, 56, 22) +
-      '<path d="M39,54 Q38,30 60,29 Q82,30 81,54 Q80,78 60,80 Q40,78 39,54 Z" fill="' + sk + '"' + o() + '/>' +
-      '<path d="M37,52 Q34,26 60,24 Q86,26 83,52 Q78,36 62,36 Q48,36 37,52 Z" fill="#C9C9D1"' + o(2.2) + '/>' +
-      brows(44, -1.5, 2.6, '#8A8A94') + eyes(52, { closed: true }) +
-      '<path d="M59,55 Q57,62 61,63" fill="none"' + o(2) + '/>' +
-      '<path d="M51,68 Q60,73 69,68" fill="none"' + o(2.6) + '/>' + blush(63) +
-      '<path d="M40,64 Q38,70 42,72 M80,64 Q82,70 78,72" fill="none" stroke="' + INK + '" stroke-width="1.2" opacity=".5"/>');
-  };
-  /* En Mouvement — Inès Disrupt, la start-uppeuse : chignon haut, micro-casque, sourire éclatant */
-  P.EM = function () {
-    var sk = '#8D5A3B';
-    return frame('#F7CF8E',
-      body('#26305A', '#F2A93B') +
-      neck(sk) + ears(sk, 56, 22) +
-      '<ellipse cx="60" cy="16" rx="13" ry="10" fill="#1E1A1A"' + o() + '/>' +
-      '<path d="M39,54 Q38,28 60,27 Q82,28 81,54 Q81,79 60,81 Q39,79 39,54 Z" fill="' + sk + '"' + o() + '/>' +
-      '<path d="M38,50 Q36,26 60,25 Q84,26 82,50 Q78,34 60,34 Q44,34 38,50 Z" fill="#1E1A1A"' + o(2.2) + '/>' +
-      '<path d="M36,56 Q34,30 60,28 Q86,30 84,56" fill="none"' + o(3) + '/>' +
-      '<rect x="80" y="50" width="7" height="12" rx="3" fill="#1E1A1A"' + o(2) + '/><path d="M83,62 Q80,72 68,72" fill="none"' + o(2.2) + '/><circle cx="67" cy="72" r="2.4" fill="#1E1A1A"' + o(1.4) + '/>' +
-      brows(43, -2, 3) + eyes(51, { r: 3.6, px: 0.6 }) +
-      '<path d="M58,55 Q56,62 61,62" fill="none" stroke="#3A2416" stroke-width="2"/>' +
-      '<path d="M48,66 Q60,64 72,66 Q68,77 60,77 Q52,77 48,66 Z" fill="#fff"' + o(2.4) + '/><path d="M49,67 Q60,70 71,67" fill="none"' + o(1.4) + '/>' +
-      '<path d="M90,30 l4,-4 M94,38 l6,-1 M88,22 l1,-6" fill="none" stroke="#F5D547" stroke-width="2.4" stroke-linecap="round"/>');
-  };
+  /* v3.0 : Le Parti Survivant (PS) — Raphaël Grandsmots, le beau parleur européen : barbe soignée, grand sourire */
+  P.SM = function () { return face({ skin: 1, hair: 'court', hairColor: '#3A2A20', glasses: 'none', mouth: 'grand', outfit: '#E07AA0', beard: true, bg: '#F3BCD1' }); };
+  /* v3.0 : Réforme Encore (RE) — Gabriel Agité, le pressé de la réforme : jeune, sourire de campagne */
+  P.EM = function () { return face({ skin: 0, hair: 'court', hairColor: '#1E1A1A', glasses: 'none', mouth: 'grand', outfit: '#26305A', bg: '#F7CF8E' }); };
   /* L'Union Gaulliste — Hubert de La Motte, le notable : visage allongé, moustache fournie, menton levé */
   P.UG = function () {
     var sk = '#F0C9A4';
@@ -122,21 +95,8 @@
       '<path d="M54,74 Q60,76 66,74" fill="none"' + o(2.2) + '/>' +
       '<path d="M24,30 L30,34 M96,30 L90,34" fill="none" stroke="#F5D547" stroke-width="2.4" stroke-linecap="round"/>');
   };
-  /* Mouvement National — Victor Rempart, le bulldog : mâchoire carrée, cheveux en brosse, regard noir */
-  P.MN = function () {
-    var sk = '#E3AE86';
-    return frame('#9BA6CC',
-      body('#1F2A4E', '#FFFFFF', '<path d="M56,88 L64,88 L66,112 L60,118 L54,112 Z" fill="#4A7FD0"' + o(1.6) + '/>' +
-        '<rect x="80" y="96" width="9" height="6" fill="#fff"' + o(1.2) + '/><rect x="80" y="96" width="3" height="6" fill="#4A7FD0"/><rect x="86" y="96" width="3" height="6" fill="#C8323C"/>') +
-      '<path d="M46,70 L46,90 Q60,98 74,90 L74,70 Z" fill="' + sk + '"' + o(2.2) + '/>' + ears(sk, 52, 28) +
-      '<path d="M32,40 Q32,22 60,22 Q88,22 88,40 L88,62 Q88,82 72,84 L48,84 Q32,82 32,62 Z" fill="' + sk + '"' + o() + '/>' +
-      '<path d="M32,40 Q32,20 60,20 Q88,20 88,40 L88,34 L32,34 Z" fill="#8F8F99"' + o(2.2) + '/>' +
-      '<path d="M36,24 l0,-4 M44,22 l0,-4 M52,21 l0,-4 M60,20 l0,-4 M68,21 l0,-4 M76,22 l0,-4 M84,24 l0,-4" fill="none" stroke="#8F8F99" stroke-width="2.6" stroke-linecap="round"/>' +
-      brows(44, -3.5, 5.2) + eyes(50, { r: 3.2, py: 0.6 }) +
-      '<path d="M56,52 Q53,62 58,64 L64,64 Q68,62 64,52" fill="none"' + o(2.2) + '/>' +
-      '<path d="M48,74 Q60,70 72,74" fill="none"' + o(3) + '/><path d="M46,72 L48,74 M74,72 L72,74" fill="none"' + o(2) + '/>' +
-      '<path d="M34,64 Q36,78 46,82 M86,64 Q84,78 74,82" fill="none" stroke="' + INK + '" stroke-width="1.2" opacity=".5"/>');
-  };
+  /* v3.0 : Rassemblement Nostalgique (RN) — Marine La Pénible, l'éternelle candidate : carré blond, air sévère */
+  P.MN = function () { return face({ skin: 0, hair: 'carre', hairColor: '#C9922E', glasses: 'none', mouth: 'serieux', outfit: '#23305A', bg: '#AFC0E0' }); };
 
   /* v1.7 — Lutte Prolétaire : Ginette Lagrève, l'ouvrière éternelle. Carré court, foulard rouge, poing levé */
   P.LO = function () {

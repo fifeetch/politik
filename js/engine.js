@@ -40,6 +40,8 @@
   var REG = {}; D.REGIONS.forEach(function (r) { REG[r.id] = r; });
   var PARTY = {}; D.PARTIES.forEach(function (p) { PARTY[p.id] = p; });
 
+  /* v3.0 : le sigle affiché (celui du modèle réel) ; le code interne sert seulement au programme */
+  function sigle(pid) { return PARTY[pid] ? PARTY[pid].sigle || pid : pid; }
   function player(g, pid) { for (var i = 0; i < g.players.length; i++) if (g.players[i].id === pid) return g.players[i]; return null; }
   function pids(g) { return g.players.map(function (p) { return p.id; }); }
   function cubes(g, rid, pid) { return g.regions[rid].cubes[pid] || 0; }
@@ -1281,7 +1283,7 @@
     resolveAffair: resolveAffair, enqueteChance: enqueteChance, affairDef: affairDef,
     resolveDilemma: resolveDilemma, dilemmaDef: dilemmaDef, applyFx: applyFx, markerAt: markerAt, hotHere: hotHere, crisisAct: crisisAct,
     impact: impact, cred: cred, isHot: isHot, concerns: concerns, bestTheme: bestTheme, terrainCubes: terrainCubes, mediaCubes: mediaCubes,
-    REG: REG, PARTY: PARTY, THEME: THEME, makeRng: makeRng, setFormat: setFormat, saveGame: saveGame, loadGame: loadGame, registerParty: registerParty, unregisterParty: unregisterParty
+    REG: REG, PARTY: PARTY, sigle: sigle, THEME: THEME, makeRng: makeRng, setFormat: setFormat, saveGame: saveGame, loadGame: loadGame, registerParty: registerParty, unregisterParty: unregisterParty
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;
   else root.PolitikEngine = API;

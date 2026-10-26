@@ -64,11 +64,11 @@
   }
   function svg(tag, attrs) { var e = document.createElementNS(SVGNS, tag); Object.keys(attrs || {}).forEach(function (k) { e.setAttribute(k, attrs[k]); }); return e; }
   function party(id) { return E.PARTY[id]; }
-  function chip(pid) { var p = party(pid); return '<span class="who" style="background:' + p.color + ';color:' + p.ink + '">' + pid + '</span>'; }
+  function chip(pid) { var p = party(pid); return '<span class="who" style="background:' + p.color + ';color:' + p.ink + '">' + esc(E.sigle(pid)) + '</span>'; }
   function axisHtml(pid) {
     var cells = D.PARTIES.slice().sort(function (a, b) { return a.pos - b.pos; }).map(function (p) {
       var on = p.id === pid;
-      return '<span class="axis-dot' + (on ? ' on' : '') + '" style="' + (on ? 'background:' + p.color + ';color:' + p.ink : '') + '">' + p.id + '</span>';
+      return '<span class="axis-dot' + (on ? ' on' : '') + '" style="' + (on ? 'background:' + p.color + ';color:' + p.ink : '') + '">' + esc(E.sigle(p.id)) + '</span>';
     }).join('');
     return '<div class="axis"><span class="axis-l">gauche</span>' + cells + '<span class="axis-l">droite</span></div>';
   }
@@ -181,7 +181,7 @@
       if (on && k === 'sond') {
         more = '<div class="polls"><p>Moyenne de <b>6 sondages</b> réalisés en ' + D.POLLS.date + ' pour la présidentielle 2027 :</p><ul>' +
           D.POLLS.list.map(function (x) { return '<li>' + esc(x.who) + ', ' + esc(x.when) + '</li>'; }).join('') + '</ul>' +
-          '<p class="hint">En Mouvement = Philippe (Horizons) + Attal (Renaissance) quand il est testé ; L\'Union Gaulliste = Retailleau (LR) ; Les Verts Pâturages = Tondelier. Les sondages sont nationaux : chaque région garde son profil de 2024 et suit la tendance.</p>' + srcHtml(D.POLLS) + '</div>';
+          '<p class="hint">Chaque parti du jeu porte le sigle de son modèle réel : RE = Renaissance, HOR = Horizons, LR = Les Républicains, LE = Les Écologistes… Les sondages sont nationaux : chaque région garde son profil de 2024 et suit la tendance.</p>' + srcHtml(D.POLLS) + '</div>';
       } else if (on) {
         var L = D.LEARN[B.learn];
         more = '<div class="polls">' + srcHtml(L) + '</div>';
@@ -236,7 +236,7 @@
     D.PARTIES.forEach(function (p) {
       var b = el('button', { class: 'party-card' + (p.id === chosen ? ' on' : ''), type: 'button', 'aria-pressed': p.id === chosen, style: 'border-left-color:' + p.color });
       var meLead = leadOn && perso && perso.name && p.id === chosen;   // v2.5 : tu prends la tête du parti choisi
-      b.innerHTML = '<div class="party-band" style="background:' + p.color + ';color:' + p.ink + '"><span class="party-ini">' + p.id +
+      b.innerHTML = '<div class="party-band" style="background:' + p.color + ';color:' + p.ink + '"><span class="party-ini">' + esc(E.sigle(p.id)) +
         '</span><span class="party-fam">' + esc(p.family) + '</span></div><div class="party-face">' + (meLead ? A.face(PS.faceCfg(perso, p.color)) : A.portrait(p.id)) + '</div><div class="party-body"><span class="party-name">' + esc(p.name) +
         '</span><span class="party-res">' + esc(meLead ? perso.name : p.candidate) + '</span></div>';
       b.addEventListener('click', function () { chosen = p.id; renderChoose(); });
@@ -278,7 +278,7 @@
     var p = PS.buildParty(founded, perso);
     D.PARTIES.forEach(function (q) {
       var b = el('button', { class: 'party-card', type: 'button', style: 'border-left-color:' + q.color });
-      b.innerHTML = '<div class="party-band" style="background:' + q.color + ';color:' + q.ink + '"><span class="party-ini">' + q.id + '</span><span class="party-fam">' + esc(q.family) + '</span></div><div class="party-face">' + A.portrait(q.id) + '</div><div class="party-body"><span class="party-name">' + esc(q.name) + '</span><span class="party-res">' + esc(q.candidate) + '</span></div>';
+      b.innerHTML = '<div class="party-band" style="background:' + q.color + ';color:' + q.ink + '"><span class="party-ini">' + esc(E.sigle(q.id)) + '</span><span class="party-fam">' + esc(q.family) + '</span></div><div class="party-face">' + A.portrait(q.id) + '</div><div class="party-body"><span class="party-name">' + esc(q.name) + '</span><span class="party-res">' + esc(q.candidate) + '</span></div>';
       b.addEventListener('click', function () { chosen = q.id; renderChoose(); });
       $('party-grid').appendChild(b);
     });
@@ -297,7 +297,7 @@
   function axisHtmlPos(p) {
     var all = D.PARTIES.concat([p]).sort(function (a, b) { return a.pos - b.pos; });
     return '<div class="axis"><span class="axis-l">gauche</span>' + all.map(function (q) {
-      var on = q === p; return '<span class="axis-dot' + (on ? ' on' : '') + '" style="' + (on ? 'background:' + q.color + ';color:' + q.ink : '') + '">' + esc(q.id) + '</span>';
+      var on = q === p; return '<span class="axis-dot' + (on ? ' on' : '') + '" style="' + (on ? 'background:' + q.color + ';color:' + q.ink : '') + '">' + esc(q.sigle || q.id) + '</span>';
     }).join('') + '<span class="axis-l">droite</span></div>';
   }
 
@@ -688,7 +688,7 @@
     (aiAff || []).forEach(function (x) {
       rivals.push(line('💥', '<b>Affaire pour ' + esc(party(x.pid).short) + '</b> : « ' + esc(x.title) + ' ». Réaction : <b>' + esc(x.reaction) + '</b>' + (x.effects.length ? ' — ' + esc(x.effects.join(', ')) : '') + '.'));
     });
-    if (info.usure) rivals.push(line('🕰️', 'Usure du pouvoir : En Mouvement perd 1 soutien en ' + esc(E.REG[info.usure].name) + '.'));
+    if (info.usure) rivals.push(line('🕰️', 'Usure du pouvoir : Réforme Encore perd 1 soutien en ' + esc(E.REG[info.usure].name) + '.'));
     if (aiDil) rivals.push(line('🤔', esc(party(aiDil.pid).short) + ', face à « ' + esc(aiDil.title) + ' », choisit : <b>' + esc(aiDil.choice) + '</b>' + (aiDil.effects.length ? ' — ' + esc(aiDil.effects.join(', ')) : '') + '.'));
     var country = [];
     if (crisis) crisis.effects.forEach(function (t) { country.push(line('📰', esc(t))); });
@@ -1042,7 +1042,7 @@
     rows.forEach(function (x) {
       var old = raceShown[x.pid], now = Math.round(100 * x.pct), was = old == null ? null : Math.round(100 * old);
       var trend = !instant && was != null && was !== now ? (now > was ? 'up' : 'down') : '';
-      var name = x.pid === '_autres' ? (x.n ? x.n + ' autres' : 'Autres') : x.pid === me ? 'Toi' : x.pid;
+      var name = x.pid === '_autres' ? (x.n ? x.n + ' autres' : 'Autres') : x.pid === me ? 'Toi' : E.sigle(x.pid);
       var sw = x.pid === '_autres' ? '<i class="sw sw-autres"></i>' : '<i class="sw" style="background:' + party(x.pid).color + '"></i>';
       var span = el('span', { class: x.pid === '_autres' ? 'autres' : x.pid === me ? 'me' : '' },
         sw + name + ' <span class="num">' + (trend ? was : now) + '</span> %' + (trend ? '<b class="trend ' + trend + '">' + (trend === 'up' ? '▲' : '▼') + '</b>' : '') + (x.pid === ally ? ' <em class="ally">allié</em>' : ''));
@@ -1118,9 +1118,10 @@
     D.REGIONS.forEach(function (r) {
       var m = M.regions[r.id], gb = svg('g', { class: 'badge' });
       var ctl = g.regions[r.id].controller;
-      var label = abstMode ? pctFr(E.regionVoters(g, r.id).abst) + '%' : ctl === me ? 'Toi' : ctl || '—';
+      var label = abstMode ? pctFr(E.regionVoters(g, r.id).abst) + '%' : ctl === me ? 'Toi' : ctl ? E.sigle(ctl) : '—';
       if (!abstMode && ctl) gb.setAttribute('class', 'badge badge-owner' + (ctl === me ? ' badge-me' : ''));
-      gb.appendChild(svg('rect', { x: m.x - 13, y: m.y - 8, width: 26, height: 15, rx: 7.5 }));
+      var bw = Math.max(26, 7 * label.length + 6);   // v3.0 : les sigles de 4 ou 5 lettres (MoDem)
+      gb.appendChild(svg('rect', { x: m.x - bw / 2, y: m.y - 8, width: bw, height: 15, rx: 7.5 }));
       var t = svg('text', { x: m.x, y: m.y + 3.5 }); t.textContent = label; gb.appendChild(t);
       s.appendChild(gb);
     });
@@ -1954,9 +1955,9 @@
       more.push({ icon: '🔁', label: 'Les reports de voix', sub: 'Qui a appelé à voter pour qui',
         html: turnoutLine(s.stats) + '<div class="transfers">' + s.transfers.map(function (t) {
           var d = t.deal ? ' · 🤝 accord (« ' + esc(E.measure(t.deal.measure).name) + ' »)' : '';
-          return '<p>' + chip(t.pid) + '<b>' + (t.consigne === 'A' ? 'Consigne : ' + esc(s.a) : t.consigne === 'B' ? 'Consigne : ' + esc(s.b) : 'Aucune consigne') + '</b>' + d + ' → ' + Math.round(100 * t.toA) + ' % ' + s.a + ', ' + Math.round(100 * t.toB) + ' % ' + s.b + ', ' + Math.round(100 * t.blank) + ' % blanc, ' + Math.round(100 * t.abst) + ' % abstention</p>';
+          return '<p>' + chip(t.pid) + '<b>' + (t.consigne === 'A' ? 'Consigne : ' + esc(E.sigle(s.a)) : t.consigne === 'B' ? 'Consigne : ' + esc(E.sigle(s.b)) : 'Aucune consigne') + '</b>' + d + ' → ' + Math.round(100 * t.toA) + ' % ' + s.a + ', ' + Math.round(100 * t.toB) + ' % ' + s.b + ', ' + Math.round(100 * t.blank) + ' % blanc, ' + Math.round(100 * t.abst) + ' % abstention</p>';
         }).join('') + (res.othersTransfer ? '<p><span class="who" style="background:#C6C9BF">…</span>Autres listes : ' + Math.round(100 * res.othersTransfer.toA) + ' % → ' + s.a + ', ' + Math.round(100 * res.othersTransfer.toB) + ' % → ' + s.b + ', ' + Math.round(100 * res.othersTransfer.abstTotal) + ' % blanc ou abstention</p>' : '') +
-          (s.mob.a || s.mob.b ? '<p>🚪 Mobilisation : ' + s.a + ' ×' + s.mob.a + ', ' + s.b + ' ×' + s.mob.b + ' (+' + pctFr(R.round2.mobilize, 1) + ' % des suffrages à chaque fois)</p>' : '') +
+          (s.mob.a || s.mob.b ? '<p>🚪 Mobilisation : ' + E.sigle(s.a) + ' ×' + s.mob.a + ', ' + E.sigle(s.b) + ' ×' + s.mob.b + ' (+' + pctFr(R.round2.mobilize, 1) + ' % des suffrages à chaque fois)</p>' : '') +
           s.notes.map(function (n) { return '<p>' + chip(n.pid) + esc(n.text) + '</p>'; }).join('') + '</div>' });
     }
     // v1.5 : du dernier sondage au 1er tour, la seule différence vient des objectifs secrets réussis
@@ -2027,7 +2028,7 @@
       '<p><b>Chaque tour :</b> revenus (4 € + 1 € par région contrôlée, max +3 ; +2 ★), un événement, puis <b>3 actions secrètes</b>. Tout le monde choisit en secret, puis les plans sont joués <b>chacun son tour</b> : l\'action 1 de chaque parti, puis l\'action 2, puis la 3. Le parti qui commence change à chaque tour (l\'ordre est affiché dans le flash info). Une action peut donc échouer si un rival a changé la situation juste avant : le flash info te dit pourquoi.</p>' +
       '<p><b>Ton message.</b> Meeting, Télé, Buzz et Faire la une portent un <b>thème</b> (💶 🏭 🏥 🌿 🚓 🛂). Son <b>impact</b>, de 0 à 4 = ta crédibilité sur le thème (0 à 2) + 1 si la région s\'en préoccupe + 1 si le thème fait l\'actu. Le bon message au bon endroit rapporte deux fois plus.</p>' +
       '<p><b>Les actions :</b></p><ul class="rules-acts">' +
-        '<li>📣 <b>Meeting</b> (2 €) : des soutiens dans la région. <b>Base</b> de 1 à 4 selon l\'impact du message (de 2 à 5 en campagne éclair), <b>plus les bonus</b> : mesure phare +1, région de cœur +1 (hostile −1), dynamique ±1, et pour Socialisme Modéré +1 là où il a déjà 5 soutiens. Le détail s\'affiche quand tu touches une région. Une région compte au plus 10 soutiens par parti.</li>' +
+        '<li>📣 <b>Meeting</b> (2 €) : des soutiens dans la région. <b>Base</b> de 1 à 4 selon l\'impact du message (de 2 à 5 en campagne éclair), <b>plus les bonus</b> : mesure phare +1, région de cœur +1 (hostile −1), dynamique ±1, et pour le Parti Survivant +1 là où il a déjà 5 soutiens. Le détail s\'affiche quand tu touches une région. Une région compte au plus 10 soutiens par parti.</li>' +
         '<li>📺 <b>Télé</b> (3 € + 1 ★) : ton message passe dans la région et dans les 2 autres régions les plus concernées par le thème. +1 soutien dans chacune (+2 si impact 4, rien si impact 0).</li>' +
         '<li>🚪 <b>Mobiliser</b> (2 €) : du porte-à-porte pour faire voter des abstentionnistes. 1 soutien, +1 avec tes militants, +1 si ton programme parle à ceux qui votent peu ici, +1 si la région s\'abstient beaucoup (3 au plus). Jusqu\'au tour 3, tu fais aussi inscrire de nouveaux électeurs.</li>' +
         '<li>📱 <b>Buzz</b> (1 €, menu Plus) : un coup de dé, de −1 à +4 soutiens. +1 si le thème fait l\'actu.</li>' +

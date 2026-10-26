@@ -5,7 +5,7 @@
   var gv = null, g = null, me = null, learned = {}, step = 0, lawsThisYear = 0;
   function $(id) { return document.getElementById(id); }
   function party(id) { return E.PARTY[id]; }
-  function chip(pid) { var p = party(pid); return '<span class="who" style="background:' + p.color + ';color:' + p.ink + '">' + pid + '</span>'; }
+  function chip(pid) { var p = party(pid); return '<span class="who" style="background:' + p.color + ';color:' + p.ink + '">' + esc(E.sigle(pid)) + '</span>'; }
   function fr(x, d) { return (Math.round(x * Math.pow(10, d)) / Math.pow(10, d)).toFixed(d).replace('.', ','); }
   function seg(id) { return D.SEGMENTS.filter(function (s) { return s.id === id; })[0]; }
   /* « Le saviez-vous ? » une fois par quinquennat */
@@ -44,7 +44,7 @@
   }
   function legend(seats) {
     return '<div class="hemi-leg">' + D.PARTIES.slice().sort(function (a, b) { return a.pos - b.pos; }).filter(function (p) { return seats[p.id] != null; }).map(function (p) {
-      return '<span' + (p.id === me ? ' class="me"' : '') + '><i style="background:' + p.color + '"></i>' + (p.id === me ? 'Toi' : p.id) + ' ' + seats[p.id] + '</span>';
+      return '<span' + (p.id === me ? ' class="me"' : '') + '><i style="background:' + p.color + '"></i>' + (p.id === me ? 'Toi' : esc(E.sigle(p.id))) + ' ' + seats[p.id] + '</span>';
     }).join('') + '</div>';
   }
 
@@ -186,7 +186,7 @@
       '<p class="hint">' + (lc.offersLeft ? 'Encore <b>' + lc.offersLeft + ' proposition' + (lc.offersLeft > 1 ? 's' : '') + '</b>. Plus un parti est proche de toi, plus il dit oui ; ses électeurs suivent aussi mieux.' : 'Plus de proposition possible.') + '</p>' +
       '<div class="pick">' + others.map(function (p) {
         var ch = LG.offerChance(g, lc, p), d = E.dist(p, me), P = party(p);
-        return '<button type="button" class="pick-row lc-ally" data-ally="' + p + '"' + (lc.offersLeft ? '' : ' disabled') + '><span class="who" style="background:' + P.color + ';color:' + P.ink + '">' + p + '</span><span class="pick-txt"><b>' + esc(P.short) + '</b><small>' +
+        return '<button type="button" class="pick-row lc-ally" data-ally="' + p + '"' + (lc.offersLeft ? '' : ' disabled') + '><span class="who" style="background:' + P.color + ';color:' + P.ink + '">' + esc(E.sigle(p)) + '</span><span class="pick-txt"><b>' + esc(P.short) + '</b><small>' +
           (d <= 1 ? 'ton camp' : d === 2 ? 'proche' : d === 3 ? 'l\'autre camp' : 'très loin de toi') + ' · ' + (100 * presScore(p)).toFixed(0) + ' % à la présidentielle' + (lc.refused[p] ? ' · a refusé' : '') + '</small></span><b class="lc-pct">' + Math.round(100 * ch) + ' %</b></button>';
       }).join('') + '</div>';
     modal({ kicker: 'Législatives · avant le 1er tour', title: 'Former ton camp', html: html,
@@ -1044,7 +1044,7 @@
       line('🗳️', 'Pronostic : <b>' + v.pour + '</b> voix pour la censure (il en faut 289).') + '</div>' +
       (coalOpen ? '<div class="kicker">Proposer une coalition pour l\'année</div><div class="pick">' + groups.map(function (gid) {
         var P = party(gid);
-        return '<button type="button" class="pick-row lc-ally" data-co="' + gid + '"><span class="who" style="background:' + P.color + ';color:' + P.ink + '">' + gid + '</span><span class="pick-txt"><b>' + esc(P.short) + '</b><small>' + op.seats[gid] + ' députés' + (E.dist(gid, me) >= 3 ? ' · loin de toi : tes électeurs n\'aimeront pas' : '') + '</small></span><b class="lc-pct">' + Math.round(100 * OP.coalitionChance(op, gid)) + ' %</b></button>';
+        return '<button type="button" class="pick-row lc-ally" data-co="' + gid + '"><span class="who" style="background:' + P.color + ';color:' + P.ink + '">' + esc(E.sigle(gid)) + '</span><span class="pick-txt"><b>' + esc(P.short) + '</b><small>' + op.seats[gid] + ' députés' + (E.dist(gid, me) >= 3 ? ' · loin de toi : tes électeurs n\'aimeront pas' : '') + '</small></span><b class="lc-pct">' + Math.round(100 * OP.coalitionChance(op, gid)) + ' %</b></button>';
       }).join('') + '</div>' : (op.coalition ? '<p>🤝 Coalition avec <b>' + esc(party(op.coalition).short) + '</b> cette année.</p>' : ''));
     modal({ kicker: 'Hiver · Année ' + op.year, title: 'Renverser le gouvernement ?', html: html, buttons: [
       { label: '⚔️ Déposer une motion de censure', primary: can && v.pour >= 289, disabled: !can, onClick: doCensure },
