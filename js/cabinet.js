@@ -21,9 +21,15 @@
   }
   /* Un profil de ministre. origin : parti · allie · expert · ouverture · impose (cohabitation) */
   function profile(gv, rng, origin, party, used) {
-    var sex = rng() < 0.5 ? 'f' : 'm', list = MIN.names[sex].filter(function (n) { return used.indexOf(n) < 0; });
-    if (!list.length) { sex = sex === 'f' ? 'm' : 'f'; list = MIN.names[sex].filter(function (n) { return used.indexOf(n) < 0; }); }
-    var name = pick(list, rng); used.push(name);
+    // v3.0 : d'abord une figure connue du parti (version satirique), sinon un nom inventé
+    var figs = party && origin !== 'expert' ? (MIN.figures[party] || []).filter(function (f) { return used.indexOf(f[0]) < 0; }) : [], name, sex;
+    if (figs.length) { var f = pick(figs, rng); name = f[0]; sex = f[1]; }
+    else {
+      sex = rng() < 0.5 ? 'f' : 'm'; var list = MIN.names[sex].filter(function (n) { return used.indexOf(n) < 0; });
+      if (!list.length) { sex = sex === 'f' ? 'm' : 'f'; list = MIN.names[sex].filter(function (n) { return used.indexOf(n) < 0; }); }
+      name = pick(list, rng);
+    }
+    used.push(name);
     var p = { id: 'm' + used.length + '-' + Math.floor(rng() * 1e6), name: name, sex: sex, origin: origin, party: party || null, face: randomFace(rng, sex),
       comp: stars(rng, 1, 3), loy: stars(rng, 2, 3), not: stars(rng, 1, 3), trait: pick(TRAIT_IDS, rng), region: null };
     if (origin === 'expert') { p.comp = 3; p.loy = 2; p.not = 1; p.trait = pick(['bourreau', 'gaffeur', 'bourreau'], rng); }
@@ -36,9 +42,11 @@
     }
     return p;
   }
-  /* Le grand rival : le premier groupe qui n'est ni toi ni tes alliés */
+  /* Le rival d'où vient la personnalité d'ouverture */
   function rivalParty(gv) {
-    return Object.keys(gv.seats).filter(function (id) { return id !== gv.pid && !G.isAlly(gv, id); }).sort(function (a, b) { return gv.seats[b] - gv.seats[a]; })[0];
+    // v3.0 : l'ouverture vient du parti rival le plus proche sur l'axe (qui a des députés), pas forcément du plus gros
+    return Object.keys(gv.seats).filter(function (id) { return id !== gv.pid && !G.isAlly(gv, id) && gv.seats[id] > 0; })
+      .sort(function (a, b) { return Math.abs(E.PARTY[a].pos - E.PARTY[gv.pid].pos) - Math.abs(E.PARTY[b].pos - E.PARTY[gv.pid].pos) || gv.seats[b] - gv.seats[a]; })[0];
   }
   /* Le tirage des profils (8) ; used : les noms déjà pris */
   function draw(gv, n) {

@@ -674,6 +674,22 @@
       f: ['Anne Alyse', 'Claire Voyance', 'Lucie Dité', 'Rose Mérite', 'Annie Versaire', 'Inès Thétique', 'Sophie Losophie', 'Margot Uvernance', 'Laure Atoire', 'Camille Itante', 'Nadia Logue', 'Jade Ministrée'],
       m: ['Hugo Vernement', 'Bruno Tation', 'Gaston Fiscal', 'Olivier Rapport', 'Jules Ministère', 'Rémi Nistre', 'Paul Itique', 'Max Imum', 'Basile Icone', 'Léon Dégalité', 'Yann Térim', 'Félix Cal']
     },
+    /* v3.0 : les figures de chaque parti, en version satirique (mêmes initiales que leurs modèles réels).
+       Elles deviennent tes ministres, tes députés, ou les ministres d'ouverture venus d'un parti rival. */
+    figures: {
+      FI: [['Manuel Bombarde', 'm'], ['Mathilde Panique', 'f'], ['Clémence Guérilla', 'f'], ['Éric Coquelicot', 'm'], ['Louis Boucan', 'm'], ['Sophia Chicane', 'f']],
+      SM: [['Olivier Fauteuil', 'm'], ['Boris Vaudeville', 'm'], ['Anne Hipster', 'f'], ['Carole Dégainée', 'f'], ['François Hésitant', 'm'], ['Johanna Roulette', 'f']],
+      VP: [['Sandrine Rouspète', 'f'], ['Yannick Jardinet', 'm'], ['Cyrielle Châtaigne', 'f'], ['Éric Pédalo', 'm'], ['Grégory Doucement', 'm']],
+      EM: [['Gérald Dans-le-Vent', 'm'], ['Élisabeth Bornée', 'f'], ['Aurore Bergerie', 'f'], ['Yaël Brouhaha-Pivot', 'f'], ['Stéphane Séjour', 'm']],
+      UG: [['Laurent Wapiti', 'm'], ['Xavier Bougonnant', 'm'], ['Valérie Patraque', 'f'], ['David Lissé', 'm'], ['Rachida Dorures', 'f']],
+      MN: [['Jordan Brushing', 'm'], ['Sébastien Chenille', 'm'], ['Jean-Philippe Tangage', 'm'], ['Louis Alibi', 'm'], ['Laure Lavande', 'f']],
+      LO: [['Jean-Pierre Merguez', 'm'], ['Arlette Lagrève', 'f']],
+      PC: [['André Chasse-neige', 'm'], ['Ian Brasero', 'm'], ['Stéphane Peuple', 'm'], ['Léon Défilé', 'm']],
+      MD: [['Marc Fermier', 'm'], ['Jean-Noël Barrage', 'm'], ['Geneviève Discrète', 'f'], ['Jean-Louis Bourdonnant', 'm']],
+      HZ: [['Christophe Béton', 'm'], ['Frédéric Valsetout', 'm'], ['Laurent Marchepied', 'm']],
+      RQ: [['Sarah Krampon', 'f'], ['Stanislas Rigolo', 'm']],
+      DL: []
+    },
     draw: { parti: 3, allie: 2, expert: 2, ouverture: 1 },
     parity: 1,               // gouvernement paritaire (3 femmes, 3 hommes) : +1 de popularité ; très déséquilibré (5 ou 6 du même sexe) : −1
     ouverture: 2,            // une personnalité d'ouverture : +2 de popularité… mais ton camp grogne (frondeurs en plus la 1re année)

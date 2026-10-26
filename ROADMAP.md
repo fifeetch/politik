@@ -202,6 +202,14 @@ Quand tu gagnes la présidentielle, le bouton « 🏛️ Gouverner le pays » ou
 - Chaque texte : ce qu'il rapporte ou coûte en Md€ et en points de déficit, les groupes contents ou fâchés, le pronostic du vote ; même vote, négociation, 49.3 et référendum que pour une promesse (pas de référendum sur un impôt).
 - Une loi nouvelle ne compte pas dans les promesses tenues ; rejetée : −1 de popularité (contre −2 pour une promesse) et on peut la représenter. Trophée « Réformateur » à partir de 2 lois nouvelles adoptées. Lulu suggère une loi de recettes ou d'économies quand le déficit dérape.
 
+## v3.0 — fait : un quinquennat plus vivant (1/4) et de nouveaux noms
+- **Les cartes à glisser** : une carte par saison (20 par mandat), 32 cartes et 9 suites qui reviennent plus tard selon tes choix ; glisser ou toucher un des deux choix ; les points au-dessus des jauges (💶 😊 🏛️ ⏳) annoncent ce qui va bouger sans dire dans quel sens. Effets : déficit, dette, popularité, satisfaction des groupes, frondeurs, départ d'un allié, changement de Premier ministre. Simulation (`node test/govern-sim.js 150 c`) : jouées au hasard, elles font glisser le déficit et rendent la réélection moins sûre ; bien jouées, elles aident.
+- **Les noms** : chaque parti porte le sigle de son modèle réel et un nom satirique (Le Parti Survivant, Les Enracinés, Réforme Encore, Les Rescapés, Rassemblement Nostalgique, Lutte Obstinée, Mollesse Démocrate, Hors-Sol, Debout La Flemme, Rétroconquête…) ; les dirigeants ont les initiales des candidats réels (vérifiées en octobre 2026 : Glucksmann a gagné la primaire PS-Place publique) ; 3 portraits redessinés (PS, RE, RN). 50 figures connues des partis, en version satirique, deviennent les ministres possibles ; la personnalité d'ouverture vient du parti rival le plus proche.
+
+## Prochains lots : un quinquennat plus vivant, et l'humour des partis
+- **v3.1 — Les traits satiriques des partis** : la machine à remonter le temps (Rassemblement Nostalgique, Rétroconquête), la rose qui perd ses pétales et la primaire perpétuelle (Parti Survivant), l'embouteillage au centre et ses micro-partis (Réforme Encore, Mollesse Démocrate, Hors-Sol), l'avis de recherche (Les Rescapés), le disque rayé et son bingo (La France Indignée) ; plus tard : vote interne des Enracinés, fête du saucisson du PCF, score immuable de Lutte Obstinée, le langue-de-bois-mètre en débat.
+- **La France sur la carte** (humeur des régions, manifestations, déplacements du président), **les questions au gouvernement** (duel express), **la réélection rejouée** (campagne éclair depuis ton bilan).
+
 ## À venir (pistes du bêta-testeur)
 - **Mécaniques débloquées au fil des parties** : scandales et dilemmes, puis le programme détaillé, puis les alliances et la phase « gouverner ».
 - **Dilemmes en cartes à glisser** (à la manière de Reigns).
