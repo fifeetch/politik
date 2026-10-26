@@ -35,6 +35,7 @@ Jeu de stratégie électorale parodique sur la carte de France, pensé pour le t
 - **Écran de campagne en onglets (v1.8)** : la carte prend la place centrale, avec le sigle du parti qui tient chaque région ; la fiche de la région tient sur deux lignes (« Détails » ouvre le reste) ; Lulu tient sur une ligne ; le sondage des 12 partis, l'actualité et ton parti ont chacun leur onglet en bas de l'écran.
 - **Démarrage rapide (v2.0)** : sur l'écran titre, **▶ Jouer** lance une partie en deux touchers (choix du parti, programme conseillé pris d'office) ; « Partie personnalisée » garde le paramétrage complet. Le premier tour commence directement sur la carte. Le tutoriel est remplacé par 4 gestes guidés par Lulu (une région qui clignote, un Meeting, d'autres actions, Valider), puis une récompense : ta place au sondage. Le dilemme du joueur arrive au tour 2 au lieu du tour 1.
 - **Moins d'infos d'un coup (v2.1)** : le journal du matin arrive comme une vraie une (gros titre, dessin, 3 brèves) et « Ouvrir le journal » donne les pages intérieures par rubriques (France, Ta campagne, Chez les rivaux, Le saviez-vous). Le flash info passe en direct télé (carte des régions qui basculent, un gros titre, bandeau des sondages qui défile, « Tout le détail » au toucher). Les résultats montrent le second tour et le podium ; le premier tour complet, les reports de voix et les objectifs secrets s'ouvrent d'un toucher. Toucher une région affiche ses préoccupations.
+- **Le journal du matin (v2.2)** : la une prend tout l'écran, avec une scène dessinée (12 scènes : usine, caddie, hôpital, canicule, incendies, inondations, police, frontière, scandale, télé, fête, meeting, grève, ville) et un mot géant choisi selon l'événement ou l'acte de crise. En dessous, trois titres renvoient chacun à leur article. Les pages intérieures sont de vrais articles écrits à partir du tour précédent : meetings dans les villes de chaque région, passages au 20 h, porte-à-porte, vidéos virales, attaques, permanences, régions qui basculent, affaires, coulisses et sondage, puis le mot de Lulu sur ta campagne. La règle de l'événement est rappelée dans un encadré « Pour la campagne ». Police Archivo (licence SIL OFL) livrée avec le jeu.
 - **Un tour** : journal du matin (revenus, militants, scandales, crise ou événement, dilemme) → 3 actions secrètes jouées par tous en même temps → débat (tours 3, 6, 8) → « Sous les projecteurs » pour le premier des sondages.
 
 ## Organisation du code
@@ -49,6 +50,7 @@ Jeu de stratégie électorale parodique sur la carte de France, pensé pour le t
 | `js/engine.js` | Les règles (sans affichage) |
 | `js/ai.js` | L'intelligence artificielle des adversaires |
 | `js/ui.js` | L'affichage et le déroulement d'une partie |
+| `js/press.js` | Le journal du matin : villes, mots de la une, scènes dessinées et rédaction des articles |
 | `js/art.js` | Les illustrations (candidats, conseillère, vignettes), dessinées en SVG |
 | `js/fx.js` | Les animations (encre, pion du candidat, bandeau alerte info, bulle de Lulu…), qui attendent que l'écran soit visible pour se jouer |
 | `js/govern.js` | Les règles du quinquennat (législatives, votes, budget, jauges) |

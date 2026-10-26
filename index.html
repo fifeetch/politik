@@ -206,6 +206,16 @@
     <button class="btn btn-ghost" id="gov-dissolve" type="button" hidden>Dissoudre l'Assemblée</button>
   </section>
 
+  <!-- v2.2 : le journal du matin, en plein écran (la une, puis les articles) -->
+  <div id="paper" class="paper-ov" hidden>
+    <div id="paper-front" class="une"></div>
+    <div id="paper-inside" class="pages" hidden></div>
+    <div class="paper-bt">
+      <button id="paper-go" class="btn btn-ink btn-big" type="button">À mes actions</button>
+      <button id="paper-open" class="btn" type="button">📰 Ouvrir le journal</button>
+    </div>
+  </div>
+
   <!-- Fenêtre modale -->
   <div id="modal" class="modal" hidden>
     <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
@@ -223,6 +233,7 @@
 <script src="js/engine.js"></script>
 <script src="js/ai.js"></script>
 <script src="js/art.js"></script>
+<script src="js/press.js"></script>
 <script src="js/fx.js"></script>
 <script src="js/tuto.js"></script>
 <script src="js/govern.js"></script>

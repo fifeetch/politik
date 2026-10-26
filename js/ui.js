@@ -402,11 +402,14 @@
     info.later.forEach(function (x) { if (x.hit) alerts.push(x.title + (x.pid === me ? '' : ' (' + party(x.pid).short + ')')); });
     FX.breaking('Alerte info', alerts);
     var jp = journalParts(info, aiDil, aiAff);
-    lastJournal = jp.front.replace('np np-in', 'np') + jp.inside;
+    var paper = window.PolitikPress.build({ g: g, E: E, me: me, info: info, aiAff: aiAff, aiDil: aiDil, log: g.turn > 1 ? pressLog : [], changes: g.turn > 1 ? pressChanges : [], before: pressBefore });
+    paper.mine = jp.mine; paper.learn = jp.learn;
+    lastPaper = paper;
+    lastJournal = articlesHtml(paper);
     showTab('carte'); $('tab-actu-dot').hidden = false;
     // v2.0 : en partie rapide, le premier tour démarre directement sur la carte (le journal reste dans l'onglet Actu)
     if (g.turn === 1 && quickGame && !waits) return startActions();
-    showJournal(jp, g.turn === 1 ? 'La campagne commence' : 'Le journal du matin', mine.length ? 'Une affaire te tombe dessus →' : waits ? 'Une décision t’attend →' : 'À mes actions', function () {
+    showPaper(paper, mine.length ? 'Une affaire te tombe dessus →' : waits ? 'Une décision t’attend →' : 'À mes actions', function () {
       chain([function (next) { mine.length ? showAffair(next) : next(); },
              function (next) { g.dilemma && g.dilemma.pid === me ? showDilemma(next) : next(); }], startActions);
     });
@@ -517,19 +520,70 @@
     var inside = '<div class="np np-inside"><div class="np-folio"><span>Le Quotidien National</span><span>Pages intérieures · tour ' + g.turn + '</span></div>' +
       rub('France', country) + rub('Ta campagne', mine) + rub('Chez les rivaux', rivals) +
       (learn ? '<section class="np-rub"><h4>Le saviez-vous ?</h4>' + learn + '</section>' : '') + '</div>';
-    return { front: front, inside: inside };
+    return { front: front, inside: inside, mine: mine.join(''), learn: learn };
   }
-  /* La une dans une fenêtre, avec « Ouvrir le journal » pour les pages intérieures */
-  function showJournal(parts, title, contLabel, cont) {
-    $('toast').hidden = true;
-    modal({ kicker: 'Tour ' + g.turn + ' / ' + R.maxTurns, title: title, cls: 'np-modal', html: parts.front,
-      buttons: [{ label: contLabel, primary: true, onClick: cont },
-                { label: '📰 Ouvrir le journal', onClick: function () {
-                  modal({ kicker: 'Le journal du matin', title: 'Les pages intérieures', cls: 'np-modal', html: parts.inside,
-                    onOpen: function () { FX.replay(document.querySelector('.np-inside'), 'np-open'); },
-                    buttons: [{ label: contLabel, primary: true, onClick: cont }, { label: '‹ Revenir à la une', onClick: function () { showJournal(parts, title, contLabel, cont); } }] });
-                } }] });
+  /* ---------- v2.2 : le journal du matin en plein écran ----------
+     La une : une scène dessinée, un mot géant, et 3 titres qui renvoient chacun à leur article.
+     « Ouvrir le journal » : tous les articles du jour, plus le mot de Lulu sur ta campagne. */
+  var pressLog = [], pressBefore = {}, pressChanges = [], lastPaper = null, paperCont = null;
+  var Press = window.PolitikPress;
+  function articleHtml(a) {
+    var p = a.pid ? party(a.pid) : null;
+    return '<article class="art-item' + (a.mine ? ' mine' : '') + '" id="art-' + a.id + '">' +
+      '<div class="art-rub"><span>' + esc(a.rub) + '</span>' + (a.mine ? '<em>Ton parti</em>' : '') + '<i>p. ' + a.page + '</i></div>' +
+      (a.id === 'main' ? '<div class="art-pic">' + Press.scene(a.scene) + '</div>' : '') +
+      '<h3>' + esc(a.title) + '</h3>' +
+      (a.rule ? '<p class="art-rule"><b>Pour la campagne :</b> ' + esc(a.rule) + '</p>' : '') +
+      '<div class="art-body">' + (p && a.id !== 'main' ? '<span class="art-face" style="--pc:' + p.color + '">' + A.portrait(a.pid) + '</span>' : '') + '<p>' + esc(a.text) + '</p></div></article>';
   }
+  function articlesHtml(paper) {
+    return '<div class="pages-in">' + paper.articles.map(articleHtml).join('') +
+      (paper.mine ? '<section class="art-lulu"><div class="art-rub"><span>Le mot de Lulu</span></div><div class="learn">' + A.advisor() + '<div class="brief">' + paper.mine + '</div></div></section>' : '') +
+      (paper.learn ? '<section class="art-learn">' + paper.learn + '</section>' : '') + '</div>';
+  }
+  function frontHtml(paper) {
+    var m = paper.main;
+    return '<div class="une-pic">' + Press.scene(paper.scene) + '</div>' +
+      '<div class="une-top"><span class="une-logo"><b>QN</b><span>Le Quotidien<br>National</span></span><span class="une-date">' + paper.day.charAt(0).toUpperCase() + paper.day.slice(1) + '<br>tour ' + g.turn + ' sur ' + R.maxTurns + '</span></div>' +
+      '<div class="une-word">' + esc(paper.word) + '</div>' +
+      '<p class="une-sub">' + esc(m.lead || m.title) + '</p>' +
+      '<div class="une-teasers">' + paper.teasers.map(function (a) {
+        return '<button type="button" class="une-t" data-art="' + a.id + '"><b>' + esc(a.title) + '</b><small>' + (a.mine ? 'Ton parti · ' : '') + 'page ' + a.page + '</small></button>';
+      }).join('') + '</div>';
+  }
+  /* le mot géant prend toute la largeur, sans déborder */
+  function fitWord() {
+    var w = document.querySelector('#paper-front .une-word'); if (!w) return;
+    var size = 132; w.style.fontSize = size + 'px';
+    while (w.scrollWidth > w.clientWidth + 1 && size > 48) { size -= 4; w.style.fontSize = size + 'px'; }
+  }
+  function showPaper(paper, contLabel, cont) {
+    closeModal(); $('toast').hidden = true;
+    paperCont = cont;
+    $('paper-front').innerHTML = frontHtml(paper);
+    $('paper-inside').innerHTML = '<div class="pages-head"><button type="button" class="linkbtn" id="paper-back">‹ La une</button><span>Le Quotidien National · tour ' + g.turn + '</span></div>' + articlesHtml(paper);
+    $('paper-inside').hidden = true; $('paper-front').hidden = false;
+    $('paper-open').hidden = false;
+    $('paper-go').textContent = contLabel;
+    $('paper').hidden = false;
+    FX.replay($('paper-front'), 'une-in');
+    requestAnimationFrame(fitWord);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitWord);
+  }
+  function openPages(id) {
+    $('paper-front').hidden = true; $('paper-inside').hidden = false; $('paper-open').hidden = true;
+    FX.replay($('paper-inside'), 'pages-in-anim');
+    var t = id && $('paper-inside').querySelector('#art-' + id);
+    $('paper-inside').scrollTop = 0;
+    if (t) { $('paper-inside').scrollTop = t.offsetTop - 56; FX.replay(t, 'art-hi'); }
+  }
+  function closePaper() { $('paper').hidden = true; var c = paperCont; paperCont = null; if (c) c(); }
+  $('paper-go').addEventListener('click', closePaper);
+  $('paper-open').addEventListener('click', function () { openPages(); });
+  $('paper').addEventListener('click', function (e) {
+    var t = e.target.closest('[data-art]'); if (t) return openPages(t.getAttribute('data-art'));
+    if (e.target.closest('#paper-back')) { $('paper-inside').hidden = true; $('paper-front').hidden = false; $('paper-open').hidden = false; }
+  });
   /* ---------- v0.7 : Lulu, la directrice de campagne — un conseil clair par tour ---------- */
   function advice() {
     var pl = mePl(), ph = E.measure(pl.phare), hot = g.hot || [];
@@ -725,7 +779,8 @@
   }
   var lastJournal = '';
   function renderActu() {
-    $('actu-body').innerHTML = (g.news ? newsHtml(g.news) : '') + (lastJournal ? '<div class="kicker" style="margin-top:6px">Le journal du matin · tour ' + g.turn + '</div>' + lastJournal : '');
+    $('actu-body').innerHTML = (lastPaper ? '<button type="button" class="btn" id="actu-une">📰 Revoir la une du jour</button>' : '') + (g.news ? newsHtml(g.news) : '') + (lastJournal ? '<div class="actu-pages">' + lastJournal + '</div>' : '');
+    var b = $('actu-une'); if (b) b.addEventListener('click', function () { showPaper(lastPaper, 'Retour à la carte', null); });
   }
 
   /* ---------- Rendu ---------- */
@@ -1155,6 +1210,7 @@
     var plans = {}; plans[me] = queue.slice();
     g.players.forEach(function (p) { if (!p.human) plans[p.id] = AI.plan(g, p.id); });
     var log = E.resolveActions(g, plans);
+    pressLog = log; pressBefore = before;   // v2.2 : le journal de demain racontera ce tour
     queue = []; advReact = null;
     // v1.4 : on montre d'abord la tournée du candidat sur la carte, puis les régions qui basculent, puis le flash info
     FX.hold(); render();
@@ -1225,10 +1281,11 @@
   /* Les gros titres de la soirée, du plus important au moins important */
   function flashData(log, before, ctrl0, allies0) {
     var heads = [], changed = [];
+    pressChanges = [];
     D.REGIONS.slice().sort(function (a, b) { return b.pts - a.pts; }).forEach(function (r) {
       var c0 = ctrl0[r.id], c1 = g.regions[r.id].controller;
       if (c0 === c1) return;
-      changed.push(r.id);
+      changed.push(r.id); pressChanges.push({ rid: r.id, from: c0, to: c1 });
       var nm = r.id === 'cor' ? 'l\'outre-mer' : r.name;
       if (c1) heads.push({ w: r.pts + (c1 === me || c0 === me ? 20 : 0), me: c1 === me || c0 === me, t: (c1 === me ? 'Tu prends ' : party(c1).short + ' prend ') + nm + (c0 ? (c0 === me ? ' : tu la perds' : ' à ' + party(c0).short) : '') });
       else heads.push({ w: r.pts / 2 + (c0 === me ? 20 : 0), me: c0 === me, t: nm + ' : ' + (c0 === me ? 'tu perds' : party(c0).short + ' perd') + ' le contrôle' });

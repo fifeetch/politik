@@ -137,6 +137,10 @@ Quand tu gagnes la présidentielle, le bouton « 🏛️ Gouverner le pays » ou
 - **Résultats** : second tour et podium à l'écran ; premier tour complet, reports de voix et objectifs secrets en sous-menus.
 - **Région touchée** : ses préoccupations s'affichent tout de suite.
 
+## v2.2 — fait : un vrai journal
+- **La une photo** : une scène dessinée plein écran et un mot géant (« Rideau. », « Krach. », « Pugilat. »…) selon l'événement, puis 3 titres qui ouvrent chacun leur article.
+- **De vrais articles** écrits à partir du tour : les partis à la rencontre des habitants d'une ville, au 20 h, en porte-à-porte, sur les réseaux, les régions qui basculent, les affaires, le sondage.
+
 ## À venir (pistes du bêta-testeur)
 - **Campagne éclair** : un format court en 3 tours, et une sauvegarde automatique pour reprendre une partie.
 - **Mécaniques débloquées au fil des parties** : scandales et dilemmes, puis le programme détaillé, puis les alliances et la phase « gouverner ».
