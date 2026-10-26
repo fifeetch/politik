@@ -6,7 +6,7 @@
   var E = node ? require('./engine.js') : root.PolitikEngine;
 
   function clone(g) {
-    var c = { turn: g.turn, nost: Object.assign({}, g.nost), petals: g.petals, micro: g.micro, hidden: g.hidden, eclatUntil: g.eclatUntil, bingo: g.bingo, mods: g.mods, hot: g.hot, nextHot: g.nextHot, markers: g.markers, bases: Object.assign({}, g.bases), rng: g.rng, alliances: Object.assign({}, g.alliances), betrayed: g.betrayed, offers: [], players: g.players.map(function (p) { return Object.assign({}, p, { cards: p.cards.slice() }); }), regions: {} };
+    var c = { turn: g.turn, weight: g.weight, base: g.base, mode: g.mode, nost: Object.assign({}, g.nost), petals: g.petals, micro: g.micro, hidden: g.hidden, eclatUntil: g.eclatUntil, bingo: g.bingo, mods: g.mods, hot: g.hot, nextHot: g.nextHot, markers: g.markers, bases: Object.assign({}, g.bases), rng: g.rng, alliances: Object.assign({}, g.alliances), betrayed: g.betrayed, offers: [], players: g.players.map(function (p) { return Object.assign({}, p, { cards: p.cards.slice() }); }), regions: {} };
     Object.keys(g.regions).forEach(function (k) { var o = g.regions[k]; c.regions[k] = { cubes: Object.assign({}, o.cubes), controller: o.controller, ins: o.ins, abst: o.abst, blank: o.blank }; });
     return c;
   }

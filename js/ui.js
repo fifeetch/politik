@@ -1244,14 +1244,29 @@
     if (!selected) return;
     var r = E.REG[selected];
     var html = '<div class="chips"><span class="chips-k">Soucis</span>' + r.concerns.map(function (x) { return '<span class="chip chip-theme' + (E.isHot(g, x) ? ' hot' : '') + '">' + th(x).icon + ' ' + esc(th(x).short) + (E.isHot(g, x) ? ' 🔥' : '') + '</span>'; }).join('') + '</div>';
-    var rows = g.players.filter(function (p) { return E.cubes(g, selected, p.id) > 0; }).sort(function (a, b) { return E.cubes(g, selected, b.id) - E.cubes(g, selected, a.id); });
+    var real = !!g.weight;   // v3.2 : en Réaliste, chaque soutien pèse selon le score historique du parti ici
+    if (real) {
+      var ln = E.regionLean(g.base, selected), myW = E.weight(g, selected, me);
+      html += '<div class="calc-line">🧭 <b>' + esc(ln.label) + '</b> · gauche ' + Math.round(100 * ln.g) + ' % · centre ' + Math.round(100 * ln.c) + ' % · droite ' + Math.round(100 * ln.d) + ' % <span class="muted">(' + esc(D.BASES[g.base].short) + ')</span><br>' +
+        (myW >= 1.15 ? '💪 Terrain favorable : chacun de tes soutiens pèse lourd ici.' : myW <= 0.6 ? '🪶 Terrain difficile : tes soutiens pèsent peu ici, ton électorat historique y est faible.' : '⚖️ Tes soutiens pèsent normalement ici.') + '</div>';
+    }
+    var sh = real ? E.regionShares(g, selected) : null;
+    var rows = g.players.filter(function (p) { return E.cubes(g, selected, p.id) > 0; }).sort(function (a, b) { return real ? sh[b.id] - sh[a.id] : E.cubes(g, selected, b.id) - E.cubes(g, selected, a.id); });
+    if (real) rows = rows.slice(0, 6);
     html += '<div class="kicker">Qui mène ici</div><div class="brief">' + rows.map(function (p, i) {
-      var nn = E.cubes(g, selected, p.id);
-      return '<div class="vote-row' + (p.id === me ? ' qual' : '') + '"><span class="vote-lbl">' + chip(p.id) + (p.id === me ? 'Toi' : esc(party(p.id).short)) + '</span><span class="vote-bar"><i style="width:' + (10 * nn) + '%;background:' + party(p.id).color + '"></i></span><b>' + nn + '</b></div>';
+      var nn = E.cubes(g, selected, p.id), bar = real ? Math.min(100, 100 * sh[p.id] / Math.max(0.01, sh[rows[0].id])) : 10 * nn;
+      return '<div class="vote-row' + (p.id === me ? ' qual' : '') + '"><span class="vote-lbl">' + chip(p.id) + (p.id === me ? 'Toi' : esc(party(p.id).short)) + '</span><span class="vote-bar"><i style="width:' + bar + '%;background:' + party(p.id).color + '"></i></span><b>' + (real ? Math.round(100 * sh[p.id]) + ' %' : nn) + '</b></div>';
     }).join('') + '</div>';
     var c = g.regions[selected].controller, need = 0;
-    if (c !== me) { var top = rows.length ? E.cubes(g, selected, rows[0].id) : 0; need = Math.max(E.minControl(me), top + 1) - E.cubes(g, selected, me); }
-    if (need > 0) html += '<p>Il te manque <b>' + need + ' soutien' + (need > 1 ? 's' : '') + '</b> pour prendre la région (au moins ' + E.minControl(me) + ' et être devant tout le monde).</p>';
+    if (c !== me) {
+      if (real) {
+        var topS = 0; g.players.forEach(function (p) { if (p.id !== me) topS = Math.max(topS, E.strength(g, selected, p.id)); });
+        var mw = E.weight(g, selected, me), byStr = Math.floor((topS - E.strength(g, selected, me)) / mw) + 1;
+        need = Math.max(E.minControl(me) - E.cubes(g, selected, me), byStr);
+      } else { var top = rows.length ? E.cubes(g, selected, rows[0].id) : 0; need = Math.max(E.minControl(me), top + 1) - E.cubes(g, selected, me); }
+    }
+    if (need > R.maxCubes - E.cubes(g, selected, me)) html += '<p>Prendre cette région est <b>hors de portée</b> pour l\u2019instant. Chaque soutien compte quand même pour tes voix.</p>';
+    else if (need > 0) html += '<p>Il te manque <b>' + need + ' soutien' + (need > 1 ? 's' : '') + '</b> pour prendre la région (au moins ' + E.minControl(me) + ' et être devant tout le monde).</p>';
     if ((g.bases[selected] || []).indexOf(me) >= 0) html += '<p>👥 Tes militants sont implantés ici : +1 électeur par tour.</p>';
     var bd = E.terrainBreakdown(g, me, selected, theme), room = R.maxCubes - E.cubes(g, selected, me);
     html += '<div class="calc-line">📣 Meeting ici : ' + bd.parts.map(function (x, i) { return (i ? (x.n >= 0 ? ' + ' : ' − ') : '') + esc(x.label) + ' <b>' + (i ? Math.abs(x.n) : x.n) + '</b>'; }).join('') +
@@ -2129,6 +2144,7 @@
       '<p><b>🤔 Les dilemmes.</b> Chaque tour, un parti (à tour de rôle) doit faire un choix. Certains choix ont des <b>conséquences différées</b> qui peuvent ressortir quelques tours plus tard.</p>' +
       '<p><b>Les crises.</b> Chaque partie connaît une crise en 3 actes (krach, grève, été brûlant, désindustrialisation). Les régions touchées sont marquées sur la carte : leur thème y compte comme à la une.</p>' +
       '<p><b>🎙️ Le débat télévisé</b> (tours 3, 6 et 8) : chaque parti affronte 3 adversaires tirés au sort, une question chacun. Choisis ta réplique : 🥊 Attaque bat ❤️ Émotion, ❤️ Émotion bat 📊 Chiffres, 📊 Chiffres bat 🥊 Attaque, 🙃 Esquive = nul. Manche gagnée 2 points, nulle 1. Bonus : 🥊 +1 si le rival a des casseroles, 📊 +1 sur ton point fort (−1 si ce n\'est pas ton sujet), ❤️ +1 si le thème fait l\'actu. Chaque ★ de préparation (3 au plus) = +1 point. Le 1er gagne +1 soutien dans 4 régions, le 2e dans 2 régions (doublé au débat final). Chaque parti a son tempérament : observe-le !</p>' +
+      '<p><b>⚖️ Mode Réaliste : le poids des urnes.</b> Chaque soutien pèse selon le score historique de son parti dans la région : un soutien du parti en tête de la région compte beaucoup, celui d\u2019un petit parti beaucoup moins. Et la moitié des électeurs vote par fidélité (le <b>socle électoral</b>) : la campagne se joue sur l\u2019autre moitié. Résultat : les petits partis ont du mal à dépasser leur score historique, et chaque région garde sa couleur (terre de gauche, de droite ou disputée, dans la fiche de la région). En mode Simulation, tout le monde pèse pareil.</p>' +
       '<p><b>Sous les projecteurs :</b> le premier des sondages paie 2 ★ ou perd des soutiens à chaque fin de tour.</p>' +
       '<p><b>🎭 Les traits satiriques.</b> Huit partis vivent un gag qui se joue de l\u2019intérieur, avec un avantage et un coût : ' + Object.keys(D.TRAITS).map(function (k) { var t = D.TRAITS[k]; return t.icon + ' <b>' + esc(t.name) + '</b> (' + t.parties.map(function (p) { return esc(party(p).short); }).join(', ') + ')'; }).join(' · ') + '. Le détail est dans l\u2019onglet de ton parti, et les actions propres à ton parti dans le menu « Plus ».</p>' });
   }

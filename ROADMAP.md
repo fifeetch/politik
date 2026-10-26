@@ -224,3 +224,13 @@ Chaque gag a un avantage **et** un coût, et se joue de l'intérieur quand on pr
 - Journal : articles satiriques (« Éric Zéronuance promet le retour du Minitel », « Avez-vous vu Bruno Raboteur ? », naissance des micro-partis, bingo, livre de François Hésitant, primaire).
 - **Équilibrage par simulation** (800 parties par mode, mêmes parties avant/après) : en Simulation, chaque parti reste dans la marge de hasard de la v3.0 ; La France Indignée, la plus faible, se qualifie plus souvent au second tour (14 % → 22 %). En Réaliste, le Rassemblement Nostalgique passe de 36 % à environ 39 % de victoires : il affronte plus souvent La France Indignée au second tour.
 - Lot 2 à venir : petits partis (Enracinés, Parti Camarade, Lutte Obstinée) et le langue-de-bois-mètre.
+
+## v3.2 — fait : le poids des urnes (mode Réaliste)
+Avant, en Réaliste, tous les partis convergeaient vers ~8 % : Lutte Obstinée démarrait à 6 % (vrai score ≈ 0,7 %) et le Rassemblement Nostalgique tombait de 31 % à 11 %.
+- **Poids électoral** : chaque soutien pèse selon le score historique de son parti dans la région (entre ×0,1 et ×3). Le sondage de départ colle aux vrais scores.
+- **Socle électoral** : la moitié des électeurs de chaque région vote par fidélité (sa part historique) ; la campagne se joue sur l'autre moitié.
+- Le contrôle d'une région va au parti qui pèse le plus (avec toujours au moins 3 soutiens, 4 pour le RN et Hors-Sol).
+- **Terres de gauche, de droite, disputées** : chaque région est classée d'après ses vrais votes (blocs gauche / centre / droite comparés à la moyenne nationale), affiché dans la fiche de la région avec « terrain favorable » ou « terrain difficile » pour ton parti. L'ordinateur en tient compte.
+- Mode Simulation inchangé (vérifié : résultats identiques sur 600 parties).
+- Simulation (150 parties, base 2024, départ → 1er tour) : RN 33,5 → 25,6 % · PS 13,5 → 14,1 · RE 10,9 → 15,4 · LFI 10,2 → 12,2 · LO 0,7 → 0,8 · PCF 2,2 → 2,4. En rejouant 2022 : RE gagne 55 % des parties, RN 45 %.
+- À surveiller : en Réaliste (base 2024), l'ordinateur RN gagne environ 3 parties sur 4. Les petits partis n'ont quasiment aucune chance de victoire : idée à creuser, un objectif « réaliste » adapté (battre son score historique, peser au second tour).

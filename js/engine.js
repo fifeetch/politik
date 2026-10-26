@@ -46,6 +46,52 @@
   function player(g, pid) { for (var i = 0; i < g.players.length; i++) if (g.players[i].id === pid) return g.players[i]; return null; }
   function pids(g) { return g.players.map(function (p) { return p.id; }); }
   function cubes(g, rid, pid) { return g.regions[rid].cubes[pid] || 0; }
+  /* v3.2 : mode Réaliste, le poids électoral. Un soutien pèse selon le score historique du parti dans la région :
+     au départ, le sondage colle aux vrais scores, et un petit parti a du mal à dépasser son électorat historique. */
+  function weight(g, rid, pid) { return g.weight && g.weight[rid] && g.weight[rid][pid] != null ? g.weight[rid][pid] : 1; }
+  function strength(g, rid, pid) { return cubes(g, rid, pid) * weight(g, rid, pid); }
+  function computeWeights(g) {
+    g.weight = {}; g.hist = {};
+    D.REGIONS.forEach(function (r) {
+      var H = 0, C = 0, w = {};
+      pids(g).forEach(function (id) { H += baseScore(g.base, r, id); C += cubes(g, r.id, id); });
+      pids(g).forEach(function (id) {
+        var c = cubes(g, r.id, id), h = baseScore(g.base, r, id);
+        w[id] = c && H && C ? Math.max(R.weightMin, Math.min(R.weightMax, (h / H) / (c / C))) : 1;
+      });
+      g.weight[r.id] = w;
+      var hs = {}; pids(g).forEach(function (id) { hs[id] = H ? baseScore(g.base, r, id) / H : 0; });
+      g.hist[r.id] = hs;   // le socle électoral : la part historique de chaque parti dans la région
+    });
+  }
+  /* Part des voix de chaque parti dans une région (sans les « autres »), socle compris */
+  function regionShares(g, rid) {
+    var reg = g.regions[rid], T = 0, w = {}, out = {}, so = g.hist ? R.socle : 0;
+    g.players.forEach(function (p) { w[p.id] = strength(g, rid, p.id) * (reg.controller === p.id ? R.incumbentBonus : 1); T += w[p.id]; });
+    g.players.forEach(function (p) { out[p.id] = (T ? (1 - so) * w[p.id] / T : 0) + so * ((g.hist && g.hist[rid][p.id]) || 0); });
+    return out;
+  }
+  /* Le bloc politique d'une région (gauche, centre, droite) d'après ses vrais votes */
+  var BLOC = { FI: 'g', LO: 'g', PC: 'g', VP: 'g', SM: 'g', MD: 'c', EM: 'c', HZ: 'c', UG: 'd', DL: 'd', MN: 'd', RQ: 'd' };
+  function regionLean(base, rid) {
+    var r = REG[rid], t = { g: 0, c: 0, d: 0 }, sum = 0;
+    D.PARTIES.forEach(function (p) { var b = BLOC[p.id]; if (!b) return; var v = baseScore(base || 'e2024', r, p.id); t[b] += v; sum += v; });
+    Object.keys(t).forEach(function (k) { t[k] = sum ? t[k] / sum : 0; });
+    var nat = natLean(base || 'e2024');
+    var d = (t.g - nat.g) - (t.d - nat.d);
+    return { g: t.g, c: t.c, d: t.d, label: d > 0.06 ? 'Terre de gauche' : d < -0.06 ? 'Terre de droite' : 'Région disputée' };
+  }
+  var LEAN_NAT = {};
+  function natLean(base) {
+    if (LEAN_NAT[base]) return LEAN_NAT[base];
+    var t = { g: 0, c: 0, d: 0 }, sum = 0;
+    D.REGIONS.forEach(function (r) {
+      var ex = r.ins * (1 - r.abst / 100);
+      D.PARTIES.forEach(function (p) { var b = BLOC[p.id]; if (!b) return; var v = ex * baseScore(base, r, p.id); t[b] += v; sum += v; });
+    });
+    Object.keys(t).forEach(function (k) { t[k] /= sum; });
+    return (LEAN_NAT[base] = t);
+  }
   function minControl(pid) { return pid === 'MN' || pid === 'HZ' ? 4 : R.minControl; }
   /* Distance sur l'axe gauche-droite, de 1 (voisins) à 5 (opposés). v1.7 : positions décimales (12 partis), arrondies. */
   function dist(a, b) { if (a === b) return 0; return Math.min(5, Math.max(1, Math.round(Math.abs(PARTY[a].pos - PARTY[b].pos)))); }
@@ -326,12 +372,12 @@
     var reg = g.regions[rid];
     var best = -1, leaders = [];
     pids(g).forEach(function (pid) {
-      var n = cubes(g, rid, pid);
-      if (n > best) { best = n; leaders = [pid]; } else if (n === best) leaders.push(pid);
+      var n = strength(g, rid, pid);   // v3.2 : en Réaliste, c'est le poids électoral qui compte (sinon, poids 1)
+      if (n > best + 1e-9) { best = n; leaders = [pid]; } else if (Math.abs(n - best) <= 1e-9) leaders.push(pid);
     });
     var prev = reg.controller;
-    if (leaders.length === 1 && best >= minControl(leaders[0])) reg.controller = leaders[0];
-    else if (prev && leaders.indexOf(prev) >= 0 && best >= minControl(prev)) reg.controller = prev;
+    if (leaders.length === 1 && cubes(g, rid, leaders[0]) >= minControl(leaders[0])) reg.controller = leaders[0];
+    else if (prev && leaders.indexOf(prev) >= 0 && cubes(g, rid, prev) >= minControl(prev)) reg.controller = prev;
     else reg.controller = null;
     return reg.controller !== prev;
   }
@@ -381,8 +427,9 @@
       totalExp += ex;
       var o = othersShare(g, r.id);
       v._autres = (v._autres || 0) + ex * o;
-      g.players.forEach(function (p) { w[p.id] = cubes(g, r.id, p.id) * (reg.controller === p.id ? R.incumbentBonus : 1); T += w[p.id]; });
-      if (T > 0) g.players.forEach(function (p) { v[p.id] += ex * (1 - o) * w[p.id] / T; });
+      g.players.forEach(function (p) { w[p.id] = strength(g, r.id, p.id) * (reg.controller === p.id ? R.incumbentBonus : 1); T += w[p.id]; });
+      var so = g.hist ? R.socle : 0;   // v3.2 : en Réaliste, une part des électeurs vote par fidélité (le socle)
+      if (T > 0) g.players.forEach(function (p) { v[p.id] += ex * (1 - o) * ((1 - so) * w[p.id] / T + so * ((g.hist && g.hist[r.id][p.id]) || 0)); });
     });
     // v3.1 : un micro-parti centriste grignote une part des voix de chaque parti du centre
     if (g.micro) CENTRE.forEach(function (pid) { if (v[pid] != null) { var cut = v[pid] * R.microCut; v[pid] -= cut; v._autres = (v._autres || 0) + cut; } });
@@ -491,6 +538,7 @@
       var sum = 0; pids(g).forEach(function (id) { sum += baseScore(g.base, r, id); });
       g.regions[r.id].others = Math.max(0, 100 - sum) / 100;
     });
+    if (g.mode !== 'egal') computeWeights(g);
     updateAllControl(g);
     // v1.5 : un objectif secret doit demander un effort. S'il est déjà rempli au départ (ex. le Mouvement National
     // contrôle déjà les régions industrielles en mode Réaliste), on l'échange contre un objectif encore à atteindre.
@@ -867,8 +915,9 @@
     var r = REG[rid], my = cubes(g, rid, pid), ctrl = g.regions[rid].controller;
     if (my >= R.maxCubes) return 0;
     k = Math.min(k, R.maxCubes - my);
-    var top = 0, tot = 0; pids(g).forEach(function (o) { tot += cubes(g, rid, o); if (o !== pid) top = Math.max(top, cubes(g, rid, o)); });
-    var voteVal = r.pts * ((my + k) / (tot + k) - (tot ? my / tot : 0)) * 1.6;
+    var top = 0, tot = 0; pids(g).forEach(function (o) { tot += strength(g, rid, o); if (o !== pid) top = Math.max(top, cubes(g, rid, o)); });
+    var wk = k * weight(g, rid, pid), ms = strength(g, rid, pid);
+    var voteVal = r.pts * ((ms + wk) / (tot + wk) - (tot ? ms / tot : 0)) * 1.6;
     var ctrlVal;
     if (ctrl === pid) {
       var margin = my - top;
@@ -1477,6 +1526,7 @@
     resolveAffair: resolveAffair, enqueteChance: enqueteChance, affairDef: affairDef,
     resolveDilemma: resolveDilemma, dilemmaDef: dilemmaDef, applyFx: applyFx, markerAt: markerAt, hotHere: hotHere, crisisAct: crisisAct,
     impact: impact, cred: cred, isHot: isHot, concerns: concerns, bestTheme: bestTheme, terrainCubes: terrainCubes, mediaCubes: mediaCubes,
+    weight: weight, strength: strength, regionLean: regionLean, natLean: natLean, regionShares: regionShares,
     traitOf: traitOf, nostalgiaPreview: nostalgiaPreview, petalsCount: petalsCount, lostPetals: lostPetals, jammed: jammed, zapped: zapped, isHidden: isHidden, retireeRegion: retireeRegion, resolvePrimaire: resolvePrimaire, actionsFor: actionsFor, centrists: centrists, tickBingo: tickBingo, ensureTraits: ensureTraits,
     REG: REG, PARTY: PARTY, sigle: sigle, THEME: THEME, makeRng: makeRng, setFormat: setFormat, saveGame: saveGame, loadGame: loadGame, registerParty: registerParty, unregisterParty: unregisterParty
   };
