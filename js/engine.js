@@ -397,8 +397,9 @@
       if (n > best + 1e-9) { best = n; leaders = [pid]; } else if (Math.abs(n - best) <= 1e-9) leaders.push(pid);
     });
     var prev = reg.controller;
-    if (leaders.length === 1 && cubes(g, rid, leaders[0]) >= minControl(leaders[0])) reg.controller = leaders[0];
-    else if (prev && leaders.indexOf(prev) >= 0 && cubes(g, rid, prev) >= minControl(prev)) reg.controller = prev;
+    var low = sh ? 1 : 0;   // v3.5.6 : en Réaliste, un soutien de moins suffit (un parti à 28 % n'a souvent que 3 soutiens)
+    if (leaders.length === 1 && cubes(g, rid, leaders[0]) >= minControl(leaders[0]) - low) reg.controller = leaders[0];
+    else if (prev && leaders.indexOf(prev) >= 0 && cubes(g, rid, prev) >= minControl(prev) - low) reg.controller = prev;
     else reg.controller = null;
     return reg.controller !== prev;
   }

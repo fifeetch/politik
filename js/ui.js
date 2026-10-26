@@ -1327,11 +1327,11 @@
           if (lead) { byStr = k; break; }
         }
         g.regions[selected].cubes[me] = c0;
-        need = Math.max(E.minControl(me) - c0, byStr);
+        need = Math.max(E.minControl(me) - 1 - c0, byStr);
       } else { var top = rows.length ? E.cubes(g, selected, rows[0].id) : 0; need = Math.max(E.minControl(me), top + 1) - E.cubes(g, selected, me); }
     }
     if (need > R.maxCubes - E.cubes(g, selected, me)) html += '<p>Prendre cette région est <b>hors de portée</b> pour l\u2019instant. Chaque soutien compte quand même pour tes voix.</p>';
-    else if (need > 0) html += '<p>Il te manque <b>' + need + ' soutien' + (need > 1 ? 's' : '') + '</b> pour prendre la région (au moins ' + E.minControl(me) + ' et être devant tout le monde).</p>';
+    else if (need > 0) html += '<p>Il te manque <b>' + need + ' soutien' + (need > 1 ? 's' : '') + '</b> pour prendre la région (au moins ' + (E.minControl(me) - (real ? 1 : 0)) + ' et être devant tout le monde).</p>';
     if ((g.bases[selected] || []).indexOf(me) >= 0) html += '<p>👥 Tes militants sont implantés ici : +1 électeur par tour.</p>';
     var bd = E.terrainBreakdown(g, me, selected, theme), room = R.maxCubes - E.cubes(g, selected, me);
     html += '<div class="calc-line">📣 Meeting ici : ' + bd.parts.map(function (x, i) { return (i ? (x.n >= 0 ? ' + ' : ' − ') : '') + esc(x.label) + ' <b>' + (i ? Math.abs(x.n) : x.n) + '</b>'; }).join('') +
