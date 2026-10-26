@@ -685,7 +685,8 @@
     incumbentBonus: 1.25,        // prime au sortant : les cubes du parti qui contrôle une région comptent ×1,25 dans les votes
     objectiveVotes: 0.6,         // un objectif réussi rapporte bonus × 0,6 « millions » de voix
     transfer: { 1: 0.55, 2: 0.42, 3: 0.25, 4: 0.12, 5: 0.06 },  // v3.6.4 : report au 2nd tour selon la distance (loin : on s'abstient plutôt)
-    cordon: { parties: ['MN', 'RQ'], below: 4.5, factor: 0.35 },  // v3.6.4 : gauche et centre (position < 4,5) reportent ×0,35 vers l'extrême droite
+    cordon: { parties: ['MN', 'RQ'], below: 4.5, factor: 0.35 },
+    blocs: { leftMax: 3, left: 0.62, rightMin: 5, right: 0.65, farLeft: 1, farLeftFactor: 0.4 },   // v3.6.7 : union de la gauche, union des droites, la droite reporte peu sur la gauche radicale  // v3.6.4 : gauche et centre (position < 4,5) reportent ×0,35 vers l'extrême droite
     allyTransfer: 0.85,
     edgeMobilization: 1,         // v1.0 : supprimé (aucune source ne le justifie)
     betrayedTransfer: 0.05,

@@ -1548,6 +1548,13 @@
   function baseTransfer(from, to) {
     var r = R.transfer[dist(from, to)] || 0, c = R.cordon;
     if (c && c.parties.indexOf(to) >= 0 && c.parties.indexOf(from) < 0 && PARTY[from].pos < c.below) r *= c.factor;
+    // v3.6.7 : union des blocs (gauche entre elle, droite entre elle) et cordon autour de la gauche radicale pour la droite
+    var B = R.blocs, pf = PARTY[from].pos, pt = PARTY[to].pos;
+    if (B) {
+      if (pf <= B.leftMax && pt <= B.leftMax) r = Math.max(r, B.left);
+      if (pf >= B.rightMin && pt >= B.rightMin) r = Math.max(r, B.right);
+      if (pf >= B.rightMin && pt <= B.farLeft) r *= B.farLeftFactor;
+    }
     return r;
   }
   function finalScores(g) {

@@ -281,3 +281,8 @@ Avant, en Réaliste, tous les partis convergeaient vers ~8 % : Lutte Obstinée d
 
 ## v3.6.6 — fait : 😴 Repos
 - Nouvelle action « Repos » (gratuite, 1 action) : +2 ⚡ tout de suite, les actions suivantes du tour en profitent. Dans le menu « Plus », qui se colore et affiche « 😴 Repos dispo » quand la forme est à 1 ou moins. L'ordinateur s'en sert aussi quand son candidat est épuisé. Brève dans le journal.
+
+## v3.6.7 — fait : union des blocs
+- Entre partis de gauche (position ≤ 3), report spontané d'au moins 62 % ; entre partis de droite (position ≥ 5), 65 %.
+- La droite reporte ×0,4 vers la gauche radicale (LR → LFI 5 %), en miroir du cordon autour de l'extrême droite.
+- Simulation (Réaliste 2024) : PS–RN 54/46, RE–RN 52/48, LFI–RN 45/55.
