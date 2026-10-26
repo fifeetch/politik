@@ -1981,8 +1981,8 @@
     });
     // le vainqueur d'une région, parmi les candidats encore en lice
     function leadIn(rid) {
-      var best = null, bn = 0;
-      among.forEach(function (pid) { var n = E.cubes(g, rid, pid); if (n > bn) { bn = n; best = pid; } });
+      var best = null, bn = 0, rv = E.regionVote(g, rid, among);   // v3.5.5 : le vrai vote de la région (poids, socle, reports)
+      among.forEach(function (pid) { if (rv[pid] > bn) { bn = rv[pid]; best = pid; } });
       return best;
     }
     function paint(rid, anim) {
@@ -2014,7 +2014,8 @@
     later(countdown, 600 + order.length * STEP + 700);
     function countRegion(r) {
       var w = {}, tot = 0;
-      among.forEach(function (pid) { w[pid] = E.cubes(g, r.id, pid); tot += w[pid]; });
+      var rv = E.regionVote(g, r.id, among);
+      among.forEach(function (pid) { w[pid] = rv[pid] || 0; tot += w[pid]; });
       among.forEach(function (pid) { acc[pid] += r.ins * (tot ? w[pid] / tot : 1 / among.length); });
       counted += r.ins;
       var f = counted / totIns, mix = 0.55 * f;   // les partiels se rapprochent du vrai résultat… sans le dévoiler

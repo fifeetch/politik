@@ -71,6 +71,18 @@
     pids(g).forEach(function (id) { out[id] = (T ? (1 - so) * strength(g, rid, id) / T : 0) + so * ((g.hist[rid] && g.hist[rid][id]) || 0); });
     return out;
   }
+  /* v3.5.5 : le vote d'une région le soir de l'élection (pour la carte de 20 h).
+     1er tour : les parts de voix ; 2nd tour : celles des finalistes + les reports des éliminés, aux taux nationaux. */
+  function regionVote(g, rid, among) {
+    var sh = g.hist ? regionShares(g, rid) : (function () { var o = {}, T = 0; pids(g).forEach(function (id) { T += cubes(g, rid, id); }); pids(g).forEach(function (id) { o[id] = T ? cubes(g, rid, id) / T : 0; }); return o; })();
+    var out = {}, sec = g.result && g.result.second;
+    among.forEach(function (pid) { out[pid] = sh[pid] || 0; });
+    if (sec && sec.transfers) sec.transfers.forEach(function (t) {
+      if (out[sec.a] != null) out[sec.a] += (sh[t.pid] || 0) * t.toA;
+      if (out[sec.b] != null) out[sec.b] += (sh[t.pid] || 0) * t.toB;
+    });
+    return out;
+  }
   /* Part des voix de chaque parti dans une région (sans les « autres »), socle compris */
   function regionShares(g, rid) {
     var reg = g.regions[rid], T = 0, w = {}, out = {}, so = g.hist ? R.socle : 0;
@@ -1535,7 +1547,7 @@
     resolveAffair: resolveAffair, enqueteChance: enqueteChance, affairDef: affairDef,
     resolveDilemma: resolveDilemma, dilemmaDef: dilemmaDef, applyFx: applyFx, markerAt: markerAt, hotHere: hotHere, crisisAct: crisisAct,
     impact: impact, cred: cred, isHot: isHot, concerns: concerns, bestTheme: bestTheme, terrainCubes: terrainCubes, mediaCubes: mediaCubes,
-    weight: weight, strength: strength, controlShares: controlShares, regionLean: regionLean, natLean: natLean, regionShares: regionShares,
+    weight: weight, strength: strength, controlShares: controlShares, regionVote: regionVote, regionLean: regionLean, natLean: natLean, regionShares: regionShares,
     traitOf: traitOf, nostalgiaPreview: nostalgiaPreview, petalsCount: petalsCount, lostPetals: lostPetals, jammed: jammed, zapped: zapped, isHidden: isHidden, retireeRegion: retireeRegion, resolvePrimaire: resolvePrimaire, actionsFor: actionsFor, centrists: centrists, tickBingo: tickBingo, ensureTraits: ensureTraits,
     REG: REG, PARTY: PARTY, sigle: sigle, THEME: THEME, makeRng: makeRng, setFormat: setFormat, saveGame: saveGame, loadGame: loadGame, registerParty: registerParty, unregisterParty: unregisterParty
   };
