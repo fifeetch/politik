@@ -1332,7 +1332,17 @@
     return { pt: after - before, moved: moved };
   }
   /* Le registre du tour : d'où vient chaque hausse ou baisse de chaque parti */
-  function ledStart(g) { g.led = { turn: g.turn, start: pollMap(g), acts: {}, riv: {}, deb: {} }; }
+  function ledStart(g) {
+    g.led = { turn: g.turn, start: pollMap(g), acts: {}, riv: {}, deb: {} };
+    // v4.6 : la photo des régions en début de tour (pour le filtre de carte « Progression »)
+    g.regPrev = g.regNow || null; g.regNow = regionSnapshot(g);
+  }
+  /* Le score de chaque parti dans chaque région, en part des voix exprimées */
+  function regionSnapshot(g) {
+    var o = {};
+    D.REGIONS.forEach(function (r) { var sh = regionShares(g, r.id), k = 1 - othersShare(g, r.id); o[r.id] = {}; Object.keys(sh).forEach(function (p) { o[r.id][p] = sh[p] * k; }); });
+    return o;
+  }
   function ledAdd(g, key, pid, d) { if (!g.led) return; g.led[key][pid] = (g.led[key][pid] || 0) + d; }
   function ledClose(g) {
     var L = g.led; if (!L) return null;
@@ -2108,7 +2118,7 @@
   }
 
   var API = {
-    estimate: estimate, ledStart: ledStart,
+    estimate: estimate, ledStart: ledStart, regionSnapshot: regionSnapshot,
     createGame: createGame, startTurn: startTurn, resolveActions: resolveActions, resolveDebate: resolveDebate, setupDebate: setupDebate, debateCards: debateCards, duelOutcome: duelOutcome, debateCounter: debateCounter, aiDebatePick: aiDebatePick, debateWeights: debateWeights, setupFace: setupFace, resolveFace: resolveFace, audScore: audScore, duelResult: duelResult, replyPoints: replyPoints,
     isDebateTurn: isDebateTurn, spotlightTarget: spotlightTarget, applySpotlight: applySpotlight, endTurn: endTurn,
     finalScores: finalScores, firstRound: firstRound, openBetween: openBetween, betweenAct: betweenAct, betweenError: betweenError, answerCounter: answerCounter, answerBetweenOffer: answerBetweenOffer, setConsigne: setConsigne, concessionsFor: concessionsFor, dealChance: dealChance, aiBetweenStep: aiBetweenStep, aiConsigne: aiConsigne, transfersFor: transfersFor, projectSecond: projectSecond, closeBetween: closeBetween, autoBetween: autoBetween, objectiveMet: objectiveMet, objectiveProgress: objectiveProgress, objectiveShare: objectiveShare, terrainBreakdown: terrainBreakdown, turnOrder: turnOrder, election: election, poll: poll, votes: votes,

@@ -17,7 +17,7 @@
   }
   .screen-game .topbar { grid-column: 1 / -1; grid-row: 1; padding: 0 20px 10px; border-bottom: 1px solid var(--rule); }
   .screen-game #advisor { grid-column: 2; grid-row: 2; margin: 10px 16px 0; }
-  .screen-game .map-wrap { grid-column: 2; grid-row: 3; min-height: 0; padding: 34px 24px 10px; }
+  .screen-game .map-wrap { grid-column: 2; grid-row: 3; min-height: 0; padding: 34px 24px 30px; }
   .screen-game .map { max-height: 100%; }
   .screen-game .panel { grid-column: 2; grid-row: 4; max-height: 44vh; margin: 0 16px; border-radius: 20px 20px 0 0; }
 

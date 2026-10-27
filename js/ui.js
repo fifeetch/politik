@@ -1266,9 +1266,84 @@
     });
     raceShown = shown;
   }
-  var mapMode = 'ctrl';
-  /* Calque « Abstention » : du plus clair (on vote) au plus foncé (on s'abstient) */
-  function abstFill(a) { var t = Math.max(0, Math.min(1, (a - 0.18) / 0.34)); var c0 = [236, 230, 214], c1 = [44, 38, 92]; return 'rgb(' + c0.map(function (v, i) { return Math.round(v + (c1[i] - v) * t); }).join(',') + ')'; }
+  var mapMode = 'ctrl', mapSeg = 'pop';
+  /* ---------- v4.6 : les filtres de carte (à la manière des jeux Paradox) ----------
+     Chaque filtre colore les régions selon une donnée, pose une étiquette sur chacune et a sa légende sous la carte. */
+  function hexRgb(h) { return [1, 3, 5].map(function (i) { return parseInt(h.substr(i, 2), 16); }); }
+  function ramp(stops, t) {
+    t = Math.max(0, Math.min(1, t)); var n = stops.length - 1, i = Math.min(n - 1, Math.floor(t * n)), u = t * n - i, a = hexRgb(stops[i]), b = hexRgb(stops[i + 1]);
+    return 'rgb(' + a.map(function (v, k) { return Math.round(v + (b[k] - v) * u); }).join(',') + ')';
+  }
+  var RAMP = { abst: ['#ECE6D6', '#8E86C2', '#2C265C'], hot: ['#D8462F', '#F3B9A4', '#EFEBE3'], meet: ['#EEEDFE', '#AFA9EC', '#534AB7', '#26215C'],
+    up: ['#EAF3DE', '#639922', '#27500A'], down: ['#FCEBEB', '#E24B4A', '#791F1F'], seg: ['#F4EFE6', '#C99A5B', '#6B3F12'] };
+  var THEME_COL = { pouvoir: '#E0A33A', emploi: '#8A6D5A', services: '#4A90C8', ecologie: '#4E9A5B', securite: '#3E4C7A', immigration: '#B5523B' };
+  function myScoreRamp() { var c = party(me).color; return ['#F4F1EA', c]; }
+  function regNow(rid) { var sh = E.regionShares(g, rid), k = 1 - E.othersShare(g, rid), o = {}; Object.keys(sh).forEach(function (p) { o[p] = sh[p] * k; }); return o; }
+  function top2(rid) { var sh = regNow(rid), ids = Object.keys(sh).sort(function (a, b) { return sh[b] - sh[a]; }); return { a: ids[0], b: ids[1], gap: sh[ids[0]] - sh[ids[1]] }; }
+  var LAYERS = [
+    { k: 'ctrl', fam: 'Le rapport de force', icon: '🚩', name: 'Qui contrôle', what: 'Le parti qui tient chaque région (le plus de voix, avec assez de soutiens).' },
+    { k: 'score', fam: 'Le rapport de force', icon: '🎯', name: 'Ton score', what: 'Ton score dans chaque région, en % des voix. Plus c’est foncé, plus tu es fort.',
+      fill: function (rid) { var r = scoreRange(); return ramp(myScoreRamp(), ((regNow(rid)[me] || 0) - r.lo) / Math.max(0.005, r.hi - r.lo)); }, label: function (rid) { var v = regNow(rid)[me] || 0; return pctFr(v, v < 0.1 ? 1 : 0) + '%'; },
+      legend: function () { var r = scoreRange(); return gradLeg(myScoreRamp(), pctFr(r.lo) + ' %', pctFr(r.hi) + ' %'); } },
+    { k: 'serre', fam: 'Le rapport de force', icon: '⚖️', name: 'Course serrée', what: 'L’écart entre le 1er et le 2e. Rouge : la région peut basculer avec peu de soutiens.',
+      fill: function (rid) { return ramp(RAMP.hot, top2(rid).gap / 0.3); }, label: function (rid) { return pctFr(top2(rid).gap) + ' pt'; },
+      legend: function () { return gradLeg(RAMP.hot, 'serré', 'joué d’avance'); } },
+    { k: 'prog', fam: 'La dynamique', icon: '📈', name: 'Progression', what: 'Ce que tu as gagné ou perdu dans chaque région au dernier tour.',
+      fill: function (rid) { var d = progOf(rid); return d == null ? '#EFEBE3' : d > 0.0005 ? ramp(RAMP.up, d / 0.05) : d < -0.0005 ? ramp(RAMP.down, -d / 0.03) : '#EFEBE3'; },
+      label: function (rid) { var d = progOf(rid); return d == null ? '—' : Math.abs(d) < 0.0005 ? '=' : ptNum(d); },
+      legend: function () { return g.regPrev ? gradLeg([RAMP.down[1], '#EFEBE3', RAMP.up[1]], 'baisse', 'hausse') : '<span>Rien à comparer avant la fin du 1er tour.</span>'; } },
+    { k: 'abst', fam: 'Le terrain', icon: '🛋️', name: 'Abstention', what: 'La part des inscrits qui ne votent pas. Là où elle est forte, Mobiliser rapporte plus.',
+      fill: function (rid) { return ramp(RAMP.abst, (E.regionVoters(g, rid).abst - 0.18) / 0.34); }, label: function (rid) { return pctFr(E.regionVoters(g, rid).abst) + '%'; },
+      legend: function () { return gradLeg(RAMP.abst, 'on vote', 'on s’abstient'); } },
+    { k: 'classe', fam: 'Le terrain', icon: '👥', name: 'Classe sociale', what: 'La part d’une classe sociale dans la population de chaque région.',
+      fill: function (rid) { var r = segRange(); return ramp(RAMP.seg, (segShare(rid) - r.lo) / Math.max(1, r.hi - r.lo)); }, label: function (rid) { return Math.round(E.REG[rid].pop[mapSeg]) + '%'; },
+      legend: function () { return '<span class="ml-segs">' + D.SEGMENTS.map(function (sg) { return '<button type="button" data-seg="' + sg.id + '" class="' + (sg.id === mapSeg ? 'on' : '') + '">' + sg.icon + ' ' + SEG_SHORT[sg.id] + '</button>'; }).join('') + '</span>'; } },
+    { k: 'theme', fam: 'Le terrain', icon: '🔥', name: 'Préoccupation', what: 'Le sujet qui compte le plus pour les habitants de chaque région.',
+      fill: function (rid) { return THEME_COL[E.REG[rid].concerns[0]] || '#ccc'; }, label: function (rid) { return th(E.REG[rid].concerns[0]).icon; }, dark: true,
+      legend: function () { return D.THEMES.map(function (t) { return '<span class="ml-key"><i style="background:' + THEME_COL[t.id] + '"></i>' + t.icon + ' ' + esc(t.short) + '</span>'; }).join(''); } },
+    { k: 'accueil', fam: 'Le terrain', icon: '❤️', name: 'Accueil de ton programme', what: 'Régions de cœur (+1 soutien sur tes Meetings) et régions hostiles (−1).',
+      fill: function (rid) { var e = E.echoBonus(g, me, rid); return e > 0 ? '#4E9A5B' : e < 0 ? '#C0503C' : '#DCD6CA'; },
+      label: function (rid) { var e = E.echoBonus(g, me, rid); return e > 0 ? 'cœur' : e < 0 ? 'hostile' : 'moyen'; },
+      legend: function () { return '<span class="ml-key"><i style="background:#4E9A5B"></i>de cœur</span><span class="ml-key"><i style="background:#DCD6CA"></i>moyen</span><span class="ml-key"><i style="background:#C0503C"></i>hostile</span>'; } },
+    { k: 'meet', fam: 'Où faire campagne', icon: '📣', name: 'Rendement d’un Meeting', what: 'Ce qu’un Meeting rapporterait à ton score national, ici et maintenant (avec ton message actuel).',
+      fill: function (rid) { var e = meetPt(rid); return e == null ? '#DCD6CA' : ramp(RAMP.meet, e / meetMax()); }, label: function (rid) { var e = meetPt(rid); return e == null ? '—' : ptNum(e); },
+      legend: function () { return gradLeg(RAMP.meet, 'rapporte peu', 'rapporte le plus'); } }
+  ];
+  var LAYER = {}; LAYERS.forEach(function (l) { LAYER[l.k] = l; });
+  function gradLeg(stops, l, r) { return '<span>' + l + '</span><i class="ml-bar" style="background:linear-gradient(90deg,' + stops.join(',') + ')"></i><span>' + r + '</span>'; }
+  function progOf(rid) { if (!g.regPrev || !g.regNow) return null; return ((g.regNow[rid] || {})[me] || 0) - ((g.regPrev[rid] || {})[me] || 0); }
+  function segShare(rid) { return E.REG[rid].pop[mapSeg] || 0; }
+  var SEG_SHORT = { ind: 'Indépendants', cad: 'Cadres', pi: 'Intermédiaires', pop: 'Ouvriers, employés', ret: 'Retraités', sae: 'Sans emploi' };
+  function segRange() { var lo = 100, hi = 0; D.REGIONS.forEach(function (r) { var v = r.pop[mapSeg] || 0; lo = Math.min(lo, v); hi = Math.max(hi, v); }); return { lo: lo, hi: hi }; }
+  function scoreRange() { var lo = 1, hi = 0; D.REGIONS.forEach(function (r) { var v = regNow(r.id)[me] || 0; lo = Math.min(lo, v); hi = Math.max(hi, v); }); return { lo: lo, hi: hi }; }
+  function meetTheme(rid) { return themePicked && theme ? theme : E.bestTheme(g, me, rid); }
+  function meetPt(rid) { if (g.phase !== 'actions') return null; var e = est({ type: 'terrain', region: rid, theme: meetTheme(rid) }); return e ? e.pt : null; }
+  function meetMax() { var m = 0.001; D.REGIONS.forEach(function (r) { var e = meetPt(r.id); if (e != null) m = Math.max(m, e); }); return m; }
+  function lumOf(c) { var v = c.charAt(0) === '#' ? hexRgb(c) : c.match(/\d+/g).map(Number); return (0.299 * v[0] + 0.587 * v[1] + 0.114 * v[2]) / 255; }
+  function renderLegend() {
+    var L = LAYER[mapMode], box = $('map-legend');
+    $('map-filter-name').textContent = L.name;
+    if (!L.legend) { box.innerHTML = ''; box.hidden = true; return; }
+    box.hidden = false;
+    box.innerHTML = L.legend();
+    Array.prototype.forEach.call(box.querySelectorAll('[data-seg]'), function (b) { b.addEventListener('click', function () { mapSeg = b.getAttribute('data-seg'); renderMap(); }); });
+  }
+  function mapFilterMenu() {
+    var fams = [];
+    LAYERS.forEach(function (l) { if (fams.indexOf(l.fam) < 0) fams.push(l.fam); });
+    var html = fams.map(function (f) {
+      return '<div class="kicker">' + esc(f) + '</div><div class="pick">' + LAYERS.filter(function (l) { return l.fam === f; }).map(function (l) {
+        return '<button type="button" class="pick-row' + (l.k === mapMode ? ' on' : '') + '" data-layer="' + l.k + '"><span class="pick-i">' + l.icon + '</span><span class="pick-txt"><b>' + esc(l.name) + '</b><small>' + esc(l.what) + '</small></span></button>';
+      }).join('') + '</div>';
+    }).join('');
+    modal({ kicker: 'La carte', title: 'Que veux-tu voir ?', html: html, buttons: [{ label: 'Fermer' }],
+      onOpen: function () {
+        Array.prototype.forEach.call(document.querySelectorAll('#modal [data-layer]'), function (b) {
+          b.addEventListener('click', function () { mapMode = b.getAttribute('data-layer'); closeModal(); if (g) renderMap(); });
+        });
+      } });
+  }
+  $('btn-map-filter').addEventListener('click', mapFilterMenu);
   /* v1.4 : la carte vivante.
      - ink : les régions qui viennent de changer de main. La nouvelle couleur se répand depuis le centre.
      - candPos : la région où se trouve ton candidat (son pion se déplace à chaque tour). */
@@ -1290,7 +1365,7 @@
       FX.wait(160 * i++, function () {
         if (ink[rid] !== k) return;
         var m = M.regions[rid];
-        if (mapMode !== 'abst') FX.ripple($('map'), m.x, m.y, k.to, k.mine);
+        if (mapMode === 'ctrl') FX.ripple($('map'), m.x, m.y, k.to, k.mine);
         FX.tween(950, function (t) { k.p = t; FX.inkSet(rid, t); }, function () {
           if (ink[rid] === k) delete ink[rid];
           if (!Object.keys(ink).length && g && !replaying) renderMap();
@@ -1300,8 +1375,9 @@
   }
   function renderMap() {
     var s = $('map'); s.innerHTML = '';
-    var abstMode = mapMode === 'abst';
+    var L = LAYER[mapMode] || LAYER.ctrl, abstMode = mapMode !== 'ctrl';   // v4.6 : abstMode = « un filtre autre que le contrôle »
     $('map-wrap').classList.toggle('mode-abst', abstMode);
+    renderLegend();
     if (mapG !== g) { mapG = g; ink = {}; lastCtrl = {}; D.REGIONS.forEach(function (r) { lastCtrl[r.id] = g.regions[r.id].controller; }); candPos = startPos(); }
     D.REGIONS.forEach(function (r) {
       var c = g.regions[r.id].controller, c0 = lastCtrl[r.id];
@@ -1317,7 +1393,7 @@
     D.REGIONS.forEach(function (r) {
       var c = g.regions[r.id].controller;
       var k = abstMode ? null : ink[r.id];
-      var fill = abstMode ? abstFill(E.regionVoters(g, r.id).abst) : k ? k.from : c ? party(c).color : NEUTRAL;
+      var fill = abstMode ? L.fill(r.id) : k ? k.from : c ? party(c).color : NEUTRAL;
       var p = svg('path', { d: M.regions[r.id].d, class: 'reg' + (T.pulseRegion() === r.id ? ' tuto-pulse' : ''), fill: fill, tabindex: 0, role: 'button', 'aria-label': r.name, 'data-rid': r.id });
       p.addEventListener('click', function () { selectRegion(r.id); });
       p.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectRegion(r.id); } });
@@ -1332,7 +1408,7 @@
     D.REGIONS.forEach(function (r) {
       var m = M.regions[r.id], gb = svg('g', { class: 'badge' });
       var ctl = g.regions[r.id].controller;
-      var label = abstMode ? pctFr(E.regionVoters(g, r.id).abst) + '%' : ctl === me ? 'Toi' : ctl ? E.sigle(ctl) : '—';
+      var label = abstMode ? L.label(r.id) : ctl === me ? 'Toi' : ctl ? E.sigle(ctl) : '—';
       if (!abstMode && ctl) gb.setAttribute('class', 'badge badge-owner' + (ctl === me ? ' badge-me' : ''));
       var bw = Math.max(26, 7 * label.length + 6);   // v3.0 : les sigles de 4 ou 5 lettres (MoDem)
       gb.appendChild(svg('rect', { x: m.x - bw / 2, y: m.y - 8, width: bw, height: 15, rx: 7.5 }));
@@ -1363,15 +1439,8 @@
     });
     // le pion de ton candidat
     pawnEl = null;
-    if (!abstMode && candPos) { var pp = pawnPt(candPos); pawnEl = FX.pawn(s, pp.x, pp.y, A.portrait(me), party(me).color); }
+    if (candPos) { var pp = pawnPt(candPos); pawnEl = FX.pawn(s, pp.x, pp.y, A.portrait(me), party(me).color); }
   }
-  Array.prototype.forEach.call(document.querySelectorAll('[data-mapmode]'), function (b) {
-    b.addEventListener('click', function () {
-      mapMode = b.getAttribute('data-mapmode');
-      Array.prototype.forEach.call(document.querySelectorAll('[data-mapmode]'), function (x) { x.setAttribute('aria-pressed', x === b); });
-      if (g) renderMap();
-    });
-  });
   function selectRegion(rid) {
     selected = rid;
     if (!themePicked) theme = E.bestTheme(g, me, rid);
@@ -1928,7 +1997,7 @@
       if (g) renderMap();
       done();
     }
-    if (!stops.length || FX.reduced || mapMode === 'abst' || !pawnEl) return finish();
+    if (!stops.length || FX.reduced || !pawnEl) return finish();
     replaying = true;
     var s = $('map'), shown = {}, i = 0;
     var skip = el('button', { class: 'fx-skip', type: 'button', 'aria-label': 'Passer l\'animation' }, '<span>Ton candidat fait campagne… <u>passer</u></span>');

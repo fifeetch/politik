@@ -296,3 +296,11 @@ Aucune règle de calcul ne change : seul ce que le joueur voit change. Le socle 
 - **Interviews et débat en points** : chaque réponse affiche son effet au sondage ; le verdict du débat donne la variation de chaque parti en points.
 - **Bilan de fin de tour, toujours au même format** : tes actions · ce que les rivaux t'ont pris · débat · événements et affaires · médias qui s'estompent = total du tour. Rappel dans l'onglet Sondage (« Pourquoi ? Le bilan »), et le gain de chaque action dans le détail du flash info.
 - Tests : l'estimation d'un Meeting = son gain réel ; la somme des lignes du bilan = la variation du sondage, à chaque tour.
+
+## v4.6 — fait : les filtres de carte (tous les modes)
+Inspiré des « modes de carte » des jeux Paradox : le bouton 🗺️ au-dessus de la carte ouvre la liste des filtres, rangés par famille ; chaque filtre a sa légende sous la carte et une étiquette par région.
+- **Le rapport de force** : Qui contrôle (la carte d'avant) · Ton score (en % par région, échelle de ton plus faible à ton plus fort) · Course serrée (écart entre le 1er et le 2e : rouge = peut basculer).
+- **La dynamique** : Progression (ce que tu as gagné ou perdu dans chaque région au dernier tour).
+- **Le terrain** : Abstention · Classe sociale (choix de la classe sous la carte) · Préoccupation (le sujet n° 1 de chaque région) · Accueil de ton programme (de cœur, moyen, hostile).
+- **Où faire campagne** : Rendement d'un Meeting (ce qu'il rapporterait en points de sondage dans chaque région, avec ton message actuel).
+- Le moteur garde la photo des scores régionaux à chaque début de tour (pour le filtre Progression).

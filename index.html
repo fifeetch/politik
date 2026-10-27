@@ -126,8 +126,9 @@
     <div id="advisor" class="advisor" hidden></div>
 
     <div class="map-wrap" id="map-wrap">
-      <div class="map-mode" role="group" aria-label="Ce que montre la carte"><button type="button" data-mapmode="ctrl" aria-pressed="true">Contrôle</button><button type="button" data-mapmode="abst" aria-pressed="false">Abstention</button></div>
+      <button type="button" class="map-filter" id="btn-map-filter" aria-label="Changer le filtre de la carte">🗺️ <span id="map-filter-name">Qui contrôle</span> ▾</button>
       <svg id="map" class="map" viewBox="0 0 370 357" role="img" aria-label="Carte des 13 régions"></svg>
+      <div class="map-legend" id="map-legend" aria-live="polite"></div>
     </div>
 
     <div class="panel">
