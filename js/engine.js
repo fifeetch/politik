@@ -947,6 +947,8 @@
     pl.cas = Math.max(0, pl.cas - 1);
     D.REGIONS.forEach(function (r) { g.regions[r.id].abst = Math.min(0.8, g.regions[r.id].abst + R.affairAbst); });   // « tous pourris » : un peu plus d'abstention
     var fx = applyFx(g, pid, rc.fx);
+    var extra = Math.round(Math.max(0, scandalMult(g, pid) - 1) * 0.75);   // v4.3 (Bêta) : pour les favoris, l'affaire fait plus de bruit
+    if (extra) fx = fx.concat(applyFx(g, pid, [{ k: 'loseTop', n: 1, count: extra }]).map(function (t) { return 'l\u2019affaire fait la une : ' + t; }));
     updateAllControl(g);
     return { pid: pid, title: a.title, reaction: rc.label, effects: fx };
   }

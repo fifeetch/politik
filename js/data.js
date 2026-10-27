@@ -929,8 +929,9 @@
        Au-dessus de 1 : renforcées pour les partis sous leur objectif ; en dessous : affaiblies pour les favoris. */
     specific: { MN: 0, FI: 0.25, SM: 0.8, HZ: 2, EM: 2.5, UG: 2.5, VP: 3, PC: 3, RQ: 2, DL: 3, LO: 3, MD: 3 },
     /* v4.3 : le risque de scandale par parti. Au-dessus de 1 : plus d'affaires (risque des casseroles × ce chiffre, plus un risque
-       de base de (chiffre − 1) × 8 % par tour même sans casserole, et plus souvent ciblé par Le Canard). En dessous : moins d'affaires. */
-    scandal: { MN: 2.5, FI: 1.8, SM: 1, HZ: 0.7, EM: 0.7, UG: 0.7, VP: 0.4, PC: 0.4, RQ: 0.6, DL: 0.4, LO: 0.4, MD: 0.4 },
+       de base de (chiffre − 1) × 8 % par tour même sans casserole, et plus souvent ciblé par Le Canard). En dessous : moins d'affaires.
+       Au-dessus de 1, chaque affaire coûte aussi plus cher : −1 soutien dans (chiffre − 1) × 0,75 régions parmi les plus fortes. */
+    scandal: { MN: 5, FI: 3, SM: 1, HZ: 0.7, EM: 0.7, UG: 0.7, VP: 0.4, PC: 0.4, RQ: 0.6, DL: 0.4, LO: 0.4, MD: 0.4 },
     changes: [
       'Pas de prime au sortant : tenir une région ne donne plus de voix en plus.',
       'Actions et cartes propres à chaque parti réglées selon son rang : plus fortes pour les petits, plus faibles pour les favoris.',
