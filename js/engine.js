@@ -51,7 +51,21 @@
   /* v3.2 : mode Réaliste, le poids électoral. Un soutien pèse selon le score historique du parti dans la région :
      au départ, le sondage colle aux vrais scores, et un petit parti a du mal à dépasser son électorat historique. */
   function weight(g, rid, pid) { return g.weight && g.weight[rid] && g.weight[rid][pid] != null ? g.weight[rid][pid] : 1; }
-  function strength(g, rid, pid) { return cubes(g, rid, pid) * weight(g, rid, pid); }
+  /* v4.2 (Bêta) : l'élan de l'outsider et le coup de pouce du joueur */
+  function elan(g, pid) {
+    if (g.mode !== 'beta' || !g.start) return 1;
+    var B = D.BETA, s = Math.max(0.1, 100 * (g.start[pid] || 0)), f = Math.max(1, Math.min(B.elan.max, Math.pow(B.elan.ref / s, B.elan.alpha)));
+    var pl = player(g, pid);
+    if (pl && pl.human) f *= 1 + B.player.bonus * Math.max(0, 1 - s / 33);
+    return f;
+  }
+  /* La force d'un parti dans une région : ses soutiens × leur poids. En Bêta, les soutiens gagnés depuis le départ comptent × l'élan. */
+  function strength(g, rid, pid) {
+    var c = cubes(g, rid, pid), w = weight(g, rid, pid);
+    if (g.mode !== 'beta' || !g.cubes0) return c * w;
+    var c0 = (g.cubes0[rid] && g.cubes0[rid][pid]) || 0;
+    return w * (Math.min(c, c0) + Math.max(0, c - c0) * elan(g, pid));
+  }
   function computeWeights(g) {
     g.weight = {}; g.hist = {};
     D.REGIONS.forEach(function (r) {
@@ -230,6 +244,7 @@
   function interview(g, pid, qid, fmt, segBoost) {
     var q = QBY[qid], th = q.theme, pl = player(g, pid), c = cred(g, pid, th), hot = isHot(g, th);
     var maj = isMajority(pid), tw = (D.TEMPERS[pid] || { w: {} }).w, sc = D.MEDIA.scale[fmt || 'tele'];
+    if (g.mode === 'beta' && pid === D.BETA.eco.party && th === 'ecologie') sc *= D.BETA.eco.media;   // v4.2
     var segs = {}; SEG.forEach(function (s) { segs[s] = (q.segs[s] || 0.5) * ((segBoost && segBoost[s]) || 1); });
     function card(key, quote, h, t, notes, extra, flat) {
       var gains = {};
@@ -312,6 +327,8 @@
     return null;
   }
   function applyInterview(g, pid, cardObj) {
+    var f = elan(g, pid);
+    if (f !== 1) { var gg = {}; SEG.forEach(function (s) { gg[s] = (cardObj.gains[s] || 0) * f; }); cardObj = Object.assign({}, cardObj, { gains: gg }); }
     addAudience(g, pid, cardObj.gains);
     var out = { gains: cardObj.gains, cas: false };
     if (cardObj.risk && g.rng() < cardObj.risk) {
@@ -477,7 +494,9 @@
   function concerns(rid, th) { return REG[rid].concerns.indexOf(th) >= 0; }
   /* Impact d'un message de 0 à 4 : crédibilité (0-2) + préoccupation de la région (0-1) + actualité (0-1) */
   function impact(g, pid, rid, th) {
-    return cred(g, pid, th) + (rid && concerns(rid, th) ? 1 : 0) + (hotHere(g, rid, th) ? 1 : 0);
+    var n = cred(g, pid, th) + (rid && concerns(rid, th) ? 1 : 0) + (hotHere(g, rid, th) ? 1 : 0);
+    if (g.mode === 'beta' && pid === D.BETA.eco.party && th === 'ecologie') n += D.BETA.eco.impact;   // v4.2 : les écolos font foi
+    return Math.min(4, n);
   }
   /* Le meilleur thème d'un parti pour une région (sert aux choix par défaut et à l'IA) */
   function bestTheme(g, pid, rid) {
@@ -800,6 +819,10 @@
     });
     if (g.mode !== 'egal') computeWeights(g);
     updateAllControl(g);
+    if (g.mode === 'beta') {   // v4.2 : la photo du départ, pour l'élan de l'outsider
+      g.cubes0 = {}; D.REGIONS.forEach(function (r) { g.cubes0[r.id] = Object.assign({}, g.regions[r.id].cubes); });
+      g.start = pollMap(g);
+    }
     // v1.5 : un objectif secret doit demander un effort. S'il est déjà rempli au départ (ex. le Mouvement National
     // contrôle déjà les régions industrielles en mode Réaliste), on l'échange contre un objectif encore à atteindre.
     var spare = objs.slice(g.players.length);
@@ -1930,7 +1953,7 @@
     makeDeal: makeDeal, weight: weight, strength: strength, controlShares: controlShares, regionVote: regionVote, regionLean: regionLean, natLean: natLean, regionShares: regionShares,
     traitOf: traitOf, nostalgiaPreview: nostalgiaPreview, petalsCount: petalsCount, lostPetals: lostPetals, jammed: jammed, zapped: zapped, isHidden: isHidden, retireeRegion: retireeRegion, resolvePrimaire: resolvePrimaire, actionsFor: actionsFor, centrists: centrists, tickBingo: tickBingo, ensureTraits: ensureTraits,
     classPoll: classPoll, addAudience: addAudience, previewGain: previewGain, quickGain: quickGain, interview: interview, applyInterview: applyInterview, aiAnswer: aiAnswer, pickQuestion: pickQuestion, stationFit: stationFit, stationBoost: stationBoost, vingtError: vingtError, matinaleError: matinaleError, stageRisk: stageRisk, isMajority: isMajority, audOf: audOf, SEG: SEG,
-    applyMode: applyMode,
+    applyMode: applyMode, elan: elan,
     REG: REG, PARTY: PARTY, sigle: sigle, THEME: THEME, makeRng: makeRng, setFormat: setFormat, saveGame: saveGame, loadGame: loadGame, registerParty: registerParty, unregisterParty: unregisterParty
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;
