@@ -217,7 +217,7 @@
   function measureFor(g, pid, q) {
     var pl = player(g, pid), best = null, bv = -1e9;
     ((pl && pl.programme) || []).forEach(function (id) {
-      var m = MEAS[id]; if (!m || m.theme !== q.theme) return;
+      var m = MEAS[id]; if (!m || m.theme !== q.theme || (q.meas && q.meas.indexOf(id) < 0)) return;   // v4.0.1 : seulement une mesure qui répond à la question
       var v = 0; SEG.forEach(function (s) { v += ((m.fans || {})[s] || 0) * (q.segs[s] || 0); });
       if (v > bv) { bv = v; best = m; }
     });
@@ -276,7 +276,8 @@
     }
     // 🙃 Recentrer sur son sujet fort
     var fav = D.THEMES.slice().sort(function (a, b) { return cred(g, pid, b.id) - cred(g, pid, a.id); }).filter(function (t) { return t.id !== th; })[0];
-    var rc = card('recentrer', 'La vraie question, c’est ' + fav.name.toLowerCase() + '. Parlons de ce qui compte vraiment.', 0, 1, ['petit gain, mais aucun risque'], null, true);
+    var ART = { pouvoir: 'le pouvoir d’achat', emploi: 'l’emploi', services: 'les services publics', ecologie: 'l’écologie', securite: 'la sécurité', immigration: 'l’immigration' };
+    var rc = card('recentrer', 'La vraie question, c’est ' + (ART[fav.id] || fav.name.toLowerCase()) + '. Parlons de ce qui compte vraiment.', 0, 1, ['petit gain, mais aucun risque'], null, true);
     rc.fav = fav.id; cards.push(rc);
     return { q: q, fmt: fmt, cards: cards };
   }
@@ -1606,7 +1607,11 @@
       pl.momentum = d >= R.momentumStep ? 1 : d <= -R.momentumStep ? -1 : 0;
     });
     g.lastPoll = now;
-    if (g.turn < R.maxTurns) { wearAudience(g); g.lastPoll = pollMap(g); }   // v3.8 : l'effet des médias s'use d'un tour à l'autre
+    if (g.turn < R.maxTurns) {   // v3.8 : l'effet des médias s'use d'un tour à l'autre
+      wearAudience(g); var nw = pollMap(g); g.lastWear = {};
+      g.players.forEach(function (pl) { g.lastWear[pl.id] = (nw[pl.id] || 0) - (now[pl.id] || 0); });
+      g.lastPoll = nw;
+    }
     g.phase = 'next';
     if (g.turn >= R.maxTurns) {
       // v1.6 : le 1er tour est voté et figé. Majorité absolue : c'est fini. Sinon : l'entre-deux-tours commence.

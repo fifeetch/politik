@@ -598,5 +598,19 @@ section('Le nouveau débat et le face-à-face (v4.0)');
   if (gf3.between) { E.autoBetween(gf3); ok(gf3.between.debate && gf3.over, 'entre deux ordinateurs, le face-à-face se joue tout seul'); }
 })();
 
+section('Correctifs v4.0.2');
+(function () {
+  var g = E.createGame('SM', { seed: 120 });
+  E.addAudience(g, 'SM', { pop: 7, cad: 7, ret: 7, pi: 7, sae: 7, ind: 7 });
+  var a = E.poll(g).filter(function (x) { return x.pid === 'SM'; })[0].pct;
+  E.addAudience(g, 'SM', { pop: 3, cad: 3, ret: 3, pi: 3, sae: 3, ind: 3 });
+  var b = E.poll(g).filter(function (x) { return x.pid === 'SM'; })[0].pct;
+  ok(E.audOf(g, 'SM', 'pop') === 10 && b > a, 'pas de plafond à 8 : un candidat déjà très médiatisé gagne encore quand il passe à la télé');
+  g.lastPoll = {}; g.turn = 2; E.endTurn(g);
+  ok(g.lastWear && g.lastWear.SM < 0, 'on mesure ce que l\'usure des médias coûte chaque tour (pour l\'expliquer)');
+  var q = D.QUESTIONS.filter(function (x) { return x.id === 's_medecin'; })[0];
+  ok(q.meas.indexOf('classes') < 0, 'question sur les médecins : « classes de 20 élèves » n\'est pas une réponse valable');
+})();
+
 console.log('\n' + passes + ' vérifications réussies, ' + fails + ' en échec.');
 process.exit(fails ? 1 : 0);

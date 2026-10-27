@@ -793,7 +793,7 @@ button { font-family: inherit; color: inherit; }
 .tab-title small { font-family: var(--body); font-size: 14px; font-weight: 400; color: var(--muted); font-stretch: 100%; }
 #tab-sondage .race { margin: 0; }
 #tab-sondage .race-legend { display: none; }
-.pos-card { display: flex; align-items: center; gap: 12px; padding: 14px; background: var(--ink); color: var(--paper); border-radius: 16px; }
+.pos-card { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 14px; background: var(--ink); color: var(--paper); border-radius: 16px; }
 .pos-card > div { display: flex; flex-direction: column; gap: 2px; flex: 1; }
 .pos-k { font-size: 13px; color: #C8C2EA; font-weight: 700; }
 .pos-rank { font-family: var(--display); font-weight: 800; font-stretch: 80%; font-size: 30px; line-height: 1; }
@@ -1316,3 +1316,6 @@ button { font-family: inherit; color: inherit; }
 .undec-bar .u-op { flex: 1; }
 .undec-l { display: flex; justify-content: space-between; font-size: 12.5px; }
 @media (prefers-reduced-motion: reduce) { .undec-bar .u-me { transition: none; } }
+
+/* v4.0.2 : pourquoi ça baisse */
+.pos-note { flex-basis: 100%; margin: 6px 0 0; font-size: 12.5px; line-height: 1.35; color: #E9E5FF; }

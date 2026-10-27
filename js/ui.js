@@ -1086,7 +1086,7 @@
     var poll = E.poll(g), rank = 1 + poll.findIndex(function (x) { return x.pid === me; }), mine = poll[rank - 1];
     var prev = g.history.length ? g.history[g.history.length - 1].filter(function (x) { return x.pid === me; })[0] : null, d = prev ? 100 * (mine.pct - prev.pct) : 0;
     $('pos-card').innerHTML = '<div><span class="pos-k">Ta position</span><b class="pos-rank">' + ordinal(rank) + ' sur ' + poll.length + '</b><span class="pos-k">Les 2 premiers vont au second tour</span></div>' +
-      '<div class="pos-right"><b class="pos-pct">' + pctFr(mine.pct, 1) + ' %</b>' + (prev ? '<span class="' + (d >= 0 ? 'up' : 'down') + '">' + (d >= 0 ? '+' : '−') + Math.abs(d).toFixed(1).replace('.', ',') + ' pt ce tour</span>' : '') + '</div>';
+      '<div class="pos-right"><b class="pos-pct">' + pctFr(mine.pct, 1) + ' %</b>' + (prev ? '<span class="' + (d >= 0 ? 'up' : 'down') + '">' + (d >= 0 ? '+' : '−') + Math.abs(d).toFixed(1).replace('.', ',') + ' pt ce tour</span>' : '') + '</div>' + wearNote();
     var max = poll[0].pct;
     $('poll-list').innerHTML = poll.map(function (x, i) {
       var P = party(x.pid);
@@ -1095,6 +1095,12 @@
     }).join('');
     Array.prototype.forEach.call(document.querySelectorAll('[data-party]'), function (b) { b.addEventListener('click', function () { partyCard(b.getAttribute('data-party')); }); });
     renderClassBox();
+  }
+  /* v4.0.2 : pourquoi ça baisse ? L'effet de tes passages dans les médias s'estompe à chaque tour */
+  function wearNote() {
+    var w = g.lastWear && g.lastWear[me] ? 100 * g.lastWear[me] : 0;
+    if (w > -0.1) return '';
+    return '<p class="pos-note">📉 Dont <b>' + w.toFixed(1).replace('.', ',').replace('-', '−') + ' pt</b> : l\u2019effet de tes passages dans les médias s\u2019estompe (−15 % par tour). Repasse à la télé ou à la radio pour l\u2019entretenir, ou gagne des régions sur le terrain : ça, ça reste.</p>';
   }
   /* v3.8 : ton score dans chaque classe sociale (profil Ipsos 2024 + ta campagne dans les médias) */
   function renderClassBox() {
@@ -1522,11 +1528,11 @@
       var on = selected || tv;   // v3.8 : la Télé ne vise plus une région
       var big = on ? (tv ? '+' + teleEstimate(act.theme) : '+' + bigGain(act)) : '—';
       var b = el('button', { class: 'tile', type: 'button', 'data-act': type, 'aria-label': def.name + ', ' + costLabel(act) },
-        '<span class="tile-n">' + def.name + '</span><span class="tile-mid"><span class="tile-i">' + def.icon + '</span><span class="tile-big">' + big + '</span></span>' +
+        '<span class="tile-n">' + (tv ? 'Médias' : def.name) + '</span><span class="tile-mid"><span class="tile-i">' + def.icon + '</span><span class="tile-big">' + big + '</span></span>' +
         (on && tiring(act) && !canQueue(act) ? '<span class="tile-cost tile-warn" title="Ta forme tomberait à 0 : un candidat épuisé a 4 chances sur 10 de faire une gaffe (aucun soutien, +1 casserole). Elle remonte de 2 au tour suivant, ou tout de suite avec 😴 Repos (menu Plus).">⚡ épuisé : 4/10 de gaffe</span>' : '<span class="tile-cost' + (on && /argent|influence|épuisé/.test(canQueue(act) || '') ? ' tile-cost-no' : '') + '">' + costLabel(act, true) + '</span>'));
       if (!on) b.disabled = true;
       else if (canQueue(act)) b.classList.add('dim');
-      b.addEventListener('click', function () { if (tv) { var er = canQueue(act); if (er) return toast(er); teleInterview(act.theme); } else addAction(act); });
+      b.addEventListener('click', function () { if (tv) mediaMenu(act.theme); else addAction(act); });
       box.appendChild(b);
     });
     var more = el('button', { class: 'tile tile-more', type: 'button', id: 'btn-more' }, '<span class="tile-n">Plus</span><span class="tile-mid"><span class="tile-big">⋯</span></span><span class="tile-cost">' + (projected().forme <= 1 ? '😴 Repos dispo' : traitKey(me) ? D.TRAITS[traitKey(me)].icon + ' + 8 actions' : '8 actions') + '</span>');
@@ -1567,6 +1573,31 @@
       onOpen: function () {
         Array.prototype.forEach.call(document.querySelectorAll('#modal .ans'), function (b) {
           b.addEventListener('click', function () { var c = iv.cards[+b.getAttribute('data-i')]; closeModal(); addAction(Object.assign({}, act0, { qid: q.id, reply: c.key })); });
+        });
+      } });
+  }
+  /* v4.0.2 : le bouton Médias : Télé, Matinale radio et 20 h au même endroit */
+  function mediaMenu(thm) {
+    var tErr = canQueue({ type: 'medias', theme: thm });
+    var mErr = E.matinaleError(g, me) || (queue.some(function (q) { return q.type === 'matinale'; }) ? 'Déjà programmée ce tour.' : canQueue({ type: 'matinale', theme: thm, station: 'rmc' }));
+    var vErr = E.vingtError(g, me) || (queue.some(function (q) { return q.type === 'vingt'; }) ? 'Déjà programmé ce tour.' : canQueue({ type: 'vingt', theme: thm }));
+    var rows = [
+      { k: 'tele', icon: '📺', name: 'Interview télé', cost: costLabel({ type: 'medias', theme: thm }), fx: 'Gagne des électeurs dans toute la France · jusqu\u2019à +' + teleEstimate(thm).replace(/<[^>]+>/g, ' ').trim(), err: tErr },
+      { k: 'matinale', icon: '📻', name: 'Matinale radio', cost: costLabel({ type: 'matinale' }), fx: 'Choisis ta radio et son public · une fois tous les deux tours', err: mErr },
+      { k: 'vingt', icon: '🕗', name: 'Le journal de 20 h', cost: costLabel({ type: 'vingt' }), fx: vErr ? '' : '<b>Tu es invité !</b> Une seule fois : gain doublé, mais gare au trac', err: vErr }
+    ];
+    var html = '<p>Les médias te font gagner des électeurs <b>partout en France</b>, dans les classes sociales que ta réponse touche. L\u2019effet s\u2019estompe de 15 % par tour : il faut l\u2019entretenir.</p><div class="pick">' + rows.map(function (r, i) {
+      return '<button type="button" class="pick-row' + (r.err ? ' off' : '') + (r.k === 'vingt' && !r.err ? ' mine' : '') + '" data-i="' + i + '"><span class="pick-i">' + r.icon + '</span><span class="pick-txt"><b>' + esc(r.name) + '</b><small>' + (r.err ? esc(r.err.replace(/\.$/, '')) : r.fx) + '</small></span><span class="pick-cost">' + esc(r.cost) + '</span></button>';
+    }).join('') + '</div>';
+    modal({ kicker: 'Médias', title: 'Où veux-tu passer ?', html: html, buttons: [{ label: 'Fermer' }],
+      onOpen: function () {
+        Array.prototype.forEach.call(document.querySelectorAll('#modal .pick-row'), function (b) {
+          b.addEventListener('click', function () {
+            var r = rows[+b.getAttribute('data-i')];
+            if (r.err) return toast(r.err);
+            closeModal();
+            if (r.k === 'tele') teleInterview(thm); else if (r.k === 'matinale') matinaleMenu(); else vingtInterview();
+          });
         });
       } });
   }
