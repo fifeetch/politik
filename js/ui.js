@@ -1092,7 +1092,9 @@
     var poll = E.poll(g), rank = 1 + poll.findIndex(function (x) { return x.pid === me; }), mine = poll[rank - 1];
     var prev = g.history.length ? g.history[g.history.length - 1].filter(function (x) { return x.pid === me; })[0] : null, d = prev ? 100 * (mine.pct - prev.pct) : 0;
     $('pos-card').innerHTML = '<div><span class="pos-k">Ta position</span><b class="pos-rank">' + ordinal(rank) + ' sur ' + poll.length + '</b><span class="pos-k">Les 2 premiers vont au second tour</span></div>' +
-      '<div class="pos-right"><b class="pos-pct">' + pctFr(mine.pct, 1) + ' %</b>' + (prev ? '<span class="' + (d >= 0 ? 'up' : 'down') + '">' + (d >= 0 ? '+' : '−') + Math.abs(d).toFixed(1).replace('.', ',') + ' pt ce tour</span>' : '') + '</div>' + wearNote() + betaNote();
+      '<div class="pos-right"><b class="pos-pct">' + pctFr(mine.pct, 1) + ' %</b>' + (prev ? '<span class="' + (d >= 0 ? 'up' : 'down') + '">' + (d >= 0 ? '+' : '−') + Math.abs(d).toFixed(1).replace('.', ',') + ' pt au dernier tour</span>' : '') +
+      (g.bilan && g.bilan.rows[me] ? '<button type="button" class="linkbtn pos-bilan" id="btn-bilan">Pourquoi ? Le bilan</button>' : '') + '</div>' + wearNote() + betaNote();
+    var bb = $('btn-bilan'); if (bb) bb.addEventListener('click', function () { modal({ kicker: 'Tour ' + g.bilan.turn, title: 'Ton bilan au sondage', html: bilanHtml(g.bilan), buttons: [{ label: 'Fermer', primary: true }] }); });
     var max = poll[0].pct;
     $('poll-list').innerHTML = poll.map(function (x, i) {
       var P = party(x.pid);
@@ -1192,11 +1194,12 @@
   /* ---------- Rendu ---------- */
   function render() {
     if (!g) return;
+    estCache = {};
     var pl = mePl(), pr = projected();
     $('turn-label').textContent = 'Tour ' + g.turn + ' sur ' + R.maxTurns;
     $('phase-label').textContent = E.isDebateTurn(g) ? 'Débat télévisé ce soir' : '3 actions à jouer';
-    function pill(id, sym, now, before) { $(id).innerHTML = sym + ' ' + now + (now !== before ? '<small>/' + before + '</small>' : ''); }
-    pill('res-money', '€', pr.money, pl.money); pill('res-infl', '★', pr.infl, pl.infl); pill('res-forme', '⚡', pr.forme, pl.forme);
+    function pill(id, sym, now, before, word) { $(id).innerHTML = '<span>' + sym + ' ' + now + (now !== before ? '<small>/' + before + '</small>' : '') + '</span><small class="pill-w">' + word + '</small>'; }
+    pill('res-money', '€', pr.money, pl.money, 'argent'); pill('res-infl', '★', pr.infl, pl.infl, 'influence'); pill('res-forme', '⚡', pr.forme, pl.forme, 'énergie');
     $('res-forme').classList.toggle('low', pr.forme <= 0);
     // dynamique et casseroles : une seule ligne discrète dans l'encadré du sondage
     var st = [];
@@ -1436,7 +1439,7 @@
     if ((g.bases[selected] || []).indexOf(me) >= 0) html += '<p>👥 Tes militants sont implantés ici : +1 électeur par tour.</p>';
     var bd = E.terrainBreakdown(g, me, selected, theme), room = R.maxCubes - E.cubes(g, selected, me);
     html += '<div class="calc-line">📣 Meeting ici : ' + bd.parts.map(function (x, i) { return (i ? (x.n >= 0 ? ' + ' : ' − ') : '') + esc(x.label) + ' <b>' + (i ? Math.abs(x.n) : x.n) + '</b>'; }).join('') +
-      ' = <b>' + bd.total + ' soutien' + (bd.total > 1 ? 's' : '') + '</b>' + (E.poachTarget(g, me, selected, true) ? ' <span class="muted">· et peut-être 1 électeur pris à un parti voisin</span>' : '') + (room < bd.total ? ' <span class="calc-warn">(plafond : +' + Math.max(0, room) + ' seulement)</span>' : '') + '</div>';
+      ' = ' + bd.total + ' soutien' + (bd.total > 1 ? 's' : '') + (function () { var m = estRange({ type: 'terrain', region: selected, theme: theme }); return m ? ' → <b>' + m.txt + ' au sondage</b>' : ''; })() + '<br><span class="muted">La région pèse ' + pctTxt(regionShare(selected)) + ' des votants de France.</span>' + (E.poachTarget(g, me, selected, true) ? ' <span class="muted">· et peut-être 1 électeur pris à un parti voisin</span>' : '') + (room < bd.total ? ' <span class="calc-warn">(plafond : +' + Math.max(0, room) + ' seulement)</span>' : '') + '</div>';
     var mk = E.markerAt(g, selected);
     if (mk) html += '<div class="mk-line">' + mk.icon + ' ' + esc(mk.title) + ' : ici, ' + th(mk.theme).icon + ' ' + esc(th(mk.theme).name) + ' compte comme à la une.</div>';
     modal({ kicker: 'Région', title: r.name, html: html, buttons: [{ label: 'Qui vit ici ?', onClick: function () { popModal(selected); } }, { label: 'Fermer', primary: true }] });
@@ -1506,17 +1509,64 @@
     }
     return '';
   }
+  /* ---------- v4.5 : une seule unité à l'écran, le point de sondage ---------- */
+  var estCache = {};
+  function ptNum(x) { var v = Math.round(1000 * x) / 10; return (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(1).replace('.', ','); }
+  function ptStr(x) { return Math.abs(x) < 0.0005 ? '0 pt' : ptNum(x) + ' pt'; }
+  /* Ce que l'action rapporterait au sondage national, jouée après celles déjà programmées (null si impossible) */
+  function est(act, luck) {
+    var k = JSON.stringify(act) + '|' + JSON.stringify(queue) + '|' + g.turn + '|' + (luck == null ? 'h' : luck);
+    if (!(k in estCache)) estCache[k] = E.estimate(g, me, act, queue.filter(function (a) { return a !== act; }), luck);
+    return estCache[k];
+  }
+  /* Le texte court : « +0,3 pt », ou une fourchette si le hasard s'en mêle */
+  function estRange(act) {
+    var hi = est(act), lo = act.type === 'reseaux' ? est(act, 0) : hi;
+    if (!hi) return null;
+    if (lo && Math.abs(hi.pt - lo.pt) >= 0.0005) return { lo: lo.pt, hi: hi.pt, txt: ptNum(Math.min(lo.pt, hi.pt)) + ' à ' + ptNum(Math.max(lo.pt, hi.pt)) + ' pt' };
+    return { lo: hi.pt, hi: hi.pt, txt: ptStr(hi.pt), moved: hi.moved };
+  }
+  /* Le poids d'une région : sa part des électeurs qui votent en France */
+  function regionShare(rid) { return E.regionVoters(g, rid).exprimes / E.turnoutStats(g).exprimes; }
+  function pctTxt(x) { var v = 100 * x; return (v < 1 ? v.toFixed(1) : Math.round(v)).toString().replace('.', ',') + ' %'; }
+  var IMPACT_WORD = ['faible', 'faible', 'moyen', 'fort', 'très fort'];
+  function impactWord(n) { return 'Message ' + IMPACT_WORD[Math.max(0, Math.min(4, n))]; }
+  /* « Comment c'est calculé ? » : la chaîne de calcul de chaque action principale, en mots */
+  function howModal() {
+    var h = '<p>Le seul score qui compte, c’est <b>ton score au sondage national</b> (en %). Chaque action le fait bouger d’un certain nombre de <b>points (pt)</b>. Les rivaux jouent en même temps : leur progression fait baisser ta part.</p>';
+    var r = selected, thm = theme || E.bestTheme(g, me, r || null);
+    if (r) {
+      var bd = E.terrainBreakdown(g, me, r, thm), m = estRange({ type: 'terrain', region: r, theme: thm }), w = E.weight(g, r, me);
+      h += '<div class="how"><b>📣 Meeting en ' + esc(E.REG[r].name) + '</b><ol>' +
+        '<li>Ton message (' + th(thm).icon + ' ' + esc(th(thm).name) + ') est <b>' + IMPACT_WORD[E.impact(g, me, r, thm)] + '</b> ici : ta crédibilité sur le sujet, + si la région s’en préoccupe, + s’il fait l’actu.</li>' +
+        '<li>Il te rapporte <b>' + bd.total + ' soutien' + (bd.total > 1 ? 's' : '') + '</b> (' + bd.parts.map(function (x) { return x.k === 'base' ? 'message ' + IMPACT_WORD[E.impact(g, me, r, thm)] + ' : ' + x.n : esc(x.label) + ' ' + (x.n > 0 ? '+' : '') + x.n; }).join(', ') + ').</li>' +
+        (g.weight ? '<li>Un soutien pèse selon ton électorat historique ici : <b>' + (w >= 1.15 ? 'terrain favorable, il pèse lourd' : w <= 0.6 ? 'terrain difficile, il pèse peu' : 'poids normal') + '</b>. Plus tu as déjà de soutiens, moins le suivant ajoute.</li>' : '') +
+        '<li>La région représente <b>' + pctTxt(regionShare(r)) + ' des votants</b> de France.</li>' +
+        '<li>Résultat : <b>' + (m ? m.txt : 'impossible ici') + '</b> au sondage national.</li></ol></div>';
+      var mg = E.mobilizeGain(g, me, r), mo = estRange({ type: 'mobiliser', region: r });
+      h += '<div class="how"><b>🚪 Mobiliser en ' + esc(E.REG[r].name) + '</b><ol>' +
+        '<li>Tu vas chercher des abstentionnistes : <b>' + mg.n + ' soutien' + (mg.n > 1 ? 's' : '') + '</b>' + (mg.why.length ? ' (' + mg.why.map(esc).join(', ') + ')' : '') + ', et l’abstention baisse ici.</li>' +
+        '<li>Ces nouveaux votants ne sont pris à personne : ils grossissent ton paquet de voix.</li>' +
+        '<li>Résultat : <b>' + (mo ? mo.txt : 'impossible ici') + '</b> au sondage national.</li></ol></div>';
+    } else h += '<p class="hint">Touche une région pour voir le calcul du Meeting et de Mobiliser là-bas.</p>';
+    h += '<div class="how"><b>📺 Médias (télé, radio, 20 h, débat)</b><ol>' +
+      '<li>Pas de région : ta réponse touche des <b>classes sociales dans toute la France</b>.</li>' +
+      '<li>Une réponse qui joue sur l’émotion (le <b>cœur</b>) parle surtout aux employés, ouvriers et sans-emploi ; une réponse sur les chiffres et le programme (la <b>tête</b>) aux cadres et retraités.</li>' +
+      '<li>Chaque réponse affiche son effet en points avant que tu choisisses.</li>' +
+      '<li>L’effet <b>s’estompe de 15 % par tour</b> : il faut repasser dans les médias pour le garder. Le terrain, lui, reste.</li></ol></div>';
+    modal({ kicker: 'Comment c’est calculé ?', title: 'Tout se joue au sondage', html: h, buttons: [{ label: 'Compris', primary: true }] });
+  }
   function impactDots(n) { var h = ''; for (var i = 0; i < 4; i++) h += '<i class="' + (i < n ? 'on' : '') + '"></i>'; return '<span class="imp">' + h + '</span>'; }
   function renderMessage() {
     var b = $('message'), t = th(theme);
     b.innerHTML = '<span class="msg-k">Message</span><span class="msg-t">' + t.icon + ' ' + esc(t.name) + (E.isHot(g, theme) ? ' 🔥' : '') + '</span>' +
-      (selected ? impactDots(E.impact(g, me, selected, theme)) : '') + '<span class="msg-change">Changer</span>';
+      (selected ? '<span class="msg-w">' + impactWord(E.impact(g, me, selected, theme)) + '</span>' : '') + '<span class="msg-change">Changer</span>';
   }
   $('message').addEventListener('click', function () {
     if (!g || g.phase !== 'actions') return;
     var list = D.THEMES.map(function (t) { return { t: t, imp: E.impact(g, me, selected, t.id) }; })
       .sort(function (a, b) { return b.imp - a.imp; });
-    var html = '<p class="hint">Plus l\'impact est fort, plus ton action rapporte.' + (selected ? ' Ici, en ' + esc(E.REG[selected].name) + ' :' : '') + '</p><div class="pick">' +
+    var html = '<p class="hint">Plus le message est fort, plus ton Meeting rapporte.' + (selected ? ' Ici, en ' + esc(E.REG[selected].name) + ', ce que rapporterait un Meeting :' : '') + '</p><div class="pick">' +
       list.map(function (x) {
         var why = [];
         var c = E.cred(g, me, x.t.id); why.push(['pas ton sujet', 'tu es crédible', 'ton point fort'][c]);
@@ -1526,7 +1576,7 @@
         if (E.isHot(g, x.t.id)) why.push('🔥 à la une');
         else if (mk) why.push(mk.icon + ' sujet brûlant ici');
         return '<button type="button" class="pick-row' + (x.t.id === theme ? ' on' : '') + '" data-theme="' + x.t.id + '"><span class="pick-i">' + x.t.icon + '</span>' +
-          '<span class="pick-txt"><b>' + esc(x.t.name) + '</b><small>' + why.join(' · ') + '</small></span>' + (selected ? impactDots(x.imp) : '') + '</button>';
+          '<span class="pick-txt"><b>' + esc(x.t.name) + '</b><small>' + IMPACT_WORD[x.imp] + ' · ' + why.join(' · ') + '</small></span>' + (selected ? (function () { var m = estRange({ type: 'terrain', region: selected, theme: x.t.id }); return '<span class="pick-cost pick-pt">' + (m ? m.txt : '—') + '</span>'; })() : '') + '</button>';
       }).join('') + '</div>';
     modal({ kicker: 'Ton message', title: 'De quoi parles-tu ?', html: html, buttons: [{ label: 'Fermer' }],
       onOpen: function () {
@@ -1541,9 +1591,16 @@
     MAIN.forEach(function (type) {
       var def = D.ACTIONS[type], tv = type === 'medias', act = { type: type, region: tv ? undefined : selected || undefined, theme: def.theme ? (theme || (tv ? E.bestTheme(g, me, selected || null) : undefined)) : undefined };
       var on = selected || tv;   // v3.8 : la Télé ne vise plus une région
-      var big = on ? (tv ? '+' + teleEstimate(act.theme) : '+' + bigGain(act)) : '—';
+      // v4.5 : le gros chiffre = les points de sondage ; le détail (soutiens, où) en petit dessous
+      var big = '—', sub = tv ? 'toute la France' : 'touche une région';
+      if (tv) { big = '+' + teleEstimate(act.theme); sub = 'partout en France'; }
+      else if (on) {
+        var e = estRange(act), n0 = bigGain(act);
+        big = e ? ptNum(e.hi) + '<small>pt</small>' : '—';
+        sub = n0 + ' soutien' + (n0 > 1 ? 's' : '') + ' ici';
+      }
       var b = el('button', { class: 'tile', type: 'button', 'data-act': type, 'aria-label': def.name + ', ' + costLabel(act) },
-        '<span class="tile-n">' + (tv ? 'Médias' : def.name) + '</span><span class="tile-mid"><span class="tile-i">' + def.icon + '</span><span class="tile-big">' + big + '</span></span>' +
+        '<span class="tile-n">' + def.icon + ' ' + (tv ? 'Médias' : def.name) + '</span><span class="tile-mid"><span class="tile-big' + (on ? ' tile-pt' : '') + '">' + big + '</span></span><span class="tile-sub">' + sub + '</span>' +
         (on && tiring(act) && !canQueue(act) ? '<span class="tile-cost tile-warn" title="Ta forme tomberait à 0 : un candidat épuisé a 4 chances sur 10 de faire une gaffe (aucun soutien, +1 casserole). Elle remonte de 2 au tour suivant, ou tout de suite avec 😴 Repos (menu Plus).">⚡ épuisé : 4/10 de gaffe</span>' : '<span class="tile-cost' + (on && /argent|influence|épuisé/.test(canQueue(act) || '') ? ' tile-cost-no' : '') + '">' + costLabel(act, true) + '</span>'));
       if (!on) b.disabled = true;
       else if (canQueue(act)) b.classList.add('dim');
@@ -1554,6 +1611,9 @@
     if (projected().forme <= 1) more.classList.add('tile-rest');   // v3.6.6 : candidat fatigué, le repos est dans « Plus »
     more.addEventListener('click', moreMenu);
     box.appendChild(more);
+    var how = el('button', { class: 'linkbtn how-link', type: 'button' }, 'Comment c\u2019est calculé ?');
+    how.addEventListener('click', howModal);
+    box.appendChild(how);
   }
   /* ---------- v3.8 : la Télé, une interview en direct ---------- */
   var SEGBY = {}; D.SEGMENTS.forEach(function (s) { SEGBY[s.id] = s; });
@@ -1565,12 +1625,20 @@
     return Math.abs(100 * best).toFixed(1).replace('.', ',') + '<small>pt</small>';
   }
   function answerCard(c, extra) {
-    var segs = E.SEG.slice().sort(function (a, b) { return Math.abs(c.gains[b]) - Math.abs(c.gains[a]); }).slice(0, 3).filter(function (s) { return c.gains[s]; });
-    return '<span class="ans-h"><span class="ans-i">' + c.icon + '</span><b>' + esc(c.name) + '</b><span class="ans-m">' + (c.heart ? '<i>❤️' + c.heart + '</i>' : '') + (c.head ? '<i>🧠' + c.head + '</i>' : '') + '</span></span>' +
+    // v4.5 : en mots, qui la réponse touche (et qui elle fâche) ; le seul chiffre, ce sont les points de sondage (extra)
+    var pos = E.SEG.filter(function (k) { return c.gains[k] > 0; }).sort(function (a, b) { return c.gains[b] - c.gains[a]; }).slice(0, 2);
+    var neg = E.SEG.filter(function (k) { return c.gains[k] < 0; }).sort(function (a, b) { return c.gains[a] - c.gains[b]; }).slice(0, 2);
+    var nm = function (k) { return esc(SEGBY[k].name.toLowerCase()); };
+    var reg = c.heart && !c.head ? 'Joue sur l’émotion' : c.head && !c.heart ? 'Joue sur les chiffres' : c.heart && c.head ? 'Émotion et chiffres' : '';
+    return '<span class="ans-h"><span class="ans-i">' + c.icon + '</span><b>' + esc(c.name) + '</b>' + (extra || '') + '</span>' +
       '<q class="ans-q">' + esc(c.quote) + '</q>' +
-      '<span class="ans-fx">' + segs.map(function (s) { return '<span class="sg' + (c.gains[s] < 0 ? ' neg' : '') + '">' + SEGBY[s].icon + ' ' + (c.gains[s] > 0 ? '+' : '') + String(c.gains[s]).replace('.', ',') + '</span>'; }).join('') +
-      (extra || '') + '</span>' +
-      (c.notes.length ? '<small class="ans-n">' + c.notes.map(esc).join(' · ') + '</small>' : '');
+      '<span class="ans-who">' + (reg ? reg + ' · ' : '') + (pos.length ? 'plaît surtout aux <b>' + pos.map(nm).join(' et ') + '</b>' : 'ne convainc personne') + (neg.length ? ' · fâche les ' + neg.map(nm).join(' et ') : '') + '</span>' +
+      (c.notes.length ? '<small class="ans-n">' + c.notes.map(noteTxt).join(' · ') + '</small>' : '');
+  }
+  /* « +1 ❤️ c'est ton registre » → « bonus : c'est ton registre » (plus d'icônes à décoder) */
+  function noteTxt(n) {
+    var m = /^([+−-])\s*\d+(?:[.,]\d+)?\s*(?:❤️|🧠)\s*/.exec(n);
+    return esc(m ? (m[1] === '+' ? 'bonus : ' : 'malus : ') + n.slice(m[0].length) : n.replace(/❤️/g, 'émotion').replace(/🧠/g, 'chiffres'));
   }
   function tvSet(kicker, iv, host, cls) {
     var t = th(iv.q.theme);
@@ -1581,8 +1649,8 @@
   function interviewModal(o) {
     var q = teleQuestion(o.theme), iv = E.interview(g, me, q.id, o.fmt, o.station ? E.stationBoost(me, o.station) : null);
     var html = tvSet(o.kicker, iv, o.host, o.cls) + (o.intro || '') + '<div class="ans-k">Ta réponse</div><div class="ans-list">' + iv.cards.map(function (c, i) {
-      return '<button type="button" class="ans" data-i="' + i + '">' + answerCard(c, '<b class="ans-pt">≈ ' + ptFr(E.previewGain(g, me, c.gains)) + ' pt</b>') + '</button>';
-    }).join('') + '</div><p class="hint">❤️ Le cœur touche surtout 🔧 ouvriers, employés et 🎓 sans-emploi ; 🧠 la tête, 💼 cadres et 👵 retraités. Le gain vaut dans <b>toutes les régions</b>, et s\u2019use de 15 % par tour.</p>';
+      return '<button type="button" class="ans" data-i="' + i + '">' + answerCard(c, '<b class="ans-pt">' + ptStr(E.previewGain(g, me, c.gains)) + '</b>') + '</button>';
+    }).join('') + '</div><p class="hint">Le chiffre = ce que la réponse rapporte à ton score au sondage national. Elle agit dans <b>toute la France</b>, sur les classes sociales qu\u2019elle touche, et son effet s\u2019estompe de 15 % par tour.</p>';
     var act0 = { type: o.type, theme: q.theme, station: o.station };
     modal({ kicker: costLabel(act0) + ' · 1 action', title: o.title || 'Que réponds-tu ?', cls: 'tv-modal', html: html, buttons: [{ label: 'Annuler' }],
       onOpen: function () {
@@ -1707,9 +1775,21 @@
     }
     items.push({ special: 'enquete', icon: '🔎', name: 'Enquêter sur un rival', cost: costLabel({ type: 'enquete', target: null }),
       fx: 'Fouiller le passé d\u2019un rival', err: g.turn >= R.maxTurns ? 'trop tard pour sortir un dossier' : null });
+    // v4.5 : chaque action dit ce qu'elle rapporte au sondage (ou qu'elle n'y touche pas tout de suite)
+    var SLOW = { repos: '0 pt au sondage', fonds: '0 pt au sondage', parrainages: '0 pt au sondage',
+      imposer: '0 pt maintenant · effet au tour suivant', militants: '0 pt maintenant · effet à chaque tour suivant' };
+    function ptLine(it) {
+      if (it.err || !it.act) return '';
+      if (SLOW[it.act.type]) return '<span class="pt-line muted">' + SLOW[it.act.type] + '</span>';
+      var e = estRange(it.act);
+      if (!e) return '';
+      var lo = Math.min(e.lo, e.hi), hi = Math.max(e.lo, e.hi);
+      if (Math.abs(hi) < 0.0005 && Math.abs(lo) < 0.0005) return '<span class="pt-line muted">' + (hi > 0 ? 'moins de +0,1 pt au sondage' : hi < 0 ? 'moins de −0,1 pt au sondage' : '0 pt au sondage') + '</span>';
+      return '<span class="pt-line"><b>' + e.txt + '</b> au sondage' + (it.act.type === 'reseaux' ? ' (selon le dé)' : '') + '</span>';
+    }
     var html = '<div class="pick">' + items.map(function (it, i) {
       return '<button type="button" class="pick-row' + (it.err ? ' off' : '') + (it.mine ? ' mine' : '') + '" data-i="' + i + '"><span class="pick-i">' + it.icon + '</span>' +
-        '<span class="pick-txt"><b>' + esc(it.name) + '</b><small>' + (it.err ? '<span class="fiche-err">' + esc(it.err) + '</span>' : '') + (!it.err || /fiche-l/.test(it.fx || '') ? it.fx : '') + '</small></span><span class="pick-cost">' + esc(it.cost) + '</span></button>';
+        '<span class="pick-txt"><b>' + esc(it.name) + '</b>' + ptLine(it) + '<small>' + (it.err ? '<span class="fiche-err">' + esc(it.err) + '</span>' : '') + (!it.err || /fiche-l/.test(it.fx || '') ? it.fx : '') + '</small></span><span class="pick-cost">' + esc(it.cost) + '</span></button>';
     }).join('') + '</div>';
     modal({ kicker: 'Autres actions', title: 'Plus d\'options', html: html, buttons: [{ label: 'Fermer' }],
       onOpen: function () {
@@ -1754,7 +1834,7 @@
   function defiQuestion(target) {
     var thm = theme || E.bestTheme(g, me, null), q = E.pickQuestion(g, thm, 61), iv = E.debateCards(g, me, q.id);
     var html = tvSet('🎤 Défi : face à ' + party(target).short, iv, 'Si ' + party(target).candidate + ' accepte le débat', 'debat') + '<div class="ans-k">Ta réponse (si le débat a lieu)</div><div class="ans-list">' + iv.cards.map(function (c, i) {
-      return '<button type="button" class="ans" data-i="' + i + '">' + answerCard(c, String(E.audScore(c.gains)).replace('.', ',') + ' pts', '<small class="ans-c">' + counterHint(c) + '</small>') + '</button>';
+      return '<button type="button" class="ans" data-i="' + i + '">' + answerCard(c, '<b class="ans-pt">' + ptStr(E.previewGain(g, me, c.gains)) + '</b>') + '<small class="ans-c">' + counterHint(c) + '</small>' + '</button>';
     }).join('') + '</div>';
     modal({ kicker: 'Défi du débat', title: 'Que répondras-tu ?', cls: 'tv-modal', html: html, buttons: [{ label: 'Annuler' }],
       onOpen: function () {
@@ -1927,14 +2007,15 @@
       '<div class="tv-lower"><span class="tv-tag">FLASH INFO</span><span class="tv-head">' + esc(top ? top.t : 'Calme plat : aucune région ne bascule') + '</span></div>' +
       (rest.length ? '<div class="tv-sub">' + rest.map(function (h) { return '<span>' + esc(h.t) + '</span>'; }).join('') + '</div>' : '') +
       '<div class="tv-ticker"><div class="tv-track"><div>' + ticker + '</div><div aria-hidden="true">' + ticker + '</div></div></div></div>' +
-      '<div class="tv-me"><span>Ta position</span><b>' + ordinal(f.rank) + '</b><span>' + pctFr(f.mine.pct, 1) + ' %</span>' + arrow(f.mine.d) + '</div>';
+      '<div class="tv-me"><span>Ta position</span><b>' + ordinal(f.rank) + '</b><span>' + pctFr(f.mine.pct, 1) + ' %</span>' + arrow(f.mine.d) + '</div>' +
+      (g.led ? '<p class="bilan-mini">Tes actions <b>' + ptStr(g.led.acts[me] || 0) + '</b> · les rivaux <b>' + ptStr(g.led.riv[me] || 0) + '</b> · bilan complet en fin de tour</p>' : '');
   }
   function flashDetail(f, log) {
     var h = '';
     h += '<div class="brief"><div class="kicker">Les titres de la soirée</div>' + (f.heads.length ? f.heads.map(function (x) { return line(x.me ? '👉' : '•', x.me ? '<b>' + esc(x.t) + '</b>' : esc(x.t)); }).join('') : line('•', 'Aucune région ne change de main.')) + '</div>';
     var mineLog = log.filter(function (l) { return l.pid === me; });
     if (mineLog.length) h += '<div class="brief"><div class="kicker">Tes actions</div>' + mineLog.map(function (l) {
-      return line(l.gaffe ? '😬' : l.ok ? '✅' : '❌', '<b>' + esc(l.action) + '</b>' + (l.region ? ' · ' + SHORT[l.region] : '') + ' — ' + esc(l.text));
+      return line(l.gaffe ? '😬' : l.ok ? '✅' : '❌', '<b>' + esc(l.action) + '</b>' + (l.region ? ' · ' + SHORT[l.region] : '') + (l.pt ? ' · <b>' + ptStr(l.pt) + '</b>' : '') + ' — ' + esc(l.text));
     }).join('') + '</div>';
     h += '<div class="brief"><div class="kicker">Le sondage</div><div class="tv-poll">' + f.poll.map(function (x, i) {
       var P = party(x.pid);
@@ -1969,10 +2050,10 @@
     return '<div class="vs-strip"><span class="vs-side"><span class="vs-face">' + A.portrait(me) + '</span><b>Toi</b></span><span class="vs-x">VS</span>' +
       '<span class="vs-side"><span class="vs-face">' + A.portrait(o) + '</span><b>' + esc(party(o).short) + '</b><small>' + esc(D.TEMPERS[o] ? D.TEMPERS[o].label : '') + '</small></span></div>';
   }
-  function undecided(sa, sb, o) {
+  function undecided(sa, sb, o, la, lb) {
     var x = sa + sb > 0 ? 100 * sa / (sa + sb) : 50;
     return '<div class="undec"><div class="undec-k">Les indécis devant leur écran</div><div class="undec-bar"><i class="u-me" data-w="' + x.toFixed(1) + '" style="width:50%;background:' + party(me).color + '"></i><i class="u-op" style="background:' + party(o).color + '"></i></div>' +
-      '<div class="undec-l"><b>Toi · ' + String(sa).replace('.', ',') + ' pts</b><b>' + esc(party(o).short) + ' · ' + String(sb).replace('.', ',') + ' pts</b></div></div>';
+      '<div class="undec-l"><b>Toi' + (la ? ' · ' + la : '') + '</b><b>' + esc(party(o).short) + (lb ? ' · ' + lb : '') + '</b></div></div>';
   }
   /* Les duels d'une soirée (débat du 1er tour ou face-à-face). cfg : { kicker, host, duels, prep (pid → ★), fiche, done(picks) } */
   function runDuels(cfg) {
@@ -1988,7 +2069,7 @@
       var mult = 1 + D.DEBATE.prep * ((cfg.prep || {})[me] || 0);
       var html = tvSet(cfg.kicker + ' · question ' + (k + 1) + ' / ' + n, iv, cfg.host, 'debat') + vsStrip(o) + fiche +
         '<div class="ans-k">Ta réponse</div><div class="ans-list">' + iv.cards.map(function (c, i) {
-          return '<button type="button" class="ans" data-i="' + i + '">' + answerCard(c, '<b class="ans-pt">' + String(E.audScore(scaleG(c.gains, mult))).replace('.', ',') + ' pts</b>') +
+          return '<button type="button" class="ans" data-i="' + i + '">' + answerCard(c, '<b class="ans-pt">' + ptStr(E.previewGain(g, me, scaleG(c.gains, mult))) + '</b>') +
             '<small class="ans-c">' + counterHint(c) + '</small></button>';
         }).join('') + '</div>';
       modal({ kicker: cfg.kicker, title: 'Que réponds-tu ?', cls: 'tv-modal', html: html, buttons: [],
@@ -2000,12 +2081,13 @@
               var r = E.duelOutcome(g, d, picks[k].ra, picks[k].rb, (cfg.prep || {})[d.a] || 0, (cfg.prep || {})[d.b] || 0);
               var mc = mineA ? r.ca : r.cb, oc = mineA ? r.cb : r.ca, ms = mineA ? r.sa : r.sb, os = mineA ? r.sb : r.sa;
               var iBeat = r.beat === (mineA ? 'a' : 'b'), oBeat = r.beat && !iBeat;
-              var side = function (who, c, s, beat, lost) {
-                return '<div class="duel-card' + (beat ? ' won' : lost ? ' lost' : '') + '"><div class="dc-h"><span class="dc-who">' + who + '</span><span>' + c.icon + ' ' + esc(c.name) + '</span><b>' + String(s).replace('.', ',') + ' pts</b></div><q class="ans-q">' + esc(c.quote) + '</q></div>';
+              var mg = mineA ? r.ga : r.gb, og = mineA ? r.gb : r.ga, mPt = E.previewGain(g, me, mg), oPt = E.previewGain(g, o, og);   // v4.5 : en points de sondage
+              var side = function (who, c, pt, beat, lost) {
+                return '<div class="duel-card' + (beat ? ' won' : lost ? ' lost' : '') + '"><div class="dc-h"><span class="dc-who">' + who + '</span><span>' + c.icon + ' ' + esc(c.name) + '</span><b>' + ptStr(pt) + '</b></div><q class="ans-q">' + esc(c.quote) + '</q></div>';
               };
               var verdict = ms > os ? 'Question gagnée !' : ms < os ? 'Question perdue…' : 'Match nul';
-              var rh = side('Toi', mc, ms, iBeat, oBeat) + (r.line ? '<div class="dc-line">' + (iBeat ? '💥 Ta réponse contre la sienne' : '💥 Sa réponse contre la tienne') + ' : ' + esc(r.line) + '</div>' : '') +
-                side(esc(party(o).short), oc, os, oBeat, iBeat) + undecided(ms, os, o);
+              var rh = side('Toi', mc, mPt, iBeat, oBeat) + (r.line ? '<div class="dc-line">' + (iBeat ? '💥 Ta réponse contre la sienne (ton gain ×' + String(D.DEBATE.win).replace('.', ',') + ', le sien réduit)' : '💥 Sa réponse contre la tienne (son gain ×' + String(D.DEBATE.win).replace('.', ',') + ', le tien réduit)') + ' : ' + esc(r.line) + '</div>' : '') +
+                side(esc(party(o).short), oc, oPt, oBeat, iBeat) + undecided(ms, os, o, ptStr(mPt), ptStr(oPt));
               closeModal();
               modal({ kicker: cfg.kicker + ' · question ' + (k + 1) + ' / ' + n, title: verdict, cls: 'tv-modal', html: rh,
                 onOpen: function () { setTimeout(function () { var u = document.querySelector('#modal .u-me'); if (u) u.style.width = u.getAttribute('data-w') + '%'; }, 60); },
@@ -2023,14 +2105,14 @@
     var mine = deb.duels.filter(function (d) { return d.a === me || d.b === me; });
     var max = Math.min(mePl().infl, R.debatePrepMax), mult = grand ? 2 : 1;
     var html = '<p>' + mine.length + ' questions, ' + mine.length + ' adversaires. À chaque question, tu choisis ta réponse ; certaines contrent les autres :</p>' +
-      '<div class="rps">❤️ émotion bat 📊 chiffres · 📊 bat 🥊 attaque · 🥊 bat ❤️ · 🥊 et 📊 démontent une 🎲 promesse</div>' +
+      '<div class="rps">L\u2019émotion bat les chiffres · les chiffres battent l\u2019attaque · l\u2019attaque bat l\u2019émotion · attaque et chiffres démontent une promesse</div>' +
       '<div class="brief">' + mine.map(function (d) {
         var o = d.a === me ? d.b : d.a;
         return line(th(d.theme).icon, '<b>' + esc(party(o).short) + '</b> sur ' + esc(th(d.theme).name) + ' <span class="muted">· ' + D.TEMPERS[o].label + '</span>');
       }).join('') + '</div>' +
-      '<p><b>Préparation</b> : chaque ★ = +' + Math.round(D.DEBATE.prep * 100) + ' % sur tes réponses, et la fiche de ton adversaire (sa réponse favorite).</p>' +
+      '<p><b>Préparation</b> : chaque ★ influence dépensée = +' + Math.round(D.DEBATE.prep * 100) + ' % sur le gain de tes réponses, et la fiche de ton adversaire (sa réponse favorite).</p>' +
       '<div class="bid"><input id="bid" type="range" min="0" max="' + max + '" value="' + Math.min(1, max) + '" aria-label="Préparation en influence"><output id="bid-out">' + Math.min(1, max) + ' ★</output></div>' +
-      '<p class="hint">Chaque réponse te fait gagner des électeurs dans des classes sociales, partout en France. Le vainqueur de la soirée gagne en plus <b>+' + String(D.DEBATE.winBonus * mult).replace('.', ',') + '</b> d’audience dans toutes les classes.' + (grand ? ' <b>Grand débat final : bonus doublé !</b>' : '') + '</p>' + learnBox('debat');
+      '<p class="hint">Chaque réponse affiche ce qu\u2019elle rapporte à ton score au sondage national (partout en France). Si ta réponse contre celle d\u2019en face, ton gain grimpe. Le vainqueur de la soirée reçoit en plus un bonus au sondage.' + (grand ? ' <b>Grand débat final : bonus doublé !</b>' : '') + '</p>' + learnBox('debat');
     var prep = {};
     g.players.forEach(function (p) { if (!p.human) prep[p.id] = AI.prep(g, p.id); });
     modal({ kicker: grand ? 'Grand débat final' : 'Débat télévisé', title: 'Ce soir, sur le plateau !', html: html,
@@ -2049,15 +2131,15 @@
     function finish(picks) {
       var res = E.resolveDebate(g, prep, picks); render();
       var h = '<div class="brief">' + res.ranking.slice(0, 6).map(function (x, n) {
-        return line(n === 0 && res.winner ? '🏆' : (n + 1) + '.', chip(x.pid) + (x.pid === me ? '<b>Toi</b>' : esc(party(x.pid).short)) + ' — <b>' + String(x.score).replace('.', ',') + ' pts</b>' + (x.prep ? ' <span class="muted">(' + x.prep + ' ★ de préparation)</span>' : ''));
+        return line(n === 0 && res.winner ? '🏆' : (n + 1) + '.', chip(x.pid) + (x.pid === me ? '<b>Toi</b>' : esc(party(x.pid).short)) + ' — <b>' + ptStr((res.delta || {})[x.pid] || 0) + '</b> au sondage' + (x.prep ? ' <span class="muted">(' + x.prep + ' ★ de préparation)</span>' : ''));
       }).join('') + '</div>';
       var myRank = 1 + res.ranking.findIndex(function (x) { return x.pid === me; });
       if (myRank > 6) h += '<p>Toi : ' + ordinal(myRank) + '.</p>';
-      res.rewards.forEach(function (w) { h += '<p>' + chip(w.pid) + ' +' + String(w.bonus).replace('.', ',') + ' d’audience dans toutes les classes sociales</p>'; });
+      if (res.rewards.length) h += '<p class="hint">Bonus du vainqueur (' + res.rewards.map(function (w) { return w.pid === me ? 'toi' : esc(party(w.pid).short); }).join(', ') + ') déjà compté dans ces chiffres. Classement : qui a le mieux répondu, question par question.</p>';
       var cas = res.duels.filter(function (o) { return (o.a === me && o.casA) || (o.b === me && o.casB); }).length;
       if (cas) h += '<p>🍳 Ta promesse improvisée a été épinglée : +' + cas + ' casserole' + (cas > 1 ? 's' : '') + '.</p>';
       if (res.bingo) h += '<p>📀 ' + chip('FI') + ' <b>BINGO en direct</b> (« ' + res.bingo.words.map(esc).join(' », « ') + ' ») : les militants s’enflamment' + (res.bingo.regions.length ? ', +1 en ' + res.bingo.regions.map(function (x) { return SHORT[x]; }).join(', ') : '') + '. Les indécis, eux, zappent.</p>';
-      h += '<p class="hint">Tes gains par classe sociale sont dans l’onglet Sondage.</p>';
+      h += '<p class="hint">Le détail par classe sociale est dans l’onglet Sondage.</p>';
       modal({ kicker: 'Débat', title: !res.winner ? 'Égalité en tête' : res.winner === me ? 'Tu remportes le débat !' : party(res.winner).short + ' remporte le débat', html: h,
               buttons: [{ label: 'Fin du tour', primary: true, onClick: spotlight }] });
     }
@@ -2066,7 +2148,7 @@
   function faceAFace(then) {
     var b = g.between, fc = b.face || E.setupFace(g), o = b.a === me ? b.b : b.a;
     var html = '<p>Le grand débat d’entre-deux-tours, la tradition depuis 1974. Trois questions face à <b>' + esc(party(o).candidate) + '</b>.</p>' +
-      '<div class="rps">❤️ émotion bat 📊 chiffres · 📊 bat 🥊 attaque · 🥊 bat ❤️ · 🥊 et 📊 démontent une 🎲 promesse</div>' +
+      '<div class="rps">L\u2019émotion bat les chiffres · les chiffres battent l\u2019attaque · l\u2019attaque bat l\u2019émotion · attaque et chiffres démontent une promesse</div>' +
       '<div class="brief">' + fc.duels.map(function (d) { return line(th(d.theme).icon, esc(th(d.theme).name)); }).join('') + '</div>' +
       '<p class="hint">Le gagnant fait basculer jusqu’à ' + Math.round(D.DEBATE.faceMax * 100) + ' % des électeurs du perdant. Quelques points qui peuvent tout changer.</p>' + learnBox('debat');
     modal({ kicker: 'Entre-deux-tours', title: 'Le grand face-à-face', html: html, buttons: [{ label: 'Entrer sur le plateau', primary: true, onClick: function () {
@@ -2099,6 +2181,27 @@
       (o && o.heir ? ' Une partie de tes électeurs se reporte sur ' + esc(party(o.heir).short) + '.' : '') + '</p><p class="hint">Astuce : sous 5 % dans les sondages, fais « Chercher des parrainages » (menu Plus) dès les premiers tours.</p>' + learnBox('parrainages'),
       buttons: [{ label: 'Retour à l\u2019accueil', primary: true, onClick: function () { go('title'); } }] });
   }
+  /* v4.5 : le bilan du tour, toujours au même format : d'où vient ta hausse ou ta baisse */
+  function bilanHtml(b) {
+    var x = b && b.rows[me]; if (!x) return '';
+    function row(label, v, always) {
+      if (!always && Math.abs(v) < 0.0005) return '';
+      return '<div class="bilan-row"><span>' + label + '</span><b class="' + (v > 0.0005 ? 'up' : v < -0.0005 ? 'down' : '') + '">' + ptStr(v) + '</b></div>';
+    }
+    return '<div class="bilan">' +
+      row('Tes actions', x.acts, true) +
+      row(x.riv <= 0 ? 'Ce que les rivaux t’ont pris' : 'Les actions des rivaux', x.riv, true) +
+      row('Le débat télévisé', x.deb) +
+      row('Événements, affaires et imprévus', x.other, true) +
+      row('L’effet des médias qui s’estompe', x.wear) +
+      '<div class="bilan-row bilan-tot"><span>Total du tour</span><b>' + ptStr(x.total) + '</b></div></div>' +
+      '<p class="bilan-mini">Tu passes de ' + pctFr(x.start, 1) + ' % à ' + pctFr(x.end, 1) + ' %. Le sondage est une part du total : quand tes rivaux gagnent des électeurs, ta part baisse même si tu n’en perds aucun.</p>';
+  }
+  function bilanModal(then) {
+    var b = g.bilan;
+    if (!b || !b.rows[me]) return then();
+    modal({ kicker: 'Fin du tour ' + b.turn, title: 'Ton bilan au sondage', html: bilanHtml(b), buttons: [{ label: g.over || g.phase === 'between' ? 'Continuer' : 'Tour suivant', primary: true, onClick: then }] });
+  }
   function finishTurn(spot) {
     var res = E.endTurn(g); render();
     if (spot && !spot.paid && spot.pid !== me) toast(party(spot.pid).short + ' sous les projecteurs : −1 soutien en ' + spot.regions.map(function (x) { return SHORT[x]; }).join(', '));
@@ -2111,8 +2214,8 @@
       return modal({ kicker: 'Fin des parrainages', title: res.out.length + ' parti' + (res.out.length > 1 ? 's' : '') + ' éliminé' + (res.out.length > 1 ? 's' : ''), html: outH,
         buttons: [{ label: 'Continuer', primary: true, onClick: function () { if (res.over) electionNight(); else if (res.between) betweenScreen(); else nextTurn(); } }] });
     }
-    if (res.over) return electionNight();
-    if (res.between) return betweenScreen();
+    if (res.over) return bilanModal(electionNight);
+    if (res.between) return bilanModal(betweenScreen);
     if (g.turn === 1 && tutoGame) {
       tutoGame = false;
       // v2.0 : une récompense courte à la place du long « Bon à savoir »
@@ -2121,10 +2224,10 @@
       return modal({ kicker: 'Tour 1 bouclé', title: rank <= 2 ? 'Bien joué !' : 'C\'est parti !', cls: 'reward', html:
         '<div class="reward-big"><b>' + ordinal(rank) + '</b><span>au sondage · ' + pctFr(mine.pct, 1) + ' %</span></div>' +
         '<div class="learn">' + A.advisor() + '<p>' + (rank <= 2 ? 'Tu es dans les 2 premiers : tu irais au second tour. Tiens bon jusqu\'au tour 8 !' : 'Objectif : finir dans les 2 premiers au tour 8 pour aller au second tour.') +
-        (held ? ' Tu tiens déjà ' + held + ' région' + (held > 1 ? 's' : '') + '.' : '') + ' Je te glisse un conseil à chaque tour.</p></div>',
+        (held ? ' Tu tiens déjà ' + held + ' région' + (held > 1 ? 's' : '') + '.' : '') + ' Je te glisse un conseil à chaque tour.</p></div>' + '<div class="kicker">Ton bilan au sondage</div>' + bilanHtml(g.bilan),
         buttons: [{ label: 'Tour suivant', primary: true, onClick: nextTurn }] });
     }
-    setTimeout(nextTurn, spot && spot.pid !== me ? 900 : 0);
+    setTimeout(function () { bilanModal(nextTurn); }, spot && spot.pid !== me ? 900 : 0);
   }
 
   function bars(list, max) {
@@ -2518,6 +2621,7 @@
   function showRules() {
     modal({ kicker: 'Règles v1.5', title: 'Comment gagner', html:
       '<p><b>But :</b> remporter l\'élection présidentielle à la fin des <b>8 tours de campagne</b>. Chaque région vote selon ses soutiens. Elle pèse ses <b>vrais électeurs</b> : ses inscrits (le chiffre sur la carte, en millions), moins ceux qui s\'abstiennent, moins ceux qui votent blanc ou nul. Le parti qui contrôle une région y gagne un petit bonus.</p>' +
+      '<p><b>Le score qui compte : le sondage.</b> Toutes les actions se mesurent en <b>points de sondage (pt)</b>, affichés en gros sur chaque bouton. Le calcul part des vrais votes : chaque région vote selon son histoire, chaque classe sociale selon ses habitudes. Une action de terrain agit sur une région (qui pèse sa part des votants), une action dans les médias sur des classes sociales dans toute la France. À la fin de chaque tour, le bilan dit d\u2019où vient ta hausse ou ta baisse.</p>' +
       '<p><b>Deux modes de jeu.</b> <b>Réaliste</b> : chaque parti démarre avec ses vrais scores, au choix ceux de la présidentielle 2022, la moyenne des législatives et des européennes 2024, ou la moyenne de 6 sondages d\'octobre 2026 ; les petites listes et les partis absents de ta partie comptent sous « Autres » dans les sondages, et la campagne les réduit peu à peu. <b>Simulation</b> : chaque parti a 2 électeurs dans chaque région et personne ne tient de région : le départ est strictement égal, sans bonus caché. Ensuite, au second tour, les partis du centre de l\'axe reçoivent plus facilement des reports de voix que ceux des extrémités.</p>' +
       '<p><b>L\'abstention :</b> environ un quart des inscrits ne votent pas, et beaucoup plus en outre-mer. Le bouton <b>Abstention</b> au-dessus de la carte la montre. 🚪 <b>Mobiliser</b> fait voter des abstentionnistes ; attaquer ou multiplier les affaires en dégoûte d\'autres.</p>' +
       '<p><b>Premier tour :</b> les ' + D.PARTIES.length + ' partis sont en lice. Plus de 50 % des suffrages exprimés (les blancs ne comptent pas) = élu directement. Sinon, les deux premiers sont qualifiés, et le résultat est figé.</p>' +
@@ -2550,7 +2654,7 @@
       '<p><b>💥 Les affaires.</b> Chaque casserole 🍳 donne 12 % de risque d\'affaire par tour. Le Canard Déchaîné en sort aussi de temps en temps, et un rival peut <b>🔎 enquêter</b> sur toi. Quand une affaire tombe, tu choisis ta réaction : nier, t\'excuser, sacrifier un collaborateur ou accuser les médias.</p>' +
       '<p><b>🤔 Les dilemmes.</b> Chaque tour, un parti (à tour de rôle) doit faire un choix. Certains choix ont des <b>conséquences différées</b> qui peuvent ressortir quelques tours plus tard.</p>' +
       '<p><b>Les crises.</b> Chaque partie connaît une crise en 3 actes (krach, grève, été brûlant, désindustrialisation). Les régions touchées sont marquées sur la carte : leur thème y compte comme à la une.</p>' +
-      '<p><b>🎙️ Le débat télévisé</b> (tours 3, 6 et 8) : chaque parti affronte 3 adversaires, une vraie question de journaliste à chaque fois. Tu choisis ta réponse (❤️ émotion, 💡 ta mesure ou 🛡️ le bilan, 🥊 attaque, 🙃 recentrer). Certaines contrent les autres : ❤️ bat 📊 chiffres (mesure, bilan), 📊 bat 🥊 attaque, 🥊 bat ❤️, et 🥊 comme 📊 démontent une 🎲 promesse improvisée. La réponse qui contre gagne 30 %, celle qui est contrée perd la moitié. Les points = l\u2019audience gagnée dans les classes sociales, et elle compte vraiment dans toute la France. Chaque ★ de préparation (3 au plus) = +15 % et la fiche de ton adversaire. Le vainqueur gagne en plus +0,8 d\u2019audience dans toutes les classes (doublé au débat final).</p>' +
+      '<p><b>🎙️ Le débat télévisé</b> (tours 3, 6 et 8) : chaque parti affronte 3 adversaires, une vraie question de journaliste à chaque fois. Tu choisis ta réponse (❤️ émotion, 💡 ta mesure ou 🛡️ le bilan, 🥊 attaque, 🙃 recentrer). Certaines contrent les autres : ❤️ bat 📊 chiffres (mesure, bilan), 📊 bat 🥊 attaque, 🥊 bat ❤️, et 🥊 comme 📊 démontent une 🎲 promesse improvisée. La réponse qui contre gagne 30 %, celle qui est contrée perd la moitié. Chaque réponse affiche ce qu\u2019elle rapporte en points de sondage, dans toute la France. Chaque ★ de préparation (3 au plus) = +15 % et la fiche de ton adversaire. Le vainqueur reçoit en plus un bonus au sondage (doublé au débat final).</p>' +
       '<p><b>🎙️ Le face-à-face</b> (entre les deux tours) : 3 questions entre les deux finalistes. Le gagnant fait basculer jusqu\u2019à 3 % des électeurs de l\u2019autre pour le second tour.</p>' +
       '<p><b>⚖️ Mode Réaliste : le poids des urnes.</b> Chaque soutien pèse selon le score historique de son parti dans la région : un soutien du parti en tête de la région compte beaucoup, celui d\u2019un petit parti beaucoup moins. Et la moitié des électeurs vote par fidélité (le <b>socle électoral</b>) : la campagne se joue sur l\u2019autre moitié. Résultat : les petits partis ont du mal à dépasser leur score historique, et chaque région garde sa couleur (terre de gauche, de droite ou disputée, dans la fiche de la région). En mode Simulation, tout le monde pèse pareil.</p>' +
       '<p><b>🧪 Mode Bêta.</b> Le mode Réaliste avec les règles à l\u2019essai : ' + D.BETA.changes.map(esc).join(' ') + '</p>' +

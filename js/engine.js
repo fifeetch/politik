@@ -915,6 +915,7 @@
     g.turn += 1; g.mods = {}; g.cancel = {}; g.log = []; g.primaire = null;
     var out = { income: [], usure: null, event: null, crisis: null, militants: [], later: [], affairs: [], dilemma: null, programmes: null };
     if (g.turn === 1) out.programmes = applyProgrammes(g);
+    ledStart(g);   // v4.5 : le bilan du tour part d'ici
     // marqueurs expirés
     g.markers = g.markers.filter(function (m) { return m.until >= g.turn; });
     if (g.turn > 1) {
@@ -1307,6 +1308,44 @@
     return [rid].concat(others);
   }
 
+  /* ---------- v4.5 : tout en points de sondage ----------
+     estimate() joue l'action « à blanc » sur une copie de la partie (après les actions déjà programmées) et mesure
+     ce qu'elle change à TON score au sondage national. Le hasard est fixé : haut (0,999 : pas de gaffe, meilleur dé)
+     ou bas (0 : pire dé), pour donner une fourchette aux actions qui dépendent du dé. */
+  function cloneGame(g) {
+    var c = JSON.parse(JSON.stringify(g, function (k, v) { return typeof v === 'function' || k === '_cp' || k === '_cpTurn' || k === 'history' || k === 'led' || k === 'bilan' ? undefined : v; }));
+    c.history = []; return c;
+  }
+  function estimate(g, pid, act, pre, luck) {
+    var c = cloneGame(g), r = luck == null ? 0.999 : luck;
+    c.rng = function () { return r; }; c.cancel = {};
+    var pl = player(c, pid); if (!pl) return null;
+    pl.money = 99; pl.infl = 99; pl.forme = Math.max(pl.forme, 9);
+    (pre || []).forEach(function (a) { try { resolveOne(c, pid, a); } catch (e) { /* une action programmée impossible : on l'ignore */ } });
+    var c0 = {}; D.REGIONS.forEach(function (x) { c0[x.id] = cubes(c, x.id, pid); });
+    var before = pollMap(c)[pid] || 0, entry;
+    try { entry = resolveOne(c, pid, act); } catch (e) { return null; }
+    if (!entry || !entry.ok) return null;
+    updateAllControl(c);
+    var after = pollMap(c)[pid] || 0, moved = [];
+    D.REGIONS.forEach(function (x) { var d = cubes(c, x.id, pid) - c0[x.id]; if (d) moved.push({ rid: x.id, n: d }); });
+    return { pt: after - before, moved: moved };
+  }
+  /* Le registre du tour : d'où vient chaque hausse ou baisse de chaque parti */
+  function ledStart(g) { g.led = { turn: g.turn, start: pollMap(g), acts: {}, riv: {}, deb: {} }; }
+  function ledAdd(g, key, pid, d) { if (!g.led) return; g.led[key][pid] = (g.led[key][pid] || 0) + d; }
+  function ledClose(g) {
+    var L = g.led; if (!L) return null;
+    var end = pollMap(g), out = { turn: L.turn, rows: {} };
+    Object.keys(L.start).concat(Object.keys(end)).forEach(function (pid) {
+      if (out.rows[pid]) return;
+      var tot = (end[pid] || 0) - (L.start[pid] || 0), a = L.acts[pid] || 0, rv = L.riv[pid] || 0, db = L.deb[pid] || 0, w = (g.lastWear && g.lastWear[pid]) || 0;
+      out.rows[pid] = { acts: a, riv: rv, deb: db, wear: w, other: tot - a - rv - db - w, total: tot, start: L.start[pid] || 0, end: end[pid] || 0 };
+    });
+    g.bilan = out; g.led = null;
+    return out;
+  }
+
   /* ---------- Résolution des actions ---------- */
   function resolveOne(g, pid, act) {
     var pl = player(g, pid), P = PARTY[pid];
@@ -1553,11 +1592,20 @@
   /* plans : { pid: [act, act, act] } — résolution en alternance, le premier joueur tourne. */
   function resolveActions(g, plans) {
     var order = turnOrder(g);
-    var log = [];
+    var log = [], prev = g.led ? pollMap(g) : null;
     for (var s = 0; s < R.actionsPerTurn; s++) {
       order.forEach(function (pid) {
         var act = (plans[pid] || [])[s];
-        if (act && player(g, pid) && s < actionsFor(g, pid)) log.push(resolveOne(g, pid, act));   // v4.4 : un parti rallié ne joue plus
+        if (!(act && player(g, pid) && s < actionsFor(g, pid))) return;   // v4.4 : un parti rallié ne joue plus
+        var entry = resolveOne(g, pid, act); log.push(entry);
+        if (prev) {   // v4.5 : ce que cette action a changé au sondage, pour son auteur et pour les autres
+          var now = pollMap(g);
+          Object.keys(prev).concat(Object.keys(now)).forEach(function (p) {
+            var d = (now[p] || 0) - (prev[p] || 0); if (!d) return;
+            if (p === pid) { ledAdd(g, 'acts', p, d); entry.pt = d; } else ledAdd(g, 'riv', p, d);
+          });
+          prev = now;
+        }
       });
     }
     g.phase = isDebateTurn(g) ? 'debate' : 'spotlight';
@@ -1643,7 +1691,7 @@
   }
   /* prep : { pid: ★ dépensées } · picks : pour chaque duel { ra, rb } (les clés des cartes choisies) */
   function resolveDebate(g, prep, picks) {
-    var tot = {}, prepSpent = {}, duels = [], bingoDeb = null;
+    var tot = {}, prepSpent = {}, duels = [], bingoDeb = null, p0 = pollMap(g);
     g.players.forEach(function (p) {
       var b = Math.max(0, Math.min(p.infl, R.debatePrepMax, Math.floor((prep || {})[p.id] || 0)));
       p.infl -= b; prepSpent[p.id] = b; tot[p.id] = 0;
@@ -1671,6 +1719,8 @@
     } else firsts.forEach(function (x) { reward(x.pid, 0.5); });
     g.debate = null;
     updateAllControl(g);
+    var p1 = pollMap(g); res.delta = {};   // v4.5 : ce que le débat a changé au sondage, parti par parti
+    Object.keys(p0).forEach(function (pid) { res.delta[pid] = (p1[pid] || 0) - p0[pid]; ledAdd(g, 'deb', pid, res.delta[pid]); });
     g.phase = 'spotlight';
     return res;
   }
@@ -1732,6 +1782,7 @@
   }
   function endTurn(g) {
     updateAllControl(g);
+    if (g.turn >= R.maxTurns) g.lastWear = {};   // v4.5 : pas d'usure des médias au dernier tour
     var res = { winner: null, over: false };
     g.history.push(poll(g));
     g.lastClass = classPoll(g);   // v3.8 : pour la tendance par classe sociale
@@ -1765,6 +1816,7 @@
       if (r1.direct) { g.over = true; g.result = { first: r1.first, stats1: r1.stats1, direct: true, second: null, winner: r1.first[0].pid }; g.winner = g.result.winner; g.phase = 'over'; }
       else { g.between = openBetween(g); g.phase = 'between'; res.between = true; }
     }
+    res.bilan = ledClose(g);   // v4.5
     res.winner = g.winner; res.over = g.over; res.result = g.result;
     return res;
   }
@@ -2056,6 +2108,7 @@
   }
 
   var API = {
+    estimate: estimate, ledStart: ledStart,
     createGame: createGame, startTurn: startTurn, resolveActions: resolveActions, resolveDebate: resolveDebate, setupDebate: setupDebate, debateCards: debateCards, duelOutcome: duelOutcome, debateCounter: debateCounter, aiDebatePick: aiDebatePick, debateWeights: debateWeights, setupFace: setupFace, resolveFace: resolveFace, audScore: audScore, duelResult: duelResult, replyPoints: replyPoints,
     isDebateTurn: isDebateTurn, spotlightTarget: spotlightTarget, applySpotlight: applySpotlight, endTurn: endTurn,
     finalScores: finalScores, firstRound: firstRound, openBetween: openBetween, betweenAct: betweenAct, betweenError: betweenError, answerCounter: answerCounter, answerBetweenOffer: answerBetweenOffer, setConsigne: setConsigne, concessionsFor: concessionsFor, dealChance: dealChance, aiBetweenStep: aiBetweenStep, aiConsigne: aiConsigne, transfersFor: transfersFor, projectSecond: projectSecond, closeBetween: closeBetween, autoBetween: autoBetween, objectiveMet: objectiveMet, objectiveProgress: objectiveProgress, objectiveShare: objectiveShare, terrainBreakdown: terrainBreakdown, turnOrder: turnOrder, election: election, poll: poll, votes: votes,

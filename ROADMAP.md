@@ -286,3 +286,13 @@ Avant, en Réaliste, tous les partis convergeaient vers ~8 % : Lutte Obstinée d
 - Entre partis de gauche (position ≤ 3), report spontané d'au moins 62 % ; entre partis de droite (position ≥ 5), 65 %.
 - La droite reporte ×0,4 vers la gauche radicale (LR → LFI 5 %), en miroir du cordon autour de l'extrême droite.
 - Simulation (Réaliste 2024) : PS–RN 54/46, RE–RN 52/48, LFI–RN 45/55.
+
+## v4.5 — fait : tout en points de sondage (tous les modes : Réaliste, Simulation, Bêta)
+Aucune règle de calcul ne change : seul ce que le joueur voit change. Le socle reste le même (sondage de départ → régions → classes sociales).
+- **Une seule unité à l'écran, le point de sondage** : chaque tuile affiche ce que l'action rapporte au sondage national, calculé en jouant l'action « à blanc » sur une copie de la partie (après les actions déjà programmées). Les soutiens passent en petit dessous (« 5 soutiens ici »). Le Buzz affiche une fourchette selon le dé.
+- **« Comment c'est calculé ? »** sous les tuiles : la chaîne de calcul en mots (message fort/moyen/faible → soutiens → poids de ton électorat ici → part de la région dans les votants → points).
+- **Moins de symboles** : les points ●●●○ deviennent « Message fort / moyen / faible » ; plus de ❤️/🧠 sur les réponses, remplacés par « joue sur l'émotion · plaît surtout aux retraités, fâche les cadres » ; €, ★, ⚡ portent leur mot (argent, influence, énergie).
+- **Menu Plus** : chaque action dit ce qu'elle rapporte au sondage, ou « 0 pt maintenant · effet au tour suivant ».
+- **Interviews et débat en points** : chaque réponse affiche son effet au sondage ; le verdict du débat donne la variation de chaque parti en points.
+- **Bilan de fin de tour, toujours au même format** : tes actions · ce que les rivaux t'ont pris · débat · événements et affaires · médias qui s'estompent = total du tour. Rappel dans l'onglet Sondage (« Pourquoi ? Le bilan »), et le gain de chaque action dans le détail du flash info.
+- Tests : l'estimation d'un Meeting = son gain réel ; la somme des lignes du bilan = la variation du sondage, à chaque tour.

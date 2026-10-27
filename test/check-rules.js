@@ -683,5 +683,40 @@ section('Bêta : nouvelles mécaniques de campagne (v4.4)');
   ok(!err && g6.winner, 'une partie Bêta complète se joue sans erreur' + (err ? ' (' + err + ')' : ''));
 })();
 
+/* ---------- v4.5 : tout en points de sondage ---------- */
+section('Points de sondage : estimation et bilan du tour');
+var AI = require('../js/ai.js');
+(function () {
+  var g7 = E.createGame('VP', { seed: 11, mode: 'beta', base: 'sond' });
+  E.startTurn(g7);
+  // l'estimation d'un Meeting = ce que le Meeting rapporte vraiment, joué seul
+  ['idf', 'cor', 'hdf'].forEach(function (rid) {
+    var act = { type: 'terrain', region: rid, theme: 'ecologie' }, e = E.estimate(g7, 'VP', act);
+    var c = JSON.parse(E.saveGame(g7)), g8 = E.loadGame(JSON.stringify(c));
+    var before = E.poll(g8).filter(function (x) { return x.pid === 'VP'; })[0].pct;
+    E.player(g8, 'VP').money = 99; E.resolveActions(g8, { VP: [act] });
+    var after = E.poll(g8).filter(function (x) { return x.pid === 'VP'; })[0].pct;
+    ok(e && Math.abs(e.pt - (after - before)) < 1e-9, 'Meeting en ' + rid + ' : estimation ' + (e ? (100 * e.pt).toFixed(3) : 'null') + ' pt = gain réel ' + (100 * (after - before)).toFixed(3) + ' pt');
+  });
+  // l'estimation ne touche pas à la partie
+  var snap = JSON.stringify(g7.regions); E.estimate(g7, 'VP', { type: 'mobiliser', region: 'idf' }); ok(JSON.stringify(g7.regions) === snap, 'estimer une action ne change pas la partie');
+  // un Meeting en Île-de-France pèse plus qu'en Corse
+  ok(E.estimate(g7, 'VP', { type: 'terrain', region: 'idf', theme: 'ecologie' }).pt > E.estimate(g7, 'VP', { type: 'terrain', region: 'cor', theme: 'ecologie' }).pt, 'à soutiens égaux, l’Île-de-France pèse plus que la Corse');
+  // le bilan : actions + rivaux + débat + médias + imprévus = variation du tour, pour chaque parti
+  var good = true;
+  for (var t = 0; t < 4; t++) {
+    if (t) E.startTurn(g7);
+    var pl = {}; g7.players.forEach(function (p) { pl[p.id] = AI.plan(g7, p.id); }); E.resolveActions(g7, pl);
+    if (E.isDebateTurn(g7)) { var d7 = E.setupDebate(g7); E.resolveDebate(g7, {}, d7.duels.map(function (x) { return { ra: AI.chooseReply(g7, x.a, x.theme, x.b, x), rb: AI.chooseReply(g7, x.b, x.theme, x.a, x) }; })); }
+    var r = E.endTurn(g7), now = {}; E.poll(g7).forEach(function (x) { now[x.pid] = x.pct; });
+    Object.keys(r.bilan.rows).forEach(function (pid) {
+      var b = r.bilan.rows[pid];
+      if (Math.abs(b.acts + b.riv + b.deb + b.wear + b.other - b.total) > 1e-9 || Math.abs(b.end - (now[pid] || 0)) > 1e-9) good = false;
+    });
+    if (E.isDebateTurn(g7) && !Object.keys(r.bilan.rows).some(function (p) { return r.bilan.rows[p].deb; })) good = false;
+  }
+  ok(good, 'le bilan de chaque tour tombe juste (somme des lignes = variation du sondage)');
+})();
+
 console.log('\n' + passes + ' vérifications réussies, ' + fails + ' en échec.');
 process.exit(fails ? 1 : 0);
