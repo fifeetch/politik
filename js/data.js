@@ -921,7 +921,7 @@
     },
     /* v4.3 : la force des actions et cartes propres à chaque parti (cartes spéciales, actions de parti, atouts du parti).
        Au-dessus de 1 : renforcées pour les partis sous leur objectif ; en dessous : affaiblies pour les favoris. */
-    specific: { MN: 0.5, FI: 0.5, SM: 0.8, HZ: 1.5, EM: 1.75, UG: 1.75, VP: 2, PC: 2, RQ: 2, DL: 2, LO: 1.5, MD: 1.5 },
+    specific: { MN: 0, FI: 0.25, SM: 0.8, HZ: 2, EM: 2.5, UG: 2.5, VP: 3, PC: 3, RQ: 2, DL: 3, LO: 3, MD: 3 },
     changes: [
       'Pas de prime au sortant : tenir une région ne donne plus de voix en plus.',
       'Actions et cartes propres à chaque parti réglées selon son rang : plus fortes pour les petits, plus faibles pour les favoris.',

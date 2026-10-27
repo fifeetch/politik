@@ -136,24 +136,25 @@
         break; }
       case 'rappel': {
         var RL = D.RULES;
-        val += RL.rappelChance * (RL.rappelSwing * 1.6 + 1) - (1 - RL.rappelChance) * RL.rappelCas * (0.7 + pl.cas * 0.25);
+        val += RL.rappelChance * (E.spec(v, pid, RL.rappelSwing) * 1.6 + 1) - (1 - RL.rappelChance) * RL.rappelCas * (0.7 + pl.cas * 0.25);
         if (E.lostPetals(v).length === 1) val += 1.2;   // la rose peut refleurir
         break; }
-      case 'fusion': E.bestRegions(v, pid, D.RULES.fusionGain, null, 1).forEach(function (rid) { boost(rid, 1); }); val += 1.6; break;
+      case 'fusion': E.bestRegions(v, pid, E.spec(v, pid, D.RULES.fusionGain), null, 1).forEach(function (rid) { boost(rid, 1); }); val += 1.6; break;
       case 'eclat': {
         if (!v.hidden) return null;
-        E.bestRegions(v, pid, D.RULES.eclatGain, null, 1).forEach(function (rid) { boost(rid, 1); });
+        E.bestRegions(v, pid, E.spec(v, pid, D.RULES.eclatGain), null, 1).forEach(function (rid) { boost(rid, 1); });
         val += 2.4 * Math.min(3, D.RULES.maxTurns - v.turn + 1) / 3;
         break; }
       case 'fonds': val += (pl.money < 3 ? 4 : pl.money < 6 ? 1.5 : 0.2) + (E.fundsGain(pid).infl ? (pl.infl < 3 ? 2.5 : 1) : 0); break;
       case 'card': {
         var c = act.card;
-        if (c === 'marche_pop' || c === 'climat') boost(act.region, 3);
-        else if (c === 'grand_meeting') boost(act.region, 4);
-        else if (c === 'fete_rose') { boost(act.region, 2); val += 1.5; }
+        var sp = function (n) { return E.spec ? E.spec(v, pid, n) : n; };   // v4.3 : la force réglée des cartes (Bêta)
+        if (c === 'marche_pop' || c === 'climat') boost(act.region, sp(3));
+        else if (c === 'grand_meeting') boost(act.region, sp(4));
+        else if (c === 'fete_rose') { boost(act.region, sp(2)); val += 1.5 * sp(2) / 2; }
         else if (c === 'remaniement') { val += E.gain(v, pid, act.region, 2) - 2; eff.push([act.region, pid, 2]); }
-        else if (c === 'plateau_tele') E.bestRegions(v, pid, 3, function (r) { return r.profile === 'rurale' || r.profile === 'industrielle'; }, 2).forEach(function (rid) { boost(rid, 2); });
-        else if (c === 'appel18') D.REGIONS.forEach(function (r) { if (r.profile === 'historique') boost(r.id, 1); });
+        else if (c === 'plateau_tele') E.bestRegions(v, pid, 3, function (r) { return r.profile === 'rurale' || r.profile === 'industrielle'; }, 2).forEach(function (rid) { boost(rid, sp(2)); });
+        else if (c === 'appel18') D.REGIONS.forEach(function (r) { if (r.profile === 'historique') boost(r.id, sp(1)); });
         else if (c === 'canicule') val += 2 + v.turn * 0.4;
         else if (c === 'art493') val += 1.4 + v.turn * 0.4 - pl.cas * 0.35;
         else if (c === 'censure') val += 1.5 + v.turn * 0.2;

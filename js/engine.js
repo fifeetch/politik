@@ -385,7 +385,7 @@
   function spec(g, pid, n) {
     if (!g || g.mode !== 'beta') return n;
     var f = (D.BETA.specific || {})[pid]; if (f == null || f === 1) return n;
-    return Math.max(0, Math.round(n * f));
+    return Math.max(0, Math.round(n * f));   // arrondi : ce que la fiche affiche est ce qui se passe
   }
   function isHidden(g, pid) { return pid === 'UG' && !!g.hidden; }
   function retireeRegion(rid) { return REG[rid].pop.ret >= 30; }
@@ -426,7 +426,7 @@
       var line = D.BINGO_LINES.filter(function (L) { return L.every(function (j) { return b.ticks[j]; }); })[0];
       if (line) {
         var regs = D.REGIONS.filter(function (r) { return cubes(g, r.id, 'FI') >= R.bingoBoostMin; }).map(function (r) { return r.id; });
-        regs = regs.filter(function (rid) { return addCubes(g, rid, 'FI', 1) > 0; });
+        var bn = spec(g, 'FI', 1); regs = regs.filter(function (rid) { return bn > 0 && addCubes(g, rid, 'FI', bn) > 0; });
         b.lines += 1; b.zapUntil = g.turn + R.bingoZap - 1;
         out = { words: line.map(function (j) { return D.BINGO[j].w; }), regions: regs };
         b.ticks = b.ticks.map(function () { return false; });
