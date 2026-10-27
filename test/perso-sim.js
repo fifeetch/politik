@@ -22,7 +22,7 @@ for (var i = 0; i < N; i++) {
       var plans = {}; g.players.forEach(function (q) { plans[q.id] = AI.plan(g, q.id); });
       E.resolveActions(g, plans);
       if (E.isDebateTurn(g)) { var deb = E.setupDebate(g), pr = {}; g.players.forEach(function (q) { pr[q.id] = AI.prep(g, q.id); });
-        E.resolveDebate(g, pr, deb.duels.map(function (d) { return { ra: AI.chooseReply(g, d.a, d.theme, d.b), rb: AI.chooseReply(g, d.b, d.theme, d.a) }; })); }
+        E.resolveDebate(g, pr, deb.duels.map(function (d) { return { ra: AI.chooseReply(g, d.a, d.theme, d.b, d), rb: AI.chooseReply(g, d.b, d.theme, d.a, d) }; })); }
       var t = E.spotlightTarget(g); if (t) E.applySpotlight(g, t, AI.paySpotlight(g, t));
       if (g.turn === 4) o.t4 += E.poll(g).filter(function (x) { return x.pid === 'GE'; })[0].pct;
       if (E.endTurn(g).between) E.autoBetween(g);

@@ -31,7 +31,7 @@ for (var i = 0; i < N; i++) {
       log.forEach(function (l) { totalActs++; if (l.gaffe) gaffes++; if (l.action === 'Enquêter') enq++; if (l.credUp) credUps++; if (!l.ok && !l.gaffe) failed++; actionCount[l.action] = (actionCount[l.action] || 0) + 1; });
       if (E.isDebateTurn(g)) {
         var deb = E.setupDebate(g), pr = {}; g.players.forEach(function (p) { pr[p.id] = AI.prep(g, p.id); });
-        var picks = deb.duels.map(function (d) { return { ra: AI.chooseReply(g, d.a, d.theme, d.b), rb: AI.chooseReply(g, d.b, d.theme, d.a) }; });
+        var picks = deb.duels.map(function (d) { return { ra: AI.chooseReply(g, d.a, d.theme, d.b, d), rb: AI.chooseReply(g, d.b, d.theme, d.a, d) }; });
         var dr = E.resolveDebate(g, pr, picks); if (dr.winner) debWins[dr.winner] = (debWins[dr.winner] || 0) + 1;
       }
       var t = E.spotlightTarget(g); if (t) E.applySpotlight(g, t, AI.paySpotlight(g, t));

@@ -637,7 +637,7 @@
       g.offers = [];
       if (E.isDebateTurn(g)) {
         var deb = E.setupDebate(g), pr = {}; g.players.forEach(function (p) { pr[p.id] = AI.prep(g, p.id); });
-        E.resolveDebate(g, pr, deb.duels.map(function (d) { return { ra: AI.chooseReply(g, d.a, d.theme, d.b), rb: AI.chooseReply(g, d.b, d.theme, d.a) }; }));
+        E.resolveDebate(g, pr, deb.duels.map(function (d) { return { ra: AI.chooseReply(g, d.a, d.theme, d.b, d), rb: AI.chooseReply(g, d.b, d.theme, d.a, d) }; }));
       }
       var t = E.spotlightTarget(g); if (t) E.applySpotlight(g, t, AI.paySpotlight(g, t));
       if (E.endTurn(g).between) E.autoBetween(g);   // v2.3 : l'entre-deux-tours se joue tout seul (sinon la boucle ne finissait jamais)
@@ -779,7 +779,7 @@
     var learn = learnKey ? learnBox(learnKey) : '';
     // ---- les 2 ou 3 brèves de la une : seulement ce qui change ton tour ----
     var briefs = [];
-    if (E.isDebateTurn(g)) briefs.push({ k: 'Ce soir', t: '🎙️ Débat télévisé', s: 'Garde des ★ pour miser.' });
+    if (E.isDebateTurn(g)) briefs.push({ k: 'Ce soir', t: '🎙️ Débat télévisé', s: 'Garde des ★ pour te préparer.' });
     var myHit = info.later.filter(function (x) { return x.pid === me && x.hit; })[0];
     if (myHit) briefs.push({ k: 'Te concerne', t: '⏳ ' + esc(myHit.title), s: esc(myHit.effects.join(', ')) });
     briefs.push({ k: 'Sujet du jour', t: g.hot.map(function (x) { return th(x).icon + ' ' + esc(th(x).short); }).join(' + '), s: 'Parles-en : +1 d\'impact.' });
@@ -866,7 +866,7 @@
     var pl = mePl(), ph = E.measure(pl.phare), hot = g.hot || [];
     if (g.turn === 1) return 'Parle de ta mesure phare (' + th(ph.theme).icon + ' ' + th(ph.theme).short + ') : choisis une région, puis 📣 Meeting.';
     if (E.isDebateTurn(g) && pl.infl < 2) return 'Débat ce soir 🎙️ et presque plus de ★ : évite la Télé ce tour-ci.';
-    if (E.isDebateTurn(g)) return 'Débat ce soir 🎙️ ! Garde 2 ou 3 ★ : chaque ★ vaut 1 point.';
+    if (E.isDebateTurn(g)) return 'Débat ce soir 🎙️ ! Garde 2 ou 3 ★ : chaque ★ de préparation = +15 % sur tes réponses, et la fiche de ton adversaire.';
     if (pl.forme <= 1) return 'Candidat épuisé (⚡ ' + pl.forme + ') : préfère 🚪 Mobiliser ou 💰 Collecte.';
     if (pl.cas >= 3) return pl.cas + ' casseroles 🍳 : une affaire peut tomber. N\'attaque pas ce tour-ci.';
     var mineHot = hot.filter(function (t) { return pl.programme.some(function (id) { return E.measure(id).theme === t; }); })[0];
@@ -1853,71 +1853,127 @@
 
   /* ---------- v0.6 : le débat télévisé en face-à-face ---------- */
   function replyTag(k) { var r = D.REPLIES[k]; return r.icon + ' ' + r.name; }
-  function debate() {
-    var deb = E.setupDebate(g), grand = g.turn === R.maxTurns, picks = [];
-    var mine = []; deb.duels.forEach(function (d, i) { if (d.a === me || d.b === me) mine.push(i); });
-    var max = Math.min(mePl().infl, R.debatePrepMax), mult = grand ? 2 : 1;
-    var html = '<p>3 questions, 3 adversaires. À chaque question, choisis ta réplique :</p>' +
-      '<div class="rps">🥊 bat ❤️ · ❤️ bat 📊 · 📊 bat 🥊 · 🙃 = nul</div>' +
-      '<div class="brief">' + mine.map(function (i) {
-        var d = deb.duels[i], o = d.a === me ? d.b : d.a;
-        return line(th(d.theme).icon, '<b>' + esc(party(o).short) + '</b> sur ' + esc(th(d.theme).name) + ' <span class="muted">· tempérament ' + D.TEMPERS[o].label + '</span>');
-      }).join('') + '</div>' +
-      '<p><b>Préparation</b> : chaque ★ dépensée = +1 point.</p>' +
-      '<div class="bid"><input id="bid" type="range" min="0" max="' + max + '" value="' + Math.min(1, max) + '" aria-label="Préparation en influence"><output id="bid-out">' + Math.min(1, max) + ' ★</output></div>' +
-      '<p class="hint">Le vainqueur gagne +' + mult + ' soutien dans 4 régions, le 2e dans 2 régions.' + (grand ? ' <b>Grand débat final : gains doublés !</b>' : '') + '</p>' + learnBox('debat');
-    var prep = {};
-    modal({ kicker: grand ? 'Grand débat final' : 'Débat télévisé', title: 'Ce soir, face-à-face !', html: html,
-      onOpen: function () { var r = $('bid'); r.addEventListener('input', function () { $('bid-out').textContent = r.value + ' ★'; }); },
-      buttons: [{ label: 'Entrer sur le plateau', primary: true, keep: true, onClick: function () {
-        prep[me] = parseInt($('bid').value, 10) || 0; closeModal(); round(0);
-      } }] });
-
-    function bonusHint(k, d, o) {
-      if (k === 'attaque' && E.player(g, o).cas > 0) return ' <b>+1 ici</b> : il traîne des casseroles.';
-      if (k === 'chiffres') { var c = E.cred(g, me, d.theme); if (c === 2) return ' <b>+1 ici</b> : c\'est ton point fort.'; if (c === 0) return ' <b>−1 ici</b> : pas ton sujet.'; }
-      if (k === 'emotion' && E.isHot(g, d.theme)) return ' <b>+1 ici</b> : le sujet fait l\'actu.';
-      return '';
-    }
-    function round(k) {
-      var i = mine[k], d = deb.duels[i], o = d.a === me ? d.b : d.a;
-      var h = '<div class="question"><div class="q-face">' + A.portrait(o) + '</div><div><span class="kicker">Question ' + (k + 1) + ' / 3</span><div class="q-theme">' + th(d.theme).icon + ' ' + esc(th(d.theme).name) + '</div>' +
-        '<div class="q-vs">Face à <b>' + esc(party(o).candidate) + '</b> (' + esc(party(o).short) + ') · ' + D.TEMPERS[o].label + '</div></div></div><div class="question-guide"><b>À toi</b><span>Choisis la réplique qui te ressemble le plus.</span></div><div class="debate-pick-label">Ta réponse</div><div class="pick">' +
-        ['attaque', 'chiffres', 'emotion', 'esquive'].concat(me === 'FI' ? ['disque'] : []).map(function (key) {
-          var r = D.REPLIES[key];
-          var bh = bonusHint(key, d, o), txt = bh ? esc(r.hint.split('. ')[0]) + '.' + bh : esc(r.hint);
-          return '<button type="button" class="pick-row" data-r="' + key + '"><span class="pick-i">' + r.icon + '</span><span class="pick-txt"><b>' + r.name + '</b><small>' + txt + '</small></span></button>';
+  /* ---------- v4.0 : le débat télévisé, sur le plateau ---------- */
+  function counterHint(c) {
+    var r = D.DEB_REG[c.key], w = [], l = [];
+    Object.keys(D.DEB_BEATS).forEach(function (k) { var p = k.split('>'); if (p[0] === r) w.push(p[1]); if (p[1] === r) l.push(p[0]); });
+    var nm = function (x) { return D.DEB_REG_NAME[x].split(' (')[0]; };
+    return (w.length ? '<span class="ch-w">bat ' + w.map(nm).join(', ') + '</span>' : '') + (l.length ? '<span class="ch-l">contrée par ' + l.map(nm).join(', ') + '</span>' : '') || '<span>ni contre, ni contrée</span>';
+  }
+  function vsStrip(o) {
+    return '<div class="vs-strip"><span class="vs-side"><span class="vs-face">' + A.portrait(me) + '</span><b>Toi</b></span><span class="vs-x">VS</span>' +
+      '<span class="vs-side"><span class="vs-face">' + A.portrait(o) + '</span><b>' + esc(party(o).short) + '</b><small>' + esc(D.TEMPERS[o] ? D.TEMPERS[o].label : '') + '</small></span></div>';
+  }
+  function undecided(sa, sb, o) {
+    var x = sa + sb > 0 ? 100 * sa / (sa + sb) : 50;
+    return '<div class="undec"><div class="undec-k">Les indécis devant leur écran</div><div class="undec-bar"><i class="u-me" data-w="' + x.toFixed(1) + '" style="width:50%;background:' + party(me).color + '"></i><i class="u-op" style="background:' + party(o).color + '"></i></div>' +
+      '<div class="undec-l"><b>Toi · ' + String(sa).replace('.', ',') + ' pts</b><b>' + esc(party(o).short) + ' · ' + String(sb).replace('.', ',') + ' pts</b></div></div>';
+  }
+  /* Les duels d'une soirée (débat du 1er tour ou face-à-face). cfg : { kicker, host, duels, prep (pid → ★), fiche, done(picks) } */
+  function runDuels(cfg) {
+    var picks = [], n = cfg.duels.length;
+    function step(k) {
+      if (k >= n) return cfg.done(picks);
+      var d = cfg.duels[k], mineA = d.a === me, o = mineA ? d.b : d.a;
+      var iv = E.debateCards(g, me, d.qid), fiche = '';
+      if (cfg.fiche) {
+        var ws = E.debateWeights(g, o, d);
+        fiche = '<div class="fiche">📋 <b>Fiche de préparation</b> : ' + esc(party(o).candidate) + ' répond souvent par ' + ws.slice(0, 2).map(function (x) { return D.ANSWERS[x.key].icon + ' ' + esc(D.ANSWERS[x.key].name.toLowerCase()) + ' (' + Math.round(100 * x.p) + ' %)'; }).join(' ou ') + '.</div>';
+      } else fiche = '<div class="fiche muted">📋 Sans préparation, tu ne sais pas ce qu’il va répondre.</div>';
+      var mult = 1 + D.DEBATE.prep * ((cfg.prep || {})[me] || 0);
+      var html = tvSet(cfg.kicker + ' · question ' + (k + 1) + ' / ' + n, iv, cfg.host, 'debat') + vsStrip(o) + fiche +
+        '<div class="ans-k">Ta réponse</div><div class="ans-list">' + iv.cards.map(function (c, i) {
+          return '<button type="button" class="ans" data-i="' + i + '">' + answerCard(c, '<b class="ans-pt">' + String(E.audScore(scaleG(c.gains, mult))).replace('.', ',') + ' pts</b>') +
+            '<small class="ans-c">' + counterHint(c) + '</small></button>';
         }).join('') + '</div>';
-      modal({ kicker: grand ? 'Grand débat final' : 'Débat télévisé', title: 'Que réponds-tu ?', html: h, buttons: [],
+      modal({ kicker: cfg.kicker, title: 'Que réponds-tu ?', cls: 'tv-modal', html: html, buttons: [],
         onOpen: function () {
-          Array.prototype.forEach.call(document.querySelectorAll('.pick-row'), function (row) {
-            row.addEventListener('click', function () {
-              var my = row.getAttribute('data-r'), their = AI.chooseReply(g, o, d.theme, me);
-              picks[i] = d.a === me ? { ra: my, rb: their } : { ra: their, rb: my };
-              var r = E.duelResult(g, d, picks[i].ra, picks[i].rb);
-              var mp = d.a === me ? r.pa : r.pb, op = d.a === me ? r.pb : r.pa, mn = d.a === me ? r.na : r.nb, on = d.a === me ? r.nb : r.na;
-              var verdict = mp > op ? 'Manche gagnée !' : mp < op ? 'Manche perdue…' : 'Match nul';
-              var rh = '<div class="duel"><div class="duel-side"><span class="duel-face">' + A.portrait(me) + '</span><span class="duel-who">Toi</span><span class="duel-r">' + D.REPLIES[my].icon + '</span><b>' + D.REPLIES[my].name + '</b><span class="duel-pts">+' + mp + '</span>' + (mn.length ? '<small>' + esc(mn.join(', ')) + '</small>' : '') + '</div>' +
-                '<div class="duel-vs">VS</div><div class="duel-side"><span class="duel-face">' + A.portrait(o) + '</span><span class="duel-who">' + esc(party(o).short) + '</span><span class="duel-r">' + D.REPLIES[their].icon + '</span><b>' + D.REPLIES[their].name + '</b><span class="duel-pts">+' + op + '</span>' + (on.length ? '<small>' + esc(on.join(', ')) + '</small>' : '') + '</div></div>';
+          Array.prototype.forEach.call(document.querySelectorAll('#modal .ans'), function (b) {
+            b.addEventListener('click', function () {
+              var my = iv.cards[+b.getAttribute('data-i')].key, their = AI.chooseReply(g, o, d.theme, me, d);
+              picks[k] = mineA ? { ra: my, rb: their } : { ra: their, rb: my };
+              var r = E.duelOutcome(g, d, picks[k].ra, picks[k].rb, (cfg.prep || {})[d.a] || 0, (cfg.prep || {})[d.b] || 0);
+              var mc = mineA ? r.ca : r.cb, oc = mineA ? r.cb : r.ca, ms = mineA ? r.sa : r.sb, os = mineA ? r.sb : r.sa;
+              var iBeat = r.beat === (mineA ? 'a' : 'b'), oBeat = r.beat && !iBeat;
+              var side = function (who, c, s, beat, lost) {
+                return '<div class="duel-card' + (beat ? ' won' : lost ? ' lost' : '') + '"><div class="dc-h"><span class="dc-who">' + who + '</span><span>' + c.icon + ' ' + esc(c.name) + '</span><b>' + String(s).replace('.', ',') + ' pts</b></div><q class="ans-q">' + esc(c.quote) + '</q></div>';
+              };
+              var verdict = ms > os ? 'Question gagnée !' : ms < os ? 'Question perdue…' : 'Match nul';
+              var rh = side('Toi', mc, ms, iBeat, oBeat) + (r.line ? '<div class="dc-line">' + (iBeat ? '💥 Ta réponse contre la sienne' : '💥 Sa réponse contre la tienne') + ' : ' + esc(r.line) + '</div>' : '') +
+                side(esc(party(o).short), oc, os, oBeat, iBeat) + undecided(ms, os, o);
               closeModal();
-              modal({ kicker: 'Question ' + (k + 1) + ' / 3', title: verdict, html: rh,
-                buttons: [{ label: k < 2 ? 'Question suivante' : 'Les résultats', primary: true, onClick: function () { if (k < 2) round(k + 1); else finish(); } }] });
+              modal({ kicker: cfg.kicker + ' · question ' + (k + 1) + ' / ' + n, title: verdict, cls: 'tv-modal', html: rh,
+                onOpen: function () { setTimeout(function () { var u = document.querySelector('#modal .u-me'); if (u) u.style.width = u.getAttribute('data-w') + '%'; }, 60); },
+                buttons: [{ label: k < n - 1 ? 'Question suivante' : 'Le verdict', primary: true, onClick: function () { step(k + 1); } }] });
             });
           });
         } });
     }
-    function finish() {
-      g.players.forEach(function (p) { if (!p.human) prep[p.id] = AI.prep(g, p.id); });
-      deb.duels.forEach(function (d, i) { if (!picks[i]) picks[i] = { ra: AI.chooseReply(g, d.a, d.theme, d.b), rb: AI.chooseReply(g, d.b, d.theme, d.a) }; });
+    step(0);
+  }
+  function scaleG(gains, f) { var o = {}; E.SEG.forEach(function (s) { o[s] = Math.round((gains[s] || 0) * f * 10) / 10; }); return o; }
+
+  function debate() {
+    var deb = E.setupDebate(g), grand = g.turn === R.maxTurns;
+    var mine = deb.duels.filter(function (d) { return d.a === me || d.b === me; });
+    var max = Math.min(mePl().infl, R.debatePrepMax), mult = grand ? 2 : 1;
+    var html = '<p>' + mine.length + ' questions, ' + mine.length + ' adversaires. À chaque question, tu choisis ta réponse ; certaines contrent les autres :</p>' +
+      '<div class="rps">❤️ émotion bat 📊 chiffres · 📊 bat 🥊 attaque · 🥊 bat ❤️ · 🥊 et 📊 démontent une 🎲 promesse</div>' +
+      '<div class="brief">' + mine.map(function (d) {
+        var o = d.a === me ? d.b : d.a;
+        return line(th(d.theme).icon, '<b>' + esc(party(o).short) + '</b> sur ' + esc(th(d.theme).name) + ' <span class="muted">· ' + D.TEMPERS[o].label + '</span>');
+      }).join('') + '</div>' +
+      '<p><b>Préparation</b> : chaque ★ = +' + Math.round(D.DEBATE.prep * 100) + ' % sur tes réponses, et la fiche de ton adversaire (sa réponse favorite).</p>' +
+      '<div class="bid"><input id="bid" type="range" min="0" max="' + max + '" value="' + Math.min(1, max) + '" aria-label="Préparation en influence"><output id="bid-out">' + Math.min(1, max) + ' ★</output></div>' +
+      '<p class="hint">Chaque réponse te fait gagner des électeurs dans des classes sociales, partout en France. Le vainqueur de la soirée gagne en plus <b>+' + String(D.DEBATE.winBonus * mult).replace('.', ',') + '</b> d’audience dans toutes les classes.' + (grand ? ' <b>Grand débat final : bonus doublé !</b>' : '') + '</p>' + learnBox('debat');
+    var prep = {};
+    g.players.forEach(function (p) { if (!p.human) prep[p.id] = AI.prep(g, p.id); });
+    modal({ kicker: grand ? 'Grand débat final' : 'Débat télévisé', title: 'Ce soir, sur le plateau !', html: html,
+      onOpen: function () { var r = $('bid'); r.addEventListener('input', function () { $('bid-out').textContent = r.value + ' ★'; }); },
+      buttons: [{ label: 'Entrer sur le plateau', primary: true, keep: true, onClick: function () {
+        prep[me] = parseInt($('bid').value, 10) || 0; closeModal();
+        runDuels({ kicker: grand ? 'Grand débat final' : 'Débat télévisé', host: 'Les deux journalistes du débat', duels: mine, prep: prep, fiche: prep[me] > 0, done: function (myPicks) {
+          var picks = deb.duels.map(function (d) {
+            var j = mine.indexOf(d); if (j >= 0) return myPicks[j];
+            return { ra: AI.chooseReply(g, d.a, d.theme, d.b, d), rb: AI.chooseReply(g, d.b, d.theme, d.a, d) };
+          });
+          finish(picks);
+        } });
+      } }] });
+
+    function finish(picks) {
       var res = E.resolveDebate(g, prep, picks); render();
-      var h = '<div class="brief">' + res.ranking.map(function (x, n) {
-        return line(n === 0 && res.winner ? '🏆' : (n + 1) + '.', chip(x.pid) + (x.pid === me ? '<b>Toi</b>' : esc(party(x.pid).short)) + ' — <b>' + x.score + ' pts</b>' + (x.prep ? ' <span class="muted">(dont ' + x.prep + ' de préparation)</span>' : ''));
+      var h = '<div class="brief">' + res.ranking.slice(0, 6).map(function (x, n) {
+        return line(n === 0 && res.winner ? '🏆' : (n + 1) + '.', chip(x.pid) + (x.pid === me ? '<b>Toi</b>' : esc(party(x.pid).short)) + ' — <b>' + String(x.score).replace('.', ',') + ' pts</b>' + (x.prep ? ' <span class="muted">(' + x.prep + ' ★ de préparation)</span>' : ''));
       }).join('') + '</div>';
-      res.rewards.forEach(function (w) { h += '<p>' + chip(w.pid) + ' +' + w.each + ' soutien' + (w.each > 1 ? 's' : '') + ' en ' + w.regions.map(function (x) { return SHORT[x]; }).join(', ') + '</p>'; });
-      if (res.bingo) h += '<p>📀 ' + chip('FI') + ' <b>BINGO en direct</b> (« ' + res.bingo.words.map(esc).join(' », « ') + ' ») : les militants s\u2019enflamment' + (res.bingo.regions.length ? ', +1 en ' + res.bingo.regions.map(function (x) { return SHORT[x]; }).join(', ') : '') + '. Les indécis, eux, zappent.</p>';
+      var myRank = 1 + res.ranking.findIndex(function (x) { return x.pid === me; });
+      if (myRank > 6) h += '<p>Toi : ' + ordinal(myRank) + '.</p>';
+      res.rewards.forEach(function (w) { h += '<p>' + chip(w.pid) + ' +' + String(w.bonus).replace('.', ',') + ' d’audience dans toutes les classes sociales</p>'; });
+      var cas = res.duels.filter(function (o) { return (o.a === me && o.casA) || (o.b === me && o.casB); }).length;
+      if (cas) h += '<p>🍳 Ta promesse improvisée a été épinglée : +' + cas + ' casserole' + (cas > 1 ? 's' : '') + '.</p>';
+      if (res.bingo) h += '<p>📀 ' + chip('FI') + ' <b>BINGO en direct</b> (« ' + res.bingo.words.map(esc).join(' », « ') + ' ») : les militants s’enflamment' + (res.bingo.regions.length ? ', +1 en ' + res.bingo.regions.map(function (x) { return SHORT[x]; }).join(', ') : '') + '. Les indécis, eux, zappent.</p>';
+      h += '<p class="hint">Tes gains par classe sociale sont dans l’onglet Sondage.</p>';
       modal({ kicker: 'Débat', title: !res.winner ? 'Égalité en tête' : res.winner === me ? 'Tu remportes le débat !' : party(res.winner).short + ' remporte le débat', html: h,
               buttons: [{ label: 'Fin du tour', primary: true, onClick: spotlight }] });
     }
+  }
+  /* v4.0 : le grand face-à-face d'entre-deux-tours (si tu es finaliste) */
+  function faceAFace(then) {
+    var b = g.between, fc = b.face || E.setupFace(g), o = b.a === me ? b.b : b.a;
+    var html = '<p>Le grand débat d’entre-deux-tours, la tradition depuis 1974. Trois questions face à <b>' + esc(party(o).candidate) + '</b>.</p>' +
+      '<div class="rps">❤️ émotion bat 📊 chiffres · 📊 bat 🥊 attaque · 🥊 bat ❤️ · 🥊 et 📊 démontent une 🎲 promesse</div>' +
+      '<div class="brief">' + fc.duels.map(function (d) { return line(th(d.theme).icon, esc(th(d.theme).name)); }).join('') + '</div>' +
+      '<p class="hint">Le gagnant fait basculer jusqu’à ' + Math.round(D.DEBATE.faceMax * 100) + ' % des électeurs du perdant. Quelques points qui peuvent tout changer.</p>' + learnBox('debat');
+    modal({ kicker: 'Entre-deux-tours', title: 'Le grand face-à-face', html: html, buttons: [{ label: 'Entrer sur le plateau', primary: true, onClick: function () {
+      runDuels({ kicker: 'Le face-à-face', host: 'Les deux journalistes du grand débat', duels: fc.duels, prep: {}, fiche: true, done: function (picks) {
+        var r = E.resolveFace(g, picks), mine = b.a === me ? r.sa : r.sb, his = b.a === me ? r.sb : r.sa;
+        var won = r.winner === me;
+        modal({ kicker: 'Le face-à-face', title: !r.winner ? 'Match nul' : won ? 'Tu remportes le grand débat !' : party(o).short + ' remporte le grand débat',
+          html: undecided(mine, his, o) + '<p>' + (r.winner ? (won ? 'Les indécis basculent vers toi' : 'Les indécis basculent vers ' + esc(party(o).short)) + ' : <b>' + (100 * Math.abs(r.swing)).toFixed(1).replace('.', ',') + ' %</b> des électeurs changent d’avis pour le second tour.' : 'Personne ne fait la différence.') + '</p>',
+          onOpen: function () { setTimeout(function () { var u = document.querySelector('#modal .u-me'); if (u) u.style.width = u.getAttribute('data-w') + '%'; }, 60); },
+          buttons: [{ label: 'Aller voter', primary: true, onClick: then }] });
+      } });
+    } }] });
   }
 
   function spotlight() {
@@ -2104,7 +2160,14 @@
   }
   $('btw-go').addEventListener('click', function () {
     var b = g.between, isFin = me === b.a || me === b.b;
-    function go2() { E.closeBetween(g); electionNight(); }
+    function go2() {
+      // v4.0 : le grand débat d'entre-deux-tours (joué par toi si tu es finaliste, sinon par l'ordinateur)
+      if (isFin && !g.between.debate) return faceAFace(function () { E.closeBetween(g); electionNight(); });
+      E.closeBetween(g);
+      var fd = g.between && g.between.debate;
+      if (!isFin && fd) return modal({ kicker: 'Entre-deux-tours', title: 'Le grand débat', html: '<p>' + (fd.winner ? esc(party(fd.winner).short) + ' remporte le face-à-face : ' + (100 * Math.abs(fd.swing)).toFixed(1).replace('.', ',') + ' % des électeurs changent d\u2019avis.' : 'Match nul au grand débat.') + '</p>', buttons: [{ label: 'La soirée électorale', primary: true, onClick: electionNight }] });
+      electionNight();
+    }
     if (isFin && b.left[me] > 0) modal({ title: 'Il te reste ' + b.left[me] + ' action' + (b.left[me] > 1 ? 's' : ''), html: '<p>Les actions non utilisées sont perdues.</p>', buttons: [{ label: 'Aller voter', primary: true, onClick: go2 }, { label: 'Retour' }] });
     else go2();
   });
@@ -2367,7 +2430,8 @@
       '<p><b>💥 Les affaires.</b> Chaque casserole 🍳 donne 12 % de risque d\'affaire par tour. Le Canard Déchaîné en sort aussi de temps en temps, et un rival peut <b>🔎 enquêter</b> sur toi. Quand une affaire tombe, tu choisis ta réaction : nier, t\'excuser, sacrifier un collaborateur ou accuser les médias.</p>' +
       '<p><b>🤔 Les dilemmes.</b> Chaque tour, un parti (à tour de rôle) doit faire un choix. Certains choix ont des <b>conséquences différées</b> qui peuvent ressortir quelques tours plus tard.</p>' +
       '<p><b>Les crises.</b> Chaque partie connaît une crise en 3 actes (krach, grève, été brûlant, désindustrialisation). Les régions touchées sont marquées sur la carte : leur thème y compte comme à la une.</p>' +
-      '<p><b>🎙️ Le débat télévisé</b> (tours 3, 6 et 8) : chaque parti affronte 3 adversaires tirés au sort, une question chacun. Choisis ta réplique : 🥊 Attaque bat ❤️ Émotion, ❤️ Émotion bat 📊 Chiffres, 📊 Chiffres bat 🥊 Attaque, 🙃 Esquive = nul. Manche gagnée 2 points, nulle 1. Bonus : 🥊 +1 si le rival a des casseroles, 📊 +1 sur ton point fort (−1 si ce n\'est pas ton sujet), ❤️ +1 si le thème fait l\'actu. Chaque ★ de préparation (3 au plus) = +1 point. Le 1er gagne +1 soutien dans 4 régions, le 2e dans 2 régions (doublé au débat final). Chaque parti a son tempérament : observe-le !</p>' +
+      '<p><b>🎙️ Le débat télévisé</b> (tours 3, 6 et 8) : chaque parti affronte 3 adversaires, une vraie question de journaliste à chaque fois. Tu choisis ta réponse (❤️ émotion, 💡 ta mesure ou 🛡️ le bilan, 🥊 attaque, 🙃 recentrer). Certaines contrent les autres : ❤️ bat 📊 chiffres (mesure, bilan), 📊 bat 🥊 attaque, 🥊 bat ❤️, et 🥊 comme 📊 démontent une 🎲 promesse improvisée. La réponse qui contre gagne 30 %, celle qui est contrée perd la moitié. Les points = l\u2019audience gagnée dans les classes sociales, et elle compte vraiment dans toute la France. Chaque ★ de préparation (3 au plus) = +15 % et la fiche de ton adversaire. Le vainqueur gagne en plus +0,8 d\u2019audience dans toutes les classes (doublé au débat final).</p>' +
+      '<p><b>🎙️ Le face-à-face</b> (entre les deux tours) : 3 questions entre les deux finalistes. Le gagnant fait basculer jusqu\u2019à 3 % des électeurs de l\u2019autre pour le second tour.</p>' +
       '<p><b>⚖️ Mode Réaliste : le poids des urnes.</b> Chaque soutien pèse selon le score historique de son parti dans la région : un soutien du parti en tête de la région compte beaucoup, celui d\u2019un petit parti beaucoup moins. Et la moitié des électeurs vote par fidélité (le <b>socle électoral</b>) : la campagne se joue sur l\u2019autre moitié. Résultat : les petits partis ont du mal à dépasser leur score historique, et chaque région garde sa couleur (terre de gauche, de droite ou disputée, dans la fiche de la région). En mode Simulation, tout le monde pèse pareil.</p>' +
       '<p><b>Sous les projecteurs :</b> le premier des sondages paie 2 ★ ou perd des soutiens à chaque fin de tour.</p>' +
       '<p><b>🎭 Les traits satiriques.</b> Huit partis vivent un gag qui se joue de l\u2019intérieur, avec un avantage et un coût : ' + Object.keys(D.TRAITS).map(function (k) { var t = D.TRAITS[k]; return t.icon + ' <b>' + esc(t.name) + '</b> (' + t.parties.map(function (p) { return esc(party(p).short); }).join(', ') + ')'; }).join(' · ') + '. Le détail est dans l\u2019onglet de ton parti, et les actions propres à ton parti dans le menu « Plus ».</p>' });

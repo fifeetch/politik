@@ -561,5 +561,42 @@ section('Matinales radio et 20 h (v3.9)');
   p2.vingtUsed = 1; ok(!!E.vingtError(g2, rk[0]), 'une seule fois par campagne');
 })();
 
+section('Le nouveau débat et le face-à-face (v4.0)');
+(function () {
+  var AI = require('../js/ai.js');
+  var g = E.createGame('SM', { seed: 101 }); E.startTurn(g); g.turn = 3;
+  var deb = E.setupDebate(g);
+  ok(deb.duels.every(function (d) { return D.QUESTIONS.some(function (q) { return q.id === d.qid && q.theme === d.theme; }); }), 'chaque duel a une vraie question sur son thème');
+  ok(E.debateCounter('emotion', 'mesure').winner === 'a' && E.debateCounter('bilan', 'attaque').winner === 'a' && E.debateCounter('attaque', 'emotion').winner === 'a' && E.debateCounter('attaque', 'promesse').winner === 'a', 'les contres : émotion > chiffres > attaque > émotion, et la promesse se fait démonter');
+  ok(E.debateCounter('recentrer', 'attaque').winner === null, 'recentrer : ni contre, ni contrée');
+  var d = deb.duels[0], o1 = E.duelOutcome(g, d, 'emotion', 'mesure', 0, 0), o0 = E.duelOutcome(g, d, 'emotion', 'recentrer', 0, 0);
+  ok(o1.beat === 'a' && o1.sa > o0.sa, 'contrer l\'adversaire rapporte plus de points');
+  var o2 = E.duelOutcome(g, d, 'emotion', 'recentrer', 3, 0);
+  ok(o2.sa > o0.sa * 1.3, 'la préparation (★) augmente les points');
+  var infl0 = {}; g.players.forEach(function (p) { infl0[p.id] = p.infl; });
+  var aud0 = E.classPoll(g);
+  var res = E.resolveDebate(g, { SM: 1 }, deb.duels.map(function (x) { return { ra: AI.chooseReply(g, x.a, x.theme, x.b, x), rb: AI.chooseReply(g, x.b, x.theme, x.a, x) }; }));
+  ok(res.ranking.length === g.players.length && res.winner && E.player(g, res.winner).debateWins === 1, 'un vainqueur de la soirée (' + res.winner + ')');
+  ok(E.player(g, 'SM').infl === infl0.SM - 1, 'la préparation coûte ses ★');
+  ok(g.audOn && E.audOf(g, res.winner, 'pop') > 0, 'le débat fait gagner de l\'audience (classes sociales)');
+  var res2 = E.resolveDebate(Object.assign(g, { debate: E.setupDebate(g) }), {}, g.debate.duels.map(function () { return { ra: 'chiffres', rb: 'esquive' }; }));
+  ok(res2.duels.length > 0 && res2.duels[0].kb === 'recentrer', 'les anciens noms de répliques marchent encore (tests, sauvegardes)');
+  // face-à-face
+  var gf = E.createGame(null, { seed: 31, aiParties: D.PARTIES.map(function (p) { return p.id; }) });
+  while (!gf.between && !gf.over) { E.startTurn(gf); var pl = {}; gf.players.forEach(function (p) { pl[p.id] = AI.plan(gf, p.id); }); E.resolveActions(gf, pl); if (E.isDebateTurn(gf)) { var db = E.setupDebate(gf); E.resolveDebate(gf, {}, db.duels.map(function (x) { return { ra: AI.chooseReply(gf, x.a, x.theme, x.b, x), rb: AI.chooseReply(gf, x.b, x.theme, x.a, x) }; })); } E.endTurn(gf); }
+  if (gf.between) {
+    var fc = E.setupFace(gf);
+    ok(fc.duels.length === 3 && fc.duels.every(function (x) { return x.a === gf.between.a && x.b === gf.between.b; }), 'face-à-face : 3 questions entre les deux finalistes');
+    var before = E.projectSecond(gf).pctA;
+    var fr = E.resolveFace(gf, fc.duels.map(function () { return { ra: 'emotion', rb: 'mesure' }; }));
+    ok(fr.winner === gf.between.a && fr.swing > 0 && fr.swing <= D.DEBATE.faceMax, 'le vainqueur du face-à-face fait basculer des voix (' + (100 * fr.swing).toFixed(1) + ' %)');
+    ok(E.projectSecond(gf).pctA > before, 'le second tour en tient compte');
+    var gf2 = E.loadGame(E.saveGame(gf)); ok(gf2.between.debate && gf2.between.debate.swing === fr.swing, 'le face-à-face est gardé dans la sauvegarde');
+  } else ok(true, 'face-à-face : élu dès le 1er tour, pas de second tour');
+  var gf3 = E.createGame(null, { seed: 32, aiParties: D.PARTIES.map(function (p) { return p.id; }) });
+  while (!gf3.between && !gf3.over) { E.startTurn(gf3); var pl3 = {}; gf3.players.forEach(function (p) { pl3[p.id] = AI.plan(gf3, p.id); }); E.resolveActions(gf3, pl3); if (E.isDebateTurn(gf3)) { var db3 = E.setupDebate(gf3); E.resolveDebate(gf3, {}, db3.duels.map(function (x) { return { ra: 'emotion', rb: 'bilan' }; })); } E.endTurn(gf3); }
+  if (gf3.between) { E.autoBetween(gf3); ok(gf3.between.debate && gf3.over, 'entre deux ordinateurs, le face-à-face se joue tout seul'); }
+})();
+
 console.log('\n' + passes + ' vérifications réussies, ' + fails + ' en échec.');
 process.exit(fails ? 1 : 0);

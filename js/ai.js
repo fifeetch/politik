@@ -215,19 +215,10 @@
     var want = g.turn === D.RULES.maxTurns ? 3 : pl.infl >= 6 ? 2 : pl.infl >= 3 ? 1 : 0;
     return Math.min(max, want);
   }
-  function chooseReply(g, pid, theme, opp) {
-    var w = Object.assign({}, D.TEMPERS[pid].w);
-    var c = E.cred(g, pid, theme);
-    if (c === 2) w.chiffres += 3; if (c === 0) w.chiffres = Math.max(0, w.chiffres - 2);
-    if (E.isHot(g, theme)) w.emotion += 2;
-    if (E.player(g, opp).cas > 0) w.attaque += 2;
-    var keys = Object.keys(w), sum = 0; keys.forEach(function (k) { sum += w[k]; });
-    var r = g.rng() * sum;
-    var pick = 'esquive';
-    for (var i = 0; i < keys.length; i++) { r -= w[keys[i]]; if (r <= 0) { pick = keys[i]; break; } }
-    // v3.1 : La France Indignée ressort souvent son disque rayé
-    if (pid === 'FI' && pick === 'emotion' && !E.isHot(g, theme) && g.rng() < 0.6) pick = 'disque';
-    return pick;
+  /* v4.0 : la carte de réponse choisie en débat (d : le duel, avec sa question ; sinon une question sur le thème) */
+  function chooseReply(g, pid, theme, opp, d) {
+    var duel = d && d.qid ? d : { a: pid, b: opp, theme: theme, qid: E.pickQuestion(g, theme, 31).id };
+    return E.aiDebatePick(g, pid, duel);
   }
   function payspotlight(g, pid) { return E.player(g, pid).infl >= 4; }
 

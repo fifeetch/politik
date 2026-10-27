@@ -385,7 +385,7 @@
     sondages: { title: 'Les sondages', text: 'Un sondage interroge environ mille personnes : il a une marge d\'erreur de 2 à 3 points. Leur publication est interdite la veille et le jour du vote.' , src: [{label: "Obligations de publication des sondages (Commission des sondages)", url: "https://www.commission-des-sondages.fr/oblig/obligations.htm"}] },
     vingt_heures: { title: 'Pourquoi 20h ?', text: 'Aucun résultat ne peut être publié avant la fermeture des derniers bureaux de vote, à 20h dans les grandes villes. Les « estimations » sont calculées à partir des premiers bulletins dépouillés.' , src: [{label: "Interdiction de diffusion des résultats avant la clôture (Commission des sondages)", url: "https://www.commission-des-sondages.fr/hist/communiques/portee-interdiction-publication-diffusion-sondages-resultats-mars07.htm"}] },
     temps_parole: { title: 'Le temps de parole', text: 'Pendant la campagne, une autorité indépendante (l\'Arcom) veille à ce que les médias audiovisuels donnent la parole à tous les candidats de façon équitable, puis égale à l\'approche du vote.' , src: [{label: "Protéger le pluralisme politique (Arcom)", url: "https://www.arcom.fr/nous-connaitre-nos-missions/garantir-le-pluralisme-et-la-cohesion-sociale/proteger-le-pluralisme-politique"}] },
-    debat: { title: 'Le débat télévisé', text: 'Le débat d\'entre-deux-tours entre les deux finalistes est une tradition depuis 1974. Une phrase bien placée peut marquer toute une campagne.' , src: [{label: "Les règles de temps de parole de l'entre-deux-tours (Arcom)", url: "https://www.arcom.fr/actualites/presidentielle-2022-les-regles-de-temps-de-parole-de-lentre-deux-tours"}] },
+    debat: { title: 'Le débat télévisé', text: 'Le débat d\'entre-deux-tours entre les deux finalistes est une tradition depuis 1974. Une phrase bien placée peut marquer toute une campagne : « Vous n\'avez pas le monopole du cœur », lancé par Valéry Giscard d\'Estaing à François Mitterrand en 1974, est restée célèbre.' , src: [{label: "Les règles de temps de parole de l'entre-deux-tours (Arcom)", url: "https://www.arcom.fr/actualites/presidentielle-2022-les-regles-de-temps-de-parole-de-lentre-deux-tours"}] },
     art49_3: { title: 'Le 49.3', text: 'L\'article 49 alinéa 3 de la Constitution permet au gouvernement de faire adopter un texte sans vote des députés… sauf si ceux-ci votent une motion de censure, qui renverse alors le gouvernement. Son usage est limité depuis 2008.' , src: [{label: "Fiche n° 64 : la responsabilité du Gouvernement (Assemblée nationale)", url: "https://www.assemblee-nationale.fr/dyn/contenu/telechargement/629167/file/Fiche%2064%20-%20Responsabilit%C3%A9%20du%20Gouvernement_actualis%C3%A9e061224.pdf"}, {label: "Constitution, article 49 (Conseil constitutionnel)", url: "https://www.conseil-constitutionnel.fr/le-bloc-de-constitutionnalite/texte-integral-de-la-constitution-du-4-octobre-1958-en-vigueur"}] },
     censure: { title: 'La motion de censure', text: 'Les députés peuvent renverser le gouvernement en votant une motion de censure. Il faut la majorité absolue des députés, soit 289 voix.' , src: [{label: "Fiche n° 64 : la responsabilité du Gouvernement (Assemblée nationale)", url: "https://www.assemblee-nationale.fr/dyn/contenu/telechargement/629167/file/Fiche%2064%20-%20Responsabilit%C3%A9%20du%20Gouvernement_actualis%C3%A9e061224.pdf"}] },
     referendum: { title: 'Le référendum', text: 'Le président peut soumettre un projet de loi directement aux citoyens (article 11 de la Constitution), mais seulement sur certains sujets : organisation des pouvoirs publics, politique économique, sociale ou environnementale.' , src: [{label: "Constitution, article 11 (Conseil constitutionnel)", url: "https://www.conseil-constitutionnel.fr/le-bloc-de-constitutionnalite/texte-integral-de-la-constitution-du-4-octobre-1958-en-vigueur"}] },
@@ -944,7 +944,24 @@
     promesse:  { name: 'Promesse improvisée', icon: '🎲' },
     attaque:   { name: 'Attaquer le bilan',  icon: '🥊' },
     bilan:     { name: 'Défendre le bilan',  icon: '🛡️' },
-    recentrer: { name: 'Recentrer',          icon: '🙃' }
+    recentrer: { name: 'Recentrer',          icon: '🙃' },
+    disque:    { name: 'Comme je le disais déjà…', icon: '📀' }
+  };
+  /* v4.0 : le débat. Chaque réponse a un registre ; certains registres en contrent d'autres (avec la phrase qui va avec). */
+  var DEB_REG = { emotion: 'emotion', disque: 'emotion', mesure: 'chiffres', bilan: 'chiffres', attaque: 'attaque', promesse: 'promesse', recentrer: 'esquive' };
+  var DEB_BEATS = {
+    'emotion>chiffres':  '« Vous parlez de chiffres, je parle de gens. »',
+    'chiffres>attaque':  'Fact-check en direct : les chiffres démontent l\u2019attaque.',
+    'attaque>emotion':   '« Vous n\u2019avez pas le monopole du cœur. » (Giscard à Mitterrand, 1974)',
+    'attaque>promesse':  '« Et vous la financez comment, votre promesse ? »',
+    'chiffres>promesse': '« Votre promesse ne tient pas : les chiffres sont têtus. »'
+  };
+  var DEB_REG_NAME = { emotion: '❤️ émotion', chiffres: '📊 chiffres (mesure, bilan)', attaque: '🥊 attaque', promesse: '🎲 promesse', esquive: '🙃 recentrer' };
+  var DEBATE = {
+    win: 1.3, lose: 0.5,     // la réponse qui contre l'autre gagne 30 % ; celle qui est contrée perd la moitié
+    prep: 0.15,              // chaque ★ de préparation : +15 % sur tes réponses (et tu lis la fiche de l'adversaire)
+    winBonus: 0.8,           // le vainqueur de la soirée : +0,8 d'audience dans toutes les classes (×2 au grand débat final)
+    faceSwing: 0.1, faceMax: 0.03   // face-à-face : l'écart de points déplace jusqu'à 3 % des voix du perdant vers le gagnant
   };
   /* Les questions des journalistes. segs = qui se sent concerné (1 = normal). emo / atk / def : la réponse type.
      emoD : variante de l'émotion pour la droite (thèmes où gauche et droite ne parlent pas aux mêmes peurs). */
@@ -1171,7 +1188,7 @@
 
   var DATA = { REFERENCE_2027: REFERENCE_2027, POLLS: POLLS, BASES: BASES, REGIONS: REGIONS, PROFILES: PROFILES, THEMES: THEMES, HEADLINES: HEADLINES, PARTIES: PARTIES, ACTIONS: ACTIONS,
                CARDS: CARDS, EVENTS: EVENTS, DILEMMAS: DILEMMAS, CRISES: CRISES, REPLIES: REPLIES, TEMPERS: TEMPERS, TRAITS: TRAITS, NOSTALGIA: NOSTALGIA, PETALS: PETALS, MICRO: MICRO, BINGO: BINGO, BINGO_LINES: BINGO_LINES,
-               MEASURES: MEASURES, FUNDING: FUNDING, SEGMENTS: SEGMENTS, VOTE_PROP: VOTE_PROP, CLASS_PROF: CLASS_PROF, CLASS_SRC: CLASS_SRC, HEART: HEART, MAJORITY: MAJORITY, MEDIA: MEDIA, ANSWERS: ANSWERS, STATIONS: STATIONS, STATION_FIT: STATION_FIT, VINGT: VINGT, QUESTIONS: QUESTIONS, SEGMENTS_SRC: SEGMENTS_SRC, AFFAIRS: AFFAIRS, LEARN: LEARN, BUDGET_AFFAIR: BUDGET_AFFAIR, REACTIONS: REACTIONS, ADVISOR: ADVISOR, OBJECTIVES: OBJECTIVES, RULES: RULES, FORMATS: FORMATS, LEGIS: LEGIS, MINISTRY: MINISTRY, OPPO: OPPO, validate: validate };
+               MEASURES: MEASURES, FUNDING: FUNDING, SEGMENTS: SEGMENTS, VOTE_PROP: VOTE_PROP, CLASS_PROF: CLASS_PROF, CLASS_SRC: CLASS_SRC, HEART: HEART, MAJORITY: MAJORITY, MEDIA: MEDIA, ANSWERS: ANSWERS, STATIONS: STATIONS, DEB_REG: DEB_REG, DEB_BEATS: DEB_BEATS, DEB_REG_NAME: DEB_REG_NAME, DEBATE: DEBATE, STATION_FIT: STATION_FIT, VINGT: VINGT, QUESTIONS: QUESTIONS, SEGMENTS_SRC: SEGMENTS_SRC, AFFAIRS: AFFAIRS, LEARN: LEARN, BUDGET_AFFAIR: BUDGET_AFFAIR, REACTIONS: REACTIONS, ADVISOR: ADVISOR, OBJECTIVES: OBJECTIVES, RULES: RULES, FORMATS: FORMATS, LEGIS: LEGIS, MINISTRY: MINISTRY, OPPO: OPPO, validate: validate };
   if (typeof module !== 'undefined' && module.exports) module.exports = DATA;
   else root.PolitikData = DATA;
 })(this);

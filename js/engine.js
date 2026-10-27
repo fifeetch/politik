@@ -119,14 +119,19 @@
     return x;
   }
   /* La même chose, avec l'audience de chacun appliquée groupe par groupe */
-  /* La couverture médiatique suit (en partie) le poids du parti : temps de parole équitable, pas égal (règles de l'Arcom).
-     Un parti à 1/n des voix (n partis) reçoit l'effet plein ; un petit parti moins, un gros un peu plus. */
-  function airtime(sh, p, n) { return Math.max(0.4, Math.min(1.4, Math.sqrt(Math.max(1e-6, sh[p]) * n))); }
   function withMedia(g, x, ids, sh) {
     var y = {}, n = ids.length;
     // additif : 1 point d'audience = environ +k point de vote dans ce groupe, quelle que soit la taille du parti
     // (multiplier aurait avantagé les gros partis). Une audience négative ne fait pas tomber sous 20 % de sa base.
-    ids.forEach(function (p) { y[p] = {}; SEG.forEach(function (s) { y[p][s] = Math.max(x[p][s] * 0.2, x[p][s] + D.MEDIA.k * audOf(g, p, s) * airtime(sh, p, n)); }); });
+    // v4.0 : l'audience est relative. Ce qui compte, c'est d'être plus (ou moins) vu que les autres auprès d'un groupe :
+    // si tout le monde passe autant à la télé, rien ne bouge. L'effet est plus fort, en proportion, pour un petit parti
+    // (élasticité e), mais en voix gagnées un gros parti profite un peu plus d'une même audience (temps de parole équitable).
+    SEG.forEach(function (s) {
+      var e = {}, se = 0, sa = 0;
+      ids.forEach(function (p) { e[p] = Math.max(0.3, Math.min(6, Math.pow(1 / (n * Math.max(1e-4, x[p][s])), 0.75))); se += x[p][s] * e[p]; sa += x[p][s] * e[p] * audOf(g, p, s); });
+      var abar = se ? sa / se : 0;
+      ids.forEach(function (p) { y[p] = y[p] || {}; y[p][s] = Math.max(x[p][s] * 0.2, x[p][s] * (1 + D.MEDIA.k * n * (audOf(g, p, s) - abar) * e[p])); });
+    });
     SEG.forEach(function (s) { var c = 0; ids.forEach(function (p) { c += y[p][s]; }); ids.forEach(function (p) { y[p][s] /= c; }); });
     return y;
   }
@@ -195,9 +200,8 @@
   function quickGain(g, pid, gains) {
     if (!g._cp || g._cpTurn !== g.turn) { g._cp = classPoll(g); g._cpTurn = g.turn; }
     var d = 0;
-    var pm = 0; SEG.forEach(function (s) { pm += NATSEGW[s] * (g._cp[s][pid] || 0); });
-    var at = airtime({ p: pm }, 'p', g.players.length);
-    SEG.forEach(function (s) { var x = g._cp[s][pid] || 0; d += NATSEGW[s] * D.MEDIA.k * at * (gains[s] || 0) * (1 - x); });
+    var n = g.players.length;
+    SEG.forEach(function (s) { var x = Math.max(1e-4, g._cp[s][pid] || 0), e = Math.max(0.3, Math.min(6, Math.pow(1 / (n * x), 0.75))); d += NATSEGW[s] * D.MEDIA.k * n * x * e * (1 - x) * (gains[s] || 0); });
     return d;
   }
   /* ---------- v3.8 : les interviews (Télé, Matinale, 20h, Débat) ---------- */
@@ -1438,7 +1442,7 @@
         var a = ids[i], b = ids[n - 1 - i];
         if (!a || !b) continue;
         var th = g.rng() < 0.5 && g.hot && g.hot.length ? g.hot[0] : D.THEMES[Math.floor(g.rng() * D.THEMES.length)].id;
-        duels.push({ a: a, b: b, theme: th });
+        duels.push({ a: a, b: b, theme: th, qid: pickQuestion(g, th, duels.length + 31).id });   // v4.0 : une vraie question par duel
       }
       ids.splice(1, 0, ids.pop());   // rotation : le premier reste en place, les autres tournent
     }
@@ -1465,39 +1469,117 @@
     var x = replyPoints(g, d.a, ra, d.b, rb, d.theme), y = replyPoints(g, d.b, rb, d.a, ra, d.theme);
     return { a: d.a, b: d.b, theme: d.theme, ra: ra, rb: rb, pa: x.pts, pb: y.pts, na: x.notes, nb: y.notes };
   }
-  /* prep : { pid: ★ dépensées } · picks : pour chaque duel { ra, rb } */
+  /* ---------- v4.0 : le débat télévisé, refait ----------
+     Chaque duel : une vraie question, les cartes de réponse de chacun (comme une interview), puis les contres.
+     Les points = l'audience gagnée (pondérée par le poids de chaque classe dans le pays). L'audience gagnée compte
+     vraiment : elle s'ajoute à celle de la campagne, dans toutes les régions. */
+  function lowerFirst(s) { return s.charAt(0).toLowerCase() + s.slice(1); }
+  function debateCards(g, pid, qid) {
+    var iv = interview(g, pid, qid, 'debat');
+    if (pid === 'FI' && g.bingo) {
+      var e0 = iv.cards[0];
+      iv.cards.push(Object.assign({}, e0, { key: 'disque', name: D.ANSWERS.disque.name, icon: D.ANSWERS.disque.icon,
+        quote: 'Comme je le disais déjà en 2017, en 2022 et en 2027 : ' + lowerFirst(e0.quote), notes: ['coche 2 mots du bingo'] }));
+    }
+    return iv;
+  }
+  function cardIn(iv, key) {
+    var m = { chiffres: ['mesure', 'bilan', 'promesse'], esquive: ['recentrer'], disque: ['disque', 'emotion'] }[key] || [key];   // anciens noms de répliques
+    for (var i = 0; i < m.length; i++) { var c = iv.cards.filter(function (x) { return x.key === m[i]; })[0]; if (c) return c; }
+    return iv.cards[0];
+  }
+  function debateCounter(ka, kb) {
+    var ra = D.DEB_REG[ka], rb = D.DEB_REG[kb];
+    if (D.DEB_BEATS[ra + '>' + rb]) return { winner: 'a', line: D.DEB_BEATS[ra + '>' + rb] };
+    if (D.DEB_BEATS[rb + '>' + ra]) return { winner: 'b', line: D.DEB_BEATS[rb + '>' + ra] };
+    return { winner: null, line: '' };
+  }
+  function scaleGains(gains, f) { var o = {}; SEG.forEach(function (s) { o[s] = Math.round((gains[s] || 0) * f * 10) / 10; }); return o; }
+  function audScore(gains) { var s = 0; SEG.forEach(function (k) { s += NATSEGW[k] * (gains[k] || 0); }); return Math.round(s * 100) / 10; }
+  /* Le résultat d'un duel (sans rien appliquer) */
+  function duelOutcome(g, d, ka, kb, prepA, prepB) {
+    var ca = cardIn(debateCards(g, d.a, d.qid), ka), cb = cardIn(debateCards(g, d.b, d.qid), kb), ct = debateCounter(ca.key, cb.key), DB = D.DEBATE;
+    var fa = (1 + DB.prep * (prepA || 0)) * (ct.winner === 'a' ? DB.win : ct.winner === 'b' ? DB.lose : 1);
+    var fb = (1 + DB.prep * (prepB || 0)) * (ct.winner === 'b' ? DB.win : ct.winner === 'a' ? DB.lose : 1);
+    var ga = scaleGains(ca.gains, fa), gb = scaleGains(cb.gains, fb), sa = audScore(ga), sb = audScore(gb);
+    return { a: d.a, b: d.b, qid: d.qid, theme: d.theme, ka: ca.key, kb: cb.key, ca: ca, cb: cb, ga: ga, gb: gb, sa: sa, sb: sb,
+             beat: ct.winner, line: ct.line, winner: sa > sb ? d.a : sb > sa ? d.b : null };
+  }
+  /* prep : { pid: ★ dépensées } · picks : pour chaque duel { ra, rb } (les clés des cartes choisies) */
   function resolveDebate(g, prep, picks) {
-    var tot = {}, duels = [];
+    var tot = {}, prepSpent = {}, duels = [], bingoDeb = null;
     g.players.forEach(function (p) {
       var b = Math.max(0, Math.min(p.infl, R.debatePrepMax, Math.floor((prep || {})[p.id] || 0)));
-      p.infl -= b; tot[p.id] = b;
+      p.infl -= b; prepSpent[p.id] = b; tot[p.id] = 0;
     });
-    var prepSpent = Object.assign({}, tot);
-    var bingoDeb = null;
     g.debate.duels.forEach(function (d, i) {
-      var r = duelResult(g, d, picks[i].ra, picks[i].rb);
-      tot[d.a] += r.pa; tot[d.b] += r.pb; duels.push(r);
-      if (g.bingo && ((d.a === 'FI' && picks[i].ra === 'disque') || (d.b === 'FI' && picks[i].rb === 'disque'))) bingoDeb = tickBingo(g, d.theme, 2) || bingoDeb;
+      var o = duelOutcome(g, d, picks[i].ra, picks[i].rb, prepSpent[d.a], prepSpent[d.b]);
+      var xa = applyInterview(g, d.a, { gains: o.ga, risk: o.ca.risk }), xb = applyInterview(g, d.b, { gains: o.gb, risk: o.cb.risk });
+      o.casA = xa.cas; o.casB = xb.cas;
+      tot[d.a] += o.sa; tot[d.b] += o.sb; duels.push(o);
+      if (g.bingo && ((d.a === 'FI' && o.ka === 'disque') || (d.b === 'FI' && o.kb === 'disque'))) bingoDeb = tickBingo(g, d.theme, 2) || bingoDeb;
     });
-    var list = g.players.map(function (p) { return { pid: p.id, score: tot[p.id], prep: prepSpent[p.id] }; })
+    var list = g.players.map(function (p) { return { pid: p.id, score: Math.round(tot[p.id] * 10) / 10, prep: prepSpent[p.id] }; })
       .sort(function (a, b) { return b.score - a.score; });
     var mult = g.turn === R.maxTurns ? 2 : 1;
     var res = { ranking: list, duels: duels, rewards: [], grand: mult === 2, bingo: bingoDeb };
-    function reward(pid, n) {
-      var regs = bestRegions(g, pid, n, null, 1);
-      regs.forEach(function (rid) { addCubes(g, rid, pid, mult); });
-      res.rewards.push({ pid: pid, regions: regs, each: mult });
+    function reward(pid, k) {
+      var gains = {}; SEG.forEach(function (s) { gains[s] = D.DEBATE.winBonus * k * mult; });
+      addAudience(g, pid, gains); res.rewards.push({ pid: pid, bonus: D.DEBATE.winBonus * k * mult });
     }
     var top = list[0].score, firsts = list.filter(function (x) { return x.score === top; });
     if (firsts.length === 1) {
-      player(g, firsts[0].pid).debateWins += 1; res.winner = firsts[0].pid; reward(firsts[0].pid, 4);
+      player(g, firsts[0].pid).debateWins += 1; res.winner = firsts[0].pid; reward(firsts[0].pid, 1);
       var second = list[1].score;
-      list.filter(function (x) { return x.score === second; }).forEach(function (x) { reward(x.pid, 2); });
-    } else firsts.forEach(function (x) { reward(x.pid, 2); });
+      list.filter(function (x) { return x.score === second; }).forEach(function (x) { reward(x.pid, 0.5); });
+    } else firsts.forEach(function (x) { reward(x.pid, 0.5); });
     g.debate = null;
     updateAllControl(g);
     g.phase = 'spotlight';
     return res;
+  }
+  /* Le choix de l'ordinateur en débat : son tempérament, pondéré par ce que chaque réponse rapporte */
+  function debateWeights(g, pid, d) {
+    var iv = debateCards(g, pid, d.qid), tw = (D.TEMPERS[pid] || { w: {} }).w, opp = d.a === pid ? d.b : d.a, out = [], sum = 0;
+    iv.cards.forEach(function (c) {
+      if (c.key === 'disque') return;   // le disque rayé remplace l'émotion (voir plus bas)
+      var reg = D.DEB_REG[c.key], base = (tw[reg === 'promesse' ? 'chiffres' : reg] || 1) * (reg === 'promesse' ? 0.6 : 1);
+      if (reg === 'attaque' && player(g, opp) && player(g, opp).cas > 0) base *= 1.5;
+      var w = base * (0.4 + Math.max(0, quickGain(g, pid, c.gains) * 100));
+      out.push({ key: c.key, w: w }); sum += w;
+    });
+    out.forEach(function (x) { x.p = sum ? x.w / sum : 0; });
+    return out.sort(function (a, b) { return b.p - a.p; });
+  }
+  function aiDebatePick(g, pid, d) {
+    var ws = debateWeights(g, pid, d), r = g.rng(), k = ws[ws.length - 1].key;
+    for (var i = 0; i < ws.length; i++) { r -= ws[i].p; if (r <= 0) { k = ws[i].key; break; } }
+    if (pid === 'FI' && k === 'emotion' && !isHot(g, d.theme) && g.bingo && g.rng() < 0.6) k = 'disque';
+    return k;
+  }
+  /* ---------- v4.0 : le face-à-face d'entre-deux-tours ---------- */
+  function setupFace(g) {
+    var b = g.between, ths = [];
+    function add(t) { if (t && ths.indexOf(t) < 0) ths.push(t); }
+    add((g.hot || [])[0]); add(bestTheme(g, b.a, null)); add(bestTheme(g, b.b, null));
+    D.THEMES.forEach(function (t) { if (ths.length < 3) add(t.id); });
+    b.face = { duels: ths.slice(0, 3).map(function (t, i) { return { a: b.a, b: b.b, theme: t, qid: pickQuestion(g, t, 50 + i).id }; }) };
+    return b.face;
+  }
+  /* picks : [{ ra, rb }] · le perdant cède une part de ses voix au gagnant au second tour */
+  function resolveFace(g, picks) {
+    var b = g.between; if (!b.face) setupFace(g);
+    var SA = 0, SB = 0, duels = b.face.duels.map(function (d, i) {
+      var o = duelOutcome(g, d, picks[i].ra, picks[i].rb, 0, 0);
+      if (o.ca.risk && g.rng() < o.ca.risk) { player(g, d.a).cas += 1; o.casA = true; }
+      if (o.cb.risk && g.rng() < o.cb.risk) { player(g, d.b).cas += 1; o.casB = true; }
+      SA += o.sa; SB += o.sb; return o;
+    });
+    var margin = (SA + SB) > 0 ? (SA - SB) / (SA + SB) : 0;
+    var swing = Math.max(-D.DEBATE.faceMax, Math.min(D.DEBATE.faceMax, margin * D.DEBATE.faceSwing));
+    b.debate = { duels: duels, sa: Math.round(SA * 10) / 10, sb: Math.round(SB * 10) / 10, swing: swing, winner: swing > 0 ? b.a : swing < 0 ? b.b : null };
+    b.log.push({ type: 'face', text: b.debate.winner ? PARTY[b.debate.winner].short + ' remporte le grand débat (' + (100 * Math.abs(swing)).toFixed(1).replace('.', ',') + ' % des voix basculent).' : 'Match nul au grand débat.' });
+    return b.debate;
   }
 
   /* ---------- Sous les projecteurs + fin de tour ---------- */
@@ -1748,6 +1830,12 @@
     });
     var mobA = b.boost[A].mob * R2.mobilize * T1, mobB = b.boost[B].mob * R2.mobilize * T1;
     va += mobA; vb += mobB;
+    // v4.0 : le grand débat d'entre-deux-tours déplace des voix du perdant vers le gagnant
+    if (b.debate && b.debate.swing) {
+      var sw = Math.abs(b.debate.swing) * T1;
+      if (b.debate.swing > 0) { sw = Math.min(sw, vb * 0.5); va += sw; vb -= sw; } else { sw = Math.min(sw, va * 0.5); vb += sw; va -= sw; }
+      notes.push({ pid: b.debate.winner, text: 'a remporté le grand débat : ' + (100 * Math.abs(b.debate.swing)).toFixed(1).replace('.', ',') + ' % des électeurs ont changé d’avis' });
+    }
     var transfers = b.elim.map(function (e) {
       var t = transfersFor(g, e, expected), ve = votesOf(g, e);
       va += ve * t.toA; vb += ve * t.toB; blankV += ve * t.blank; abstV += ve * t.abst;
@@ -1773,6 +1861,7 @@
     for (var k = 0; k < R2.actions * 2; k++) [b.a, b.b].forEach(function (f) { if (!player(g, f).human) aiBetweenStep(g, f); });
     b.offers = []; b.counter = null;
     b.elim.forEach(function (e) { if (!b.consignes[e]) b.consignes[e] = player(g, e).human ? 'none' : aiConsigne(g, b, e); });
+    if (!b.debate) { var fc = b.face || setupFace(g); resolveFace(g, fc.duels.map(function (d) { return { ra: aiDebatePick(g, d.a, d), rb: aiDebatePick(g, d.b, d) }; })); }   // v4.0
     b.closed = true;
     var r1 = g.round1, second = secondCalc(g, false);
     g.result = { first: r1.first, stats1: r1.stats1, direct: false, second: second, othersTransfer: second.othersTransfer, deals: b.deals, winner: second.pctA >= second.pctB ? b.a : b.b };
@@ -1817,7 +1906,7 @@
   }
 
   var API = {
-    createGame: createGame, startTurn: startTurn, resolveActions: resolveActions, resolveDebate: resolveDebate, setupDebate: setupDebate, duelResult: duelResult, replyPoints: replyPoints,
+    createGame: createGame, startTurn: startTurn, resolveActions: resolveActions, resolveDebate: resolveDebate, setupDebate: setupDebate, debateCards: debateCards, duelOutcome: duelOutcome, debateCounter: debateCounter, aiDebatePick: aiDebatePick, debateWeights: debateWeights, setupFace: setupFace, resolveFace: resolveFace, audScore: audScore, duelResult: duelResult, replyPoints: replyPoints,
     isDebateTurn: isDebateTurn, spotlightTarget: spotlightTarget, applySpotlight: applySpotlight, endTurn: endTurn,
     finalScores: finalScores, firstRound: firstRound, openBetween: openBetween, betweenAct: betweenAct, betweenError: betweenError, answerCounter: answerCounter, answerBetweenOffer: answerBetweenOffer, setConsigne: setConsigne, concessionsFor: concessionsFor, dealChance: dealChance, aiBetweenStep: aiBetweenStep, aiConsigne: aiConsigne, transfersFor: transfersFor, projectSecond: projectSecond, closeBetween: closeBetween, autoBetween: autoBetween, objectiveMet: objectiveMet, objectiveProgress: objectiveProgress, objectiveShare: objectiveShare, terrainBreakdown: terrainBreakdown, turnOrder: turnOrder, election: election, poll: poll, votes: votes,
     dist: dist, fundsGain: fundsGain, allyOf: allyOf, allianceError: allianceError, answerOffer: answerOffer, acceptChance: acceptChance,
