@@ -896,22 +896,11 @@
     text: 'Le mode Réaliste, avec les nouvelles règles à tester.',
     rules: {
       incumbentBonus: 1,   // pas de prime au sortant : tenir une région ne donne plus +25 % de voix cachées
-      socle: 0.15,         // socle figé : 15 % du vote reste fidèle aux scores historiques (50 % en Réaliste)
-      terrainCubes: [1, 1, 2, 3, 4, 5]   // v4.3 : un impact 5 est possible pour un petit parti sur son sujet
+      socle: 0.3           // socle figé : 30 % du vote reste fidèle aux scores historiques (50 % en Réaliste)
     },
-    /* v4.2 : l'élan de l'outsider (tous les partis). Les soutiens gagnés pendant la campagne pèsent poids + (1 − poids) × k
-       (un petit parti n'est plus écrasé par son poids historique) ; en interview, +k au plus pour un parti parti de très bas (sous ref %). */
-    elan: { k: 0.35, ref: 15, small: 5, kSmall: 0.7 },   // sous 5 % au départ, l'élan monte jusqu'à 0,7
-    /* v4.2 : le coup de pouce du joueur, plus fort s'il part bas : 1 + bonus × (1 − départ ÷ 33 %) */
-    player: { bonus: 0 },
-    /* v4.3 : les petits partis font foi sur leur sujet de prédilection : +1 d'impact sur ce thème, +50 % en interview */
-    fief: { VP: 'ecologie', PC: 'emploi', LO: 'emploi', RQ: 'immigration', DL: 'pouvoir' },
-    fiefImpact: 1, fiefMedia: 1.5,
     changes: [
       'Pas de prime au sortant : tenir une région ne donne plus de voix en plus.',
-      'Socle figé à 15 % (au lieu de 50 %) : beaucoup plus de voix bougent pendant la campagne.',
-      'Élan de l\u2019outsider : plus un parti part bas, plus ses nouveaux soutiens et ses passages médias comptent.',
-      'Les petits partis font foi sur leur sujet : Enracinés sur l\u2019écologie, PCF et Lutte Obstinée sur l\u2019emploi, Rétroconquête sur l\u2019immigration, Debout La Flemme sur le pouvoir d\u2019achat (+1 d\u2019impact, +50 % en interview).'
+      'Socle figé à 30 % (au lieu de 50 %) : plus de voix bougent pendant la campagne.'
     ]
   };
 
