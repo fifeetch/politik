@@ -528,7 +528,7 @@
   /* Actions de base. cost = { money, infl } ; target : 'region' | 'party' | null ; theme : l'action porte un message (thème) */
   var ACTIONS = {
     terrain:  { name: 'Meeting',        icon: '📣', cost: { money: 2, infl: 0, forme: 1 }, target: 'region', theme: true, text: 'Autant de soutiens que l\'impact du message (1 à 4)' },
-    medias:   { name: 'Télé',           icon: '📺', cost: { money: 3, infl: 1, forme: 1 }, target: 'region', theme: true, text: 'Le message passe dans cette région et les 2 autres les plus concernées par le thème' },
+    medias:   { name: 'Télé',           icon: '📺', cost: { money: 3, infl: 1, forme: 1 }, target: null, theme: true, text: 'Une interview sur ton thème : gagne des classes sociales dans toute la France (v3.8)' },
     reseaux:  { name: 'Buzz',           icon: '📱', cost: { money: 1, infl: 0 }, target: 'region', theme: true, text: 'Un dé : de −1 à +4 soutiens, +1 si le thème fait l\'actu' },
     contre:   { name: 'Attaquer',       icon: '🥊', cost: { money: 2, infl: 1 }, target: 'region', text: '−2 soutiens au rival le plus fort de la région (il faut y avoir 1 soutien)' },
     fonds:    { name: 'Collecte',       icon: '💰', cost: { money: 0, infl: 0 }, target: null,     text: '+3 €' },
@@ -886,6 +886,155 @@
     dissolveIfPop: 45                      // gouvernement renversé : le président dissout s'il est à 45 % ou plus (et si c'est permis), sinon il nomme un nouveau Premier ministre
   };
 
+  /* ---------- v3.8 : les médias et les classes sociales ----------
+     Le terrain (Meeting, Mobiliser…) gagne des soutiens dans UNE région. Les médias (Télé, Matinale, 20h, Débat)
+     gagnent de l'audience auprès d'une CLASSE SOCIALE, partout en France à la fois. */
+
+  /* Profil social de départ de chaque parti : son score dans chaque groupe ÷ son score d'ensemble.
+     Source : Ipsos, sondage jour du vote des européennes 2024 (8 923 inscrits, 6-7 juin 2024), tableau « selon la profession ».
+     Employés et ouvriers = moyenne des deux lignes. Étudiants et sans emploi = moyenne « au chômage » et « 18-24 ans ».
+     Indépendants : pas de ligne dans l'enquête, profil neutre (1). RE, MoDem et Horizons = la liste commune (Hayer).
+     LO et DLF = la colonne « une autre liste ». */
+  var CLASS_PROF = {
+    FI: { cad: 1.21, pi: 1.01, pop: 1.26, ret: 0.40, sae: 2.58, ind: 1 },
+    PC: { cad: 0.83, pi: 0.83, pop: 0.83, ret: 1.25, sae: 1.04, ind: 1 },
+    VP: { cad: 1.45, pi: 1.64, pop: 1.09, ret: 0.55, sae: 1.64, ind: 1 },
+    SM: { cad: 1.45, pi: 1.09, pop: 0.65, ret: 1.16, sae: 0.51, ind: 1 },
+    EM: { cad: 0.96, pi: 0.82, pop: 0.38, ret: 1.51, sae: 0.45, ind: 1 },
+    MD: { cad: 0.96, pi: 0.82, pop: 0.38, ret: 1.51, sae: 0.45, ind: 1 },
+    HZ: { cad: 0.96, pi: 0.82, pop: 0.38, ret: 1.51, sae: 0.45, ind: 1 },
+    UG: { cad: 1.25, pi: 0.83, pop: 0.42, ret: 1.39, sae: 0.76, ind: 1 },
+    MN: { cad: 0.64, pi: 0.92, pop: 1.47, ret: 0.92, sae: 0.92, ind: 1 },
+    RQ: { cad: 0.91, pi: 0.91, pop: 0.91, ret: 1.09, sae: 1.00, ind: 1 },
+    LO: { cad: 1.03, pi: 1.24, pop: 1.13, ret: 0.72, sae: 0.98, ind: 1 },
+    DL: { cad: 1.03, pi: 1.24, pop: 1.13, ret: 0.72, sae: 0.98, ind: 1 }
+  };
+  var CLASS_SRC = { label: 'Ipsos — Européennes 2024, sociologie des électorats (vote selon la profession)', url: 'https://www.ipsos.com/fr-fr/europeennes-2024/sociologie-des-electorats-2024' };
+  /* Ce qui touche chaque groupe : la part du ❤️ cœur (le reste, c'est la 🧠 tête). Les cadres veulent des preuves, les ouvriers qu'on les comprenne. */
+  var HEART = { pop: 0.7, sae: 0.65, ind: 0.45, pi: 0.5, ret: 0.4, cad: 0.25 };
+  /* Le « bloc central » au pouvoir : il ne peut pas attaquer le bilan du gouvernement, il le défend */
+  var MAJORITY = ['EM', 'MD', 'HZ'];
+  var MEDIA = {
+    k: 0.012,         // 1 point d'audience = environ +1,2 point de vote dans ce groupe
+    keep: 0.85,       // l'audience s'use : elle garde 85 % de sa force à chaque tour
+    min: -5, max: 8,
+    scale: { tele: 0.5, matinale: 0.35, vingt: 1, debat: 0.7 },
+    gaffePromise: 0.3 // promesse improvisée : 30 % de risque de casserole
+  };
+  /* Les types de réponse */
+  var ANSWERS = {
+    emotion:   { name: 'Émotion',            icon: '❤️' },
+    mesure:    { name: 'Ma mesure',          icon: '💡' },
+    promesse:  { name: 'Promesse improvisée', icon: '🎲' },
+    attaque:   { name: 'Attaquer le bilan',  icon: '🥊' },
+    bilan:     { name: 'Défendre le bilan',  icon: '🛡️' },
+    recentrer: { name: 'Recentrer',          icon: '🙃' }
+  };
+  /* Les questions des journalistes. segs = qui se sent concerné (1 = normal). emo / atk / def : la réponse type.
+     emoD : variante de l'émotion pour la droite (thèmes où gauche et droite ne parlent pas aux mêmes peurs). */
+  var QUESTIONS = [
+    { id: 'p_caddie', theme: 'pouvoir', ask: 'Les ménages modestes doivent choisir entre faire le plein et remplir leur caddie. Que leur répondez-vous ?',
+      segs: { pop: 1.5, sae: 1.3, ret: 0.9, pi: 0.8, ind: 0.7, cad: 0.4 },
+      emo: 'Je pense à cette aide-soignante qui saute un repas pour pouvoir payer l’essence et aller travailler.',
+      atk: 'Les prix ont flambé et le gouvernement a regardé ailleurs pendant des mois.',
+      def: 'Nous avons bloqué les prix de l’énergie avec le bouclier tarifaire : sans lui, les factures auraient explosé.' },
+    { id: 'p_loyer', theme: 'pouvoir', ask: 'Beaucoup de jeunes actifs laissent plus d’un tiers de leur salaire dans leur loyer. Comment les aider ?',
+      segs: { sae: 1.6, pop: 1.2, pi: 1.1, cad: 0.7, ind: 0.6, ret: 0.4 },
+      emo: 'J’ai rencontré une infirmière qui dort dans sa voiture deux nuits par semaine, faute de logement près de l’hôpital.',
+      atk: 'On construit de moins en moins de logements, et le gouvernement n’a aucun plan.',
+      def: 'Nous avons simplifié les permis de construire et lancé des logements pour les classes moyennes.' },
+    { id: 'p_pension', theme: 'pouvoir', ask: 'Beaucoup de retraités vivent avec moins de 1 000 € par mois. Que faites-vous pour eux ?',
+      segs: { ret: 1.8, pop: 0.9, ind: 0.8, pi: 0.6, sae: 0.4, cad: 0.4 },
+      emo: 'Une dame de 78 ans m’a dit : « J’ai travaillé quarante ans, et je choisis entre le chauffage et le médecin. »',
+      atk: 'Les retraités ont payé la facture de ce gouvernement : pensions rabotées, médicaments plus chers.',
+      def: 'Nous avons revalorisé les pensions face à l’inflation et relevé les petites retraites.' },
+
+    { id: 'e_usine', theme: 'emploi', ask: 'Une usine de 800 salariés va fermer. Que dites-vous aux ouvriers ce soir ?',
+      segs: { pop: 1.7, ind: 0.9, sae: 1.0, pi: 0.9, ret: 0.6, cad: 0.6 },
+      emo: 'Derrière 800 emplois, il y a 800 familles, une école qui perd des classes, un café qui baisse le rideau.',
+      atk: 'Le gouvernement a laissé partir nos usines en jurant que le marché ferait le reste.',
+      def: 'Le chômage a nettement baissé et des usines rouvrent : la réindustrialisation a commencé.' },
+    { id: 'e_jeunes', theme: 'emploi', ask: 'Près d’un jeune actif sur cinq est au chômage. Que lui proposez-vous ?',
+      segs: { sae: 1.8, pop: 1.0, pi: 0.8, ind: 0.7, cad: 0.6, ret: 0.3 },
+      emo: 'J’ai vu un jeune envoyer 200 CV sans une seule réponse. À 22 ans, il se sent déjà de trop.',
+      atk: 'Le gouvernement a supprimé des aides, et les jeunes enchaînent les petits boulots.',
+      def: 'L’apprentissage n’a jamais aussi bien marché : plus de 800 000 contrats par an.' },
+    { id: 'e_patrons', theme: 'emploi', ask: 'Les artisans et les petits patrons disent crouler sous les charges et la paperasse. Que leur répondez-vous ?',
+      segs: { ind: 1.9, cad: 1.0, pi: 0.7, pop: 0.6, ret: 0.5, sae: 0.4 },
+      emo: 'Un boulanger m’a montré sa pile de formulaires : il passe ses dimanches à remplir des papiers au lieu de vivre.',
+      atk: 'Le gouvernement promet chaque année de simplifier. Chaque année, il y a plus de formulaires.',
+      def: 'Nous avons baissé les impôts de production et supprimé des formalités.' },
+
+    { id: 's_medecin', theme: 'services', ask: 'Dans certains villages, il faut six mois pour voir un médecin. Que proposez-vous ?',
+      segs: { ret: 1.5, pop: 1.1, ind: 1.0, pi: 0.9, sae: 0.8, cad: 0.6 },
+      emo: 'Un agriculteur m’a raconté avoir fait 80 km avec une fracture parce qu’il n’y avait plus personne près de chez lui.',
+      atk: 'Les déserts médicaux s’étendent et le gouvernement ferme les yeux.',
+      def: 'Nous avons supprimé le numerus clausus : il y aura bien plus de médecins formés.' },
+    { id: 's_ecole', theme: 'services', ask: 'Des milliers de classes n’ont pas de professeur à la rentrée. Comment réparer l’école ?',
+      segs: { pi: 1.7, cad: 1.1, pop: 0.9, sae: 0.9, ind: 0.6, ret: 0.5 },
+      emo: 'Une maman m’a dit que son fils n’avait pas eu de cours de maths depuis Noël.',
+      atk: 'Les profs sont épuisés, mal payés, et le gouvernement leur fait la leçon.',
+      def: 'Nous avons porté le salaire des professeurs débutants à plus de 2 000 € net par mois.' },
+    { id: 's_urgences', theme: 'services', ask: 'Des urgences ferment la nuit faute de soignants. Que faites-vous ?',
+      segs: { pi: 1.3, ret: 1.3, pop: 1.0, sae: 0.8, cad: 0.7, ind: 0.7 },
+      emo: 'Une infirmière m’a dit qu’elle pleurait dans sa voiture avant chaque garde de nuit.',
+      atk: 'On ferme des lits pendant que les patients attendent sur des brancards.',
+      def: 'Nous avons augmenté les salaires des soignants avec le Ségur de la santé.' },
+
+    { id: 'ec_chaleur', theme: 'ecologie', ask: 'Les étés sont de plus en plus brûlants. Que faites-vous, concrètement, pour le climat ?',
+      segs: { cad: 1.4, pi: 1.3, sae: 1.3, ret: 0.7, pop: 0.6, ind: 0.6 },
+      emo: 'Cet été, des enfants ont eu cours à 38 °C dans des classes sans volets. Ce sont eux qui vivront ce climat.',
+      atk: 'Le gouvernement fait de beaux discours au sommet et recule dès qu’il faut agir.',
+      def: 'Nos émissions de gaz à effet de serre baissent plus vite qu’avant : on tient le cap.' },
+    { id: 'ec_voiture', theme: 'ecologie', ask: 'À la campagne, sans voiture on ne peut rien faire. Comment rendre l’écologie juste pour ces gens-là ?',
+      segs: { pop: 1.3, ind: 1.2, ret: 1.0, pi: 0.9, sae: 0.8, cad: 0.5 },
+      emo: 'On ne peut pas demander à une caissière qui fait 50 km par jour d’acheter une voiture électrique à 35 000 €.',
+      atk: 'Le gouvernement fait payer l’écologie aux plus modestes et épargne les plus gros pollueurs.',
+      def: 'Nous avons lancé la voiture électrique en location à 100 € par mois pour les ménages modestes.' },
+    { id: 'ec_agri', theme: 'ecologie', ask: 'Les agriculteurs disent que les normes écologiques les étranglent. Que leur répondez-vous ?',
+      segs: { ind: 1.8, ret: 1.0, pop: 0.8, pi: 0.7, cad: 0.7, sae: 0.5 },
+      emo: 'Un éleveur gagne moins que le Smic en travaillant 70 heures par semaine. Il nourrit la France, il mérite mieux.',
+      atk: 'Le gouvernement a empilé les normes sans jamais protéger les prix agricoles.',
+      def: 'Nous avons simplifié les règles et fait voter les lois Égalim pour mieux payer les agriculteurs.' },
+
+    { id: 'se_quartier', theme: 'securite', ask: 'Dans certains quartiers, des habitants n’osent plus sortir le soir. Que leur répondez-vous ?',
+      segs: { ret: 1.3, pop: 1.3, ind: 1.0, pi: 0.8, sae: 0.8, cad: 0.6 },
+      emo: 'Les premières victimes de l’insécurité, ce sont les habitants des quartiers populaires, pas les beaux quartiers.',
+      emoD: 'Une retraitée m’a dit qu’elle ne sortait plus faire ses courses après 17 heures. En France, en 2027 !',
+      atk: 'Le gouvernement promet de l’ordre à chaque fait divers. Rien ne change dans les quartiers.',
+      def: 'Nous avons recruté des milliers de policiers et de gendarmes supplémentaires.' },
+    { id: 'se_drogue', theme: 'securite', ask: 'Le trafic de drogue gagne les villes moyennes. Comment l’arrêter ?',
+      segs: { ret: 1.2, pop: 1.2, pi: 1.0, ind: 0.9, cad: 0.8, sae: 0.8 },
+      emo: 'Des enfants de 13 ans servent de guetteurs pour 50 € la journée. On est en train de perdre une génération.',
+      emoD: 'Des points de deal s’installent au pied des écoles. Les parents ont peur, et ils ont raison.',
+      atk: 'Les opérations « coup de poing » font des images, mais les trafics reviennent dès le lendemain.',
+      def: 'Nous avons créé un parquet national contre le crime organisé et renforcé les saisies sur les biens des trafiquants.' },
+    { id: 'se_justice', theme: 'securite', ask: 'Les victimes trouvent la justice trop lente. Comment la rendre plus rapide ?',
+      segs: { ret: 1.2, ind: 1.1, cad: 1.0, pi: 1.0, pop: 1.0, sae: 0.7 },
+      emo: 'Une femme battue a attendu deux ans son procès. Deux ans à croiser son agresseur dans la rue.',
+      atk: 'Les tribunaux manquent de tout et le gouvernement s’en lave les mains.',
+      def: 'Le budget de la justice a augmenté chaque année et nous recrutons des magistrats.' },
+
+    { id: 'im_accueil', theme: 'immigration', ask: 'Faut-il accueillir moins d’étrangers en France, ou les accueillir mieux ?',
+      segs: { ret: 1.2, pop: 1.2, ind: 1.0, cad: 0.9, pi: 0.9, sae: 0.8 },
+      emo: 'Derrière les chiffres, il y a des familles qui fuient la guerre. On peut être ferme et rester humain.',
+      emoD: 'Beaucoup de Français ont le sentiment qu’on ne leur demande jamais leur avis. Ils veulent qu’on les écoute enfin.',
+      atk: 'Loi après loi, le gouvernement promet de régler la question. Personne n’y croit plus.',
+      def: 'Notre loi immigration a durci les expulsions et facilité l’intégration par le travail.' },
+    { id: 'im_travail', theme: 'immigration', ask: 'Le bâtiment et la restauration manquent de bras. Faut-il régulariser les travailleurs sans papiers ?',
+      segs: { ind: 1.4, pop: 1.1, cad: 1.0, pi: 0.9, ret: 0.9, sae: 0.8 },
+      emo: 'Ils construisent nos maisons et font la plonge dans nos restaurants. Ils paient des cotisations sans aucun droit.',
+      emoD: 'Avant de faire venir des bras d’ailleurs, pensons aux millions de Français qui cherchent un emploi.',
+      atk: 'Le gouvernement dit tout et son contraire : un jour la fermeté, le lendemain les régularisations.',
+      def: 'Nous avons créé un titre de séjour pour les métiers en tension, au cas par cas.' },
+    { id: 'im_integration', theme: 'immigration', ask: 'Comment réussir l’intégration de ceux qui s’installent en France ?',
+      segs: { pi: 1.2, cad: 1.1, ret: 1.0, pop: 1.0, sae: 0.9, ind: 0.8 },
+      emo: 'J’ai rencontré une femme arrivée sans un mot de français : elle est aujourd’hui aide-soignante. L’intégration, ça marche quand on s’en donne les moyens.',
+      emoD: 'S’intégrer, c’est aimer la France, parler sa langue et respecter ses règles. C’est le minimum.',
+      atk: 'Les cours de français manquent, les dossiers traînent : le gouvernement a tout laissé filer.',
+      def: 'Nous avons rendu obligatoire un niveau de français pour les titres de séjour longs.' }
+  ];
+
   /* ---------- v0.6 : le débat télévisé ----------
      Chaque parti affronte chacun des autres sur une question (un thème).
      Attaque bat Émotion, Émotion bat Chiffres, Chiffres bat Attaque. Esquive = match nul.
@@ -1006,7 +1155,7 @@
 
   var DATA = { REFERENCE_2027: REFERENCE_2027, POLLS: POLLS, BASES: BASES, REGIONS: REGIONS, PROFILES: PROFILES, THEMES: THEMES, HEADLINES: HEADLINES, PARTIES: PARTIES, ACTIONS: ACTIONS,
                CARDS: CARDS, EVENTS: EVENTS, DILEMMAS: DILEMMAS, CRISES: CRISES, REPLIES: REPLIES, TEMPERS: TEMPERS, TRAITS: TRAITS, NOSTALGIA: NOSTALGIA, PETALS: PETALS, MICRO: MICRO, BINGO: BINGO, BINGO_LINES: BINGO_LINES,
-               MEASURES: MEASURES, FUNDING: FUNDING, SEGMENTS: SEGMENTS, VOTE_PROP: VOTE_PROP, SEGMENTS_SRC: SEGMENTS_SRC, AFFAIRS: AFFAIRS, LEARN: LEARN, BUDGET_AFFAIR: BUDGET_AFFAIR, REACTIONS: REACTIONS, ADVISOR: ADVISOR, OBJECTIVES: OBJECTIVES, RULES: RULES, FORMATS: FORMATS, LEGIS: LEGIS, MINISTRY: MINISTRY, OPPO: OPPO, validate: validate };
+               MEASURES: MEASURES, FUNDING: FUNDING, SEGMENTS: SEGMENTS, VOTE_PROP: VOTE_PROP, CLASS_PROF: CLASS_PROF, CLASS_SRC: CLASS_SRC, HEART: HEART, MAJORITY: MAJORITY, MEDIA: MEDIA, ANSWERS: ANSWERS, QUESTIONS: QUESTIONS, SEGMENTS_SRC: SEGMENTS_SRC, AFFAIRS: AFFAIRS, LEARN: LEARN, BUDGET_AFFAIR: BUDGET_AFFAIR, REACTIONS: REACTIONS, ADVISOR: ADVISOR, OBJECTIVES: OBJECTIVES, RULES: RULES, FORMATS: FORMATS, LEGIS: LEGIS, MINISTRY: MINISTRY, OPPO: OPPO, validate: validate };
   if (typeof module !== 'undefined' && module.exports) module.exports = DATA;
   else root.PolitikData = DATA;
 })(this);

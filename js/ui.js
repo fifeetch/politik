@@ -931,7 +931,7 @@
     switch (act.type) {
       case 'terrain': var n = E.terrainCubes(g, me, act.region, act.theme);
         return n >= 3 ? '+' + n + ' en ' + rn + ' ? Je réserve la plus grande salle de la ville !' : 'Un meeting en ' + rn + ' : je préviens la presse locale.';
-      case 'medias': return 'Un passage télé : ça rayonne sur trois régions d\'un coup. Bien vu.';
+      case 'medias': return 'La télé, ça touche toute la France d\u2019un coup. Mais l\u2019effet s\u2019use : pense aussi au terrain.';
       case 'mobiliser': return 'Aller chercher ceux qui ne votent plus en ' + rn + ' : c\'est souvent là que tout se joue.';
       case 'reseaux': return 'Les réseaux sociaux… carton ou flop. Croisons les doigts !';
       case 'imposer': return 'Demain, tout le monde parlera de notre sujet. Malin.';
@@ -1094,6 +1094,19 @@
         '<span class="pr-bar"><i style="width:' + (100 * x.pct / max) + '%;background:' + P.color + '"></i></span><b>' + pctFr(x.pct, 1) + '</b></button></li>';
     }).join('');
     Array.prototype.forEach.call(document.querySelectorAll('[data-party]'), function (b) { b.addEventListener('click', function () { partyCard(b.getAttribute('data-party')); }); });
+    renderClassBox();
+  }
+  /* v3.8 : ton score dans chaque classe sociale (profil Ipsos 2024 + ta campagne dans les médias) */
+  function renderClassBox() {
+    var box = $('class-box'); if (!box) return;
+    var cp = E.classPoll(g), prev = g.lastClass;
+    box.innerHTML = '<div class="cls-h"><b>Ton score par classe sociale</b><small>dans toute la France</small></div>' + D.SEGMENTS.map(function (sg) {
+      var row = cp[sg.id], x = row[me] || 0, lead = Object.keys(row).sort(function (a, b) { return row[b] - row[a]; })[0];
+      var d = prev && prev[sg.id] ? x - (prev[sg.id][me] || 0) : 0, a = E.audOf(g, me, sg.id);
+      return '<div class="cls-row"><span class="cls-n">' + sg.icon + ' ' + esc(sg.name) + '</span><span class="cls-bar"><i style="width:' + Math.min(100, 100 * x / 0.6) + '%;background:' + party(me).color + '"></i></span>' +
+        '<b class="cls-pct">' + pctFr(x, 0) + ' %</b><span class="cls-d ' + (d > 0.0005 ? 'up' : d < -0.0005 ? 'down' : '') + '">' + (Math.abs(d) >= 0.0005 ? (d > 0 ? '↗' : '↘') + Math.abs(100 * d).toFixed(1).replace('.', ',') : '') + '</span>' +
+        '<small class="cls-s">' + (lead === me ? 'tu es en tête' : 'en tête : ' + esc(E.sigle(lead)) + ' ' + pctFr(row[lead], 0) + ' %') + (Math.abs(a) >= 0.1 ? ' · 📺 audience ' + (a > 0 ? '+' : '') + a.toFixed(1).replace('.', ',') : '') + '</small></div>';
+    }).join('') + '<p class="hint">Les médias (Télé, débat) font gagner des classes sociales partout en France ; le terrain gagne des régions. Point de départ : <a href="' + D.CLASS_SRC.url + '" target="_blank" rel="noopener">' + esc(D.CLASS_SRC.label) + '</a>.</p>';
   }
   /* ---------- v3.1 : les traits satiriques ---------- */
   function traitKey(pid) { return E.traitOf(pid); }
@@ -1414,7 +1427,7 @@
       if (!a && i >= E.actionsFor(g, me)) { box.appendChild(el('div', { class: 'slot slot-lock', title: 'Perdue à cause de la primaire' }, '🌹 Primaire')); continue; }
       if (!a) { box.appendChild(el('div', { class: 'slot' }, 'Action ' + (i + 1))); continue; }
       var name = a.type === 'card' ? D.CARDS[a.card].name : D.ACTIONS[a.type].name;
-      var sub = (a.theme ? th(a.theme).icon + ' ' : '') + (a.region ? SHORT[a.region] : a.target ? a.target : a.theme ? th(a.theme).short : '✕ retirer');
+      var sub = (a.reply ? D.ANSWERS[a.reply].icon + ' ' : a.theme ? th(a.theme).icon + ' ' : '') + (a.region ? SHORT[a.region] : a.target ? a.target : a.theme ? th(a.theme).short : '✕ retirer');
       var b = el('button', { class: 'slot full' + (i === justAdded ? ' flip' : ''), type: 'button', 'aria-label': 'Retirer ' + name },
         '<span class="slot-in"><span class="face front">' + esc(name) + '<small>' + sub + '</small></span><span class="face back" aria-hidden="true">★</span></span>');
       (function (idx) { b.addEventListener('click', function () { queue.splice(idx, 1); render(); }); })(i);
@@ -1443,10 +1456,7 @@
       case 'terrain':
         if (!r) return 'des soutiens dans 1 région';
         n = E.terrainCubes(g, me, r, act.theme); return '<b>+' + n + ' soutien' + (n > 1 ? 's' : '') + '</b> ici';
-      case 'medias':
-        if (!r) return 'des soutiens dans 3 régions';
-        n = 0; E.mediaRegions(g, me, r, act.theme).forEach(function (rid) { n += E.mediaCubes(g, me, rid, act.theme); });
-        return '<b>+' + n + ' soutien' + (n > 1 ? 's' : '') + '</b> · 3 régions';
+      case 'medias': return 'une interview : <b>des classes sociales</b> dans toute la France';
       case 'mobiliser':
         if (!r) return 'fais voter des abstentionnistes';
         n = E.mobilizeGain(g, me, r); return '<b>+' + n.n + ' soutien' + (n.n > 1 ? 's' : '') + '</b> · des abstentionnistes vont voter';
@@ -1508,20 +1518,55 @@
   function renderActions() {
     var box = $('actions'); box.innerHTML = '';
     MAIN.forEach(function (type) {
-      var def = D.ACTIONS[type], act = { type: type, region: selected || undefined, theme: def.theme ? theme : undefined };
-      var big = selected ? '+' + bigGain(act) : '—';
+      var def = D.ACTIONS[type], tv = type === 'medias', act = { type: type, region: tv ? undefined : selected || undefined, theme: def.theme ? (theme || (tv ? E.bestTheme(g, me, selected || null) : undefined)) : undefined };
+      var on = selected || tv;   // v3.8 : la Télé ne vise plus une région
+      var big = on ? (tv ? '+' + teleEstimate(act.theme) : '+' + bigGain(act)) : '—';
       var b = el('button', { class: 'tile', type: 'button', 'data-act': type, 'aria-label': def.name + ', ' + costLabel(act) },
         '<span class="tile-n">' + def.name + '</span><span class="tile-mid"><span class="tile-i">' + def.icon + '</span><span class="tile-big">' + big + '</span></span>' +
-        (selected && tiring(act) && !canQueue(act) ? '<span class="tile-cost tile-warn" title="Ta forme tomberait à 0 : un candidat épuisé a 4 chances sur 10 de faire une gaffe (aucun soutien, +1 casserole). Elle remonte de 2 au tour suivant, ou tout de suite avec 😴 Repos (menu Plus).">⚡ épuisé : 4/10 de gaffe</span>' : '<span class="tile-cost' + (selected && /argent|influence|épuisé/.test(canQueue(act) || '') ? ' tile-cost-no' : '') + '">' + costLabel(act, true) + '</span>'));
-      if (!selected) b.disabled = true;
+        (on && tiring(act) && !canQueue(act) ? '<span class="tile-cost tile-warn" title="Ta forme tomberait à 0 : un candidat épuisé a 4 chances sur 10 de faire une gaffe (aucun soutien, +1 casserole). Elle remonte de 2 au tour suivant, ou tout de suite avec 😴 Repos (menu Plus).">⚡ épuisé : 4/10 de gaffe</span>' : '<span class="tile-cost' + (on && /argent|influence|épuisé/.test(canQueue(act) || '') ? ' tile-cost-no' : '') + '">' + costLabel(act, true) + '</span>'));
+      if (!on) b.disabled = true;
       else if (canQueue(act)) b.classList.add('dim');
-      b.addEventListener('click', function () { addAction(act); });
+      b.addEventListener('click', function () { if (tv) { var er = canQueue(act); if (er) return toast(er); teleInterview(act.theme); } else addAction(act); });
       box.appendChild(b);
     });
     var more = el('button', { class: 'tile tile-more', type: 'button', id: 'btn-more' }, '<span class="tile-n">Plus</span><span class="tile-mid"><span class="tile-big">⋯</span></span><span class="tile-cost">' + (projected().forme <= 1 ? '😴 Repos dispo' : traitKey(me) ? D.TRAITS[traitKey(me)].icon + ' + 8 actions' : '8 actions') + '</span>');
     if (projected().forme <= 1) more.classList.add('tile-rest');   // v3.6.6 : candidat fatigué, le repos est dans « Plus »
     more.addEventListener('click', moreMenu);
     box.appendChild(more);
+  }
+  /* ---------- v3.8 : la Télé, une interview en direct ---------- */
+  var SEGBY = {}; D.SEGMENTS.forEach(function (s) { SEGBY[s.id] = s; });
+  function ptFr(x) { return (x >= 0 ? '+' : '−') + Math.abs(100 * x).toFixed(1).replace('.', ','); }
+  function teleQuestion(thm) { return E.pickQuestion(g, thm, queue.filter(function (a) { return a.type === 'medias'; }).length + 97); }
+  function teleEstimate(thm) {
+    var iv = E.interview(g, me, teleQuestion(thm).id, 'tele'), best = 0;
+    iv.cards.forEach(function (c) { best = Math.max(best, E.previewGain(g, me, c.gains)); });
+    return Math.abs(100 * best).toFixed(1).replace('.', ',') + '<small>pt</small>';
+  }
+  function answerCard(c, extra) {
+    var segs = E.SEG.slice().sort(function (a, b) { return Math.abs(c.gains[b]) - Math.abs(c.gains[a]); }).slice(0, 3).filter(function (s) { return c.gains[s]; });
+    return '<span class="ans-h"><span class="ans-i">' + c.icon + '</span><b>' + esc(c.name) + '</b><span class="ans-m">' + (c.heart ? '<i>❤️' + c.heart + '</i>' : '') + (c.head ? '<i>🧠' + c.head + '</i>' : '') + '</span></span>' +
+      '<q class="ans-q">' + esc(c.quote) + '</q>' +
+      '<span class="ans-fx">' + segs.map(function (s) { return '<span class="sg' + (c.gains[s] < 0 ? ' neg' : '') + '">' + SEGBY[s].icon + ' ' + (c.gains[s] > 0 ? '+' : '') + String(c.gains[s]).replace('.', ',') + '</span>'; }).join('') +
+      (extra || '') + '</span>' +
+      (c.notes.length ? '<small class="ans-n">' + c.notes.map(esc).join(' · ') + '</small>' : '');
+  }
+  function tvSet(kicker, iv) {
+    var t = th(iv.q.theme);
+    return '<div class="tvset"><div class="tvset-top"><span class="tv-live">● EN DIRECT</span><span>' + esc(kicker) + '</span></div>' +
+      '<div class="tvset-q"><span class="tvset-chip">' + t.icon + ' ' + esc(t.name) + '</span><p>« ' + esc(iv.q.ask) + ' »</p><small>La journaliste, plateau du 13 h</small></div></div>';
+  }
+  function teleInterview(thm) {
+    var q = teleQuestion(thm), iv = E.interview(g, me, q.id, 'tele');
+    var html = tvSet('📺 Interview télé', iv) + '<div class="ans-k">Ta réponse</div><div class="ans-list">' + iv.cards.map(function (c, i) {
+      return '<button type="button" class="ans" data-i="' + i + '">' + answerCard(c, '<b class="ans-pt">≈ ' + ptFr(E.previewGain(g, me, c.gains)) + ' pt</b>') + '</button>';
+    }).join('') + '</div><p class="hint">❤️ Le cœur touche surtout 🔧 ouvriers, employés et 🎓 sans-emploi ; 🧠 la tête, 💼 cadres et 👵 retraités. Le gain vaut dans <b>toutes les régions</b>, et s\u2019use de 15 % par tour.</p>';
+    modal({ kicker: costLabel({ type: 'medias', theme: q.theme }) + ' · 1 action', title: 'Que réponds-tu ?', cls: 'tv-modal', html: html, buttons: [{ label: 'Annuler' }],
+      onOpen: function () {
+        Array.prototype.forEach.call(document.querySelectorAll('#modal .ans'), function (b) {
+          b.addEventListener('click', function () { var c = iv.cards[+b.getAttribute('data-i')]; closeModal(); addAction({ type: 'medias', theme: q.theme, qid: q.id, reply: c.key }); });
+        });
+      } });
   }
   function bigGain(act) {
     if (act.type === 'mobiliser') return E.mobilizeGain(g, me, act.region).n;
@@ -2268,7 +2313,7 @@
       '<p><b>Ton message.</b> Meeting, Télé, Buzz et Faire la une portent un <b>thème</b> (💶 🏭 🏥 🌿 🚓 🛂). Son <b>impact</b>, de 0 à 4 = ta crédibilité sur le thème (0 à 2) + 1 si la région s\'en préoccupe + 1 si le thème fait l\'actu. Le bon message au bon endroit rapporte deux fois plus.</p>' +
       '<p><b>Les actions :</b></p><ul class="rules-acts">' +
         '<li>📣 <b>Meeting</b> (2 €) : des soutiens dans la région. <b>Base</b> de 1 à 4 selon l\'impact du message (de 2 à 5 en campagne éclair), <b>plus les bonus</b> : mesure phare +1, région de cœur +1 (hostile −1), dynamique ±1, et pour le Parti Survivant +1 là où il a déjà 5 soutiens. Le détail s\'affiche quand tu touches une région. Une région compte au plus 10 soutiens par parti.</li>' +
-        '<li>📺 <b>Télé</b> (3 € + 1 ★) : ton message passe dans la région et dans les 2 autres régions les plus concernées par le thème. +1 soutien dans chacune (+2 si impact 4, rien si impact 0).</li>' +
+        '<li>📺 <b>Télé</b> (3 € + 1 ★ + 1 ⚡) : une interview sur ton thème. Tu choisis ta réponse (❤️ émotion, 💡 ta mesure, 🥊 attaque ou 🛡️ bilan, 🙃 recentrer) : elle te fait gagner des voix dans une ou plusieurs <b>classes sociales</b>, dans toutes les régions à la fois. L\u2019effet s\u2019use de 15 % par tour.</li>' +
         '<li>🚪 <b>Mobiliser</b> (2 €) : du porte-à-porte pour faire voter des abstentionnistes. 1 soutien, +1 avec tes militants, +1 si ton programme parle à ceux qui votent peu ici, +1 si la région s\'abstient beaucoup (3 au plus). Jusqu\'au tour 3, tu fais aussi inscrire de nouveaux électeurs.</li>' +
         '<li>📱 <b>Buzz</b> (1 €, menu Plus) : un coup de dé, de −1 à +4 soutiens. +1 si le thème fait l\'actu.</li>' +
         '<li>🗞️ <b>Faire la une</b> (2 € + 2 ★) : ton thème fera l\'actu au tour suivant… pour tout le monde.</li>' +

@@ -291,8 +291,13 @@
         a.title = pick([p.short + ' à la rencontre des habitants de ' + city, p.candidate + ' fait salle comble à ' + city, 'À ' + city + ', ' + p.candidate + ' parle ' + topic], key);
         a.text = p.candidate + ' était à ' + city + ' (' + E.REG[l.region].name + ') ' + pick(CROWDS, key + 'c') + '. Il a surtout été question ' + topic + '.' + quote;
       } else if (type === 'medias') {
-        a.title = p.candidate + ' s\'invite au journal de 20 h';
-        a.text = 'Costume impeccable, phrases calibrées : ' + p.candidate + ' a profité du journal télévisé pour parler ' + topic + '.' + quote + ' Les audiences ont été bonnes dans plusieurs régions.';
+        a.title = p.candidate + ' invité du journal de 13 h';
+        if (l.media) {
+          var segN = { pop: 'les ouvriers et les employés', sae: 'les étudiants et les chômeurs', ret: 'les retraités', cad: 'les cadres', pi: 'les professions intermédiaires', ind: 'les artisans et les commerçants' };
+          var topS = Object.keys(l.media.gains).sort(function (x, y) { return l.media.gains[y] - l.media.gains[x]; })[0];
+          var tone = { emotion: 'La voix tremble un peu, le plateau se tait.', mesure: 'Fiche à la main, chiffres à l\'appui.', promesse: 'La promesse tombe, un peu sortie du chapeau.', attaque: 'Le ton monte d\'un cran contre le gouvernement.', bilan: 'Le candidat défend pied à pied le bilan du gouvernement.', recentrer: 'La question est esquivée avec un certain talent.' }[l.media.key] || '';
+          a.text = '« ' + l.media.quote + ' » ' + tone + ' Interrogé sur ' + topic + ', ' + p.candidate + ' a choisi la carte « ' + l.media.name.toLowerCase() + ' ». Selon les sondeurs, le message a surtout porté chez ' + segN[topS] + '.' + (l.media.cas ? ' Dès le lendemain, la promesse est épinglée par les fact-checkeurs : une casserole de plus.' : '');
+        } else a.text = 'Costume impeccable, phrases calibrées : ' + p.candidate + ' a profité du journal télévisé pour parler ' + topic + '.' + quote;
         a.rub = 'Médias';
       } else if (type === 'mobiliser') {
         a.title = 'Porte-à-porte à ' + city + ' : ' + p.short + ' réveille les abstentionnistes';

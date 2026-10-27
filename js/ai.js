@@ -6,7 +6,7 @@
   var E = node ? require('./engine.js') : root.PolitikEngine;
 
   function clone(g) {
-    var c = { turn: g.turn, weight: g.weight, base: g.base, mode: g.mode, nost: Object.assign({}, g.nost), petals: g.petals, micro: g.micro, hidden: g.hidden, eclatUntil: g.eclatUntil, bingo: g.bingo, mods: g.mods, hot: g.hot, nextHot: g.nextHot, markers: g.markers, bases: Object.assign({}, g.bases), rng: g.rng, alliances: Object.assign({}, g.alliances), betrayed: g.betrayed, offers: [], players: g.players.map(function (p) { return Object.assign({}, p, { cards: p.cards.slice() }); }), regions: {} };
+    var c = { seed: g.seed, hist: g.hist, aud: g.aud ? JSON.parse(JSON.stringify(g.aud)) : null, audOn: g.audOn, turn: g.turn, weight: g.weight, base: g.base, mode: g.mode, nost: Object.assign({}, g.nost), petals: g.petals, micro: g.micro, hidden: g.hidden, eclatUntil: g.eclatUntil, bingo: g.bingo, mods: g.mods, hot: g.hot, nextHot: g.nextHot, markers: g.markers, bases: Object.assign({}, g.bases), rng: g.rng, alliances: Object.assign({}, g.alliances), betrayed: g.betrayed, offers: [], players: g.players.map(function (p) { return Object.assign({}, p, { cards: p.cards.slice() }); }), regions: {} };
     Object.keys(g.regions).forEach(function (k) { var o = g.regions[k]; c.regions[k] = { cubes: Object.assign({}, o.cubes), controller: o.controller, ins: o.ins, abst: o.abst, blank: o.blank }; });
     return c;
   }
@@ -27,9 +27,12 @@
     });
     D.THEMES.forEach(function (t) {
       var best = E.bestRegions(v, pid, 1, function (r) { return E.concerns(r.id, t.id); }, 1)[0];
-      if (best) list.push({ type: 'medias', region: best, theme: t.id });
       if (E.cred(v, pid, t.id) === 2 && !E.isHot(v, t.id)) list.push({ type: 'imposer', theme: t.id });
     });
+    // v3.8 : la Télé est une interview nationale : on la tente sur ses 2 meilleurs thèmes (et le thème à la une)
+    var tvThemes = D.THEMES.map(function (t) { return t.id; }).sort(function (a, b) { return E.impact(v, pid, null, b) - E.impact(v, pid, null, a); }).slice(0, 2);
+    if (hotTh && tvThemes.indexOf(hotTh) < 0) tvThemes.push(hotTh);
+    tvThemes.forEach(function (th) { list.push({ type: 'medias', theme: th }); });
     list.push({ type: 'fonds' });
     list.push({ type: 'repos' });   // v3.6.6
     // v3.1 : les actions propres à un parti
@@ -77,9 +80,13 @@
         var hb = E.isHot(v, act.theme) ? D.RULES.socialHotBonus : 0;
         val += 0.5 * E.gain(v, pid, act.region, 1 + hb) + 0.33 * E.gain(v, pid, act.region, 2 + hb) + 0.17 * E.gain(v, pid, act.region, 4 + hb) - (hb ? 0 : 0.17 * 0.5);
         eff.push([act.region, pid, 1 + hb]); break; }
-      case 'medias': E.mediaRegions(v, pid, act.region, act.theme).forEach(function (rid) {
-          var n = E.mediaCubes(v, pid, rid, act.theme);
-          if (n) boost(rid, n); }); break;
+      case 'medias': {
+        // v3.8 : on choisit la réponse qui rapporte le plus au sondage ; l'effet s'use au fil des tours
+        var q = E.pickQuestion(v, act.theme, pid.length + pid.charCodeAt(0)), iv = E.interview(v, pid, q.id, 'tele'), card = E.aiAnswer(v, pid, iv);
+        act.qid = q.id; act.reply = card.key;
+        var left = Math.max(0, D.RULES.maxTurns - v.turn);
+        val += E.quickGain(v, pid, card.gains) * 100 * 1.6 * (1 + Math.pow(D.MEDIA.keep, left)) / 2 * 1.4 - (card.risk || 0) * 1.2;
+        break; }
       case 'imposer': {
         // le thème aidera ses actions du prochain tour… mais aussi les rivaux crédibles sur ce thème
         if (v.turn >= D.RULES.maxTurns || (v.nextHot || []).some(function (x) { return x.theme === act.theme; })) return null;

@@ -26,7 +26,7 @@
     return D.FORMATS[name] ? name : 'classique';
   }
   /* v2.8 : la sauvegarde : tout l'état de la partie, plus l'état du hasard */
-  function saveGame(g) { var s = JSON.stringify(g, function (k, v) { return typeof v === 'function' ? undefined : v; }); var o = JSON.parse(s); o.rngState = g.rng.getState(); return JSON.stringify(o); }
+  function saveGame(g) { var s = JSON.stringify(g, function (k, v) { return typeof v === 'function' || k === '_cp' || k === '_cpTurn' ? undefined : v; }); var o = JSON.parse(s); o.rngState = g.rng.getState(); return JSON.stringify(o); }
   function loadGame(str) {
     var g = JSON.parse(str); setFormat(g.format);
     g.rng = makeRng(1); g.rng.setState(g.rngState); delete g.rngState;
@@ -69,7 +69,7 @@
     var T = 0, out = {}, so = R.socle;
     pids(g).forEach(function (id) { T += strength(g, rid, id); });
     pids(g).forEach(function (id) { out[id] = (T ? (1 - so) * strength(g, rid, id) / T : 0) + so * ((g.hist[rid] && g.hist[rid][id]) || 0); });
-    return out;
+    return mediaAdjust(g, rid, out);
   }
   /* v3.5.5 : le vote d'une région le soir de l'élection (pour la carte de 20 h).
      1er tour : les parts de voix ; 2nd tour : celles des finalistes + les reports des éliminés, aux taux nationaux. */
@@ -84,14 +84,216 @@
     return out;
   }
   /* Part des voix de chaque parti dans une région (sans les « autres »), socle compris */
-  function regionShares(g, rid) {
+  function rawRegionShares(g, rid) {
     var reg = g.regions[rid], T = 0, w = {}, out = {}, so = g.hist ? R.socle : 0;
     g.players.forEach(function (p) { w[p.id] = strength(g, rid, p.id) * (reg.controller === p.id ? R.incumbentBonus : 1); T += w[p.id]; });
     g.players.forEach(function (p) { out[p.id] = (T ? (1 - so) * w[p.id] / T : 0) + so * ((g.hist && g.hist[rid][p.id]) || 0); });
     return out;
   }
+  /* v3.8 : avec l'audience médiatique (classes sociales) */
+  function regionShares(g, rid) { return mediaAdjust(g, rid, rawRegionShares(g, rid)); }
   /* Le bloc politique d'une région (gauche, centre, droite) d'après ses vrais votes */
   var BLOC = { FI: 'g', LO: 'g', PC: 'g', VP: 'g', SM: 'g', MD: 'c', EM: 'c', HZ: 'c', UG: 'd', DL: 'd', MN: 'd', RQ: 'd' };
+  /* ---------- v3.8 : les classes sociales et l'audience médiatique ----------
+     Dans chaque région, les voix d'un parti se répartissent entre les 6 groupes sociaux (profil Ipsos 2024,
+     ajusté à la composition de la région par la méthode du « calage » : chaque groupe totalise 100 % des voix,
+     chaque parti garde son score). L'audience médiatique d'un parti auprès d'un groupe multiplie ses voix
+     DANS CE GROUPE, dans toutes les régions à la fois. Sans audience, le vote est exactement le même qu'avant. */
+  var SEG = D.SEGMENTS.map(function (s) { return s.id; });
+  var SEGW = {};   // poids de chaque groupe parmi les votants d'une région (part de la population × propension à voter)
+  D.REGIONS.forEach(function (r) {
+    var w = {}, t = 0; SEG.forEach(function (s) { w[s] = r.pop[s] * D.VOTE_PROP[s]; t += w[s]; });
+    SEG.forEach(function (s) { w[s] /= t; }); SEGW[r.id] = w;
+  });
+  function classProf(pid, s) { var p = D.CLASS_PROF[pid]; return p ? p[s] : 1; }
+  function audOf(g, pid, s) { return (g.aud && g.aud[pid] && g.aud[pid][s]) || 0; }
+  /* x[pid][seg] : la part de chaque parti dans chaque groupe (chaque groupe fait 100 %) */
+  function rake(sh, ids, w) {
+    var x = {};
+    ids.forEach(function (p) { x[p] = {}; SEG.forEach(function (s) { x[p][s] = Math.max(1e-6, sh[p]) * classProf(p, s); }); });
+    for (var it = 0; it < 4; it++) {
+      SEG.forEach(function (s) { var c = 0; ids.forEach(function (p) { c += x[p][s]; }); ids.forEach(function (p) { x[p][s] /= c; }); });
+      ids.forEach(function (p) { var r = 0; SEG.forEach(function (s) { r += w[s] * x[p][s]; }); var f = Math.max(1e-6, sh[p]) / r; SEG.forEach(function (s) { x[p][s] *= f; }); });
+    }
+    SEG.forEach(function (s) { var c = 0; ids.forEach(function (p) { c += x[p][s]; }); ids.forEach(function (p) { x[p][s] /= c; }); });
+    return x;
+  }
+  /* La même chose, avec l'audience de chacun appliquée groupe par groupe */
+  /* La couverture médiatique suit (en partie) le poids du parti : temps de parole équitable, pas égal (règles de l'Arcom).
+     Un parti à 1/n des voix (n partis) reçoit l'effet plein ; un petit parti moins, un gros un peu plus. */
+  function airtime(sh, p, n) { return Math.max(0.4, Math.min(1.4, Math.sqrt(Math.max(1e-6, sh[p]) * n))); }
+  function withMedia(g, x, ids, sh) {
+    var y = {}, n = ids.length;
+    // additif : 1 point d'audience = environ +k point de vote dans ce groupe, quelle que soit la taille du parti
+    // (multiplier aurait avantagé les gros partis). Une audience négative ne fait pas tomber sous 20 % de sa base.
+    ids.forEach(function (p) { y[p] = {}; SEG.forEach(function (s) { y[p][s] = Math.max(x[p][s] * 0.2, x[p][s] + D.MEDIA.k * audOf(g, p, s) * airtime(sh, p, n)); }); });
+    SEG.forEach(function (s) { var c = 0; ids.forEach(function (p) { c += y[p][s]; }); ids.forEach(function (p) { y[p][s] /= c; }); });
+    return y;
+  }
+  function mediaAdjust(g, rid, sh) {
+    if (!g.audOn) return sh;
+    var ids = Object.keys(sh), w = SEGW[rid], tot = 0, out = {};
+    var x = rake(sh, ids, w), y = withMedia(g, x, ids, sh), T = 0;
+    ids.forEach(function (p) { tot += sh[p]; });
+    ids.forEach(function (p) {
+      var a = 0, b = 0; SEG.forEach(function (s) { a += w[s] * y[p][s]; b += w[s] * x[p][s]; });
+      out[p] = sh[p] * (b > 0 ? a / b : 1); T += out[p];
+    });
+    if (T > 0) ids.forEach(function (p) { out[p] *= tot / T; });
+    return out;
+  }
+  /* Sondage par classe sociale : { seg: { pid: part des voix exprimées } } (les « autres » à part) */
+  function classPoll(g) {
+    var acc = {}; SEG.forEach(function (s) { acc[s] = { _t: 0 }; });
+    var ids = pids(g);
+    D.REGIONS.forEach(function (r) {
+      var ex = regionVoters(g, r.id).exprimes, o = othersShare(g, r.id);
+      var sh = rawRegionShares(g, r.id), x = rake(sh, ids, SEGW[r.id]), y = g.audOn ? withMedia(g, x, ids, sh) : x;
+      SEG.forEach(function (s) {
+        var n = ex * SEGW[r.id][s];
+        acc[s]._t += n;
+        ids.forEach(function (p) { acc[s][p] = (acc[s][p] || 0) + n * (1 - o) * y[p][s]; });
+      });
+    });
+    var out = {};
+    SEG.forEach(function (s) { out[s] = {}; ids.forEach(function (p) { out[s][p] = acc[s]._t ? acc[s][p] / acc[s]._t : 0; }); });
+    return out;
+  }
+  function addAudience(g, pid, gains) {
+    g.aud = g.aud || {}; g.aud[pid] = g.aud[pid] || {};
+    SEG.forEach(function (s) {
+      if (!gains[s]) return;
+      g.aud[pid][s] = Math.max(D.MEDIA.min, Math.min(D.MEDIA.max, (g.aud[pid][s] || 0) + gains[s]));
+    });
+    g.audOn = true;
+  }
+  function wearAudience(g) {
+    if (!g.aud) return;
+    var any = false;
+    Object.keys(g.aud).forEach(function (p) { SEG.forEach(function (s) {
+      var v = (g.aud[p][s] || 0) * D.MEDIA.keep;
+      if (Math.abs(v) < 0.05) v = 0; else any = true;
+      g.aud[p][s] = v;
+    }); });
+    g.audOn = any;
+  }
+  /* Ce qu'un gain d'audience rapporterait au sondage (en points), sans rien changer à la partie */
+  function previewGain(g, pid, gains) {
+    var before = pollMap(g)[pid] || 0, keep = g.aud ? JSON.parse(JSON.stringify(g.aud)) : null, on = g.audOn;
+    addAudience(g, pid, gains);
+    var after = pollMap(g)[pid] || 0;
+    g.aud = keep; g.audOn = on;
+    return after - before;
+  }
+
+  /* Estimation rapide (pour l'ordinateur) : dérivée du vote de chaque groupe × poids du groupe dans le pays */
+  var NATSEGW = (function () {
+    var w = {}, t = 0; SEG.forEach(function (s) { w[s] = 0; });
+    D.REGIONS.forEach(function (r) { SEG.forEach(function (s) { w[s] += r.ins * SEGW[r.id][s]; }); t += r.ins; });
+    SEG.forEach(function (s) { w[s] /= t; }); return w;
+  })();
+  function quickGain(g, pid, gains) {
+    if (!g._cp || g._cpTurn !== g.turn) { g._cp = classPoll(g); g._cpTurn = g.turn; }
+    var d = 0;
+    var pm = 0; SEG.forEach(function (s) { pm += NATSEGW[s] * (g._cp[s][pid] || 0); });
+    var at = airtime({ p: pm }, 'p', g.players.length);
+    SEG.forEach(function (s) { var x = g._cp[s][pid] || 0; d += NATSEGW[s] * D.MEDIA.k * at * (gains[s] || 0) * (1 - x); });
+    return d;
+  }
+  /* ---------- v3.8 : les interviews (Télé, Matinale, 20h, Débat) ---------- */
+  var QBY = {}; D.QUESTIONS.forEach(function (q) { QBY[q.id] = q; });
+  function isMajority(pid) { return D.MAJORITY.indexOf(pid) >= 0; }
+  function blocOf(pid) { return BLOC[pid] || (PARTY[pid] && PARTY[pid].pos >= 5 ? 'd' : PARTY[pid] && PARTY[pid].pos <= 3 ? 'g' : 'c'); }
+  function pickQuestion(g, theme, salt) {
+    var list = D.QUESTIONS.filter(function (q) { return q.theme === theme; });
+    var h = (g.seed || 0) + g.turn * 7 + (salt || 0) * 13;
+    return list[Math.abs(h) % list.length];
+  }
+  /* La mesure du programme qui répond le mieux à la question */
+  function measureFor(g, pid, q) {
+    var pl = player(g, pid), best = null, bv = -1e9;
+    ((pl && pl.programme) || []).forEach(function (id) {
+      var m = MEAS[id]; if (!m || m.theme !== q.theme) return;
+      var v = 0; SEG.forEach(function (s) { v += ((m.fans || {})[s] || 0) * (q.segs[s] || 0); });
+      if (v > bv) { bv = v; best = m; }
+    });
+    return best;
+  }
+  /* Les cartes de réponse d'un parti à une question. fmt : 'tele' | 'matinale' | 'vingt' | 'debat'.
+     segBoost : un public particulier (la matinale d'une radio, par exemple) */
+  function interview(g, pid, qid, fmt, segBoost) {
+    var q = QBY[qid], th = q.theme, pl = player(g, pid), c = cred(g, pid, th), hot = isHot(g, th);
+    var maj = isMajority(pid), tw = (D.TEMPERS[pid] || { w: {} }).w, sc = D.MEDIA.scale[fmt || 'tele'];
+    var segs = {}; SEG.forEach(function (s) { segs[s] = (q.segs[s] || 0.5) * ((segBoost && segBoost[s]) || 1); });
+    function card(key, quote, h, t, notes, extra, flat) {
+      var gains = {};
+      SEG.forEach(function (s) {
+        var w = flat ? 0.7 * ((segBoost && segBoost[s]) || 1) : segs[s];
+        gains[s] = Math.round(w * (D.HEART[s] * Math.max(0, h) + (1 - D.HEART[s]) * Math.max(0, t)) * sc * 10) / 10;
+      });
+      if (extra) SEG.forEach(function (s) { if (extra[s]) gains[s] = Math.round((gains[s] + extra[s] * sc) * 10) / 10; });
+      return { key: key, name: D.ANSWERS[key].name, icon: D.ANSWERS[key].icon, quote: quote, heart: Math.max(0, h), head: Math.max(0, t), notes: notes, gains: gains };
+    }
+    var cards = [];
+    // ❤️ Émotion
+    var h = 2, n = [];
+    if (hot) { h++; n.push('+1 ❤️ le sujet fait l’actu'); }
+    if (maj) { h--; n.push('−1 ❤️ venant du pouvoir, ça sonne faux'); }
+    if ((tw.emotion || 0) >= 4) { h++; n.push('+1 ❤️ c’est ton registre'); }
+    else if ((tw.emotion || 0) <= 1) { h--; n.push('−1 ❤️ pas ton registre'); }
+    var emo = blocOf(pid) === 'd' && q.emoD ? q.emoD : q.emo;
+    cards.push(card('emotion', emo, h, 0, n));
+    // 💡 Ma mesure, ou 🎲 promesse improvisée
+    var m = measureFor(g, pid, q);
+    if (m) {
+      var t2 = 2, n2 = ['dans ton programme'], funded = pl && pl.budget <= R.budgetCap;
+      if (funded) { t2++; n2.push('+1 🧠 programme financé'); } else { t2--; n2.push('−1 🧠 programme pas financé'); }
+      if (c === 2) { t2++; n2.push('+1 🧠 ton point fort'); }
+      var fans = {}; Object.keys(m.fans || {}).forEach(function (s) { fans[s] = m.fans[s] * 0.4; });
+      var mc = card('mesure', 'Ma réponse est dans mon programme : ' + m.name.charAt(0).toLowerCase() + m.name.slice(1) + '.', 1, t2, n2, fans);
+      mc.measure = m.id; mc.funded = funded; cards.push(mc);
+    } else {
+      var pc = card('promesse', 'Dès mon élection, je m’y attaque : vous verrez des résultats en six mois.', 2, 0,
+        ['hors de ton programme', Math.round(D.MEDIA.gaffePromise * 100) + ' % de risque de casserole']);
+      pc.risk = D.MEDIA.gaffePromise; cards.push(pc);
+    }
+    // 🥊 Attaquer le bilan (opposition) ou 🛡️ Défendre le bilan (bloc au pouvoir)
+    if (!maj) {
+      var h3 = 1, t3 = 1, n3 = [];
+      if (hot) { h3++; n3.push('+1 ❤️ le sujet fait l’actu'); }
+      if ((tw.attaque || 0) >= 4) { h3++; n3.push('+1 ❤️ c’est ton registre'); }
+      if (c === 2) { t3++; n3.push('+1 🧠 ton point fort'); }
+      cards.push(card('attaque', q.atk, h3, t3, n3));
+    } else {
+      var t4 = 2, n4 = [];
+      if (c === 2) { t4++; n4.push('+1 🧠 ton point fort'); } else if (c === 0) { t4--; n4.push('−1 🧠 pas ton sujet'); }
+      if (hot) { t4--; n4.push('−1 🧠 la colère gronde sur ce sujet'); }
+      cards.push(card('bilan', q.def, 0, t4, n4));
+    }
+    // 🙃 Recentrer sur son sujet fort
+    var fav = D.THEMES.slice().sort(function (a, b) { return cred(g, pid, b.id) - cred(g, pid, a.id); }).filter(function (t) { return t.id !== th; })[0];
+    var rc = card('recentrer', 'La vraie question, c’est ' + fav.name.toLowerCase() + '. Parlons de ce qui compte vraiment.', 0, 1, ['petit gain, mais aucun risque'], null, true);
+    rc.fav = fav.id; cards.push(rc);
+    return { q: q, fmt: fmt, cards: cards };
+  }
+  function applyInterview(g, pid, cardObj) {
+    addAudience(g, pid, cardObj.gains);
+    var out = { gains: cardObj.gains, cas: false };
+    if (cardObj.risk && g.rng() < cardObj.risk) {
+      var pl = player(g, pid); pl.cas = Math.min(R.casseroleMax, pl.cas + 1); out.cas = true;
+    }
+    return out;
+  }
+  /* L'ordinateur choisit sa réponse : le meilleur gain au sondage, avec un peu de son tempérament */
+  function aiAnswer(g, pid, iv) {
+    var best = null, bv = -1e9, tw = (D.TEMPERS[pid] || { w: {} }).w;
+    iv.cards.forEach(function (c) {
+      var k = c.key === 'mesure' || c.key === 'promesse' ? 'chiffres' : c.key === 'bilan' ? 'chiffres' : c.key === 'recentrer' ? 'esquive' : c.key;
+      var v = quickGain(g, pid, c.gains) * 100 + (tw[k] || 1) * 0.05 - (c.risk || 0) * 0.8 + g.rng() * 0.1;
+      if (v > bv) { bv = v; best = c; }
+    });
+    return best;
+  }
   function regionLean(base, rid) {
     var r = REG[rid], t = { g: 0, c: 0, d: 0 }, sum = 0;
     D.PARTIES.forEach(function (p) { var b = BLOC[p.id]; if (!b) return; var v = baseScore(base || 'e2024', r, p.id); t[b] += v; sum += v; });
@@ -450,8 +652,8 @@
       var o = othersShare(g, r.id);
       v._autres = (v._autres || 0) + ex * o;
       g.players.forEach(function (p) { w[p.id] = strength(g, r.id, p.id) * (reg.controller === p.id ? R.incumbentBonus : 1); T += w[p.id]; });
-      var so = g.hist ? R.socle : 0;   // v3.2 : en Réaliste, une part des électeurs vote par fidélité (le socle)
-      if (T > 0) g.players.forEach(function (p) { v[p.id] += ex * (1 - o) * ((1 - so) * w[p.id] / T + so * ((g.hist && g.hist[r.id][p.id]) || 0)); });
+      // v3.2 : en Réaliste, une part des électeurs vote par fidélité (le socle) · v3.8 : puis l'audience par classe sociale
+      if (T > 0) { var sh = regionShares(g, r.id); g.players.forEach(function (p) { v[p.id] += ex * (1 - o) * sh[p.id]; }); }
     });
     // v3.1 : un micro-parti centriste grignote une part des voix de chaque parti du centre
     if (g.micro) CENTRE.forEach(function (pid) { if (v[pid] != null) { var cut = v[pid] * R.microCut; v[pid] -= cut; v._autres = (v._autres || 0) + cut; } });
@@ -990,14 +1192,19 @@
         var pc = poach(g, pid, act.region, true); if (pc) t.push('récupère 1 électeur de ' + PARTY[pc].short);
         break; }
       case 'medias': {
-        mediaRegions(g, pid, act.region, act.theme).forEach(function (rid) {
-          var n = mediaCubes(g, pid, rid, act.theme);
-          if (!n) { t.push('0 ' + REG[rid].name + ' (message inaudible)'); return; }
-          if (isHidden(g, pid) && g.rng() < R.hiddenMiss) { entry.hidden = true; t.push('0 ' + REG[rid].name + ' (la caméra est partie chez le voisin)'); return; }
-          n = addCubes(g, rid, pid, n);
-          var pc2 = poach(g, pid, rid, false);
-          t.push('+' + n + ' ' + REG[rid].name + (pc2 ? ' (+1 de ' + pc2 + ')' : ''));
-        }); break; }
+        // v3.8 : une interview à la télé. Plus de région : l'audience gagne des classes sociales, dans toute la France.
+        var qv = act.qid && QBY[act.qid] ? QBY[act.qid] : pickQuestion(g, act.theme || bestTheme(g, pid, null), pid.length + pid.charCodeAt(0));
+        var iv = interview(g, pid, qv.id, 'tele');
+        var cd = iv.cards.filter(function (x) { return x.key === act.reply; })[0] || aiAnswer(g, pid, iv);
+        if (isHidden(g, pid) && g.rng() < R.hiddenMiss) { entry.hidden = true; t.push('📺 personne n\u2019a regardé (la caméra est partie chez le voisin)'); break; }
+        if (g.bingo && pid === 'FI' && g.bingo.zapUntil >= g.turn) { Object.keys(cd.gains).forEach(function (s) { cd.gains[s] = Math.round(cd.gains[s] * 7) / 10; }); }
+        var before = pollMap(g)[pid] || 0, ra = applyInterview(g, pid, cd);
+        entry.media = { qid: qv.id, key: cd.key, name: cd.name, icon: cd.icon, quote: cd.quote, gains: cd.gains, delta: (pollMap(g)[pid] || 0) - before, cas: ra.cas };
+        entry.theme = qv.theme;
+        var best = SEG.slice().sort(function (a, b) { return cd.gains[b] - cd.gains[a]; }).slice(0, 2);
+        t.push('📺 ' + cd.icon + ' ' + cd.name + ' : ' + best.map(function (s) { var sg = D.SEGMENTS.filter(function (x) { return x.id === s; })[0]; return sg.icon + ' +' + String(cd.gains[s]).replace('.', ','); }).join(' · ') +
+          ' (' + (entry.media.delta >= 0 ? '+' : '') + (100 * entry.media.delta).toFixed(1).replace('.', ',') + ' pt)' + (ra.cas ? ' · la promesse ne tient pas : +1 casserole' : ''));
+        break; }
       case 'reseaux': {
         var d = 1 + Math.floor(g.rng() * 6);
         if (pid === 'FI' && d <= 2) { var d2 = 1 + Math.floor(g.rng() * 6); t.push('dé ' + d + ', relancé'); d = d2; }
@@ -1269,6 +1476,7 @@
     updateAllControl(g);
     var res = { winner: null, over: false };
     g.history.push(poll(g));
+    g.lastClass = classPoll(g);   // v3.8 : pour la tendance par classe sociale
     // v0.4 : dynamique = le sondage a monté (ou baissé) de plus de 1,5 point ce tour
     var now = pollMap(g);
     g.players.forEach(function (pl) {
@@ -1276,6 +1484,7 @@
       pl.momentum = d >= R.momentumStep ? 1 : d <= -R.momentumStep ? -1 : 0;
     });
     g.lastPoll = now;
+    if (g.turn < R.maxTurns) { wearAudience(g); g.lastPoll = pollMap(g); }   // v3.8 : l'effet des médias s'use d'un tour à l'autre
     g.phase = 'next';
     if (g.turn >= R.maxTurns) {
       // v1.6 : le 1er tour est voté et figé. Majorité absolue : c'est fini. Sinon : l'entre-deux-tours commence.
@@ -1583,6 +1792,7 @@
     impact: impact, cred: cred, isHot: isHot, concerns: concerns, bestTheme: bestTheme, terrainCubes: terrainCubes, mediaCubes: mediaCubes,
     makeDeal: makeDeal, weight: weight, strength: strength, controlShares: controlShares, regionVote: regionVote, regionLean: regionLean, natLean: natLean, regionShares: regionShares,
     traitOf: traitOf, nostalgiaPreview: nostalgiaPreview, petalsCount: petalsCount, lostPetals: lostPetals, jammed: jammed, zapped: zapped, isHidden: isHidden, retireeRegion: retireeRegion, resolvePrimaire: resolvePrimaire, actionsFor: actionsFor, centrists: centrists, tickBingo: tickBingo, ensureTraits: ensureTraits,
+    classPoll: classPoll, addAudience: addAudience, previewGain: previewGain, quickGain: quickGain, interview: interview, applyInterview: applyInterview, aiAnswer: aiAnswer, pickQuestion: pickQuestion, isMajority: isMajority, audOf: audOf, SEG: SEG,
     REG: REG, PARTY: PARTY, sigle: sigle, THEME: THEME, makeRng: makeRng, setFormat: setFormat, saveGame: saveGame, loadGame: loadGame, registerParty: registerParty, unregisterParty: unregisterParty
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;

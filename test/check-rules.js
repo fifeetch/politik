@@ -511,5 +511,34 @@ section('Les cartes à glisser');
   var t = CD.touches(CD.BY.patronat.right); ok(t.budget && t.pop && !t.assemblee, 'les points indiquent les jauges touchées');
 })();
 
+section('Les médias et les classes sociales (v3.8)');
+(function () {
+  var g = E.createGame('SM', { seed: 77 });
+  var p0 = E.poll(g).map(function (x) { return x.pct; });
+  var cp = E.classPoll(g), sum = 0; Object.keys(cp.pop).forEach(function (k) { sum += cp.pop[k]; });
+  ok(sum > 0.5 && sum <= 1.0001, 'sondage par classe : les ouvriers et employés se répartissent entre les partis (' + (100 * sum).toFixed(0) + ' %, le reste aux « autres »)');
+  ok(cp.pop.MN > cp.cad.MN && cp.ret.EM > cp.pop.EM && cp.sae.FI > cp.ret.FI, 'profils Ipsos : RN fort chez les ouvriers, Renaissance chez les retraités, LFI chez les jeunes et chômeurs');
+  var before = E.poll(g).filter(function (x) { return x.pid === 'SM'; })[0].pct;
+  E.addAudience(g, 'SM', { pop: 2, sae: 1 });
+  var after = E.poll(g).filter(function (x) { return x.pid === 'SM'; })[0].pct;
+  ok(after > before + 0.003, 'de l\'audience chez les ouvriers fait monter au sondage (' + (100 * (after - before)).toFixed(2) + ' pt)');
+  var cp2 = E.classPoll(g); ok(cp2.pop.SM > cp.pop.SM && Math.abs(cp2.cad.SM - cp.cad.SM) < Math.abs(cp2.pop.SM - cp.pop.SM), 'le gain porte sur les ouvriers, beaucoup moins sur les cadres');
+  var sv = E.loadGame(E.saveGame(g)); ok(sv.aud && sv.aud.SM.pop === 2 && sv.audOn, 'l\'audience est gardée dans la sauvegarde');
+  var g2 = E.createGame('SM', { seed: 77 }); g2.aud = { SM: { pop: 0 } }; g2.audOn = false;
+  var p2 = E.poll(g2).map(function (x) { return x.pct; });
+  ok(p2.every(function (v, i) { return Math.abs(v - p0[i]) < 1e-9; }), 'sans audience, le sondage est exactement le même qu\'avant');
+  var q = E.pickQuestion(g, 'pouvoir', 1);
+  var keys = function (pid) { return E.interview(g, pid, q.id, 'tele').cards.map(function (c) { return c.key; }); };
+  ok(keys('SM').indexOf('attaque') >= 0 && keys('SM').indexOf('bilan') < 0, 'l\'opposition peut attaquer le bilan');
+  ok(keys('EM').indexOf('bilan') >= 0 && keys('EM').indexOf('attaque') < 0, 'le bloc au pouvoir défend son bilan, sans pouvoir l\'attaquer');
+  var qi = D.QUESTIONS.filter(function (x) { return x.id === 'im_accueil'; })[0];
+  ok(E.interview(g, 'MN', 'im_accueil', 'tele').cards[0].quote === qi.emoD && E.interview(g, 'SM', 'im_accueil', 'tele').cards[0].quote === qi.emo, 'immigration : l\'émotion n\'est pas la même à gauche et à droite');
+  var em = E.interview(g, 'EM', q.id, 'tele').cards[0], sm = E.interview(g, 'SM', q.id, 'tele').cards[0];
+  ok(em.heart < sm.heart || em.notes.join().indexOf('sonne faux') >= 0, 'venant du pouvoir, l\'émotion sonne faux');
+  var g3 = E.createGame('SM', { seed: 78 }); E.addAudience(g3, 'SM', { pop: 4 }); g3.lastPoll = {}; g3.turn = 1; E.endTurn(g3);
+  ok(Math.abs(g3.aud.SM.pop - 4 * D.MEDIA.keep) < 1e-9, 'l\'audience s\'use à chaque tour (×' + D.MEDIA.keep + ')');
+  ok(D.ACTIONS.medias.target === null, 'la Télé ne vise plus de région');
+})();
+
 console.log('\n' + passes + ' vérifications réussies, ' + fails + ' en échec.');
 process.exit(fails ? 1 : 0);
