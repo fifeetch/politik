@@ -276,6 +276,34 @@
     rc.fav = fav.id; cards.push(rc);
     return { q: q, fmt: fmt, cards: cards };
   }
+  /* v3.9 : l'accueil d'une radio selon ton bord politique */
+  var STB = {}; D.STATIONS.forEach(function (st) { STB[st.id] = st; });
+  function stationFit(pid, sid) {
+    var st = STB[sid], pos = PARTY[pid] ? PARTY[pid].pos : 3.5;
+    if (!st || !st.lean) return { k: 'near', f: D.STATION_FIT.near, label: 'public de tous bords' };
+    if (pos >= st.lean[0] && pos <= st.lean[1]) return { k: 'home', f: D.STATION_FIT.home, label: 'public acquis' };
+    var d = pos < st.lean[0] ? st.lean[0] - pos : pos - st.lean[1];
+    return d <= 1 ? { k: 'near', f: D.STATION_FIT.near, label: 'public partagé' } : { k: 'far', f: D.STATION_FIT.far, label: 'public hostile' };
+  }
+  function stationBoost(pid, sid) {
+    var st = STB[sid], f = stationFit(pid, sid).f, b = {};
+    SEG.forEach(function (s) { b[s] = (st ? st.segs[s] || 0.5 : 1) * f; });
+    return b;
+  }
+  /* Le 20 h : invité si tu es dans les 4 premiers, une seule fois */
+  function vingtError(g, pid) {
+    var pl = player(g, pid);
+    if (pl.vingtUsed) return 'Tu es déjà passé au 20 h : une seule fois par campagne.';
+    if (ranking(g).indexOf(pid) >= D.VINGT.top) return 'Le 20 h n\u2019invite que les ' + D.VINGT.top + ' premiers du sondage.';
+    return null;
+  }
+  /* forme : l'énergie qui reste au moment du direct (après avoir payé le 20 h) */
+  function stageRisk(g, pid, forme) { if (forme == null) forme = player(g, pid).forme; return Math.max(D.VINGT.stageMin, D.VINGT.stage - D.VINGT.stagePerForme * Math.max(0, forme)); }
+  function matinaleError(g, pid) {
+    var pl = player(g, pid);
+    if (pl.matinaleTurn && g.turn - pl.matinaleTurn < 2) return 'Une matinale tous les deux tours : les radios t\u2019ont reçu au tour ' + pl.matinaleTurn + '.';
+    return null;
+  }
   function applyInterview(g, pid, cardObj) {
     addAudience(g, pid, cardObj.gains);
     var out = { gains: cardObj.gains, cas: false };
@@ -1063,6 +1091,8 @@
       if (player(g, pid).rappelTurn === g.turn) return 'François Hésitant ne décroche qu\u2019une fois par tour.';
     }
     if (act.type === 'repos' && player(g, pid).forme >= R.formeMax) return 'Ton candidat est déjà en pleine forme.';
+    if (act.type === 'matinale') { var me1 = matinaleError(g, pid); if (me1) return me1; if (act.station && !STB[act.station]) return 'Radio inconnue.'; }
+    if (act.type === 'vingt') { var ve = vingtError(g, pid); if (ve) return ve; }
     if (act.type === 'fusion' && !g.micro) return 'Aucun micro-parti à absorber pour l\u2019instant.';
     if (act.type === 'eclat' && g.eclatUntil >= g.turn) return 'Les caméras sont déjà braquées sur toi.';
     if (def.theme && !THEME[act.theme]) return 'Choisis un thème.';
@@ -1191,18 +1221,28 @@
         t.push('+' + n + ' en ' + rn + ' (' + bd.parts.map(function (x) { return x.label + (x.k === 'base' ? ' : ' : ' ') + (x.n > 0 && x.k !== 'base' ? '+' : '') + x.n; }).join(', ') + (n < bd.total ? ', plafond atteint' : '') + ')');
         var pc = poach(g, pid, act.region, true); if (pc) t.push('récupère 1 électeur de ' + PARTY[pc].short);
         break; }
+      case 'matinale':
+      case 'vingt':
       case 'medias': {
+        var fmtK = act.type === 'medias' ? 'tele' : act.type, stK = act.type === 'matinale' ? (act.station && STB[act.station] ? act.station : 'rmc') : null;
+        if (act.type === 'matinale') pl.matinaleTurn = g.turn;
+        if (act.type === 'vingt') pl.vingtUsed = g.turn;
         // v3.8 : une interview à la télé. Plus de région : l'audience gagne des classes sociales, dans toute la France.
         var qv = act.qid && QBY[act.qid] ? QBY[act.qid] : pickQuestion(g, act.theme || bestTheme(g, pid, null), pid.length + pid.charCodeAt(0));
-        var iv = interview(g, pid, qv.id, 'tele');
+        var iv = interview(g, pid, qv.id, fmtK, stK ? stationBoost(pid, stK) : null);
         var cd = iv.cards.filter(function (x) { return x.key === act.reply; })[0] || aiAnswer(g, pid, iv);
         if (isHidden(g, pid) && g.rng() < R.hiddenMiss) { entry.hidden = true; t.push('📺 personne n\u2019a regardé (la caméra est partie chez le voisin)'); break; }
         if (g.bingo && pid === 'FI' && g.bingo.zapUntil >= g.turn) { Object.keys(cd.gains).forEach(function (s) { cd.gains[s] = Math.round(cd.gains[s] * 7) / 10; }); }
+        var flop = act.type === 'vingt' && g.rng() < stageRisk(g, pid);
+        if (flop) {   // le trac du direct : trou de mémoire, ça tourne en boucle sur les réseaux
+          var neg = {}; SEG.forEach(function (s) { neg[s] = -Math.round(Math.abs(cd.gains[s]) * 5) / 10; });
+          cd = Object.assign({}, cd, { gains: neg }); pl.cas = Math.min(R.casseroleMax, pl.cas + 1);
+        }
         var before = pollMap(g)[pid] || 0, ra = applyInterview(g, pid, cd);
-        entry.media = { qid: qv.id, key: cd.key, name: cd.name, icon: cd.icon, quote: cd.quote, gains: cd.gains, delta: (pollMap(g)[pid] || 0) - before, cas: ra.cas };
+        entry.media = { fmt: fmtK, station: stK, flop: flop, qid: qv.id, key: cd.key, name: cd.name, icon: cd.icon, quote: cd.quote, gains: cd.gains, delta: (pollMap(g)[pid] || 0) - before, cas: ra.cas };
         entry.theme = qv.theme;
         var best = SEG.slice().sort(function (a, b) { return cd.gains[b] - cd.gains[a]; }).slice(0, 2);
-        t.push('📺 ' + cd.icon + ' ' + cd.name + ' : ' + best.map(function (s) { var sg = D.SEGMENTS.filter(function (x) { return x.id === s; })[0]; return sg.icon + ' +' + String(cd.gains[s]).replace('.', ','); }).join(' · ') +
+        t.push((act.type === 'vingt' ? '🕗 ' : act.type === 'matinale' ? STB[stK].icon + ' ' + STB[stK].name + ' · ' : '📺 ') + (flop ? '😱 trou de mémoire en direct, +1 casserole · ' : '') + cd.icon + ' ' + cd.name + ' : ' + best.map(function (s) { var sg = D.SEGMENTS.filter(function (x) { return x.id === s; })[0]; return sg.icon + ' +' + String(cd.gains[s]).replace('.', ','); }).join(' · ') +
           ' (' + (entry.media.delta >= 0 ? '+' : '') + (100 * entry.media.delta).toFixed(1).replace('.', ',') + ' pt)' + (ra.cas ? ' · la promesse ne tient pas : +1 casserole' : ''));
         break; }
       case 'reseaux': {
@@ -1792,7 +1832,7 @@
     impact: impact, cred: cred, isHot: isHot, concerns: concerns, bestTheme: bestTheme, terrainCubes: terrainCubes, mediaCubes: mediaCubes,
     makeDeal: makeDeal, weight: weight, strength: strength, controlShares: controlShares, regionVote: regionVote, regionLean: regionLean, natLean: natLean, regionShares: regionShares,
     traitOf: traitOf, nostalgiaPreview: nostalgiaPreview, petalsCount: petalsCount, lostPetals: lostPetals, jammed: jammed, zapped: zapped, isHidden: isHidden, retireeRegion: retireeRegion, resolvePrimaire: resolvePrimaire, actionsFor: actionsFor, centrists: centrists, tickBingo: tickBingo, ensureTraits: ensureTraits,
-    classPoll: classPoll, addAudience: addAudience, previewGain: previewGain, quickGain: quickGain, interview: interview, applyInterview: applyInterview, aiAnswer: aiAnswer, pickQuestion: pickQuestion, isMajority: isMajority, audOf: audOf, SEG: SEG,
+    classPoll: classPoll, addAudience: addAudience, previewGain: previewGain, quickGain: quickGain, interview: interview, applyInterview: applyInterview, aiAnswer: aiAnswer, pickQuestion: pickQuestion, stationFit: stationFit, stationBoost: stationBoost, vingtError: vingtError, matinaleError: matinaleError, stageRisk: stageRisk, isMajority: isMajority, audOf: audOf, SEG: SEG,
     REG: REG, PARTY: PARTY, sigle: sigle, THEME: THEME, makeRng: makeRng, setFormat: setFormat, saveGame: saveGame, loadGame: loadGame, registerParty: registerParty, unregisterParty: unregisterParty
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;

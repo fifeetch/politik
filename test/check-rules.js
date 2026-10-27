@@ -540,5 +540,26 @@ section('Les médias et les classes sociales (v3.8)');
   ok(D.ACTIONS.medias.target === null, 'la Télé ne vise plus de région');
 })();
 
+section('Matinales radio et 20 h (v3.9)');
+(function () {
+  var g = E.createGame('SM', { seed: 91 }); E.startTurn(g);
+  var pl = E.player(g, 'SM'); pl.money = 20; pl.infl = 10; pl.forme = 4;
+  ok(E.stationFit('SM', 'inter').k === 'home' && E.stationFit('MN', 'inter').k === 'far' && E.stationFit('MN', 'europe').k === 'home' && E.stationFit('FI', 'nova').k === 'home', 'chaque radio accueille mieux son bord politique');
+  var bIn = E.stationBoost('SM', 'inter'), bRmc = E.stationBoost('SM', 'rmc');
+  ok(bIn.cad > bIn.pop && bRmc.pop > bRmc.cad, 'France Intérieure parle aux cadres, Radio Mon Comptoir aux ouvriers');
+  var log = E.resolveActions(g, { SM: [{ type: 'matinale', theme: 'pouvoir', station: 'inter', reply: 'emotion' }, { type: 'matinale', theme: 'pouvoir', station: 'rmc' }] }).filter(function (l) { return l.pid === 'SM'; });
+  ok(log[0].ok && log[0].media && log[0].media.fmt === 'matinale', 'une matinale se joue et rapporte de l\'audience');
+  ok(!log[1].ok, 'une seule matinale tous les deux tours');
+  ok(D.ACTIONS.matinale.cost.forme === 1 && !D.ACTIONS.matinale.cost.money && !D.ACTIONS.matinale.cost.infl, 'la matinale ne coûte qu\'1 ⚡');
+  var rk = E.ranking(g), out = rk[6];
+  ok(!E.vingtError(g, rk[0]) && E.vingtError(g, out), 'le 20 h n\'invite que les 4 premiers du sondage');
+  var g2 = E.createGame('SM', { seed: 92 }); E.startTurn(g2); var p2 = E.player(g2, rk[0]); p2.forme = 4;
+  var q = E.pickQuestion(g2, 'emploi', 3);
+  var tv = E.interview(g2, rk[0], q.id, 'tele').cards[0], vg = E.interview(g2, rk[0], q.id, 'vingt').cards[0];
+  ok(vg.gains.pop > tv.gains.pop * 1.8, 'le 20 h rapporte deux fois plus qu\'un passage télé');
+  ok(E.stageRisk(g2, rk[0], 0) === 0.25 && E.stageRisk(g2, rk[0], 3) < 0.15 && E.stageRisk(g2, rk[0], 9) === D.VINGT.stageMin, 'le trac du direct baisse avec l\'énergie');
+  p2.vingtUsed = 1; ok(!!E.vingtError(g2, rk[0]), 'une seule fois par campagne');
+})();
+
 console.log('\n' + passes + ' vérifications réussies, ' + fails + ' en échec.');
 process.exit(fails ? 1 : 0);

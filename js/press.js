@@ -281,7 +281,7 @@
     (ctx.log || []).forEach(function (l) {
       var type = ACTION_TYPE[l.action];
       if (!l.ok || !type || seen[l.pid + type]) return;
-      if (['terrain', 'medias', 'mobiliser', 'reseaux', 'contre', 'militants'].indexOf(type) < 0) return;
+      if (['terrain', 'medias', 'matinale', 'vingt', 'mobiliser', 'reseaux', 'contre', 'militants'].indexOf(type) < 0) return;
       seen[l.pid + type] = true;
       var p = P(l.pid), key = g.turn + l.pid + type + (l.region || ''), city = l.region ? pick(CITIES[l.region], key) : null;
       var topic = l.theme && TOPICS[l.theme] ? pick(TOPICS[l.theme], key + 't') : 'de ses propositions', m = l.theme ? measureOn(l.pid, l.theme) : null;
@@ -290,6 +290,19 @@
       if (type === 'terrain') {
         a.title = pick([p.short + ' à la rencontre des habitants de ' + city, p.candidate + ' fait salle comble à ' + city, 'À ' + city + ', ' + p.candidate + ' parle ' + topic], key);
         a.text = p.candidate + ' était à ' + city + ' (' + E.REG[l.region].name + ') ' + pick(CROWDS, key + 'c') + '. Il a surtout été question ' + topic + '.' + quote;
+      } else if ((type === 'matinale' || type === 'vingt') && l.media) {
+        var segN2 = { pop: 'les ouvriers et les employés', sae: 'les étudiants et les chômeurs', ret: 'les retraités', cad: 'les cadres', pi: 'les professions intermédiaires', ind: 'les artisans et les commerçants' };
+        var topS2 = Object.keys(l.media.gains).sort(function (x, y) { return Math.abs(l.media.gains[y]) - Math.abs(l.media.gains[x]); })[0];
+        var stN = l.media.station ? (D.STATIONS.filter(function (s) { return s.id === l.media.station; })[0] || {}).name : '';
+        if (type === 'vingt') {
+          a.title = l.media.flop ? 'Trou de mémoire au 20 h : ' + p.candidate + ' se noie en direct' : p.candidate + ' face à six millions de téléspectateurs';
+          a.text = l.media.flop ? 'Silence de plomb sur le plateau : la question sur ' + topic + ' a laissé ' + p.candidate + ' sans voix pendant de longues secondes. La séquence tourne en boucle sur les réseaux, et ' + segN2[topS2] + ' n\'ont pas aimé.'
+            : '« ' + l.media.quote + ' » Au journal de 20 h, interrogé sur ' + topic + ', ' + p.candidate + ' a joué la carte « ' + l.media.name.toLowerCase() + ' ». Gros succès d\'audience, surtout chez ' + segN2[topS2] + '.';
+        } else {
+          a.title = p.candidate + ' invité de la matinale de ' + stN;
+          a.text = 'À 7 h 50, au micro de ' + stN + ', ' + p.candidate + ' a été interrogé sur ' + topic + ' : « ' + l.media.quote + ' » Les auditeurs ont réagi, surtout ' + segN2[topS2] + '.';
+        }
+        a.rub = 'Médias';
       } else if (type === 'medias') {
         a.title = p.candidate + ' invité du journal de 13 h';
         if (l.media) {

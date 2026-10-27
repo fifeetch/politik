@@ -1002,7 +1002,7 @@
     if (g.phase !== 'actions') return 'Ce n’est pas le moment.';
     if (queue.length >= E.actionsFor(g, me)) return 'Tes ' + E.actionsFor(g, me) + ' actions sont déjà choisies.';
     if (act.type === 'card' && queue.some(function (q) { return q.card === act.card; })) return 'Carte déjà programmée.';
-    if (['rappel', 'fusion', 'eclat'].indexOf(act.type) >= 0 && queue.some(function (q) { return q.type === act.type; })) return 'Déjà programmé ce tour.';
+    if (['rappel', 'fusion', 'eclat', 'matinale', 'vingt'].indexOf(act.type) >= 0 && queue.some(function (q) { return q.type === act.type; })) return 'Déjà programmé ce tour.';
     if (act.type === 'nostalgie' && queue.some(function (q) { return q.type === 'nostalgie'; })) return 'Un seul retour en arrière par tour.';
     var err = E.checkAction(g, me, act); if (err) return err;
     var c = E.actionCost(g, me, act), pr = projected();
@@ -1427,7 +1427,7 @@
       if (!a && i >= E.actionsFor(g, me)) { box.appendChild(el('div', { class: 'slot slot-lock', title: 'Perdue à cause de la primaire' }, '🌹 Primaire')); continue; }
       if (!a) { box.appendChild(el('div', { class: 'slot' }, 'Action ' + (i + 1))); continue; }
       var name = a.type === 'card' ? D.CARDS[a.card].name : D.ACTIONS[a.type].name;
-      var sub = (a.reply ? D.ANSWERS[a.reply].icon + ' ' : a.theme ? th(a.theme).icon + ' ' : '') + (a.region ? SHORT[a.region] : a.target ? a.target : a.theme ? th(a.theme).short : '✕ retirer');
+      var sub = (a.reply ? D.ANSWERS[a.reply].icon + ' ' : a.theme ? th(a.theme).icon + ' ' : '') + (a.station ? D.STATIONS.filter(function (s) { return s.id === a.station; })[0].name : a.region ? SHORT[a.region] : a.target ? a.target : a.theme ? th(a.theme).short : '✕ retirer');
       var b = el('button', { class: 'slot full' + (i === justAdded ? ' flip' : ''), type: 'button', 'aria-label': 'Retirer ' + name },
         '<span class="slot-in"><span class="face front">' + esc(name) + '<small>' + sub + '</small></span><span class="face back" aria-hidden="true">★</span></span>');
       (function (idx) { b.addEventListener('click', function () { queue.splice(idx, 1); render(); }); })(i);
@@ -1551,22 +1551,50 @@
       (extra || '') + '</span>' +
       (c.notes.length ? '<small class="ans-n">' + c.notes.map(esc).join(' · ') + '</small>' : '');
   }
-  function tvSet(kicker, iv) {
+  function tvSet(kicker, iv, host, cls) {
     var t = th(iv.q.theme);
-    return '<div class="tvset"><div class="tvset-top"><span class="tv-live">● EN DIRECT</span><span>' + esc(kicker) + '</span></div>' +
-      '<div class="tvset-q"><span class="tvset-chip">' + t.icon + ' ' + esc(t.name) + '</span><p>« ' + esc(iv.q.ask) + ' »</p><small>La journaliste, plateau du 13 h</small></div></div>';
+    return '<div class="tvset' + (cls ? ' ' + cls : '') + '"><div class="tvset-top"><span class="tv-live">● EN DIRECT</span><span>' + esc(kicker) + '</span></div>' +
+      '<div class="tvset-q"><span class="tvset-chip">' + t.icon + ' ' + esc(t.name) + '</span><p>« ' + esc(iv.q.ask) + ' »</p><small>' + esc(host) + '</small></div></div>';
   }
-  function teleInterview(thm) {
-    var q = teleQuestion(thm), iv = E.interview(g, me, q.id, 'tele');
-    var html = tvSet('📺 Interview télé', iv) + '<div class="ans-k">Ta réponse</div><div class="ans-list">' + iv.cards.map(function (c, i) {
+  /* v3.9 : une interview (Télé, Matinale, 20 h) : la question, tes 4 réponses et ce qu'elles rapportent */
+  function interviewModal(o) {
+    var q = teleQuestion(o.theme), iv = E.interview(g, me, q.id, o.fmt, o.station ? E.stationBoost(me, o.station) : null);
+    var html = tvSet(o.kicker, iv, o.host, o.cls) + (o.intro || '') + '<div class="ans-k">Ta réponse</div><div class="ans-list">' + iv.cards.map(function (c, i) {
       return '<button type="button" class="ans" data-i="' + i + '">' + answerCard(c, '<b class="ans-pt">≈ ' + ptFr(E.previewGain(g, me, c.gains)) + ' pt</b>') + '</button>';
     }).join('') + '</div><p class="hint">❤️ Le cœur touche surtout 🔧 ouvriers, employés et 🎓 sans-emploi ; 🧠 la tête, 💼 cadres et 👵 retraités. Le gain vaut dans <b>toutes les régions</b>, et s\u2019use de 15 % par tour.</p>';
-    modal({ kicker: costLabel({ type: 'medias', theme: q.theme }) + ' · 1 action', title: 'Que réponds-tu ?', cls: 'tv-modal', html: html, buttons: [{ label: 'Annuler' }],
+    var act0 = { type: o.type, theme: q.theme, station: o.station };
+    modal({ kicker: costLabel(act0) + ' · 1 action', title: o.title || 'Que réponds-tu ?', cls: 'tv-modal', html: html, buttons: [{ label: 'Annuler' }],
       onOpen: function () {
         Array.prototype.forEach.call(document.querySelectorAll('#modal .ans'), function (b) {
-          b.addEventListener('click', function () { var c = iv.cards[+b.getAttribute('data-i')]; closeModal(); addAction({ type: 'medias', theme: q.theme, qid: q.id, reply: c.key }); });
+          b.addEventListener('click', function () { var c = iv.cards[+b.getAttribute('data-i')]; closeModal(); addAction(Object.assign({}, act0, { qid: q.id, reply: c.key })); });
         });
       } });
+  }
+  function teleInterview(thm) { interviewModal({ type: 'medias', fmt: 'tele', theme: thm, kicker: '📺 Interview télé', host: 'La journaliste, plateau du 13 h' }); }
+  /* v3.9 : la matinale radio. D'abord la station (son public et son accueil), puis l'interview */
+  function matinaleMenu() {
+    var thm = theme || E.bestTheme(g, me, selected || null);
+    var html = '<p>Une interview à 7 h 50. Chaque radio a son public : choisis qui tu veux toucher. Les auditeurs t\u2019écoutent mieux s\u2019ils sont de ton bord.</p><div class="pick">' + D.STATIONS.map(function (st) {
+      var fit = E.stationFit(me, st.id), top = E.SEG.slice().sort(function (a, b) { return st.segs[b] - st.segs[a]; }).slice(0, 2);
+      return '<button type="button" class="pick-row st-' + fit.k + '" data-st="' + st.id + '"><span class="pick-i">' + st.icon + '</span><span class="pick-txt"><b>' + esc(st.name) + ' <span class="muted">(' + esc(st.parody) + ')</span></b><small>' + esc(st.desc) + '</small>' +
+        '<small class="st-fit">Public : ' + top.map(function (s) { return SEGBY[s].icon + ' ' + esc(SEGBY[s].name.toLowerCase()); }).join(', ') + ' · <b>' + esc(fit.label) + '</b>' + (fit.f === 1 ? '' : ' (' + (fit.f > 1 ? '+' : '−') + Math.abs(Math.round((fit.f - 1) * 100)) + ' %)') + '</small></span></button>';
+    }).join('') + '</div>';
+    modal({ kicker: '📻 Matinale radio · 1 ⚡', title: 'Quelle radio ce matin ?', html: html, buttons: [{ label: 'Annuler' }],
+      onOpen: function () {
+        Array.prototype.forEach.call(document.querySelectorAll('#modal [data-st]'), function (b) {
+          b.addEventListener('click', function () {
+            var st = D.STATIONS.filter(function (x) { return x.id === b.getAttribute('data-st'); })[0], fit = E.stationFit(me, st.id);
+            closeModal();
+            interviewModal({ type: 'matinale', fmt: 'matinale', theme: thm, station: st.id, kicker: st.icon + ' ' + st.name + ' · la matinale', host: 'L\u2019intervieweur de 7 h 50 · ' + fit.label, cls: 'radio' });
+          });
+        });
+      } });
+  }
+  /* v3.9 : le 20 h, une fois par campagne, sur invitation */
+  function vingtInterview() {
+    var thm = theme || E.bestTheme(g, me, selected || null), risk = Math.round(100 * E.stageRisk(g, me, Math.max(0, projected().forme - 1)));
+    interviewModal({ type: 'vingt', fmt: 'vingt', theme: thm, kicker: '🕗 Le journal de 20 h', host: 'Le présentateur du 20 h · 6 millions de téléspectateurs', cls: 'vingt', title: 'Le grand rendez-vous',
+      intro: '<p class="vingt-risk">😱 <b>Trac du direct : ' + risk + ' %</b> de risque de trou de mémoire (la moitié du gain en négatif, +1 casserole). Moins tu as d\u2019énergie ⚡, plus c\u2019est risqué.</p>' });
   }
   function bigGain(act) {
     if (act.type === 'mobiliser') return E.mobilizeGain(g, me, act.region).n;
@@ -1602,6 +1630,11 @@
       var err = def.target === 'region' && !selected ? 'choisis d\'abord une région' : canQueue(act);
       items.push({ act: act, icon: '🃏', name: def.name, cost: 'carte unique', fx: MORE_SHORT[k] || esc(def.text), err: err });
     });
+    // v3.9 : la matinale et le 20 h
+    var mErr = E.matinaleError(g, me) || (queue.some(function (q) { return q.type === 'matinale'; }) ? 'déjà programmée ce tour' : canQueue({ type: 'matinale', theme: theme || E.bestTheme(g, me, null), station: 'rmc' }));
+    items.unshift({ special: 'matinale', icon: '📻', name: 'Matinale radio', cost: costLabel({ type: 'matinale' }), fx: 'Une radio, un public : gagne des classes sociales', err: mErr ? mErr.replace(/\.$/, '') : null });
+    var vErr = E.vingtError(g, me) || (queue.some(function (q) { return q.type === 'vingt'; }) ? 'déjà programmé ce tour' : canQueue({ type: 'vingt', theme: theme || E.bestTheme(g, me, null) }));
+    items.unshift({ special: 'vingt', icon: '🕗', name: 'Le 20 h', cost: costLabel({ type: 'vingt' }), fx: '<b>Tu es invité !</b> Une fois par campagne : gros gain… ou gros raté', err: vErr ? vErr.replace(/\.$/, '') : null, mine: !vErr });
     items.push({ special: 'enquete', icon: '🔎', name: 'Enquêter sur un rival', cost: costLabel({ type: 'enquete', target: null }),
       fx: 'Fouiller le passé d\u2019un rival', err: g.turn >= R.maxTurns ? 'trop tard pour sortir un dossier' : null });
     var html = '<div class="pick">' + items.map(function (it, i) {
@@ -1616,6 +1649,8 @@
             if (it.err) { toast(it.err.charAt(0).toUpperCase() + it.err.slice(1) + '.'); return; }
             closeModal();
             if (it.special === 'enquete') enqueteMenu();
+            else if (it.special === 'matinale') matinaleMenu();
+            else if (it.special === 'vingt') vingtInterview();
             else if (it.special === 'alliance') allianceMenu();
             else if (it.special === 'break') confirmBreak();
             else addAction(it.act);
@@ -2313,6 +2348,8 @@
       '<p><b>Ton message.</b> Meeting, Télé, Buzz et Faire la une portent un <b>thème</b> (💶 🏭 🏥 🌿 🚓 🛂). Son <b>impact</b>, de 0 à 4 = ta crédibilité sur le thème (0 à 2) + 1 si la région s\'en préoccupe + 1 si le thème fait l\'actu. Le bon message au bon endroit rapporte deux fois plus.</p>' +
       '<p><b>Les actions :</b></p><ul class="rules-acts">' +
         '<li>📣 <b>Meeting</b> (2 €) : des soutiens dans la région. <b>Base</b> de 1 à 4 selon l\'impact du message (de 2 à 5 en campagne éclair), <b>plus les bonus</b> : mesure phare +1, région de cœur +1 (hostile −1), dynamique ±1, et pour le Parti Survivant +1 là où il a déjà 5 soutiens. Le détail s\'affiche quand tu touches une région. Une région compte au plus 10 soutiens par parti.</li>' +
+        '<li>📻 <b>Matinale radio</b> (1 ⚡, une fois tous les deux tours) : une interview sur une radio au choix. Chaque radio a son public (France Intérieure : cadres et profs ; Radio Nouba : les jeunes ; Europe Hier : retraités et petits patrons ; Radio Mon Comptoir : ouvriers et artisans). Si les auditeurs sont de ton bord, +25 % ; s\u2019ils sont loin, −30 %.</li>' +
+        '<li>🕗 <b>Le 20 h</b> (1 ⚡, une fois par campagne, réservé aux 4 premiers du sondage) : le gain d\u2019une interview multiplié par deux… mais le trac du direct peut tourner au trou de mémoire (25 % de risque, 5 % de moins par ⚡ qu\u2019il te reste).</li>' +
         '<li>📺 <b>Télé</b> (3 € + 1 ★ + 1 ⚡) : une interview sur ton thème. Tu choisis ta réponse (❤️ émotion, 💡 ta mesure, 🥊 attaque ou 🛡️ bilan, 🙃 recentrer) : elle te fait gagner des voix dans une ou plusieurs <b>classes sociales</b>, dans toutes les régions à la fois. L\u2019effet s\u2019use de 15 % par tour.</li>' +
         '<li>🚪 <b>Mobiliser</b> (2 €) : du porte-à-porte pour faire voter des abstentionnistes. 1 soutien, +1 avec tes militants, +1 si ton programme parle à ceux qui votent peu ici, +1 si la région s\'abstient beaucoup (3 au plus). Jusqu\'au tour 3, tu fais aussi inscrire de nouveaux électeurs.</li>' +
         '<li>📱 <b>Buzz</b> (1 €, menu Plus) : un coup de dé, de −1 à +4 soutiens. +1 si le thème fait l\'actu.</li>' +

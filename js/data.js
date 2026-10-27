@@ -539,6 +539,8 @@
     enquete:  { name: 'Enquêter',       icon: '🔎', cost: { money: 1, infl: 1 }, target: 'party', text: 'Fouiller le passé d\'un rival : si tu trouves quelque chose, une affaire lui tombe dessus au prochain tour' },
     alliance: { name: 'Alliance',       cost: { money: 0, infl: 1 }, target: 'party',  text: "Proposer une alliance à un parti proche (distance 2 au plus)" },
     rupture:  { name: 'Rupture',        cost: { money: 0, infl: 0 }, target: null,     text: "Rompre ton alliance : −2 ★, et ton ex-allié ne te reportera presque rien au second tour" },
+    matinale: { name: 'Matinale radio', icon: '📻', cost: { money: 0, infl: 0, forme: 1 }, target: null, theme: true, text: 'Une interview à la radio : le public dépend de la station (une fois tous les deux tours)' },   // v3.9
+    vingt:    { name: 'Le 20 h',        icon: '🕗', cost: { money: 0, infl: 0, forme: 1 }, target: null, theme: true, text: 'Invité au journal de 20 h : une fois par campagne, réservé aux 4 premiers du sondage' },   // v3.9
     repos:    { name: 'Repos',          icon: '😴', cost: { money: 0, infl: 0 }, target: null,     text: 'Une journée loin des caméras : +2 ⚡ tout de suite' },   // v3.6.6
     /* v3.1 : les actions propres à un parti (voir TRAITS) */
     nostalgie:{ name: 'C\u2019était mieux avant', icon: '⏪', only: ['MN', 'RQ'], cost: { money: 2, infl: 0, forme: 1 }, target: 'region', text: 'Promettre le retour du passé : plaît aux retraités, fait fuir les jeunes à mesure qu\u2019on recule' },
@@ -921,6 +923,20 @@
     scale: { tele: 0.5, matinale: 0.35, vingt: 1, debat: 0.7 },
     gaffePromise: 0.3 // promesse improvisée : 30 % de risque de casserole
   };
+  /* v3.9 : les matinales radio (parodies). segs = qui écoute ; lean = le bord politique des auditeurs (positions sur l'axe, 0 à 7) */
+  var STATIONS = [
+    { id: 'inter',  name: 'France Intérieure',  parody: 'France Inter', icon: '📻', segs: { cad: 1.6, pi: 1.5, ret: 1.2, sae: 0.9, pop: 0.6, ind: 0.6 }, lean: [2, 4.4],
+      desc: 'La matinale des cadres, des profs et des retraités curieux. Auditeurs plutôt à gauche et au centre.' },
+    { id: 'nova',   name: 'Radio Nouba',        parody: 'Radio Nova',   icon: '🎧', segs: { sae: 1.9, pi: 1.2, cad: 1.0, pop: 0.8, ind: 0.5, ret: 0.3 }, lean: [0, 2],
+      desc: 'Les jeunes des grandes villes, entre deux morceaux. Auditeurs à gauche toute.' },
+    { id: 'europe', name: 'Europe Hier',        parody: 'Europe 1',     icon: '📼', segs: { ret: 1.6, ind: 1.4, pop: 1.0, cad: 0.9, pi: 0.6, sae: 0.4 }, lean: [5.5, 7],
+      desc: 'Les retraités et les petits patrons, nostalgiques d\u2019une France d\u2019avant. Auditeurs très à droite.' },
+    { id: 'rmc',    name: 'Radio Mon Comptoir', parody: 'RMC',          icon: '☕', segs: { pop: 1.8, ind: 1.5, ret: 0.8, pi: 0.8, sae: 0.8, cad: 0.5 }, lean: null,
+      desc: 'Les ouvriers et les artisans, au café ou au volant. Des auditeurs de tous bords, qui ne font de cadeau à personne.' }
+  ];
+  /* Accueil d'un candidat selon le bord de la radio : public acquis, partagé ou hostile */
+  var STATION_FIT = { home: 1.25, near: 1, far: 0.7 };
+  var VINGT = { top: 4, stage: 0.25, stagePerForme: 0.05, stageMin: 0.05 };   // le trac du direct : 25 % − 5 % par ⚡ qu'il te reste (5 % au moins)
   /* Les types de réponse */
   var ANSWERS = {
     emotion:   { name: 'Émotion',            icon: '❤️' },
@@ -1155,7 +1171,7 @@
 
   var DATA = { REFERENCE_2027: REFERENCE_2027, POLLS: POLLS, BASES: BASES, REGIONS: REGIONS, PROFILES: PROFILES, THEMES: THEMES, HEADLINES: HEADLINES, PARTIES: PARTIES, ACTIONS: ACTIONS,
                CARDS: CARDS, EVENTS: EVENTS, DILEMMAS: DILEMMAS, CRISES: CRISES, REPLIES: REPLIES, TEMPERS: TEMPERS, TRAITS: TRAITS, NOSTALGIA: NOSTALGIA, PETALS: PETALS, MICRO: MICRO, BINGO: BINGO, BINGO_LINES: BINGO_LINES,
-               MEASURES: MEASURES, FUNDING: FUNDING, SEGMENTS: SEGMENTS, VOTE_PROP: VOTE_PROP, CLASS_PROF: CLASS_PROF, CLASS_SRC: CLASS_SRC, HEART: HEART, MAJORITY: MAJORITY, MEDIA: MEDIA, ANSWERS: ANSWERS, QUESTIONS: QUESTIONS, SEGMENTS_SRC: SEGMENTS_SRC, AFFAIRS: AFFAIRS, LEARN: LEARN, BUDGET_AFFAIR: BUDGET_AFFAIR, REACTIONS: REACTIONS, ADVISOR: ADVISOR, OBJECTIVES: OBJECTIVES, RULES: RULES, FORMATS: FORMATS, LEGIS: LEGIS, MINISTRY: MINISTRY, OPPO: OPPO, validate: validate };
+               MEASURES: MEASURES, FUNDING: FUNDING, SEGMENTS: SEGMENTS, VOTE_PROP: VOTE_PROP, CLASS_PROF: CLASS_PROF, CLASS_SRC: CLASS_SRC, HEART: HEART, MAJORITY: MAJORITY, MEDIA: MEDIA, ANSWERS: ANSWERS, STATIONS: STATIONS, STATION_FIT: STATION_FIT, VINGT: VINGT, QUESTIONS: QUESTIONS, SEGMENTS_SRC: SEGMENTS_SRC, AFFAIRS: AFFAIRS, LEARN: LEARN, BUDGET_AFFAIR: BUDGET_AFFAIR, REACTIONS: REACTIONS, ADVISOR: ADVISOR, OBJECTIVES: OBJECTIVES, RULES: RULES, FORMATS: FORMATS, LEGIS: LEGIS, MINISTRY: MINISTRY, OPPO: OPPO, validate: validate };
   if (typeof module !== 'undefined' && module.exports) module.exports = DATA;
   else root.PolitikData = DATA;
 })(this);

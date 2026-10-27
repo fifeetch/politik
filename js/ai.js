@@ -33,6 +33,9 @@
     var tvThemes = D.THEMES.map(function (t) { return t.id; }).sort(function (a, b) { return E.impact(v, pid, null, b) - E.impact(v, pid, null, a); }).slice(0, 2);
     if (hotTh && tvThemes.indexOf(hotTh) < 0) tvThemes.push(hotTh);
     tvThemes.forEach(function (th) { list.push({ type: 'medias', theme: th }); });
+    // v3.9 : la matinale (sur la radio qui l'accueille le mieux) et le 20 h s'il est invité
+    if (!E.matinaleError(v, pid)) D.STATIONS.forEach(function (st) { if (E.stationFit(pid, st.id).k !== 'far') list.push({ type: 'matinale', theme: tvThemes[0], station: st.id }); });
+    if (!E.vingtError(v, pid)) tvThemes.forEach(function (th) { list.push({ type: 'vingt', theme: th }); });
     list.push({ type: 'fonds' });
     list.push({ type: 'repos' });   // v3.6.6
     // v3.1 : les actions propres à un parti
@@ -80,12 +83,16 @@
         var hb = E.isHot(v, act.theme) ? D.RULES.socialHotBonus : 0;
         val += 0.5 * E.gain(v, pid, act.region, 1 + hb) + 0.33 * E.gain(v, pid, act.region, 2 + hb) + 0.17 * E.gain(v, pid, act.region, 4 + hb) - (hb ? 0 : 0.17 * 0.5);
         eff.push([act.region, pid, 1 + hb]); break; }
+      case 'matinale':
+      case 'vingt':
       case 'medias': {
         // v3.8 : on choisit la réponse qui rapporte le plus au sondage ; l'effet s'use au fil des tours
-        var q = E.pickQuestion(v, act.theme, pid.length + pid.charCodeAt(0)), iv = E.interview(v, pid, q.id, 'tele'), card = E.aiAnswer(v, pid, iv);
+        var fmtA = act.type === 'medias' ? 'tele' : act.type;
+        var q = E.pickQuestion(v, act.theme, pid.length + pid.charCodeAt(0)), iv = E.interview(v, pid, q.id, fmtA, act.station ? E.stationBoost(pid, act.station) : null), card = E.aiAnswer(v, pid, iv);
         act.qid = q.id; act.reply = card.key;
         var left = Math.max(0, D.RULES.maxTurns - v.turn);
         val += E.quickGain(v, pid, card.gains) * 100 * 1.6 * (1 + Math.pow(D.MEDIA.keep, left)) / 2 * 1.4 - (card.risk || 0) * 1.2;
+        if (act.type === 'vingt') { var sr = E.stageRisk(v, pid, Math.max(0, pl.forme - 1)); val *= 1 - 1.5 * sr; if (left > 3) val *= 0.6; }   // le trac, et on le garde pour la fin
         break; }
       case 'imposer': {
         // le thème aidera ses actions du prochain tour… mais aussi les rivaux crédibles sur ce thème
@@ -179,6 +186,8 @@
       if (best.act.type === 'fonds') { pl.money += E.fundsGain(pid).money; pl.infl += E.fundsGain(pid).infl; }
       if (best.act.type === 'enquete') { v.enq = v.enq || {}; v.enq[pid + best.act.target] = 1; }
       if (best.act.type === 'alliance') { v.alliances[pid] = best.act.target; v.alliances[best.act.target] = pid; }
+      if (best.act.type === 'matinale') pl.matinaleTurn = g.turn;
+      if (best.act.type === 'vingt') pl.vingtUsed = g.turn;
       if (best.act.type === 'repos') pl.forme = Math.min(D.RULES.formeMax, pl.forme + D.RULES.reposForme);
       if (best.act.type === 'nostalgie') { v.nost[pid] = (v.nost[pid] || 0) + 1; pl.nostTurn = g.turn; }
       if (best.act.type === 'rappel') pl.rappelTurn = g.turn;
