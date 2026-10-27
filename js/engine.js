@@ -585,6 +585,7 @@
     var imp = impact(g, pid, rid, th), parts = [{ k: 'base', label: 'impact ' + imp, n: R.terrainCubes[imp] }];
     if (pid === 'SM' && cubes(g, rid, pid) >= 5) parts.push({ k: 'parti', label: 'implantation', n: spec(g, pid, 1) });
     if (pid === 'DL' && REG[rid].profile === 'rurale') parts.push({ k: 'parti', label: 'France des clochers', n: spec(g, pid, 1) });
+    if (g.mode === 'beta' && pid === 'VP' && th === 'ecologie') parts.push({ k: 'parti', label: 'l\u2019écologie, leur combat', n: 2 });   // v4.3 (Bêta) : atout des Enracinés
     var pl = player(g, pid);
     if (pl && pl.phare && MEAS[pl.phare].theme === th) parts.push({ k: 'phare', label: 'mesure phare', n: R.pharBonus });
     var e = pl && pl.programme ? echoBonus(g, pid, rid) : 0;   // v0.8 : le programme plaît (ou déplaît) aux habitants

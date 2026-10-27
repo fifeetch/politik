@@ -936,6 +936,7 @@
       'Pas de prime au sortant : tenir une région ne donne plus de voix en plus.',
       'Actions et cartes propres à chaque parti réglées selon son rang : plus fortes pour les petits, plus faibles pour les favoris.',
       'Scandales : plus fréquents pour les favoris (RN, LFI), plus rares pour les petits partis.',
+      'Les Enracinés : chaque Meeting sur l\u2019écologie rapporte 2 soutiens de plus.',
       'Socle figé à 30 % (au lieu de 50 %) : plus de voix bougent pendant la campagne.'
     ]
   };

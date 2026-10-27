@@ -626,5 +626,18 @@ section('Le mode Bêta (v4.1)');
   E.loadGame(E.saveGame(gr)); ok(D.RULES.socle === 0.5, 'reprendre une sauvegarde Réaliste remet les règles Réaliste');
 })();
 
+section('Bêta : réglages par parti (v4.3)');
+(function () {
+  var gb = E.createGame('VP', { seed: 160, base: 'sond', mode: 'beta' }), gr = E.createGame('VP', { seed: 160, base: 'sond' });
+  var rid = D.REGIONS[0].id;
+  ok(E.terrainCubes(gb, 'VP', rid, 'ecologie') >= E.terrainCubes(gr, 'VP', rid, 'ecologie') + 2 || E.terrainCubes(gb, 'VP', rid, 'ecologie') >= 6, 'Bêta : un Meeting des Enracinés sur l\'écologie rapporte 2 soutiens de plus');
+  gb = E.createGame('MN', { seed: 160, base: 'sond', mode: 'beta' });
+  ok(E.spec(gb, 'MN', 4) < 4 && E.spec(gb, 'VP', 3) > 3, 'Bêta : effets spécifiques réduits pour le RN, renforcés pour les petits');
+  ok(D.BETA.scandal.MN > 1 && D.BETA.scandal.VP < 1, 'Bêta : plus de scandales pour le favori, moins pour les petits');
+  ok(D.AFFAIRS.some(function (a) { return a.party && a.party.indexOf('MN') >= 0; }), 'des affaires propres au RN existent');
+  var gn = E.createGame('MN', { seed: 160, base: 'sond' });
+  ok(E.spec(gn, 'MN', 4) === 4, 'Réaliste : les effets spécifiques ne changent pas');
+})();
+
 console.log('\n' + passes + ' vérifications réussies, ' + fails + ' en échec.');
 process.exit(fails ? 1 : 0);
