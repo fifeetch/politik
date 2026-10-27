@@ -549,6 +549,27 @@
     eclat:    { name: 'Le coup d\u2019éclat', icon: '💥', only: ['UG'], cost: { money: 3, infl: 2 }, target: null, text: 'Faire parler de soi : les caméras reviennent pour 3 tours' }
   };
 
+  /* v4.3 : les fiches des actions et cartes propres à un parti, toutes au même format :
+     quand on peut la jouer · ce qu'elle fait (chiffré) · le risque. {n} = un nombre qui dépend du réglage du parti (mode Bêta). */
+  var FICHES = {
+    nostalgie:     { quand: 'Une fois par tour, dans une région au choix.', effet: '+{3} soutiens dans la région (+{4} à partir de 1962), +1 si c\u2019est une région de retraités.', risque: 'Chaque usage recule l\u2019année rêvée. Dès 1962 : −1 soutien dans 1, puis 2, puis 3 de tes régions où il y a le plus d\u2019étudiants et de chômeurs. Si l\u2019autre parti nostalgique est présent dans la région : −1 soutien chacun. Au 6e usage (l\u2019âge de pierre) : −1 soutien dans 3 régions et +1 casserole.' },
+    rappel:        { quand: 'Une fois par tour, s\u2019il manque au moins un pétale à ta rose (un courant est parti chez un voisin).', effet: '2 chances sur 3 : le premier courant parti revient, et ramène {3} soutiens (1 dans chacune de 3 régions), repris au parti qu\u2019il avait rejoint. Si ta rose est complète : +2 ★ et +1 soutien dans 3 régions.', risque: '1 chance sur 3 : l\u2019ancien sort un livre qui règle ses comptes, +2 casseroles.' },
+    fusion:        { quand: 'Quand un micro-parti centriste existe (il apparaît au tour 4).', effet: '+1 soutien dans {3} régions, et le micro-parti cesse de prendre 6 % des voix des partis du centre.', risque: 'Les deux autres partis du centre profitent aussi de la fin du micro-parti.' },
+    eclat:         { quand: 'Seulement quand tu es « transparent » (les caméras t\u2019ont oublié).', effet: '+1 soutien dans {3} régions, et tu restes visible pendant 3 tours.', risque: 'Aucun.' },
+    marche_pop:    { quand: 'Une fois par partie, dans une région urbaine.', effet: '+{3} soutiens dans la région.', risque: 'Aucun.' },
+    climat:        { quand: 'Une fois par partie, dans une région rurale ou urbaine.', effet: '+{3} soutiens dans la région.', risque: 'Aucun.' },
+    grand_meeting: { quand: 'Une fois par partie, dans n\u2019importe quelle région.', effet: '+{4} soutiens dans la région.', risque: 'Aucun.' },
+    fete_rose:     { quand: 'Une fois par partie, dans une région au choix.', effet: '+{2} soutiens dans la région, et +{2} dans ta meilleure autre région où tu es déjà présent.', risque: 'Aucun.' },
+    appel18:       { quand: 'Une fois par partie.', effet: '+{1} soutien dans chacune des 4 régions historiques (Normandie, Bourgogne-Franche-Comté, Centre-Val de Loire, Corse et outre-mer).', risque: 'Aucun.' },
+    plateau_tele:  { quand: 'Une fois par partie.', effet: '+{2} soutiens dans 3 régions rurales ou industrielles (celles où ça rapporte le plus).', risque: 'Aucun.' },
+    canicule:      { quand: 'Une fois par partie.', effet: 'Chaque adversaire perd 1 soutien dans ses 2 régions les plus fortes.', risque: 'Aucun.' },
+    censure:       { quand: 'Une fois par partie.', effet: 'Chaque adversaire perd 1 ★.', risque: 'Aucun.' },
+    art493:        { quand: 'Une fois par partie.', effet: 'La prochaine action du rival en tête des sondages est annulée ce tour.', risque: '+1 casserole.' },
+    remaniement:   { quand: 'Une fois par partie, vers une région au choix.', effet: 'Déplace 2 soutiens de ta région la plus forte vers cette région.', risque: 'Tu perds 2 soutiens dans ta région la plus forte.' },
+    primaire:      { quand: 'Une fois par partie.', effet: '+3 ★.', risque: 'Aucun.' },
+    rassemblement: { quand: 'Une fois par partie.', effet: '+3 € et +1 ★.', risque: 'Aucun.' }
+  };
+
   /* Cartes spéciales : 1 utilisation par partie, prend 1 action. */
   var CARDS = {
     marche_pop:    { name: 'Marche populaire',     target: 'region', profiles: ['urbaine'], text: '+3 soutiens dans une région urbaine.' },
@@ -1207,7 +1228,7 @@
   }
 
   var DATA = { REFERENCE_2027: REFERENCE_2027, POLLS: POLLS, BASES: BASES, REGIONS: REGIONS, PROFILES: PROFILES, THEMES: THEMES, HEADLINES: HEADLINES, PARTIES: PARTIES, ACTIONS: ACTIONS,
-               CARDS: CARDS, EVENTS: EVENTS, DILEMMAS: DILEMMAS, CRISES: CRISES, REPLIES: REPLIES, TEMPERS: TEMPERS, TRAITS: TRAITS, NOSTALGIA: NOSTALGIA, PETALS: PETALS, MICRO: MICRO, BINGO: BINGO, BINGO_LINES: BINGO_LINES,
+               CARDS: CARDS, FICHES: FICHES, EVENTS: EVENTS, DILEMMAS: DILEMMAS, CRISES: CRISES, REPLIES: REPLIES, TEMPERS: TEMPERS, TRAITS: TRAITS, NOSTALGIA: NOSTALGIA, PETALS: PETALS, MICRO: MICRO, BINGO: BINGO, BINGO_LINES: BINGO_LINES,
                MEASURES: MEASURES, FUNDING: FUNDING, SEGMENTS: SEGMENTS, VOTE_PROP: VOTE_PROP, CLASS_PROF: CLASS_PROF, CLASS_SRC: CLASS_SRC, HEART: HEART, MAJORITY: MAJORITY, BETA: BETA, MEDIA: MEDIA, ANSWERS: ANSWERS, STATIONS: STATIONS, DEB_REG: DEB_REG, DEB_BEATS: DEB_BEATS, DEB_REG_NAME: DEB_REG_NAME, DEBATE: DEBATE, STATION_FIT: STATION_FIT, VINGT: VINGT, QUESTIONS: QUESTIONS, SEGMENTS_SRC: SEGMENTS_SRC, AFFAIRS: AFFAIRS, LEARN: LEARN, BUDGET_AFFAIR: BUDGET_AFFAIR, REACTIONS: REACTIONS, ADVISOR: ADVISOR, OBJECTIVES: OBJECTIVES, RULES: RULES, FORMATS: FORMATS, LEGIS: LEGIS, MINISTRY: MINISTRY, OPPO: OPPO, validate: validate };
   if (typeof module !== 'undefined' && module.exports) module.exports = DATA;
   else root.PolitikData = DATA;

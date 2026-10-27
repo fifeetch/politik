@@ -1323,3 +1323,12 @@ button { font-family: inherit; color: inherit; }
 /* v4.1 : le mode Bêta */
 .beta-note { margin: 8px 0 0; padding: 10px 12px; background: var(--hot); border-radius: 12px; font-size: 13px; line-height: 1.4; }
 .beta-note ul { margin: 4px 0 0; padding-left: 18px; }
+
+/* v4.3 : les fiches des actions spécifiques */
+.pick-txt .fiche-l { display: block; font-size: 12.5px; line-height: 1.35; margin-top: 2px; }
+.pick-txt .fiche-r { color: var(--red); }
+.pick-txt .fiche-err { display: block; font-style: italic; color: var(--muted); }
+.specials { display: flex; flex-direction: column; gap: 8px; margin: 8px 0; }
+.special { background: var(--sheet); border-radius: 12px; padding: 8px 10px; font-size: 14px; }
+.special .pick-txt { display: block; margin-top: 3px; }
+.special .fiche-l b, .pick-txt .fiche-l b { font: inherit; font-weight: 700; }

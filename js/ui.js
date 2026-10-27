@@ -1637,6 +1637,23 @@
     if (act.type === 'terrain') return E.terrainCubes(g, me, act.region, act.theme);
     var n = 0; E.mediaRegions(g, me, act.region, act.theme).forEach(function (rid) { n += E.mediaCubes(g, me, rid, act.theme); }); return n;
   }
+  /* v4.3 : tes actions de parti et tes cartes, avec leur fiche (dans l'onglet Mon parti) */
+  function specialsHtml() {
+    var rows = [];
+    Object.keys(D.ACTIONS).forEach(function (k) { var a = D.ACTIONS[k]; if (a.only && a.only.indexOf(me) >= 0 && D.FICHES[k]) rows.push({ icon: a.icon, name: a.name + ' · ' + costLabel({ type: k }), k: k }); });
+    mePl().cards.forEach(function (k) { if (D.FICHES[k]) rows.push({ icon: '🃏', name: D.CARDS[k].name + ' · carte unique', k: k }); });
+    if (!rows.length) return '';
+    return '<div class="specials"><div class="kicker">Tes actions spéciales et tes cartes</div>' + rows.map(function (r) {
+      return '<div class="special"><b>' + r.icon + ' ' + esc(r.name) + '</b><span class="pick-txt">' + ficheHtml(r.k) + '</span></div>';
+    }).join('') + '</div>';
+  }
+  /* v4.3 : la fiche d'une action ou d'une carte propre à ton parti : quand · effet chiffré · risque */
+  function ficheTxt(k, part) { var f = D.FICHES[k]; return f ? f[part].replace(/\{(\d+)\}/g, function (m, n) { return String(E.spec ? E.spec(g, me, +n) : +n); }) : ''; }
+  function ficheHtml(k) {
+    var f = D.FICHES[k]; if (!f) return '';
+    return '<span class="fiche-l"><b>Effet :</b> ' + esc(ficheTxt(k, 'effet')) + '</span><span class="fiche-l"><b>Quand :</b> ' + esc(ficheTxt(k, 'quand')) + '</span>' +
+      (f.risque !== 'Aucun.' ? '<span class="fiche-l fiche-r"><b>Risque :</b> ' + esc(ficheTxt(k, 'risque')) + '</span>' : '');
+  }
   /* Les autres actions, dans une fenêtre où l'on a la place de les expliquer */
   /* v3.1 : une ligne courte par action ; le détail arrive ensuite dans le journal */
   var MORE_SHORT = {
@@ -1659,12 +1676,12 @@
       var def = D.ACTIONS[type]; if (!def.only || def.only.indexOf(me) < 0) return;
       var act = { type: type, region: def.target === 'region' ? selected : undefined };
       var err = def.target === 'region' && !selected ? 'choisis d\u2019abord une région' : canQueue(act);
-      items.unshift({ act: act, icon: def.icon, name: def.name, cost: costLabel(act), fx: MORE_SHORT[type], err: err, mine: true });
+      items.unshift({ act: act, icon: def.icon, name: def.name, cost: costLabel(act), fx: D.FICHES[type] ? ficheHtml(type) : MORE_SHORT[type], err: err, mine: true });
     });
     mePl().cards.forEach(function (k) {
       var def = D.CARDS[k], act = { type: 'card', card: k, region: def.target === 'region' ? selected : undefined };
       var err = def.target === 'region' && !selected ? 'choisis d\'abord une région' : canQueue(act);
-      items.push({ act: act, icon: '🃏', name: def.name, cost: 'carte unique', fx: MORE_SHORT[k] || esc(def.text), err: err });
+      items.push({ act: act, icon: '🃏', name: def.name, cost: 'carte unique', fx: D.FICHES[k] ? ficheHtml(k) : MORE_SHORT[k] || esc(def.text), err: err });
     });
     // v3.9 : la matinale et le 20 h
     var mErr = E.matinaleError(g, me) || (queue.some(function (q) { return q.type === 'matinale'; }) ? 'déjà programmée ce tour' : canQueue({ type: 'matinale', theme: theme || E.bestTheme(g, me, null), station: 'rmc' }));
@@ -1675,7 +1692,7 @@
       fx: 'Fouiller le passé d\u2019un rival', err: g.turn >= R.maxTurns ? 'trop tard pour sortir un dossier' : null });
     var html = '<div class="pick">' + items.map(function (it, i) {
       return '<button type="button" class="pick-row' + (it.err ? ' off' : '') + (it.mine ? ' mine' : '') + '" data-i="' + i + '"><span class="pick-i">' + it.icon + '</span>' +
-        '<span class="pick-txt"><b>' + esc(it.name) + '</b><small>' + (it.err ? esc(it.err) : it.fx) + '</small></span><span class="pick-cost">' + esc(it.cost) + '</span></button>';
+        '<span class="pick-txt"><b>' + esc(it.name) + '</b><small>' + (it.err ? '<span class="fiche-err">' + esc(it.err) + '</span>' : '') + (!it.err || /fiche-l/.test(it.fx || '') ? it.fx : '') + '</small></span><span class="pick-cost">' + esc(it.cost) + '</span></button>';
     }).join('') + '</div>';
     modal({ kicker: 'Autres actions', title: 'Plus d\'options', html: html, buttons: [{ label: 'Fermer' }],
       onOpen: function () {
@@ -2410,7 +2427,7 @@
       line('🍳', '<b>' + pl.cas + ' casserole' + (pl.cas > 1 ? 's' : '') + '</b> — chacune = ' + Math.round(R.affairPerCasserole * 100) + ' % de risque d\'affaire par tour. Attaquer, enquêter, trahir, le 49.3 et certains choix en ajoutent.') +
       line(pl.momentum > 0 ? '↗' : pl.momentum < 0 ? '↘' : '→', pl.momentum > 0 ? '<b>En dynamique</b> : +1 soutien sur tes Meetings.' : pl.momentum < 0 ? '<b>Passage à vide</b> : −1 soutien sur tes Meetings.' : '<b>Dynamique stable.</b> Gagne 1,5 point au sondage en un tour pour être en dynamique.') +
       line('👥', '<b>' + pl.militants + ' / ' + R.militantsMax + ' équipes de militants</b> — chacune rapporte 1 soutien par tour.') +
-      '</div><p><b>Force :</b> ' + esc(p.force) + '</p><p><b>Faiblesse :</b> ' + esc(p.weakness) + '</p>' + traitHtml(me, true) + credHtml(me);
+      '</div><p><b>Force :</b> ' + esc(p.force) + '</p><p><b>Faiblesse :</b> ' + esc(p.weakness) + '</p>' + traitHtml(me, true) + specialsHtml() + credHtml(me);
     $('parti-body').innerHTML = '<span class="kicker">Ton parti</span><h1 class="h1 tab-title">' + esc(p.name) + '</h1>' + html +
       '<div class="stack parti-btns">' + (g && !g.over && g.phase !== 'between' && turnSnap ? '<button type="button" class="btn btn-ink" id="pb-save">💾 Sauvegarder la partie</button>' : '') + '<button type="button" class="btn" id="pb-lib">📚 Comprendre la politique</button><button type="button" class="btn" id="pb-rules">Règles du jeu</button><button type="button" class="btn btn-ghost" id="pb-quit">Abandonner la partie</button></div>';
     if ($('pb-save')) $('pb-save').addEventListener('click', saveNamed);
