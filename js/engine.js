@@ -381,13 +381,19 @@
     var rk = ranking(g), u = rk.indexOf('UG');
     return u >= 3 && rk.indexOf('MN') < u && rk.indexOf('EM') < u;
   }
+  /* v4.3 (Bêta) : la force des effets propres à un parti (cartes, actions de parti, atouts) */
+  function spec(g, pid, n) {
+    if (!g || g.mode !== 'beta') return n;
+    var f = (D.BETA.specific || {})[pid]; if (f == null || f === 1) return n;
+    return Math.max(0, Math.round(n * f));
+  }
   function isHidden(g, pid) { return pid === 'UG' && !!g.hidden; }
   function retireeRegion(rid) { return REG[rid].pop.ret >= 30; }
   function nostalgiaPreview(g, pid, rid) {
     var k = (g.nost && g.nost[pid]) || 0;
     if (k >= D.NOSTALGIA.length) return null;
     if (k === D.NOSTALGIA.length - 1) return { k: k, n: 0, youth: 0, stone: true };
-    var n = R.nostalgieGain[k] + (rid && retireeRegion(rid) ? 1 : 0);
+    var n = spec(g, pid, R.nostalgieGain[k] + (rid && retireeRegion(rid) ? 1 : 0));
     var other = pid === 'MN' ? 'RQ' : 'MN', war = !!(rid && player(g, other) && cubes(g, rid, other) > 0);
     return { k: k, n: Math.max(0, n - (war ? 1 : 0)), youth: R.nostalgieYouth[k], war: war, stone: false };
   }
@@ -577,8 +583,8 @@
   /* v1.5 : le gain d'un Meeting, détaillé : base (selon l'impact) + bonus. terrainCubes en est le total. */
   function terrainBreakdown(g, pid, rid, th) {
     var imp = impact(g, pid, rid, th), parts = [{ k: 'base', label: 'impact ' + imp, n: R.terrainCubes[imp] }];
-    if (pid === 'SM' && cubes(g, rid, pid) >= 5) parts.push({ k: 'parti', label: 'implantation', n: 1 });
-    if (pid === 'DL' && REG[rid].profile === 'rurale') parts.push({ k: 'parti', label: 'France des clochers', n: 1 });
+    if (pid === 'SM' && cubes(g, rid, pid) >= 5) parts.push({ k: 'parti', label: 'implantation', n: spec(g, pid, 1) });
+    if (pid === 'DL' && REG[rid].profile === 'rurale') parts.push({ k: 'parti', label: 'France des clochers', n: spec(g, pid, 1) });
     var pl = player(g, pid);
     if (pl && pl.phare && MEAS[pl.phare].theme === th) parts.push({ k: 'phare', label: 'mesure phare', n: R.pharBonus });
     var e = pl && pl.programme ? echoBonus(g, pid, rid) : 0;   // v0.8 : le programme plaît (ou déplaît) aux habitants
@@ -949,7 +955,7 @@
     if (lowTurnoutFit(g, pid, rid) >= 0.18) { n++; why.push('ton programme parle à ceux qui votent peu'); }
     if (regionVoters(g, rid).abst >= 0.35) { n++; why.push('beaucoup d\'abstentionnistes'); }
     var cap = 3;
-    if (pid === 'PC' && REG[rid].profile === 'industrielle') { n++; cap = 4; why.push('bastion ouvrier'); }
+    if (pid === 'PC' && REG[rid].profile === 'industrielle') { var bo = spec(g, pid, 1); n += bo; cap = 3 + bo; why.push('bastion ouvrier'); }
     return { n: Math.min(cap, n), why: why };
   }
   function enqueteChance(g, target) { return Math.min(0.9, R.enqueteBase + R.enqueteCas * player(g, target).cas); }
@@ -1258,7 +1264,7 @@
         if (pid === 'FI' && d <= 2) { var d2 = 1 + Math.floor(g.rng() * 6); t.push('dé ' + d + ', relancé'); d = d2; }
         var m = d === 1 ? -1 : d <= 3 ? 1 : d <= 5 ? 2 : 4;
         if (isHot(g, act.theme)) m += R.socialHotBonus;
-        if (pid === 'RQ' && act.theme === 'immigration') m += 1;   // v1.7 : polémiques
+        if (pid === 'RQ' && act.theme === 'immigration') m += spec(g, pid, 1);   // v1.7 : polémiques
         var unseen = isHidden(g, pid) && m > 0 && g.rng() < R.hiddenMiss;
         if (unseen) { entry.hidden = true; m = 0; }
         var got = addCubes(g, act.region, pid, m);
@@ -1329,7 +1335,7 @@
         var lp = lostPetals(g)[0];
         if (g.rng() < R.rappelChance) {
           g.petals[lp.id] = true; entry.petal = lp.id;
-          var mv = swing(g, player(g, lp.to) ? lp.to : null, pid, R.rappelSwing);
+          var mv = swing(g, player(g, lp.to) ? lp.to : null, pid, spec(g, pid, R.rappelSwing));
           t.push('François Hésitant ramène ' + lp.name + ' : +1 en ' + mv.map(function (r) { return REG[r].name; }).join(', ') + (player(g, lp.to) ? ' (repris à ' + PARTY[lp.to].short + ')' : ''));
           if (petalsCount(g) === D.PETALS.length && !g.roseBloom) {
             g.roseBloom = true; entry.bloom = true; pl.infl += 2;
@@ -1343,12 +1349,12 @@
         break; }
       case 'fusion': {
         var mname = g.micro.name; g.micro = null; g.microDone += 1; entry.micro = mname;
-        var fr = bestRegions(g, pid, R.fusionGain, null, 1); fr.forEach(function (rid) { addCubes(g, rid, pid, 1); });
+        var fr = bestRegions(g, pid, spec(g, pid, R.fusionGain), null, 1); fr.forEach(function (rid) { addCubes(g, rid, pid, 1); });
         t.push('absorbe « ' + mname + ' » : ses militants rejoignent le parti, +1 en ' + fr.map(function (r) { return REG[r].name; }).join(', '));
         break; }
       case 'eclat': {
         g.eclatUntil = g.turn + R.eclatTurns - 1; g.hidden = false; entry.eclat = true;
-        var er = bestRegions(g, pid, R.eclatGain, null, 1); er.forEach(function (rid) { addCubes(g, rid, pid, 1); });
+        var er = bestRegions(g, pid, spec(g, pid, R.eclatGain), null, 1); er.forEach(function (rid) { addCubes(g, rid, pid, 1); });
         t.push(PARTY[pid].candidate + ' sort la tronçonneuse : les caméras reviennent · +1 en ' + er.map(function (r) { return REG[r].name; }).join(', '));
         break; }
       case 'card': t = resolveCard(g, pid, act); pl.cards = pl.cards.filter(function (k) { return k !== act.card; }); break;
@@ -1388,15 +1394,15 @@
     var pl = player(g, pid), t = [];
     function others() { return g.players.filter(function (p) { return p.id !== pid; }); }
     switch (act.card) {
-      case 'marche_pop': case 'climat': t.push('+' + addCubes(g, act.region, pid, 3) + ' en ' + REG[act.region].name); break;
-      case 'grand_meeting': t.push('+' + addCubes(g, act.region, pid, 4) + ' en ' + REG[act.region].name); break;
+      case 'marche_pop': case 'climat': t.push('+' + addCubes(g, act.region, pid, spec(g, pid, 3)) + ' en ' + REG[act.region].name); break;
+      case 'grand_meeting': t.push('+' + addCubes(g, act.region, pid, spec(g, pid, 4)) + ' en ' + REG[act.region].name); break;
       case 'censure': others().forEach(function (p) { p.infl = Math.max(0, p.infl - 1); }); t.push('chaque adversaire −1 ★'); break;
       case 'primaire': pl.infl += 3; t.push('+3 ★'); break;
       case 'rassemblement': pl.money += 3; pl.infl += 1; t.push('+3 € +1 ★'); break;
       case 'fete_rose': {
-        t.push('+' + addCubes(g, act.region, pid, 2) + ' en ' + REG[act.region].name);
+        t.push('+' + addCubes(g, act.region, pid, spec(g, pid, 2)) + ' en ' + REG[act.region].name);
         var o = bestRegions(g, pid, 1, function (r) { return cubes(g, r.id, pid) > 0; }, 2, [act.region])[0];
-        if (o) t.push('+' + addCubes(g, o, pid, 2) + ' en ' + REG[o].name); break; }
+        if (o) t.push('+' + addCubes(g, o, pid, spec(g, pid, 2)) + ' en ' + REG[o].name); break; }
       case 'canicule':
         others().forEach(function (p) {
           var a = strongestRegion(g, p.id); if (a) addCubes(g, a, p.id, -1);
@@ -1410,10 +1416,10 @@
         var from = strongestRegion(g, pid, function (r) { return r.id !== act.region; });
         if (from) { var mv = -addCubes(g, from, pid, -2); addCubes(g, act.region, pid, mv); t.push(mv + ' soutiens de ' + REG[from].name + ' vers ' + REG[act.region].name); }
         break; }
-      case 'appel18': D.REGIONS.forEach(function (r) { if (r.profile === 'historique') addCubes(g, r.id, pid, 1); }); t.push('+1 dans chaque région historique'); break;
+      case 'appel18': D.REGIONS.forEach(function (r) { if (r.profile === 'historique') addCubes(g, r.id, pid, spec(g, pid, 1)); }); t.push('+' + spec(g, pid, 1) + ' dans chaque région historique'); break;
       case 'plateau_tele':
         bestRegions(g, pid, 3, function (r) { return r.profile === 'rurale' || r.profile === 'industrielle'; }, 2)
-          .forEach(function (rid) { t.push('+' + addCubes(g, rid, pid, 2) + ' ' + REG[rid].name); }); break;
+          .forEach(function (rid) { t.push('+' + addCubes(g, rid, pid, spec(g, pid, 2)) + ' ' + REG[rid].name); }); break;
     }
     return t;
   }
@@ -1930,7 +1936,7 @@
     makeDeal: makeDeal, weight: weight, strength: strength, controlShares: controlShares, regionVote: regionVote, regionLean: regionLean, natLean: natLean, regionShares: regionShares,
     traitOf: traitOf, nostalgiaPreview: nostalgiaPreview, petalsCount: petalsCount, lostPetals: lostPetals, jammed: jammed, zapped: zapped, isHidden: isHidden, retireeRegion: retireeRegion, resolvePrimaire: resolvePrimaire, actionsFor: actionsFor, centrists: centrists, tickBingo: tickBingo, ensureTraits: ensureTraits,
     classPoll: classPoll, addAudience: addAudience, previewGain: previewGain, quickGain: quickGain, interview: interview, applyInterview: applyInterview, aiAnswer: aiAnswer, pickQuestion: pickQuestion, stationFit: stationFit, stationBoost: stationBoost, vingtError: vingtError, matinaleError: matinaleError, stageRisk: stageRisk, isMajority: isMajority, audOf: audOf, SEG: SEG,
-    applyMode: applyMode,
+    applyMode: applyMode, spec: spec,
     REG: REG, PARTY: PARTY, sigle: sigle, THEME: THEME, makeRng: makeRng, setFormat: setFormat, saveGame: saveGame, loadGame: loadGame, registerParty: registerParty, unregisterParty: unregisterParty
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;

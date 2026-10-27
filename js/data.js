@@ -898,8 +898,12 @@
       incumbentBonus: 1,   // pas de prime au sortant : tenir une région ne donne plus +25 % de voix cachées
       socle: 0.3           // socle figé : 30 % du vote reste fidèle aux scores historiques (50 % en Réaliste)
     },
+    /* v4.3 : la force des actions et cartes propres à chaque parti (cartes spéciales, actions de parti, atouts du parti).
+       Au-dessus de 1 : renforcées pour les partis sous leur objectif ; en dessous : affaiblies pour les favoris. */
+    specific: { MN: 0.5, FI: 0.5, SM: 0.8, HZ: 1.5, EM: 1.75, UG: 1.75, VP: 2, PC: 2, RQ: 2, DL: 2, LO: 1.5, MD: 1.5 },
     changes: [
       'Pas de prime au sortant : tenir une région ne donne plus de voix en plus.',
+      'Actions et cartes propres à chaque parti réglées selon son rang : plus fortes pour les petits, plus faibles pour les favoris.',
       'Socle figé à 30 % (au lieu de 50 %) : plus de voix bougent pendant la campagne.'
     ]
   };
