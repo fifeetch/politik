@@ -675,6 +675,7 @@
     mine.forEach(function (a) { alerts.push('AFFAIRE · Toi : ' + a.title); });
     aiAff.forEach(function (x) { alerts.push('AFFAIRE · ' + party(x.pid).short + ' : ' + x.title); });
     info.later.forEach(function (x) { if (x.hit) alerts.push(x.title + (x.pid === me ? '' : ' (' + party(x.pid).short + ')')); });
+    if (info.bomb) alerts.unshift('BOMBE · ' + (info.bomb.pid === me ? 'Toi' : party(info.bomb.pid).short) + ' : ' + info.bomb.title.replace('💣 ', ''));
     FX.breaking('Alerte info', alerts);
     var jp = journalParts(info, aiDil, aiAff);
     var paper = window.PolitikPress.build({ g: g, E: E, me: me, info: info, aiAff: aiAff, aiDil: aiDil, log: g.turn > 1 ? pressLog : [], changes: g.turn > 1 ? pressChanges : [], before: pressBefore });
@@ -1007,7 +1008,7 @@
     if (g.phase !== 'actions') return 'Ce n’est pas le moment.';
     if (queue.length >= E.actionsFor(g, me)) return 'Tes ' + E.actionsFor(g, me) + ' actions sont déjà choisies.';
     if (act.type === 'card' && queue.some(function (q) { return q.card === act.card; })) return 'Carte déjà programmée.';
-    if (['rappel', 'fusion', 'eclat', 'matinale', 'vingt'].indexOf(act.type) >= 0 && queue.some(function (q) { return q.type === act.type; })) return 'Déjà programmé ce tour.';
+    if (['rappel', 'fusion', 'eclat', 'matinale', 'vingt', 'defi'].indexOf(act.type) >= 0 && queue.some(function (q) { return q.type === act.type; })) return 'Déjà programmé ce tour.';
     if (act.type === 'nostalgie' && queue.some(function (q) { return q.type === 'nostalgie'; })) return 'Un seul retour en arrière par tour.';
     var err = E.checkAction(g, me, act); if (err) return err;
     var c = E.actionCost(g, me, act), pr = projected();
@@ -1091,7 +1092,7 @@
     var poll = E.poll(g), rank = 1 + poll.findIndex(function (x) { return x.pid === me; }), mine = poll[rank - 1];
     var prev = g.history.length ? g.history[g.history.length - 1].filter(function (x) { return x.pid === me; })[0] : null, d = prev ? 100 * (mine.pct - prev.pct) : 0;
     $('pos-card').innerHTML = '<div><span class="pos-k">Ta position</span><b class="pos-rank">' + ordinal(rank) + ' sur ' + poll.length + '</b><span class="pos-k">Les 2 premiers vont au second tour</span></div>' +
-      '<div class="pos-right"><b class="pos-pct">' + pctFr(mine.pct, 1) + ' %</b>' + (prev ? '<span class="' + (d >= 0 ? 'up' : 'down') + '">' + (d >= 0 ? '+' : '−') + Math.abs(d).toFixed(1).replace('.', ',') + ' pt ce tour</span>' : '') + '</div>' + wearNote();
+      '<div class="pos-right"><b class="pos-pct">' + pctFr(mine.pct, 1) + ' %</b>' + (prev ? '<span class="' + (d >= 0 ? 'up' : 'down') + '">' + (d >= 0 ? '+' : '−') + Math.abs(d).toFixed(1).replace('.', ',') + ' pt ce tour</span>' : '') + '</div>' + wearNote() + betaNote();
     var max = poll[0].pct;
     $('poll-list').innerHTML = poll.map(function (x, i) {
       var P = party(x.pid);
@@ -1102,6 +1103,15 @@
     renderClassBox();
   }
   /* v4.0.2 : pourquoi ça baisse ? L'effet de tes passages dans les médias s'estompe à chaque tour */
+  /* v4.4 : la vague, la démobilisation, les parrainages */
+  function betaNote() {
+    if (!E.isBeta(g)) return '';
+    var h = '', dl = E.dynLabel(g, me), pl = mePl();
+    if (dl === 'vague') h += '<p class="pos-note">🌊 <b>La vague</b> : ' + pl.streak + ' tours de hausse d\u2019affilée. Meeting +2 soutiens, médias +30 %.</p>';
+    if (dl === 'demob') h += '<p class="pos-note">🥶 <b>Démobilisation</b> : ' + (-pl.streak) + ' tours de baisse. Meeting −1, médias −20 %. Une hausse ce tour-ci casse la spirale.</p>';
+    if (pl.sign != null && pl.sign < D.BETA.parr.need && g.turn <= E.parrDeadline(g)) h += '<p class="pos-note">✍️ <b>Parrainages : ' + pl.sign + ' / ' + D.BETA.parr.need + '</b> — sinon éliminé à la fin du tour ' + E.parrDeadline(g) + ' (menu Plus).</p>';
+    return h;
+  }
   function wearNote() {
     var w = g.lastWear && g.lastWear[me] ? 100 * g.lastWear[me] : 0;
     if (w > -0.1) return '';
@@ -1438,7 +1448,7 @@
       if (!a && i >= E.actionsFor(g, me)) { box.appendChild(el('div', { class: 'slot slot-lock', title: 'Perdue à cause de la primaire' }, '🌹 Primaire')); continue; }
       if (!a) { box.appendChild(el('div', { class: 'slot' }, 'Action ' + (i + 1))); continue; }
       var name = a.type === 'card' ? D.CARDS[a.card].name : D.ACTIONS[a.type].name;
-      var sub = (a.reply ? D.ANSWERS[a.reply].icon + ' ' : a.theme ? th(a.theme).icon + ' ' : '') + (a.station ? D.STATIONS.filter(function (s) { return s.id === a.station; })[0].name : a.region ? SHORT[a.region] : a.target ? a.target : a.theme ? th(a.theme).short : '✕ retirer');
+      var sub = (a.reply ? D.ANSWERS[a.reply].icon + ' ' : a.theme ? th(a.theme).icon + ' ' : '') + (a.station ? D.STATIONS.filter(function (s) { return s.id === a.station; })[0].name : a.region ? SHORT[a.region] : a.target ? E.sigle(a.target) : a.theme ? th(a.theme).short : '✕ retirer');
       var b = el('button', { class: 'slot full' + (i === justAdded ? ' flip' : ''), type: 'button', 'aria-label': 'Retirer ' + name },
         '<span class="slot-in"><span class="face front">' + esc(name) + '<small>' + sub + '</small></span><span class="face back" aria-hidden="true">★</span></span>');
       (function (idx) { b.addEventListener('click', function () { queue.splice(idx, 1); render(); }); })(i);
@@ -1688,6 +1698,13 @@
     items.unshift({ special: 'matinale', icon: '📻', name: 'Matinale radio', cost: costLabel({ type: 'matinale' }), fx: 'Une radio, un public : gagne des classes sociales', err: mErr ? mErr.replace(/\.$/, '') : null });
     var vErr = E.vingtError(g, me) || (queue.some(function (q) { return q.type === 'vingt'; }) ? 'déjà programmé ce tour' : canQueue({ type: 'vingt', theme: theme || E.bestTheme(g, me, null) }));
     items.unshift({ special: 'vingt', icon: '🕗', name: 'Le 20 h', cost: costLabel({ type: 'vingt' }), fx: '<b>Tu es invité !</b> Une fois par campagne : gros gain… ou gros raté', err: vErr ? vErr.replace(/\.$/, '') : null, mine: !vErr });
+    if (E.isBeta(g)) {   // v4.4 : les nouvelles mécaniques de la Bêta
+      var pl4 = mePl();
+      if (pl4.sign != null && pl4.sign < D.BETA.parr.need) items.unshift({ act: { type: 'parrainages' }, icon: '✍️', name: 'Chercher des parrainages', cost: costLabel({ type: 'parrainages' }),
+        fx: '<b>' + pl4.sign + ' / ' + D.BETA.parr.need + ' signatures</b> · +' + D.BETA.parr.action + ' par tournée · date limite : fin du tour ' + E.parrDeadline(g), err: canQueue({ type: 'parrainages' }), mine: true });
+      if (g.turn <= D.BETA.union.lastTurn) items.push({ special: 'union', icon: '🤝', name: 'Candidature commune', cost: costLabel({ type: 'union', target: null }), fx: 'Rallier un petit parti de ton camp : 70 % de ses électeurs te rejoignent (jusqu\u2019au tour ' + D.BETA.union.lastTurn + ')', err: null });
+      if (!pl4.defiUsed) items.push({ special: 'defi', icon: '🎤', name: 'Défier en débat', cost: costLabel({ type: 'defi', target: null }), fx: 'Un face-à-face avec le rival de ton choix. S\u2019il refuse : la chaise vide lui coûte cher (une fois par campagne)', err: null });
+    }
     items.push({ special: 'enquete', icon: '🔎', name: 'Enquêter sur un rival', cost: costLabel({ type: 'enquete', target: null }),
       fx: 'Fouiller le passé d\u2019un rival', err: g.turn >= R.maxTurns ? 'trop tard pour sortir un dossier' : null });
     var html = '<div class="pick">' + items.map(function (it, i) {
@@ -1703,11 +1720,46 @@
             closeModal();
             if (it.special === 'enquete') enqueteMenu();
             else if (it.special === 'matinale') matinaleMenu();
+            else if (it.special === 'union') unionMenu();
+            else if (it.special === 'defi') defiMenu();
             else if (it.special === 'vingt') vingtInterview();
             else if (it.special === 'alliance') allianceMenu();
             else if (it.special === 'break') confirmBreak();
             else addAction(it.act);
           });
+        });
+      } });
+  }
+  /* v4.4 : candidature commune */
+  function unionMenu() {
+    var rows = g.players.filter(function (p) { return p.id !== me; }).map(function (p) { return { p: p, err: E.unionError(g, me, p.id) || canQueue({ type: 'union', target: p.id }) }; })
+      .sort(function (a, b) { return (a.err ? 1 : 0) - (b.err ? 1 : 0); });
+    var html = '<p>Tu proposes à un parti de ton camp, au moins deux fois plus petit que toi, de se ranger derrière ta candidature. S\u2019il accepte, il se retire : <b>70 %</b> de ses électeurs te rejoignent.</p>';
+    var buttons = rows.map(function (r) {
+      return { label: party(r.p.id).short + ' · ' + (r.err ? r.err.replace(/\.$/, '') : 'accord ' + chanceLabel(E.unionChance(g, me, r.p.id))), disabled: !!r.err, onClick: function () { addAction({ type: 'union', target: r.p.id }); } };
+    });
+    buttons.push({ label: 'Annuler' });
+    modal({ kicker: costLabel({ type: 'union', target: null }) + ' · 1 action', title: 'Candidature commune avec qui ?', html: html, buttons: buttons });
+  }
+  /* v4.4 : défi du débat (le rival, puis ta réponse à la question) */
+  function defiMenu() {
+    var rows = g.players.filter(function (p) { return p.id !== me; });
+    var buttons = rows.map(function (p) {
+      var err = E.defiError(g, me, p.id) || canQueue({ type: 'defi', target: p.id }), ch = Math.round(100 * E.defiAccept(g, me, p.id));
+      return { label: party(p.id).short + ' · ' + (err ? err.replace(/\.$/, '') : ch + ' % qu\u2019il accepte'), disabled: !!err, onClick: function () { defiQuestion(p.id); } };
+    });
+    buttons.push({ label: 'Annuler' });
+    modal({ kicker: costLabel({ type: 'defi', target: null }) + ' · 1 action', title: 'Qui défies-tu ?', html: '<p>S\u2019il accepte : un face-à-face sur une question, et chacun gagne des électeurs selon sa réponse. S\u2019il refuse : <b>+1 soutien pour toi dans 2 régions, −1 pour lui dans 2 régions</b>. Les favoris refusent plus souvent.</p>', buttons: buttons });
+  }
+  function defiQuestion(target) {
+    var thm = theme || E.bestTheme(g, me, null), q = E.pickQuestion(g, thm, 61), iv = E.debateCards(g, me, q.id);
+    var html = tvSet('🎤 Défi : face à ' + party(target).short, iv, 'Si ' + party(target).candidate + ' accepte le débat', 'debat') + '<div class="ans-k">Ta réponse (si le débat a lieu)</div><div class="ans-list">' + iv.cards.map(function (c, i) {
+      return '<button type="button" class="ans" data-i="' + i + '">' + answerCard(c, String(E.audScore(c.gains)).replace('.', ',') + ' pts', '<small class="ans-c">' + counterHint(c) + '</small>') + '</button>';
+    }).join('') + '</div>';
+    modal({ kicker: 'Défi du débat', title: 'Que répondras-tu ?', cls: 'tv-modal', html: html, buttons: [{ label: 'Annuler' }],
+      onOpen: function () {
+        Array.prototype.forEach.call(document.querySelectorAll('#modal .ans'), function (b) {
+          b.addEventListener('click', function () { var c = iv.cards[+b.getAttribute('data-i')]; closeModal(); addAction({ type: 'defi', target: target, theme: q.theme, qid: q.id, reply: c.key }); });
         });
       } });
   }
@@ -2040,10 +2092,25 @@
     } else finishTurn(E.applySpotlight(g, t, AI.paySpotlight(g, t)));
   }
 
+  /* v4.4 : éliminé faute de parrainages */
+  function humanOut() {
+    var o = g.humanOut; clearSave();
+    modal({ kicker: 'Fin des parrainages', title: 'Pas de candidature', html: '<p>Tu n\u2019as pas réuni les <b>500 signatures d\u2019élus</b> à temps : ton parti ne sera pas sur la ligne de départ.' +
+      (o && o.heir ? ' Une partie de tes électeurs se reporte sur ' + esc(party(o.heir).short) + '.' : '') + '</p><p class="hint">Astuce : sous 5 % dans les sondages, fais « Chercher des parrainages » (menu Plus) dès les premiers tours.</p>' + learnBox('parrainages'),
+      buttons: [{ label: 'Retour à l\u2019accueil', primary: true, onClick: function () { go('title'); } }] });
+  }
   function finishTurn(spot) {
     var res = E.endTurn(g); render();
     if (spot && !spot.paid && spot.pid !== me) toast(party(spot.pid).short + ' sous les projecteurs : −1 soutien en ' + spot.regions.map(function (x) { return SHORT[x]; }).join(', '));
     else if (spot && spot.paid && spot.pid !== me) toast(party(spot.pid).short + ' paie 2 ★ pour éviter le scandale');
+    if (g.humanOut) return humanOut();   // v4.4 : pas tes 500 parrainages
+    if (res.out && res.out.length) {   // v4.4 : les partis sans leurs 500 signatures quittent la course
+      var outH = '<p>Sans leurs 500 signatures d\u2019élus, ces partis ne seront pas candidats :</p><div class="brief">' + res.out.map(function (o) {
+        return line('✍️', '<b>' + esc(party(o.pid).short) + '</b>' + (o.heir ? ' — une partie de ses électeurs part chez ' + esc(party(o.heir).short) + ' (+' + o.moved + ' soutiens)' : '') + '.');
+      }).join('') + '</div>' + learnBox('parrainages');
+      return modal({ kicker: 'Fin des parrainages', title: res.out.length + ' parti' + (res.out.length > 1 ? 's' : '') + ' éliminé' + (res.out.length > 1 ? 's' : ''), html: outH,
+        buttons: [{ label: 'Continuer', primary: true, onClick: function () { if (res.over) electionNight(); else if (res.between) betweenScreen(); else nextTurn(); } }] });
+    }
     if (res.over) return electionNight();
     if (res.between) return betweenScreen();
     if (g.turn === 1 && tutoGame) {

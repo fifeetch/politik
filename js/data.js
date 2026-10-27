@@ -368,6 +368,10 @@
     { id: 'pret_est',      party: ['MN'], title: 'Le prêt venu de l\u2019Est',          text: 'Une banque étrangère très bienveillante aurait prêté des millions au parti. Qui rembourse, et en échange de quoi ?' },
     { id: 'kits',          party: ['MN', 'RQ'], title: 'Les kits de campagne',          text: 'Des kits de campagne facturés au prix fort aux candidats… et remboursés par l\u2019État.' },
     { id: 'comptes_fi',    party: ['FI'], title: 'Les comptes de campagne',              text: 'La commission des comptes de campagne s\u2019interroge sur des prestations surfacturées par des proches du parti.' },
+    /* v4.4 : les bombes de campagne (mode Bêta), une seule par partie, sur l'un des deux premiers */
+    { id: 'bombe_emplois', bomb: true, title: '💣 Le Penelopegate du candidat', text: 'Révélation : toute la famille du candidat aurait été payée pendant des années sur des fonds publics pour des emplois introuvables.' },
+    { id: 'bombe_juge',    bomb: true, title: '💣 Convocation chez le juge',    text: 'En pleine campagne, le candidat est convoqué par les juges d\u2019instruction. Les caméras attendent devant le palais de justice.' },
+    { id: 'bombe_video',   bomb: true, title: '💣 La vidéo volée',               text: 'Une vidéo filmée en cachette montre le candidat se moquer de ses propres électeurs.' },
     { id: 'perquisition',  party: ['FI'], title: 'La perquisition en direct',            text: 'Le chef du parti crie « La République, c\u2019est moi ! » devant les policiers. La vidéo tourne en boucle.' }
   ];
   var BUDGET_AFFAIR = { id: 'budget', title: 'Le programme non financé', text: 'Les économistes ont fait les comptes : ton programme coûte bien plus que ce que tu annonces.' };
@@ -547,6 +551,9 @@
     rupture:  { name: 'Rupture',        cost: { money: 0, infl: 0 }, target: null,     text: "Rompre ton alliance : −2 ★, et ton ex-allié ne te reportera presque rien au second tour" },
     matinale: { name: 'Matinale radio', icon: '📻', cost: { money: 0, infl: 0, forme: 1 }, target: null, theme: true, text: 'Une interview à la radio : le public dépend de la station (une fois tous les deux tours)' },   // v3.9
     vingt:    { name: 'Le 20 h',        icon: '🕗', cost: { money: 0, infl: 0, forme: 1 }, target: null, theme: true, text: 'Invité au journal de 20 h : une fois par campagne, réservé aux 4 premiers du sondage' },   // v3.9
+    parrainages: { name: 'Chercher des parrainages', icon: '✍️', cost: { money: 1, infl: 0, forme: 1 }, target: null, beta: true, text: 'Faire le tour des mairies : +130 signatures (il en faut 500 avant la fin du tour 3)' },   // v4.4
+    union:    { name: 'Candidature commune', icon: '🤝', cost: { money: 0, infl: 2 }, target: 'party', beta: true, text: 'Proposer à un parti proche de se ranger derrière toi : 70 % de ses électeurs te rejoignent' },   // v4.4
+    defi:     { name: 'Défier en débat',   icon: '🎤', cost: { money: 0, infl: 1 }, target: 'party', beta: true, text: 'Défier un rival en face-à-face : s\u2019il refuse, la chaise vide lui coûte cher' },   // v4.4
     repos:    { name: 'Repos',          icon: '😴', cost: { money: 0, infl: 0 }, target: null,     text: 'Une journée loin des caméras : +2 ⚡ tout de suite' },   // v3.6.6
     /* v3.1 : les actions propres à un parti (voir TRAITS) */
     nostalgie:{ name: 'C\u2019était mieux avant', icon: '⏪', only: ['MN', 'RQ'], cost: { money: 2, infl: 0, forme: 1 }, target: 'region', text: 'Promettre le retour du passé : plaît aux retraités, fait fuir les jeunes à mesure qu\u2019on recule' },
@@ -932,8 +939,20 @@
        de base de (chiffre − 1) × 8 % par tour même sans casserole, et plus souvent ciblé par Le Canard). En dessous : moins d'affaires.
        Au-dessus de 1, chaque affaire coûte aussi plus cher : −1 soutien dans (chiffre − 1) × 0,75 régions parmi les plus fortes. */
     scandal: { MN: 5, FI: 3, SM: 1, HZ: 0.7, EM: 0.7, UG: 0.7, VP: 0.4, PC: 0.4, RQ: 0.6, DL: 0.4, LO: 0.4, MD: 0.4 },
+    /* v4.4 : nouvelles mécaniques de campagne, à l'essai */
+    dyn: { step: 0.003, need: 3, meeting: 2, media: 1.3, downMeeting: -1, downMedia: 0.8 },   // 3 tours de hausse (≥ 0,3 pt) : la vague
+    bomb: { from: 4, to: 7, eclair: 2, hit: 4, cas: 1, leader: 0.6 },                          // une bombe par partie, sur l'un des 2 premiers
+    parr: { turn: 3, eclairTurn: 2, need: 500, auto: 5, perTurn: 40, action: 130, other: 220,
+            base: { PC: 380, MD: 420, VP: 320, DL: 240, RQ: 280, LO: 220 } },                 // signatures de départ (élus locaux du parti)
+    union: { lastTurn: 4, maxDist: 2, transfer: 0.7, accept: { 1: 0.6, 2: 0.35 }, cordon: ['MN'], cordonOk: ['RQ', 'DL'] },   // même camp ; le RN ne peut rallier que les souverainistes et l'extrême droite
+    defi: { refuseWin: 2, refuseLoss: 2 },
     changes: [
       'Pas de prime au sortant : tenir une région ne donne plus de voix en plus.',
+      'Dynamique de campagne : 3 tours de hausse d\u2019affilée, c\u2019est la vague (Meeting +2, médias +30 %) ; 3 tours de baisse, la démobilisation (Meeting −1, médias −20 %).',
+      'Bombe de campagne : une fois par partie (tours 4 à 7), une grosse affaire tombe sur l\u2019un des deux premiers des sondages.',
+      'Les 500 parrainages : les partis sous 5 % doivent réunir 500 signatures d\u2019élus avant la fin du tour 3, sinon ils sont éliminés.',
+      'Candidature commune : jusqu\u2019au tour 4, un parti peut proposer à un parti de son camp, proche et au moins deux fois plus petit, de se ranger derrière lui. 70 % de ses électeurs suivent. Le RN ne peut rallier que Rétroconquête ou Debout La Flemme.',
+      'Défi du débat : une fois par partie, défie un rival en face-à-face. S\u2019il refuse, la chaise vide lui coûte cher.',
       'Actions et cartes propres à chaque parti réglées selon son rang : plus fortes pour les petits, plus faibles pour les favoris.',
       'Scandales : plus fréquents pour les favoris (RN, LFI), plus rares pour les petits partis.',
       'Les Enracinés : chaque Meeting sur l\u2019écologie rapporte 2 soutiens de plus.',

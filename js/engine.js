@@ -312,6 +312,8 @@
     return null;
   }
   function applyInterview(g, pid, cardObj) {
+    var fdm = dynMedia(g, pid);   // v4.4 : la vague porte (ou la démobilisation freine) tes passages médias
+    if (fdm !== 1) { var gm = {}; SEG.forEach(function (s) { gm[s] = (cardObj.gains[s] || 0) * fdm; }); cardObj = Object.assign({}, cardObj, { gains: gm }); }
     addAudience(g, pid, cardObj.gains);
     var out = { gains: cardObj.gains, cas: false };
     if (cardObj.risk && g.rng() < cardObj.risk) {
@@ -590,7 +592,7 @@
     if (pl && pl.phare && MEAS[pl.phare].theme === th) parts.push({ k: 'phare', label: 'mesure phare', n: R.pharBonus });
     var e = pl && pl.programme ? echoBonus(g, pid, rid) : 0;   // v0.8 : le programme plaît (ou déplaît) aux habitants
     if (e) parts.push({ k: 'echo', label: e > 0 ? 'région de cœur' : 'région hostile', n: e });
-    if (pl && pl.momentum) parts.push({ k: 'dyn', label: pl.momentum > 0 ? 'dynamique' : 'passage à vide', n: pl.momentum });
+    if (pl && pl.momentum) parts.push({ k: 'dyn', label: pl.momentum >= 2 ? 'la vague' : pl.momentum > 0 ? 'dynamique' : 'passage à vide', n: pl.momentum });
     if (g.bingo && jammed(g, pid, rid)) parts.push({ k: 'jam', label: 'embouteillage au centre', n: -1 });
     if (g.bingo && zapped(g, pid, rid)) parts.push({ k: 'zap', label: 'les indécis zappent', n: -1 });
     // v2.5 : un parti tout neuf attire la curiosité au début de la campagne, puis l'effet s'use
@@ -781,6 +783,10 @@
       event: null, mods: {}, cancel: {}, log: [], history: []
     };
     applyMode(g);   // v4.1
+    if (g.mode === 'beta') {   // v4.4 : la bombe de campagne (un tour tiré au sort) et les parrainages
+      var BB = D.BETA.bomb, eclairB = format === 'eclair';
+      g.bomb = { turn: eclairB ? BB.eclair : BB.from + Math.floor(rng() * (BB.to - BB.from + 1)), done: false };
+    }
     // v1.0 : chaque région démarre avec ses vrais inscrits, sa vraie abstention et son vrai vote blanc (2022),
     // et chaque parti avec des électeurs proportionnels à son score de départ (mode Réaliste) ou à égalité (mode Égalité)
     D.REGIONS.forEach(function (r) {
@@ -807,6 +813,10 @@
     });
     if (g.mode !== 'egal') computeWeights(g);
     updateAllControl(g);
+    if (g.mode === 'beta') {   // v4.4 : les signatures de départ (les partis sous 5 % doivent aller les chercher)
+      var pm0 = pollMap(g), PR = D.BETA.parr;
+      g.players.forEach(function (pl) { pl.sign = 100 * (pm0[pl.id] || 0) >= PR.auto ? PR.need : (PR.base[pl.id] || (PARTY[pl.id] && PARTY[pl.id].custom ? 150 : PR.other)); });
+    }
     // v1.5 : un objectif secret doit demander un effort. S'il est déjà rempli au départ (ex. le Mouvement National
     // contrôle déjà les régions industrielles en mode Réaliste), on l'échange contre un objectif encore à atteindre.
     var spare = objs.slice(g.players.length);
@@ -826,7 +836,7 @@
     g.crisis = { id: cr.id, start: R.crisisStart[0] + Math.floor(rng() * (R.crisisStart[1] - R.crisisStart[0] + 1)) };
     initTraits(g);
     g.dilemmas = shuffle(D.DILEMMAS.map(function (d) { return d.id; }), rng);
-    g.affairDeck = shuffle(D.AFFAIRS.filter(function (a) { return !a.party; }).map(function (a) { return a.id; }), rng);   // v4.3 : les affaires propres à un parti ne touchent que lui
+    g.affairDeck = shuffle(D.AFFAIRS.filter(function (a) { return !a.party && !a.bomb; }).map(function (a) { return a.id; }), rng);   // v4.3 : les affaires propres à un parti ne touchent que lui
     g.lastPoll = pollMap(g);
     return g;
   }
@@ -838,6 +848,66 @@
     var cr = D.CRISES.filter(function (c) { return c.id === g.crisis.id; })[0];
     return { crisis: cr, index: k, act: cr.acts[k] };
   }
+
+  /* ---------- v4.4 (Bêta) : nouvelles mécaniques de campagne ---------- */
+  function isBeta(g) { return g && g.mode === 'beta'; }
+  function parrDeadline(g) { return g.format === 'eclair' ? D.BETA.parr.eclairTurn : D.BETA.parr.turn; }
+  /* Un parti quitte la course : ses électeurs passent en partie à un héritier (candidature commune) ou au parti le plus proche */
+  function removeParty(g, pid, heir, rate, why) {
+    if (!player(g, pid)) return null;
+    var near = heir || pids(g).filter(function (o) { return o !== pid; }).sort(function (a, b) { return dist(pid, a) - dist(pid, b) || pollShare(g, b) - pollShare(g, a); })[0];
+    var moved = 0;
+    D.REGIONS.forEach(function (r) {
+      var c = cubes(g, r.id, pid), n = Math.round(c * rate);
+      if (near && n) moved += addCubes(g, r.id, near, n);
+      delete g.regions[r.id].cubes[pid];
+      if (g.hist && g.hist[r.id]) {
+        if (near) g.hist[r.id][near] = (g.hist[r.id][near] || 0) + (g.hist[r.id][pid] || 0) * rate;
+        delete g.hist[r.id][pid];
+      }
+      if (g.weight && g.weight[r.id] && near && g.weight[r.id][near] == null) g.weight[r.id][near] = 1;
+      Object.keys(g.bases || {}).forEach(function (rid) { g.bases[rid] = (g.bases[rid] || []).filter(function (x) { return x !== pid; }); });
+    });
+    var wasHuman = player(g, pid).human;
+    g.players = g.players.filter(function (p) { return p.id !== pid; });
+    var al = allyOf(g, pid); if (al) { delete g.alliances[al]; delete g.alliances[pid]; }
+    if (g.aud) delete g.aud[pid];
+    g.out = (g.out || []).concat([{ pid: pid, why: why, heir: near || null, rate: rate, moved: moved, turn: g.turn, human: wasHuman }]);
+    if (wasHuman) g.humanOut = { pid: pid, why: why, heir: near || null };
+    updateAllControl(g);
+    g._cp = null;
+    return { pid: pid, heir: near, moved: moved };
+  }
+  function pollShare(g, pid) { return pollMap(g)[pid] || 0; }
+  function unionError(g, pid, target) {
+    if (!isBeta(g)) return 'Seulement en mode Bêta.';
+    if (g.turn > D.BETA.union.lastTurn) return 'Trop tard : les candidatures communes se nouent avant la fin du tour ' + D.BETA.union.lastTurn + '.';
+    if (!target || !player(g, target) || target === pid) return 'Choisis un parti en lice.';
+    if (dist(pid, target) > D.BETA.union.maxDist) return 'Trop éloigné de toi sur l\u2019axe politique (distance ' + D.BETA.union.maxDist + ' au plus).';
+    if (blocOf(pid) !== blocOf(target)) return 'Pas le même camp (gauche, centre, droite) : ses électeurs ne suivraient pas.';
+    if ((D.BETA.union.cordon || []).indexOf(pid) >= 0 && (D.BETA.union.cordonOk || []).indexOf(target) < 0) return 'Le cordon sanitaire : ce parti refuse toute candidature commune avec toi.';
+    if (pollShare(g, target) > pollShare(g, pid) / 2) return 'Il pèse trop lourd pour se ranger derrière toi (il faut qu\u2019il fasse moins de la moitié de ton score).';
+    if (pollShare(g, target) >= pollShare(g, pid)) return 'Il est devant toi dans les sondages : c\u2019est à lui de te proposer de le rejoindre.';
+    if (player(g, target).human) return 'On ne peut pas absorber le joueur.';
+    return null;
+  }
+  function unionChance(g, pid, target) {
+    var U = D.BETA.union, ch = U.accept[dist(pid, target)] || 0, pt = 100 * pollShare(g, target);
+    if (pt < 5) ch += 0.25;                                   // un petit parti sait qu'il ne passera pas
+    if (pt > 0.6 * 100 * pollShare(g, pid)) ch -= 0.25;       // presque à égalité : il veut sa chance
+    if (player(g, target).sign != null && player(g, target).sign < D.BETA.parr.need && g.turn <= parrDeadline(g)) ch += 0.15;   // pas ses parrainages
+    return Math.max(0, Math.min(0.95, ch));
+  }
+  function defiError(g, pid, target) {
+    if (!isBeta(g)) return 'Seulement en mode Bêta.';
+    if (player(g, pid).defiUsed) return 'Un seul défi par campagne.';
+    if (!target || !player(g, target) || target === pid) return 'Choisis un rival en lice.';
+    if (player(g, target).human) return 'Le joueur ne peut pas être défié par ce biais.';
+    return null;
+  }
+  function defiAccept(g, pid, target) { var a = pollShare(g, pid), b = pollShare(g, target); return b < a ? 0.85 : b < a * 1.5 ? 0.55 : 0.25; }
+  function dynLabel(g, pid) { var pl = player(g, pid); if (!isBeta(g) || !pl || !pl.streak) return null; var N = D.BETA.dyn.need; return pl.streak >= N ? 'vague' : pl.streak <= -N ? 'demob' : null; }
+  function dynMedia(g, pid) { var l = dynLabel(g, pid); return l === 'vague' ? D.BETA.dyn.media : l === 'demob' ? D.BETA.dyn.downMedia : 1; }
 
   /* ---------- Début de tour : revenus, usure, événement ---------- */
   function startTurn(g) {
@@ -854,12 +924,15 @@
         var f0 = pl.forme; pl.forme = Math.min(R.formeMax, pl.forme + R.formeRegen + (pl.id === 'EM' ? 1 : 0));
         out.income.push({ pid: pl.id, money: R.incomeMoney + bonus, infl: R.incomeInfl, forme: pl.forme - f0 });
       });
+      // v4.4 (Bêta) : chaque tour, des élus signent d'eux-mêmes pour les petits partis
+      if (isBeta(g) && g.turn <= parrDeadline(g)) g.players.forEach(function (pl) { if (pl.sign != null && pl.sign < D.BETA.parr.need) pl.sign = Math.min(D.BETA.parr.need, pl.sign + D.BETA.parr.perTurn); });
       // militants : +1 cube dans chaque région où le parti a une équipe
       Object.keys(g.bases).forEach(function (rid) {
         g.bases[rid].forEach(function (pid) { if (addCubes(g, rid, pid, 1)) out.militants.push({ pid: pid, rid: rid }); });
       });
       // conséquences différées
       g.pending = g.pending.filter(function (x) {
+        if (x.pid && !player(g, x.pid)) return false;   // v4.4 : le parti n'est plus en lice
         if (x.turn > g.turn) return true;
         if (x.affair) { g.nextAffairs.push({ pid: x.pid, id: x.affair }); return false; }
         var hit = g.rng() < x.chance;
@@ -867,7 +940,7 @@
         return false;
       });
       // v0.7 : les affaires (dossiers des rivaux, programme non financé, casseroles, Le Canard)
-      var list = g.nextAffairs.slice(); g.nextAffairs = [];
+      var list = g.nextAffairs.filter(function (x) { return player(g, x.pid); }); g.nextAffairs = [];
       g.players.forEach(function (pl) {
         var sm = scandalMult(g, pl.id);   // v4.3 (Bêta) : plus de scandales pour les favoris
         var risk = pl.cas * R.affairPerCasserole * sm + Math.max(0, sm - 1) * 0.08;
@@ -878,6 +951,16 @@
         var r = g.rng() * tot, pick = g.players[0];
         for (var i = 0; i < g.players.length; i++) { r -= (g.players[i].cas + 1) * scandalMult(g, g.players[i].id); if (r <= 0) { pick = g.players[i]; break; } }
         list.push({ pid: pick.id, src: 'canard' });
+      }
+      // v4.4 (Bêta) : la bombe de campagne, une fois par partie, sur l'un des deux premiers
+      if (isBeta(g) && g.bomb && !g.bomb.done && g.turn === g.bomb.turn) {
+        var rkB = ranking(g), tB = g.rng() < D.BETA.bomb.leader ? rkB[0] : rkB[1];
+        var bombs = D.AFFAIRS.filter(function (a) { return a.bomb; }), bd = bombs[Math.floor(g.rng() * bombs.length)];
+        g.bomb.done = true; g.bomb.pid = tB; g.bomb.id = bd.id;
+        var hitB = []; for (var qb = 0; qb < D.BETA.bomb.hit; qb++) { var sb = strongestRegion(g, tB, function (r) { return hitB.indexOf(r.id) < 0; }); if (sb) { addCubes(g, sb, tB, -1); hitB.push(sb); } }
+        player(g, tB).cas = Math.min(R.casseroleMax, player(g, tB).cas + D.BETA.bomb.cas);
+        g.bomb.regions = hitB; out.bomb = { pid: tB, title: bd.title, text: bd.text, regions: hitB };
+        list = list.filter(function (x) { return x.pid !== tB; }); list.unshift({ pid: tB, id: bd.id, src: 'bombe' });
       }
       var seenAff = {}; list = list.filter(function (x) { if (seenAff[x.pid]) return false; seenAff[x.pid] = 1; return true; });   // v3.6.5 : une affaire par parti et par tour
       g.affairs = list.slice(0, R.affairsMax).map(function (x) {
@@ -1116,6 +1199,10 @@
       if (player(g, pid).rappelTurn === g.turn) return 'François Hésitant ne décroche qu\u2019une fois par tour.';
     }
     if (act.type === 'repos' && player(g, pid).forme >= R.formeMax) return 'Ton candidat est déjà en pleine forme.';
+    if (def.beta && !isBeta(g)) return 'Seulement en mode Bêta.';
+    if (act.type === 'parrainages') { var plS = player(g, pid); if (plS.sign == null || plS.sign >= D.BETA.parr.need) return 'Tu as déjà tes 500 signatures.'; if (g.turn > parrDeadline(g)) return 'Trop tard pour les parrainages.'; }
+    if (act.type === 'union') { var ue = unionError(g, pid, act.target); if (ue) return ue; }
+    if (act.type === 'defi') { var de = defiError(g, pid, act.target); if (de) return de; }
     if (act.type === 'matinale') { var me1 = matinaleError(g, pid); if (me1) return me1; if (act.station && !STB[act.station]) return 'Radio inconnue.'; }
     if (act.type === 'vingt') { var ve = vingtError(g, pid); if (ve) return ve; }
     if (act.type === 'fusion' && !g.micro) return 'Aucun micro-parti à absorber pour l\u2019instant.';
@@ -1368,6 +1455,34 @@
         var er = bestRegions(g, pid, spec(g, pid, R.eclatGain), null, 1); er.forEach(function (rid) { addCubes(g, rid, pid, 1); });
         t.push(PARTY[pid].candidate + ' sort la tronçonneuse : les caméras reviennent · +1 en ' + er.map(function (r) { return REG[r].name; }).join(', '));
         break; }
+      case 'parrainages': {   // v4.4
+        pl.sign = Math.min(D.BETA.parr.need, (pl.sign || 0) + D.BETA.parr.action);
+        t.push('✍️ tournée des mairies : ' + pl.sign + ' / ' + D.BETA.parr.need + ' signatures'); entry.sign = pl.sign; break; }
+      case 'union': {   // v4.4 : candidature commune
+        var tgU = act.target, chU = unionChance(g, pid, tgU);
+        if (g.rng() < chU) {
+          var ru = removeParty(g, tgU, pid, D.BETA.union.transfer, 'union');
+          entry.union = { target: tgU, moved: ru.moved };
+          t.push('🤝 candidature commune : ' + PARTY[tgU].short + ' se range derrière toi (+' + ru.moved + ' soutiens, 70 % de ses électeurs)');
+        } else { entry.unionRefused = tgU; t.push(PARTY[tgU].short + ' refuse la candidature commune'); }
+        break; }
+      case 'defi': {   // v4.4 : défi du débat
+        pl.defiUsed = g.turn;
+        var tgD = act.target, qD = act.qid && QBY[act.qid] ? QBY[act.qid] : pickQuestion(g, act.theme || bestTheme(g, pid, null), 61);
+        if (g.rng() < defiAccept(g, pid, tgD)) {
+          var duelD = { a: pid, b: tgD, theme: qD.theme, qid: qD.id };
+          var oD = duelOutcome(g, duelD, act.reply || aiDebatePick(g, pid, duelD), aiDebatePick(g, tgD, duelD), 0, 0);
+          applyInterview(g, pid, { gains: oD.ga, risk: oD.ca.risk }); applyInterview(g, tgD, { gains: oD.gb, risk: oD.cb.risk });
+          entry.defi = { target: tgD, accepted: true, sa: oD.sa, sb: oD.sb, ka: oD.ka, kb: oD.kb, line: oD.line, qid: qD.id };
+          t.push('🎤 ' + PARTY[tgD].short + ' accepte le face-à-face : ' + (oD.sa > oD.sb ? 'tu le gagnes' : oD.sa < oD.sb ? 'tu le perds' : 'match nul') + ' (' + String(oD.sa).replace('.', ',') + ' contre ' + String(oD.sb).replace('.', ',') + ' pts)');
+        } else {
+          var DF = D.BETA.defi, gotD = [];
+          bestRegions(g, pid, DF.refuseWin, null, 1).forEach(function (rid) { if (addCubes(g, rid, pid, 1)) gotD.push(rid); });
+          applyFx(g, tgD, [{ k: 'loseTop', n: 1, count: DF.refuseLoss }]);
+          entry.defi = { target: tgD, accepted: false };
+          t.push('🎤 ' + PARTY[tgD].short + ' refuse le débat : la chaise vide fait le tour des réseaux (+1 soutien pour toi dans ' + gotD.length + ' régions, −1 pour lui dans ' + DF.refuseLoss + ')');
+        }
+        break; }
       case 'card': t = resolveCard(g, pid, act); pl.cards = pl.cards.filter(function (k) { return k !== act.card; }); break;
       case 'alliance': {
         var to = player(g, act.target);
@@ -1442,7 +1557,7 @@
     for (var s = 0; s < R.actionsPerTurn; s++) {
       order.forEach(function (pid) {
         var act = (plans[pid] || [])[s];
-        if (act && s < actionsFor(g, pid)) log.push(resolveOne(g, pid, act));
+        if (act && player(g, pid) && s < actionsFor(g, pid)) log.push(resolveOne(g, pid, act));   // v4.4 : un parti rallié ne joue plus
       });
     }
     g.phase = isDebateTurn(g) ? 'debate' : 'spotlight';
@@ -1625,6 +1740,11 @@
     g.players.forEach(function (pl) {
       var d = now[pl.id] - (g.lastPoll[pl.id] || 0);
       pl.momentum = d >= R.momentumStep ? 1 : d <= -R.momentumStep ? -1 : 0;
+      if (isBeta(g)) {   // v4.4 : la dynamique de campagne (3 tours de hausse : la vague ; 3 de baisse : la démobilisation)
+        var DY = D.BETA.dyn, s = pl.streak || 0;
+        pl.streak = d >= DY.step ? (s > 0 ? s + 1 : 1) : d <= -DY.step ? (s < 0 ? s - 1 : -1) : 0;
+        if (pl.streak >= DY.need) pl.momentum = DY.meeting; else if (pl.streak <= -DY.need) pl.momentum = DY.downMeeting;
+      }
     });
     g.lastPoll = now;
     if (g.turn < R.maxTurns) {   // v3.8 : l'effet des médias s'use d'un tour à l'autre
@@ -1633,6 +1753,11 @@
       g.lastPoll = nw;
     }
     g.phase = 'next';
+    if (isBeta(g) && g.turn === parrDeadline(g)) {   // v4.4 : sans ses 500 signatures, on ne se présente pas
+      res.out = [];
+      g.players.slice().forEach(function (pl) { if (pl.sign != null && pl.sign < D.BETA.parr.need) { var ro = removeParty(g, pl.id, null, 0.6, 'parrainages'); if (ro) res.out.push(ro); } });
+      g.lastPoll = pollMap(g);
+    }
     if (g.turn >= R.maxTurns) {
       // v1.6 : le 1er tour est voté et figé. Majorité absolue : c'est fini. Sinon : l'entre-deux-tours commence.
       var r1 = firstRound(g);
@@ -1947,7 +2072,7 @@
     makeDeal: makeDeal, weight: weight, strength: strength, controlShares: controlShares, regionVote: regionVote, regionLean: regionLean, natLean: natLean, regionShares: regionShares,
     traitOf: traitOf, nostalgiaPreview: nostalgiaPreview, petalsCount: petalsCount, lostPetals: lostPetals, jammed: jammed, zapped: zapped, isHidden: isHidden, retireeRegion: retireeRegion, resolvePrimaire: resolvePrimaire, actionsFor: actionsFor, centrists: centrists, tickBingo: tickBingo, ensureTraits: ensureTraits,
     classPoll: classPoll, addAudience: addAudience, previewGain: previewGain, quickGain: quickGain, interview: interview, applyInterview: applyInterview, aiAnswer: aiAnswer, pickQuestion: pickQuestion, stationFit: stationFit, stationBoost: stationBoost, vingtError: vingtError, matinaleError: matinaleError, stageRisk: stageRisk, isMajority: isMajority, audOf: audOf, SEG: SEG,
-    applyMode: applyMode, spec: spec,
+    applyMode: applyMode, isBeta: isBeta, parrDeadline: parrDeadline, removeParty: removeParty, unionError: unionError, unionChance: unionChance, defiError: defiError, defiAccept: defiAccept, dynLabel: dynLabel, spec: spec,
     REG: REG, PARTY: PARTY, sigle: sigle, THEME: THEME, makeRng: makeRng, setFormat: setFormat, saveGame: saveGame, loadGame: loadGame, registerParty: registerParty, unregisterParty: unregisterParty
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;

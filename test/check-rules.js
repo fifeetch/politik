@@ -639,5 +639,49 @@ section('Bêta : réglages par parti (v4.3)');
   ok(E.spec(gn, 'MN', 4) === 4, 'Réaliste : les effets spécifiques ne changent pas');
 })();
 
+section('Bêta : nouvelles mécaniques de campagne (v4.4)');
+(function () {
+  var AI = require('../js/ai.js');
+  var g = E.createGame('SM', { seed: 170, base: 'sond', mode: 'beta' });
+  ok(g.bomb && g.bomb.turn >= 4 && g.bomb.turn <= 7, 'une bombe de campagne est prévue entre les tours 4 et 7');
+  ok(E.player(g, 'MN').sign === 500 && E.player(g, 'VP').sign < 500 && E.player(g, 'PC').sign > E.player(g, 'LO').sign, 'parrainages : les gros partis les ont d\'office, les petits doivent les chercher (le PCF a plus d\'élus que LO)');
+  ok(!!E.checkAction(E.createGame('SM', { seed: 170 }), 'SM', { type: 'parrainages' }), 'les nouvelles actions n\'existent qu\'en Bêta');
+  ok(!!E.unionError(g, 'MN', 'UG'), 'cordon : le RN ne peut pas rallier LR');
+  ok(!E.unionError(g, 'MN', 'RQ') || /Trop tard|pèse/.test(E.unionError(g, 'MN', 'RQ')), 'le RN peut rallier Rétroconquête');
+  ok(!!E.unionError(g, 'SM', 'MN') && !!E.unionError(g, 'FI', 'UG'), 'pas de candidature commune avec un parti plus gros ou d\'un autre camp');
+  // une union : VP se range derrière le PS
+  var g2 = E.createGame('SM', { seed: 171, base: 'sond', mode: 'beta' }); E.startTurn(g2);
+  var before = E.poll(g2).filter(function (x) { return x.pid === 'SM'; })[0].pct;
+  var r = E.removeParty(g2, 'VP', 'SM', 0.7, 'union');
+  var after = E.poll(g2).filter(function (x) { return x.pid === 'SM'; })[0].pct;
+  ok(!E.player(g2, 'VP') && r.moved > 0 && after > before, 'candidature commune : les Enracinés se retirent, le PS récupère des électeurs (+' + (100 * (after - before)).toFixed(1) + ' pt)');
+  // parrainages : élimination en fin de tour 3
+  var g3 = E.createGame('SM', { seed: 172, base: 'sond', mode: 'beta' });
+  E.player(g3, 'LO').sign = 100; E.player(g3, 'PC').sign = 500;
+  for (var t = 0; t < 3; t++) { E.startTurn(g3); var res = E.endTurn(g3); }
+  ok(!E.player(g3, 'LO') && E.player(g3, 'PC') && res.out && res.out.some(function (o) { return o.pid === 'LO'; }), 'sans 500 signatures à la fin du tour 3, le parti est éliminé (LO), les autres restent');
+  // dynamique
+  var g4 = E.createGame('SM', { seed: 173, base: 'sond', mode: 'beta' }); E.startTurn(g4);
+  E.player(g4, 'SM').streak = 2; g4.lastPoll.SM = 0; E.endTurn(g4);
+  ok(E.player(g4, 'SM').streak === 3 && E.player(g4, 'SM').momentum === 2 && E.dynLabel(g4, 'SM') === 'vague', 'dynamique : 3 tours de hausse, la vague (Meeting +2)');
+  // bombe
+  var g5 = E.createGame('SM', { seed: 174, base: 'sond', mode: 'beta' }), hit = null;
+  for (var k = 0; k < 8 && !hit; k++) { var inf = E.startTurn(g5); if (inf.bomb) hit = inf.bomb; g5.affairs.slice().forEach(function (a) { E.resolveAffair(g5, a.pid, 1); }); E.endTurn(g5); }
+  ok(hit && hit.regions.length === 4 && g5.bomb.done, 'la bombe tombe une fois, sur l\'un des 2 premiers (' + (hit && hit.pid) + ')');
+  // une partie Bêta complète par l'ordinateur, sans erreur
+  var g6 = E.createGame(null, { seed: 175, base: 'sond', mode: 'beta', aiParties: D.PARTIES.map(function (p) { return p.id; }) }), err = null;
+  try {
+    while (!g6.over && !g6.between) {
+      var i6 = E.startTurn(g6); i6.affairs.forEach(function (a) { E.resolveAffair(g6, a.pid, AI.chooseReaction(g6, a.pid)); });
+      if (i6.dilemma && E.player(g6, i6.dilemma.pid)) E.resolveDilemma(g6, i6.dilemma.pid, AI.chooseDilemma(g6, i6.dilemma.pid));
+      var pl6 = {}; g6.players.forEach(function (p) { pl6[p.id] = AI.plan(g6, p.id); }); E.resolveActions(g6, pl6);
+      if (E.isDebateTurn(g6)) { var d6 = E.setupDebate(g6); E.resolveDebate(g6, {}, d6.duels.map(function (x) { return { ra: AI.chooseReply(g6, x.a, x.theme, x.b, x), rb: AI.chooseReply(g6, x.b, x.theme, x.a, x) }; })); }
+      E.endTurn(g6);
+    }
+    if (g6.between) E.autoBetween(g6);
+  } catch (e) { err = e.message; }
+  ok(!err && g6.winner, 'une partie Bêta complète se joue sans erreur' + (err ? ' (' + err + ')' : ''));
+})();
+
 console.log('\n' + passes + ' vérifications réussies, ' + fails + ' en échec.');
 process.exit(fails ? 1 : 0);

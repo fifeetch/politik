@@ -36,6 +36,12 @@
     // v3.9 : la matinale (sur la radio qui l'accueille le mieux) et le 20 h s'il est invité
     if (!E.matinaleError(v, pid)) D.STATIONS.forEach(function (st) { if (E.stationFit(pid, st.id).k !== 'far') list.push({ type: 'matinale', theme: tvThemes[0], station: st.id }); });
     if (!E.vingtError(v, pid)) tvThemes.forEach(function (th) { list.push({ type: 'vingt', theme: th }); });
+    // v4.4 (Bêta) : parrainages, candidature commune, défi du débat
+    if (E.isBeta(v)) {
+      if (pl.sign != null && pl.sign < D.BETA.parr.need && v.turn <= E.parrDeadline(v)) list.push({ type: 'parrainages' });
+      if (v.turn <= D.BETA.union.lastTurn && !pl.unionTried) v.players.forEach(function (o) { if (o.id !== pid && !o.human && !E.unionError(v, pid, o.id)) list.push({ type: 'union', target: o.id }); });
+      if (!pl.defiUsed && v.turn >= 2) { var rkD = E.ranking(v), myD = rkD.indexOf(pid); if (myD >= 2 && myD <= 6) { var tD = rkD[0] !== pid && !E.player(v, rkD[0]).human ? rkD[0] : rkD[1]; if (tD && !E.defiError(v, pid, tD)) list.push({ type: 'defi', target: tD }); } }
+    }
     list.push({ type: 'fonds' });
     list.push({ type: 'repos' });   // v3.6.6
     // v3.1 : les actions propres à un parti
@@ -127,6 +133,13 @@
         val += chance * (E.dist(pid, act.target) === 1 ? 6 : 4.5) * (v.turn >= 3 ? 1 : 0.6);
         break; }
       case 'repos': val += pl.forme <= 0 ? 2.6 : pl.forme === 1 ? 1.4 : -5; break;
+      case 'parrainages': {   // v4.4 : indispensable si les signatures ne viendront pas toutes seules
+        var lackP = D.BETA.parr.need - pl.sign, passive = D.BETA.parr.perTurn * Math.max(0, E.parrDeadline(v) - v.turn);
+        val += lackP > passive ? 9 : 0.3; break; }
+      case 'union': {   // v4.4 : absorber un petit voisin
+        var chU = E.unionChance(v, pid, act.target), pt = E.poll(v).filter(function (x) { return x.pid === act.target; })[0];
+        val += chU * (pt ? pt.pct : 0) * 100 * 0.7 * 1.6 * 2 - 1; break; }   // un rival de moins dans son camp
+      case 'defi': val += 2.2 + v.turn * 0.15; break;   // v4.4
       case 'nostalgie': {
         var nv = E.nostalgiaPreview(v, pid, act.region);
         if (!nv || nv.stone) return null;   // l'ordinateur ne va jamais jusqu'à l'âge de pierre
@@ -188,6 +201,9 @@
       if (best.act.type === 'enquete') { v.enq = v.enq || {}; v.enq[pid + best.act.target] = 1; }
       if (best.act.type === 'alliance') { v.alliances[pid] = best.act.target; v.alliances[best.act.target] = pid; }
       if (best.act.type === 'matinale') pl.matinaleTurn = g.turn;
+      if (best.act.type === 'union') pl.unionTried = 1;
+      if (best.act.type === 'defi') pl.defiUsed = g.turn;
+      if (best.act.type === 'parrainages') pl.sign = Math.min(D.BETA.parr.need, pl.sign + D.BETA.parr.action);
       if (best.act.type === 'vingt') pl.vingtUsed = g.turn;
       if (best.act.type === 'repos') pl.forme = Math.min(D.RULES.formeMax, pl.forme + D.RULES.reposForme);
       if (best.act.type === 'nostalgie') { v.nost[pid] = (v.nost[pid] || 0) + 1; pl.nostTurn = g.turn; }

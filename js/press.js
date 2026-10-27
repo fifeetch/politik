@@ -281,7 +281,7 @@
     (ctx.log || []).forEach(function (l) {
       var type = ACTION_TYPE[l.action];
       if (!l.ok || !type || seen[l.pid + type]) return;
-      if (['terrain', 'medias', 'matinale', 'vingt', 'mobiliser', 'reseaux', 'contre', 'militants'].indexOf(type) < 0) return;
+      if (['terrain', 'medias', 'matinale', 'vingt', 'mobiliser', 'reseaux', 'contre', 'militants', 'union', 'defi'].indexOf(type) < 0) return;
       seen[l.pid + type] = true;
       var p = P(l.pid), key = g.turn + l.pid + type + (l.region || ''), city = l.region ? pick(CITIES[l.region], key) : null;
       var topic = l.theme && TOPICS[l.theme] ? pick(TOPICS[l.theme], key + 't') : 'de ses propositions', m = l.theme ? measureOn(l.pid, l.theme) : null;
@@ -290,6 +290,19 @@
       if (type === 'terrain') {
         a.title = pick([p.short + ' à la rencontre des habitants de ' + city, p.candidate + ' fait salle comble à ' + city, 'À ' + city + ', ' + p.candidate + ' parle ' + topic], key);
         a.text = p.candidate + ' était à ' + city + ' (' + E.REG[l.region].name + ') ' + pick(CROWDS, key + 'c') + '. Il a surtout été question ' + topic + '.' + quote;
+      } else if (type === 'union') {   // v4.4
+        var tu = l.union ? l.union.target : l.unionRefused, Pu = tu ? P(tu) : null;
+        if (!Pu) return;
+        a.title = l.union ? Pu.short + ' se range derrière ' + p.candidate : Pu.short + ' dit non à ' + p.short;
+        a.text = l.union ? 'Coup de tonnerre : ' + Pu.candidate + ' retire sa candidature et appelle à voter ' + p.candidate + ' dès le premier tour. « L\'union, c\'est maintenant ou jamais », lance-t-on des deux côtés. Les sondeurs estiment que 7 électeurs sur 10 suivront.'
+          : p.candidate + ' proposait une candidature commune. ' + Pu.candidate + ' refuse : « Nos électeurs veulent un vrai choix au premier tour. »';
+        a.rub = 'Campagne';
+      } else if (type === 'defi' && l.defi) {   // v4.4
+        var Pd = P(l.defi.target);
+        a.title = l.defi.accepted ? 'Face-à-face surprise : ' + p.candidate + ' contre ' + Pd.candidate : Pd.candidate + ' se dérobe : la chaise vide';
+        a.text = l.defi.accepted ? 'Défié en direct, ' + Pd.candidate + ' a accepté le débat. ' + (l.defi.sa > l.defi.sb ? 'Avantage ' + p.candidate + ', plus convaincant.' : l.defi.sa < l.defi.sb ? 'Avantage ' + Pd.candidate + ', qui a retourné le piège.' : 'Match nul, chacun reste sur ses positions.') + (l.defi.line ? ' Le moment fort : ' + l.defi.line : '')
+          : 'Pupitre vide et chaise vide : ' + Pd.candidate + ' a refusé le débat proposé par ' + p.candidate + '. Les réseaux sociaux s\'en donnent à cœur joie.';
+        a.rub = 'Médias';
       } else if ((type === 'matinale' || type === 'vingt') && l.media) {
         var segN2 = { pop: 'les ouvriers et les employés', sae: 'les étudiants et les chômeurs', ret: 'les retraités', cad: 'les cadres', pi: 'les professions intermédiaires', ind: 'les artisans et les commerçants' };
         var topS2 = Object.keys(l.media.gains).sort(function (x, y) { return Math.abs(l.media.gains[y]) - Math.abs(l.media.gains[x]); })[0];
