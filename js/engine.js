@@ -825,7 +825,7 @@
     g.crisis = { id: cr.id, start: R.crisisStart[0] + Math.floor(rng() * (R.crisisStart[1] - R.crisisStart[0] + 1)) };
     initTraits(g);
     g.dilemmas = shuffle(D.DILEMMAS.map(function (d) { return d.id; }), rng);
-    g.affairDeck = shuffle(D.AFFAIRS.map(function (a) { return a.id; }), rng);
+    g.affairDeck = shuffle(D.AFFAIRS.filter(function (a) { return !a.party; }).map(function (a) { return a.id; }), rng);   // v4.3 : les affaires propres à un parti ne touchent que lui
     g.lastPoll = pollMap(g);
     return g;
   }
@@ -868,18 +868,19 @@
       // v0.7 : les affaires (dossiers des rivaux, programme non financé, casseroles, Le Canard)
       var list = g.nextAffairs.slice(); g.nextAffairs = [];
       g.players.forEach(function (pl) {
-        var risk = pl.cas * R.affairPerCasserole;
-        if (pl.cas > 0 && g.rng() < risk && !list.some(function (x) { return x.pid === pl.id; })) list.push({ pid: pl.id, src: 'casseroles' });
+        var sm = scandalMult(g, pl.id);   // v4.3 (Bêta) : plus de scandales pour les favoris
+        var risk = pl.cas * R.affairPerCasserole * sm + Math.max(0, sm - 1) * 0.08;
+        if ((pl.cas > 0 || sm > 1) && g.rng() < risk && !list.some(function (x) { return x.pid === pl.id; })) list.push({ pid: pl.id, src: 'casseroles' });
       });
       if (!list.length && g.rng() < R.canardChance) {
-        var tot = 0; g.players.forEach(function (p) { tot += p.cas + 1; });
+        var tot = 0; g.players.forEach(function (p) { tot += (p.cas + 1) * scandalMult(g, p.id); });
         var r = g.rng() * tot, pick = g.players[0];
-        for (var i = 0; i < g.players.length; i++) { r -= g.players[i].cas + 1; if (r <= 0) { pick = g.players[i]; break; } }
+        for (var i = 0; i < g.players.length; i++) { r -= (g.players[i].cas + 1) * scandalMult(g, g.players[i].id); if (r <= 0) { pick = g.players[i]; break; } }
         list.push({ pid: pick.id, src: 'canard' });
       }
       var seenAff = {}; list = list.filter(function (x) { if (seenAff[x.pid]) return false; seenAff[x.pid] = 1; return true; });   // v3.6.5 : une affaire par parti et par tour
       g.affairs = list.slice(0, R.affairsMax).map(function (x) {
-        var id = x.id || g.affairDeck[g.affairIdx++ % g.affairDeck.length];
+        var id = x.id || partyAffair(g, x.pid) || g.affairDeck[g.affairIdx++ % g.affairDeck.length];
         var def = affairDef(id);
         return { pid: x.pid, id: id, title: def.title, text: def.text, src: x.src || (id === 'budget' ? 'budget' : 'dossier'), from: x.from || null };
       });
@@ -929,6 +930,13 @@
     }
     g.phase = 'actions';
     return out;
+  }
+  /* v4.3 : le risque de scandale d'un parti (Bêta) et les affaires qui lui sont propres */
+  function scandalMult(g, pid) { return g.mode === 'beta' && D.BETA.scandal && D.BETA.scandal[pid] != null ? D.BETA.scandal[pid] : 1; }
+  function partyAffair(g, pid) {
+    var own = D.AFFAIRS.filter(function (a) { return a.party && a.party.indexOf(pid) >= 0 && (g.affairsSeen || []).indexOf(a.id) < 0; });
+    if (!own.length || g.rng() < 0.5) return null;
+    var a = own[Math.floor(g.rng() * own.length)]; g.affairsSeen = (g.affairsSeen || []).concat([a.id]); return a.id;
   }
   function affairDef(id) { return id === 'budget' ? D.BUDGET_AFFAIR : D.AFFAIRS.filter(function (a) { return a.id === id; })[0]; }
   /* Un parti réagit à son affaire (index de D.REACTIONS). L'affaire fait d'office sortir 1 casserole. */

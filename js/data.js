@@ -362,7 +362,13 @@
     { id: 'diners',     title: 'Les dîners à 500 €',         text: 'Des dîners dans les plus grandes tables de Paris, aux frais du contribuable.' },
     { id: 'tweet',      title: 'Le vieux message',           text: 'Un message que tu as publié il y a dix ans refait surface. Il a très mal vieilli.' },
     { id: 'chauffeur',  title: 'Le chauffeur pressé',        text: 'Ta voiture officielle cumule 87 excès de vitesse.' },
-    { id: 'neveu',      title: 'Le neveu bien placé',        text: 'Ton neveu de 19 ans dirige désormais la communication du parti.' }
+    { id: 'neveu',      title: 'Le neveu bien placé',        text: 'Ton neveu de 19 ans dirige désormais la communication du parti.' },
+    /* v4.3 : des affaires propres à un parti, parodies d'affaires réelles (tirées une fois sur deux quand ce parti est touché) */
+    { id: 'assistants_ue', party: ['MN'], title: 'Les assistants fantômes de Bruxelles', text: 'Des assistants payés par le Parlement européen auraient en réalité travaillé pour le parti, à Paris.' },
+    { id: 'pret_est',      party: ['MN'], title: 'Le prêt venu de l\u2019Est',          text: 'Une banque étrangère très bienveillante aurait prêté des millions au parti. Qui rembourse, et en échange de quoi ?' },
+    { id: 'kits',          party: ['MN', 'RQ'], title: 'Les kits de campagne',          text: 'Des kits de campagne facturés au prix fort aux candidats… et remboursés par l\u2019État.' },
+    { id: 'comptes_fi',    party: ['FI'], title: 'Les comptes de campagne',              text: 'La commission des comptes de campagne s\u2019interroge sur des prestations surfacturées par des proches du parti.' },
+    { id: 'perquisition',  party: ['FI'], title: 'La perquisition en direct',            text: 'Le chef du parti crie « La République, c\u2019est moi ! » devant les policiers. La vidéo tourne en boucle.' }
   ];
   var BUDGET_AFFAIR = { id: 'budget', title: 'Le programme non financé', text: 'Les économistes ont fait les comptes : ton programme coûte bien plus que ce que tu annonces.' };
   /* Les 4 façons de réagir à une affaire */
@@ -922,9 +928,13 @@
     /* v4.3 : la force des actions et cartes propres à chaque parti (cartes spéciales, actions de parti, atouts du parti).
        Au-dessus de 1 : renforcées pour les partis sous leur objectif ; en dessous : affaiblies pour les favoris. */
     specific: { MN: 0, FI: 0.25, SM: 0.8, HZ: 2, EM: 2.5, UG: 2.5, VP: 3, PC: 3, RQ: 2, DL: 3, LO: 3, MD: 3 },
+    /* v4.3 : le risque de scandale par parti. Au-dessus de 1 : plus d'affaires (risque des casseroles × ce chiffre, plus un risque
+       de base de (chiffre − 1) × 8 % par tour même sans casserole, et plus souvent ciblé par Le Canard). En dessous : moins d'affaires. */
+    scandal: { MN: 2.5, FI: 1.8, SM: 1, HZ: 0.7, EM: 0.7, UG: 0.7, VP: 0.4, PC: 0.4, RQ: 0.6, DL: 0.4, LO: 0.4, MD: 0.4 },
     changes: [
       'Pas de prime au sortant : tenir une région ne donne plus de voix en plus.',
       'Actions et cartes propres à chaque parti réglées selon son rang : plus fortes pour les petits, plus faibles pour les favoris.',
+      'Scandales : plus fréquents pour les favoris (RN, LFI), plus rares pour les petits partis.',
       'Socle figé à 30 % (au lieu de 50 %) : plus de voix bougent pendant la campagne.'
     ]
   };
