@@ -944,7 +944,7 @@
     bomb: { from: 4, to: 7, eclair: 2, hit: 4, cas: 1, leader: 0.6 },                          // une bombe par partie, sur l'un des 2 premiers
     parr: { turn: 3, eclairTurn: 2, need: 500, auto: 5, perTurn: 40, action: 130, other: 220,
             base: { PC: 380, MD: 420, VP: 320, DL: 240, RQ: 280, LO: 220 } },                 // signatures de départ (élus locaux du parti)
-    union: { lastTurn: 4, maxDist: 2, transfer: 0.7, accept: { 1: 0.6, 2: 0.35 }, cordon: ['MN'], cordonOk: ['RQ', 'DL'] },   // même camp ; le RN ne peut rallier que les souverainistes et l'extrême droite
+    union: { lastTurn: 4, maxDist: 2, transfer: 0.7, accept: { 1: 0.4, 2: 0.2 }, cordon: ['MN'], cordonOk: ['RQ', 'DL'] },   // même camp ; le RN ne peut rallier que les souverainistes et l'extrême droite
     defi: { refuseWin: 2, refuseLoss: 2 },
     changes: [
       'Pas de prime au sortant : tenir une région ne donne plus de voix en plus.',

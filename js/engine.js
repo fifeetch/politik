@@ -893,7 +893,7 @@
   }
   function unionChance(g, pid, target) {
     var U = D.BETA.union, ch = U.accept[dist(pid, target)] || 0, pt = 100 * pollShare(g, target);
-    if (pt < 5) ch += 0.25;                                   // un petit parti sait qu'il ne passera pas
+    if (pt < 5) ch += 0.15;                                   // un petit parti sait qu'il ne passera pas
     if (pt > 0.6 * 100 * pollShare(g, pid)) ch -= 0.25;       // presque à égalité : il veut sa chance
     if (player(g, target).sign != null && player(g, target).sign < D.BETA.parr.need && g.turn <= parrDeadline(g)) ch += 0.15;   // pas ses parrainages
     return Math.max(0, Math.min(0.95, ch));
