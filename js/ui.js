@@ -199,12 +199,30 @@
       btn.addEventListener('click', function () { if (!b.keep) closeModal(); if (b.onClick) b.onClick(); });
       bx.appendChild(btn);
     });
+    restoreModal();
     $('modal').hidden = false;
     FX.setModal(true);
     FX.replay(card, 'enter');
     if (opts.onOpen) opts.onOpen();
   }
-  function closeModal() { $('modal').hidden = true; FX.setModal(false); }
+  function closeModal() { restoreModal(); $('modal').hidden = true; FX.setModal(false); }
+  /* v4.5.1 : réduire une fenêtre pour regarder le jeu derrière (scores, carte…), puis la rouvrir.
+     Pendant ce temps, le jeu se regarde mais ne se joue pas : on rouvre d'abord la fenêtre. */
+  function minimizeModal() {
+    $('modal').classList.add('min');
+    $('modal-pill').textContent = '▴ Rouvrir · ' + ($('modal-title').textContent || 'la fenêtre');
+    $('modal-pill').hidden = false;
+  }
+  function restoreModal() { $('modal').classList.remove('min'); $('modal-pill').hidden = true; }
+  $('modal-min').addEventListener('click', minimizeModal);
+  $('modal-pill').addEventListener('click', restoreModal);
+  document.addEventListener('click', function (ev) {
+    if (!$('modal').classList.contains('min') || $('modal').hidden) return;
+    if ($('modal-pill').contains(ev.target)) return;
+    if (!ev.target.closest('button, a, [role="button"], input, select, label')) return;
+    ev.preventDefault(); ev.stopPropagation();
+    toast('Rouvre la fenêtre en bas pour continuer.');
+  }, true);
   var toastTimer;
   function toast(msg) { var t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.hidden = true; }, Math.max(2200, String(msg).length * 45)); }
 
@@ -2350,7 +2368,7 @@
       mine.innerHTML = '<div class="kicker">Tes actions · ' + b.left[me] + ' sur ' + R.round2.actions + '</div><div class="pick">' + acts.map(function (a) {
         var err = b.left[me] <= 0 ? 'Plus d\'action disponible.' : a.k === 'negocier' ? (b.elim.some(function (e) { return !b.deals[e]; }) ? null : 'Plus aucun parti libre.') : E.betweenError(g, me, { type: a.k });
         return '<button type="button" class="pick-row' + (err ? ' off' : '') + '" data-bact="' + a.k + '"><span class="pick-i">' + a.icon + '</span><span class="pick-txt"><b>' + a.name + '</b><small>' + esc(err || a.fx) + '</small></span></button>';
-      }).join('') + '</div>';
+      }).join('') + '</div>' + threatHtml(rival);
       Array.prototype.forEach.call(mine.querySelectorAll('[data-bact]'), function (row) {
         row.addEventListener('click', function () {
           if (row.classList.contains('off')) return toast(row.querySelector('small').textContent);
@@ -2389,7 +2407,8 @@
     // les partis éliminés : position et reports estimés
     $('btw-parties').innerHTML = '<div class="kicker">Les partis éliminés · reports estimés</div>' + b.elim.map(function (e) {
       var t = E.transfersFor(g, e, true), d = b.deals[e], c = b.consignes[e];
-      var st = d ? '🤝 accord avec ' + esc(who2(d.with)) + ' (« ' + esc(E.measure(d.measure).name) + ' »)' : c ? (c === 'none' ? '∅ ' : '➜ ') + consigneTxt(b, c) : '… hésite';
+      var aim = isFin && !d && E.rivalTargets(g, rival).indexOf(e) >= 0;
+      var st = aim ? '🎯 courtisé par ' + esc(party(rival).short) : d ? '🤝 accord avec ' + esc(who2(d.with)) + ' (« ' + esc(E.measure(d.measure).name) + ' »)' : c ? (c === 'none' ? '∅ ' : '➜ ') + consigneTxt(b, c) : '… hésite';
       return '<button type="button" class="elim-row" data-why="' + e + '"><span class="elim-top">' + chip(e) + '<b>' + (e === me ? 'Toi' : esc(party(e).short)) + '</b> <span class="muted">' + pctFr(votePct(e), 1) + ' %</span><span class="elim-st">' + st + '</span></span>' +
         '<span class="split"><i style="width:' + (100 * t.toA) + '%;background:' + PA.color + '"></i><i style="width:' + (100 * t.toB) + '%;background:' + PB.color + '"></i><i class="split-rest" style="width:' + (100 * (t.blank + t.abst)) + '%"></i></span>' +
         '<small>' + pctN(t.toA) + ' % → ' + esc(who2(b.a)) + ' · ' + pctN(t.toB) + ' % → ' + esc(who2(b.b)) + ' · ' + pctN(t.blank + t.abst) + ' % blanc ou abstention</small></button>';
@@ -2409,12 +2428,23 @@
     $('btw-go').textContent = undecided ? 'Choisis d\'abord ta consigne' : 'Aller au second tour';
     $('btw-go').disabled = undecided;
   }
+  /* v4.5.1 : un écart en points (toujours positif) */
+  function ptFr(d) { return String(Math.round(1000 * Math.abs(d)) / 10).replace('.', ',') + ' pt'; }
+  /* v4.5.1 : qui le rival compte courtiser, et ce que tu perdrais s'il y arrive */
+  function threatHtml(rival) {
+    var aims = E.rivalTargets(g, rival).map(function (e) { return { e: e, c: E.threatCost(g, me, e) }; }).filter(function (t) { return t.c >= 0.001; });
+    if (!aims.length) return '';
+    return '<div class="threat"><div class="kicker">🎯 ' + esc(party(rival).short) + ' prépare ses offres</div>' + aims.map(function (t) {
+      return '<p><b>' + esc(party(t.e).short) + '</b> : s\'il signe avec lui, tu perds environ <b>' + ptFr(t.c) + '</b>.</p>';
+    }).join('') + '<p class="hint">Négocie avant lui pour garder ces électeurs : un parti ne signe qu\'avec un seul finaliste.</p></div>';
+  }
   function votePct(pid) { var x = g.round1.first.filter(function (y) { return y.pid === pid; })[0]; return x ? x.pct : 0; }
   function negotiateMenu() {
-    var b = g.between, free = b.elim.filter(function (e) { return !b.deals[e]; }).sort(function (x, y) { return votePct(y) - votePct(x); });
+    var b = g.between, rival = me === b.a ? b.b : b.a, aims = E.rivalTargets(g, rival), free = b.elim.filter(function (e) { return !b.deals[e]; }).sort(function (x, y) { return votePct(y) - votePct(x); });
     var buttons = free.map(function (e) {
       var err = E.betweenError(g, me, { type: 'negocier', target: e, measure: E.concessionsFor(g, me, e)[0] });
-      return { label: party(e).short + ' · ' + pctFr(votePct(e), 1) + ' % · distance ' + E.dist(me, e) + (err ? ' — ' + err : ''), disabled: !!err, onClick: function () { concessionMenu(e); } };
+      var aim = aims.indexOf(e) >= 0 ? ' · 🎯 visé par ' + party(rival).short + ' (protège ' + ptFr(E.threatCost(g, me, e)) + ')' : '';
+      return { label: party(e).short + ' · ' + pctFr(votePct(e), 1) + ' % · distance ' + E.dist(me, e) + aim + (err ? ' — ' + err : ''), disabled: !!err, onClick: function () { concessionMenu(e); } };
     });
     buttons.push({ label: 'Annuler' });
     modal({ kicker: '1 action', title: 'Avec qui négocier ?', html: axisHtml(me) + '<p>Plus un parti est proche de toi sur l\'axe, plus il acceptera facilement, et plus ses électeurs suivront sa consigne. Un accord avec un parti éloigné (distance 3 ou plus) fait fuir ' + pctN(R.round2.farDealLoss) + ' % de tes électeurs.</p>', buttons: buttons });
@@ -2434,6 +2464,7 @@
     // v3.6.1 : on montre l'effet de TON action, puis celui de la réponse du rival, séparément
     function myPct() { var pj = E.projectSecond(g); return me === pj.a ? pj.pctA : pj.pctB; }
     function ptTxt(d) { var v = Math.round(1000 * d) / 10; return (v > 0 ? '+' : v < 0 ? '−' : '±') + String(Math.abs(v)).replace('.', ',') + ' pt'; }
+    var aimed = act.type === 'negocier' && E.rivalTargets(g, rival).indexOf(act.target) >= 0, saved = aimed ? E.threatCost(g, me, act.target) : 0;
     var p0 = myPct(), r = E.betweenAct(g, me, act);
     if (!r.ok) return toast(r.text);
     var p1 = myPct();
@@ -2441,7 +2472,8 @@
       var rr = E.aiBetweenStep(g, rival), p2 = myPct();
       renderBetween();
       var last = rr ? b.log[b.log.length - 1] : null;
-      toast('Ton action : ' + ptTxt(p1 - p0) + (rr ? ' · Réponse de ' + party(rival).short + ' : ' + ptTxt(p2 - p1) + (last ? ' (' + last.text + ')' : '') : ''));
+      var prot = aimed && b.deals[act.target] && b.deals[act.target].with === me ? ' (et tu protèges ' + ptFr(saved) + ' : ' + party(act.target).short + ' ne peut plus signer avec ' + party(rival).short + ')' : '';
+      toast('Ton action : ' + ptTxt(p1 - p0) + prot + (rr ? ' · Réponse de ' + party(rival).short + ' : ' + ptTxt(p2 - p1) + (last ? ' (' + last.text + ')' : '') : ''));
     }
     if (act.type !== 'negocier') { renderBetween(); return rivalTurn(); }
     var pn = party(act.target).short, m = E.measure(act.measure);

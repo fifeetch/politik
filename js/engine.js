@@ -1999,6 +1999,24 @@
     if (r.outcome === 'counter') answerCounter(g, true);
     return r;
   }
+  /* v4.5.1 : les partis que le finaliste f (mené par l'ordinateur) compte encore courtiser, dans l'ordre de son plan */
+  function rivalTargets(g, f) {
+    var b = g.between; if (!b || player(g, f).human || b.left[f] <= 0) return [];
+    return (b.plan[f] || []).filter(function (a) { return a.type === 'negocier' && !b.deals[a.target] && concessionsFor(g, f, a.target).length; })
+      .map(function (a) { return a.target; }).filter(function (e, i, arr) { return arr.indexOf(e) === i; });
+  }
+  /* v4.5.1 : ce que coûterait au finaliste « me » un accord entre son rival et le parti e (en part des voix, ≥ 0).
+     On simule l'accord sur l'estimation, puis on remet tout en place. */
+  function threatCost(g, me, e) {
+    var b = g.between; if (!b || b.deals[e]) return 0;
+    var rival = me === b.a ? b.b : b.a, mid = concessionsFor(g, rival, e)[0]; if (!mid) return 0;
+    function mine() { var p = secondCalc(g, true); return me === p.a ? p.pctA : p.pctB; }
+    var before = mine(), keepC = b.consignes[e], rd = player(g, rival).deals;
+    b.deals[e] = { with: rival, measure: mid }; b.consignes[e] = side(b, rival); rd.push({ with: e, measure: mid });
+    var after = mine();
+    delete b.deals[e]; b.consignes[e] = keepC; rd.pop();
+    return Math.max(0, before - after);
+  }
   /* Les reports d'un parti éliminé vers les deux finalistes, et pourquoi. expected : estimation (consignes pas encore données) */
   function transfersFor(g, e, expected) {
     var b = g.between, A = b.a, B = b.b, dA = dist(e, A), dB = dist(e, B), why = [];
@@ -2121,7 +2139,7 @@
     estimate: estimate, ledStart: ledStart, regionSnapshot: regionSnapshot,
     createGame: createGame, startTurn: startTurn, resolveActions: resolveActions, resolveDebate: resolveDebate, setupDebate: setupDebate, debateCards: debateCards, duelOutcome: duelOutcome, debateCounter: debateCounter, aiDebatePick: aiDebatePick, debateWeights: debateWeights, setupFace: setupFace, resolveFace: resolveFace, audScore: audScore, duelResult: duelResult, replyPoints: replyPoints,
     isDebateTurn: isDebateTurn, spotlightTarget: spotlightTarget, applySpotlight: applySpotlight, endTurn: endTurn,
-    finalScores: finalScores, firstRound: firstRound, openBetween: openBetween, betweenAct: betweenAct, betweenError: betweenError, answerCounter: answerCounter, answerBetweenOffer: answerBetweenOffer, setConsigne: setConsigne, concessionsFor: concessionsFor, dealChance: dealChance, aiBetweenStep: aiBetweenStep, aiConsigne: aiConsigne, transfersFor: transfersFor, projectSecond: projectSecond, closeBetween: closeBetween, autoBetween: autoBetween, objectiveMet: objectiveMet, objectiveProgress: objectiveProgress, objectiveShare: objectiveShare, terrainBreakdown: terrainBreakdown, turnOrder: turnOrder, election: election, poll: poll, votes: votes,
+    finalScores: finalScores, firstRound: firstRound, openBetween: openBetween, betweenAct: betweenAct, betweenError: betweenError, answerCounter: answerCounter, answerBetweenOffer: answerBetweenOffer, setConsigne: setConsigne, concessionsFor: concessionsFor, dealChance: dealChance, aiBetweenStep: aiBetweenStep, aiConsigne: aiConsigne, rivalTargets: rivalTargets, threatCost: threatCost, transfersFor: transfersFor, projectSecond: projectSecond, closeBetween: closeBetween, autoBetween: autoBetween, objectiveMet: objectiveMet, objectiveProgress: objectiveProgress, objectiveShare: objectiveShare, terrainBreakdown: terrainBreakdown, turnOrder: turnOrder, election: election, poll: poll, votes: votes,
     dist: dist, fundsGain: fundsGain, allyOf: allyOf, allianceError: allianceError, answerOffer: answerOffer, acceptChance: acceptChance,
     poachTarget: poachTarget, transferRate: transferRate,
     actionCost: actionCost, checkAction: checkAction, mediaRegions: mediaRegions, gain: gain, bestRegions: bestRegions,
