@@ -33,14 +33,80 @@
   function readSave() { try { var x = JSON.parse(localStorage.getItem(SAVE) || 'null'); return x && x.v === 1 ? x : null; } catch (e) { return null; } }
   function renderResume() {
     var sv = readSave(), b = $('btn-resume'); if (!b) return;
+    var lb = $('btn-load'); if (lb) { var n = readSaves().length; lb.hidden = !n; lb.innerHTML = '📂 Charger une partie<small>' + n + ' sauvegarde' + (n > 1 ? 's' : '') + '</small>'; }
     if (!sv) { b.hidden = true; return; }
     var gg; try { gg = JSON.parse(sv.game); } catch (e) { b.hidden = true; return; }
     var P = E.PARTY[sv.me] || (sv.founded && sv.founded.sigle === sv.me ? sv.founded : null);
     b.hidden = !P;
-    if (P) b.innerHTML = '↻ Reprendre ta partie<small>' + esc(P.name || P.short) + ' · tour ' + (gg.turn + 1) + ' sur ' + (D.FORMATS[gg.format] || D.FORMATS.classique).turns + '</small>';
+    if (P) b.innerHTML = '↻ Reprendre la dernière partie<small>' + esc(P.name || P.short) + ' · tour ' + (gg.turn + 1) + ' sur ' + (D.FORMATS[gg.format] || D.FORMATS.classique).turns + '</small>';
   }
-  function resumeGame() {
-    var sv = readSave(); if (!sv) return;
+  /* v3.7 : les sauvegardes nommées (plusieurs parties gardées, à recharger depuis l'accueil) */
+  var SAVES = 'politik_saves', SAVES_MAX = 20;
+  function readSaves() { try { var x = JSON.parse(localStorage.getItem(SAVES) || '[]'); return Array.isArray(x) ? x.filter(function (s) { return s && s.v === 1 && s.game; }) : []; } catch (e) { return []; } }
+  function writeSaves(list) { localStorage.setItem(SAVES, JSON.stringify(list)); }
+  function snapPayload() {
+    return { v: 1, when: Date.now(), game: turnSnap, me: me, quick: quickGame, perso: perso, founded: founded, lead: leadOn, foundedOn: !!(founded && me === founded.sigle) };
+  }
+  function saveInfo(sv) {
+    var gg; try { gg = JSON.parse(sv.game); } catch (e) { return null; }
+    var P = E.PARTY[sv.me] || (sv.founded && sv.founded.sigle === sv.me ? sv.founded : null);
+    if (!P) return null;
+    return { party: P.name || P.short, turn: gg.turn + 1, turns: (D.FORMATS[gg.format] || D.FORMATS.classique).turns };
+  }
+  function whenFr(t) {
+    var d = new Date(t), p2 = function (n) { return (n < 10 ? '0' : '') + n; };
+    return p2(d.getDate()) + '/' + p2(d.getMonth() + 1) + ' à ' + p2(d.getHours()) + 'h' + p2(d.getMinutes());
+  }
+  function saveNamed() {
+    if (!turnSnap) return;
+    var info = saveInfo(snapPayload()) || { party: '', turn: turnSnapTurn };
+    var def = info.party + ' · tour ' + info.turn;
+    var list = readSaves();
+    modal({ kicker: '💾 Sauvegarder', title: 'Nommer ta partie',
+      html: '<label class="kicker" for="sv-name">Nom de la sauvegarde</label><input id="sv-name" class="pc-input" maxlength="40" value="' + esc(def) + '">' +
+        '<p class="hint">La partie reprendra au début du tour ' + turnSnapTurn + '. Même nom qu\u2019une sauvegarde existante = elle est remplacée.</p>' +
+        (list.length >= SAVES_MAX ? '<p class="hint">Tu as déjà ' + SAVES_MAX + ' sauvegardes : la plus ancienne sera effacée.</p>' : ''),
+      onOpen: function () { var i = $('sv-name'); if (i) { i.focus(); i.select(); } },
+      buttons: [{ label: 'Enregistrer', primary: true, onClick: function () {
+        var name = (($('sv-name') && $('sv-name').value) || '').trim() || def;
+        var entry = Object.assign(snapPayload(), { name: name, id: Date.now().toString(36) });
+        var l = readSaves().filter(function (x) { return x.name.toLowerCase() !== name.toLowerCase(); });
+        l.unshift(entry);
+        while (l.length > SAVES_MAX) l.pop();
+        try { writeSaves(l); toast('💾 « ' + name + ' » enregistrée. « Charger une partie » sur l\u2019écran d\u2019accueil.'); }
+        catch (e) { toast('Sauvegarde impossible : mémoire du téléphone pleine. Supprime une ancienne sauvegarde.'); }
+        renderResume();
+      } }, { label: 'Annuler' }] });
+  }
+  function showLoad() {
+    var list = readSaves();
+    var rows = list.map(function (sv, i) {
+      var inf = saveInfo(sv);
+      return '<li class="sv-row"><button type="button" class="sv-load" data-i="' + i + '"' + (inf ? '' : ' disabled') + '><b>' + esc(sv.name) + '</b><small>' +
+        (inf ? esc(inf.party) + ' · tour ' + inf.turn + ' sur ' + inf.turns + ' · ' : 'Sauvegarde illisible · ') + whenFr(sv.when) + '</small></button>' +
+        '<button type="button" class="sv-del" data-i="' + i + '" aria-label="Supprimer ' + esc(sv.name) + '">🗑</button></li>';
+    }).join('');
+    modal({ kicker: '📂 Charger', title: 'Tes parties enregistrées',
+      html: list.length ? '<ul class="sv-list">' + rows + '</ul>' : '<p>Aucune partie enregistrée. En jeu : onglet « Mon parti » → « Sauvegarder la partie ».</p>',
+      buttons: [{ label: 'Fermer' }],
+      onOpen: function () {
+        Array.prototype.forEach.call(document.querySelectorAll('#modal .sv-load'), function (b) {
+          b.addEventListener('click', function () { var sv = readSaves()[+b.getAttribute('data-i')]; closeModal(); if (sv) resumeGame(sv); });
+        });
+        Array.prototype.forEach.call(document.querySelectorAll('#modal .sv-del'), function (b) {
+          b.addEventListener('click', function () {
+            var l = readSaves(), sv = l[+b.getAttribute('data-i')]; if (!sv) return;
+            modal({ title: 'Supprimer « ' + sv.name + ' » ?', html: '<p>Cette sauvegarde sera effacée pour de bon.</p>',
+              buttons: [{ label: 'Supprimer', primary: true, onClick: function () {
+                try { writeSaves(readSaves().filter(function (x) { return x.id !== sv.id || x.when !== sv.when; })); } catch (e) {}
+                renderResume(); showLoad();
+              } }, { label: 'Garder', onClick: showLoad }] });
+          });
+        });
+      } });
+  }
+  function resumeGame(from) {
+    var sv = (from && from.game) ? from : readSave(); if (!sv) return;
     perso = sv.perso; founded = sv.founded; leadOn = sv.lead;
     PS.reset(A);
     if (sv.foundedOn && founded) PS.found(founded, perso, A);
@@ -2168,16 +2234,9 @@
       '</div><p><b>Force :</b> ' + esc(p.force) + '</p><p><b>Faiblesse :</b> ' + esc(p.weakness) + '</p>' + traitHtml(me, true) + credHtml(me);
     $('parti-body').innerHTML = '<span class="kicker">Ton parti</span><h1 class="h1 tab-title">' + esc(p.name) + '</h1>' + html +
       '<div class="stack parti-btns">' + (g && !g.over && g.phase !== 'between' && turnSnap ? '<button type="button" class="btn btn-ink" id="pb-save">💾 Sauvegarder la partie</button>' : '') + '<button type="button" class="btn" id="pb-lib">📚 Comprendre la politique</button><button type="button" class="btn" id="pb-rules">Règles du jeu</button><button type="button" class="btn btn-ghost" id="pb-quit">Abandonner la partie</button></div>';
-    if ($('pb-save')) $('pb-save').addEventListener('click', function () {
-      try {
-        localStorage.setItem(SAVE, JSON.stringify({ v: 1, when: Date.now(), game: turnSnap, me: me, quick: quickGame, perso: perso, founded: founded, lead: leadOn,
-          foundedOn: !!(founded && me === founded.sigle) }));
-        renderResume();
-        toast('💾 Partie sauvegardée (début du tour ' + turnSnapTurn + '). « Reprendre » sur l\u2019écran d\u2019accueil.');
-      } catch (e) { toast('Sauvegarde impossible sur cet appareil.'); }
-    });
+    if ($('pb-save')) $('pb-save').addEventListener('click', saveNamed);
     $('pb-lib').addEventListener('click', library); $('pb-rules').addEventListener('click', showRules);
-    $('pb-quit').addEventListener('click', function () { modal({ title: 'Abandonner la partie ?', html: '<p>Ta campagne sera perdue.</p>', buttons: [{ label: 'Abandonner', primary: true, onClick: function () { clearSave(); go('title'); } }, { label: 'Continuer à jouer' }] }); });
+    $('pb-quit').addEventListener('click', function () { modal({ title: 'Abandonner la partie ?', html: '<p>Ta campagne en cours sera perdue. Tes parties enregistrées sont gardées.</p>', buttons: [{ label: 'Abandonner', primary: true, onClick: function () { clearSave(); go('title'); } }, { label: 'Continuer à jouer' }] }); });
   }
   $('btn-menu').addEventListener('click', function () { showTab(activeTab === 'parti' ? 'carte' : 'parti'); });
   /* La bibliothèque : toutes les fiches « Le saviez-vous ? » */
@@ -2259,7 +2318,8 @@
   renderTitleMap();
   renderChoose();
   renderResume();
-  $('btn-resume').addEventListener('click', resumeGame);
+  $('btn-resume').addEventListener('click', function () { resumeGame(); });
+  $('btn-load').addEventListener('click', showLoad);
   /* v1.9 : l'écran d'ouverture du studio disparaît tout seul (ou d'un toucher) */
   (function () {
     var sp = $('splash'); if (!sp) return;

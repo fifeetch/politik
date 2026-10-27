@@ -1149,6 +1149,14 @@ button { font-family: inherit; color: inherit; }
 /* v2.8 : reprendre une partie */
 .btn-resume { flex-direction: column; gap: 2px; }
 .btn-resume small { font: 600 12.5px var(--body); opacity: .75; }
+/* v3.7 : la liste des parties enregistrées */
+.sv-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.sv-row { display: flex; gap: 6px; align-items: stretch; }
+.sv-load { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 10px 12px; min-height: 52px; background: var(--sheet); border: 1.5px solid var(--ink); border-radius: 12px; font: 15px var(--body); text-align: left; cursor: pointer; }
+.sv-load b { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sv-load small { font-size: 12.5px; color: var(--muted); }
+.sv-load:disabled { opacity: .5; cursor: default; }
+.sv-del { flex: none; width: 48px; border: 1.5px solid var(--rule); border-radius: 12px; background: transparent; font-size: 18px; cursor: pointer; }
 
 /* v2.8.2 : campagne des législatives plus lisible */
 .lc-legend { margin: 0; font-size: 12.5px; color: var(--ink-2); line-height: 1.35; display: flex; gap: 6px; align-items: flex-start; }
