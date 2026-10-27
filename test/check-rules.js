@@ -617,13 +617,26 @@ section('Le mode Bêta (v4.1)');
   var gr = E.createGame('SM', { seed: 140, base: 'sond' }), pr = E.poll(gr).map(function (x) { return x.pid + x.pct.toFixed(4); }).join();
   ok(D.RULES.incumbentBonus === 1.25 && D.RULES.socle === 0.5, 'Réaliste : prime au sortant et socle à 50 % inchangés');
   var gb = E.createGame('SM', { seed: 140, base: 'sond', mode: 'beta' });
-  ok(gb.mode === 'beta' && D.RULES.incumbentBonus === 1 && D.RULES.socle === 0.3, 'Bêta : sans prime au sortant, socle à 30 %');
+  ok(gb.mode === 'beta' && D.RULES.incumbentBonus === 1 && D.RULES.socle === D.BETA.rules.socle && D.BETA.rules.socle < 0.5, 'Bêta : sans prime au sortant, socle plus bas que le Réaliste');
   ok(gb.hist && Object.keys(gb.regions.idf.cubes).length >= 12, 'Bêta : même départ que le Réaliste (vrais scores, socle historique)');
   var gr2 = E.createGame('SM', { seed: 141 });
   ok(D.RULES.incumbentBonus === 1.25 && D.RULES.socle === 0.5, 'une nouvelle partie Réaliste remet les règles normales');
   var back = E.loadGame(E.saveGame(gb));
-  ok(back.mode === 'beta' && D.RULES.socle === 0.3, 'reprendre une sauvegarde Bêta remet les règles Bêta');
+  ok(back.mode === 'beta' && D.RULES.socle === D.BETA.rules.socle, 'reprendre une sauvegarde Bêta remet les règles Bêta');
   E.loadGame(E.saveGame(gr)); ok(D.RULES.socle === 0.5, 'reprendre une sauvegarde Réaliste remet les règles Réaliste');
+})();
+
+section('Bêta : élan de l\'outsider et écologie (v4.2)');
+(function () {
+  var g = E.createGame('VP', { seed: 150, base: 'sond', mode: 'beta' }), g2 = E.createGame('VP', { seed: 150, base: 'sond' });
+  var p1 = E.poll(g).map(function (x) { return x.pid + x.pct.toFixed(4); }).join(), p2 = E.poll(g2).map(function (x) { return x.pid + x.pct.toFixed(4); }).join();
+  g = E.createGame('VP', { seed: 150, base: 'sond', mode: 'beta' });
+  ok(g.start && g.cubes0, 'Bêta : la photo du départ est prise (pour l\'élan)');
+  var w = E.weight(g, 'idf', 'VP'), s0 = E.strength(g, 'idf', 'VP'); g.regions.idf.cubes.VP += 2; var s1 = E.strength(g, 'idf', 'VP');
+  ok(w < 1 && s1 - s0 > 2 * w + 1e-9, 'Bêta : les soutiens gagnés par un petit parti pèsent plus que son poids historique');
+  ok(E.elan(g, 'VP') > E.elan(g, 'MN') && E.elan(g, 'MN') === 1, 'Bêta : élan des petits partis en interview, pas pour le favori');
+  ok(E.impact(g, 'VP', 'idf', 'ecologie') > E.impact(g2, 'VP', 'idf', 'ecologie') || E.impact(g2, 'VP', 'idf', 'ecologie') === 4, 'Bêta : les Enracinés font foi sur l\'écologie (+1 d\'impact)');
+  ok(D.BETA.player.bonus === 0, 'pas de bonus pour le joueur');
 })();
 
 console.log('\n' + passes + ' vérifications réussies, ' + fails + ' en échec.');

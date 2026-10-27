@@ -51,20 +51,26 @@
   /* v3.2 : mode Réaliste, le poids électoral. Un soutien pèse selon le score historique du parti dans la région :
      au départ, le sondage colle aux vrais scores, et un petit parti a du mal à dépasser son électorat historique. */
   function weight(g, rid, pid) { return g.weight && g.weight[rid] && g.weight[rid][pid] != null ? g.weight[rid][pid] : 1; }
-  /* v4.2 (Bêta) : l'élan de l'outsider et le coup de pouce du joueur */
+  /* v4.2 (Bêta) : l'élan de l'outsider et le coup de pouce du joueur.
+     En Réaliste, un soutien d'un petit parti pèse peu (son poids historique). En Bêta, les soutiens GAGNÉS pendant la campagne
+     pèsent plus près de la normale : poids + (1 − poids) × k. Un parti qui part bas peut donc vraiment monter, sans dépasser les gros d'office. */
+  function startShare(g, pid) { return Math.max(0.1, 100 * ((g.start && g.start[pid]) || 0)); }
+  function playerBoost(g, pid) {
+    var pl = player(g, pid);
+    return pl && pl.human ? 1 + D.BETA.player.bonus * Math.max(0, 1 - startShare(g, pid) / 33) : 1;
+  }
+  function newWeight(g, rid, pid) { var w = weight(g, rid, pid); return w < 1 ? w + (1 - w) * D.BETA.elan.k : w; }
+  /* L'élan pour les médias : jusqu'à +k pour un parti parti de très bas (et le coup de pouce du joueur) */
   function elan(g, pid) {
     if (g.mode !== 'beta' || !g.start) return 1;
-    var B = D.BETA, s = Math.max(0.1, 100 * (g.start[pid] || 0)), f = Math.max(1, Math.min(B.elan.max, Math.pow(B.elan.ref / s, B.elan.alpha)));
-    var pl = player(g, pid);
-    if (pl && pl.human) f *= 1 + B.player.bonus * Math.max(0, 1 - s / 33);
-    return f;
+    return (1 + D.BETA.elan.k * Math.max(0, 1 - startShare(g, pid) / D.BETA.elan.ref)) * playerBoost(g, pid);
   }
-  /* La force d'un parti dans une région : ses soutiens × leur poids. En Bêta, les soutiens gagnés depuis le départ comptent × l'élan. */
+  /* La force d'un parti dans une région : ses soutiens × leur poids. En Bêta, les soutiens gagnés depuis le départ ont l'élan. */
   function strength(g, rid, pid) {
     var c = cubes(g, rid, pid), w = weight(g, rid, pid);
     if (g.mode !== 'beta' || !g.cubes0) return c * w;
     var c0 = (g.cubes0[rid] && g.cubes0[rid][pid]) || 0;
-    return w * (Math.min(c, c0) + Math.max(0, c - c0) * elan(g, pid));
+    return w * Math.min(c, c0) + Math.max(0, c - c0) * newWeight(g, rid, pid) * playerBoost(g, pid);
   }
   function computeWeights(g) {
     g.weight = {}; g.hist = {};

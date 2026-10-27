@@ -896,20 +896,19 @@
     text: 'Le mode Réaliste, avec les nouvelles règles à tester.',
     rules: {
       incumbentBonus: 1,   // pas de prime au sortant : tenir une région ne donne plus +25 % de voix cachées
-      socle: 0.3           // socle figé : 30 % du vote reste fidèle aux scores historiques (50 % en Réaliste)
+      socle: 0.15          // socle figé : 15 % du vote reste fidèle aux scores historiques (50 % en Réaliste)
     },
-    /* v4.2 : l'élan de l'outsider (tous les partis). Les soutiens gagnés pendant la campagne, et l'audience, valent
-       (référence ÷ score de départ) ^ alpha, entre 1 et max. Un parti à 15 % ou plus : ×1 ; à 2 % : ×3 environ. */
-    elan: { ref: 15, alpha: 0.6, max: 4 },
+    /* v4.2 : l'élan de l'outsider (tous les partis). Les soutiens gagnés pendant la campagne pèsent poids + (1 − poids) × k
+       (un petit parti n'est plus écrasé par son poids historique) ; en interview, +k au plus pour un parti parti de très bas (sous ref %). */
+    elan: { k: 0.35, ref: 15 },
     /* v4.2 : le coup de pouce du joueur, plus fort s'il part bas : 1 + bonus × (1 − départ ÷ 33 %) */
-    player: { bonus: 0.5 },
+    player: { bonus: 0 },
     /* v4.2 : Les Enracinés font foi sur l'écologie */
     eco: { party: 'VP', impact: 1, media: 1.5 },
     changes: [
       'Pas de prime au sortant : tenir une région ne donne plus de voix en plus.',
-      'Socle figé à 30 % (au lieu de 50 %) : plus de voix bougent pendant la campagne.',
+      'Socle figé à 15 % (au lieu de 50 %) : beaucoup plus de voix bougent pendant la campagne.',
       'Élan de l\u2019outsider : plus un parti part bas, plus ses nouveaux soutiens et ses passages médias comptent.',
-      'Coup de pouce du joueur : ton parti a un bonus, d\u2019autant plus fort que tu pars bas.',
       'Les Enracinés font foi sur l\u2019écologie : +1 d\u2019impact et +50 % en interview sur ce thème.'
     ]
   };
