@@ -32,6 +32,15 @@
     <div class="splash-name"><span>Free</span><b>Green</b><span>Studio</span></div>
     <div class="splash-sub">présente</div>
   </div>
+  <script>
+    /* v3.8.1 : filet de sécurité. Même si le jeu plante au démarrage, l'écran du studio s'efface (ou d'un toucher). */
+    (function () {
+      var sp = document.getElementById('splash');
+      function hide() { if (sp && sp.parentNode) { sp.classList.add('out'); setTimeout(function () { if (sp.parentNode) sp.parentNode.removeChild(sp); }, 600); } }
+      sp.addEventListener('click', hide);
+      setTimeout(hide, 4000);
+    })();
+  </script>
 
   <!-- Écran titre -->
   <section id="screen-title" class="screen active">

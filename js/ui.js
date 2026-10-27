@@ -2360,11 +2360,10 @@
   /* Outils partagés avec la phase « Gouverner » (js/govui.js) */
   window.PolitikUI = { showPaper: showPaper, modal: modal, closeModal: closeModal, toast: toast, go: go, esc: esc, line: line, srcHtml: srcHtml, chip: chip,
     game: function () { return g; }, me: function () { return me; } };
-  renderTitleMap();
-  renderChoose();
-  renderResume();
-  $('btn-resume').addEventListener('click', function () { resumeGame(); });
-  $('btn-load').addEventListener('click', showLoad);
+  // v3.8.1 : un démarrage qui ne peut plus rester bloqué (une erreur ici n'empêche pas d'arriver à l'accueil)
+  [renderTitleMap, renderChoose, renderResume].forEach(function (f) { try { f(); } catch (e) { if (window.console) console.error(e); } });
+  if ($('btn-resume')) $('btn-resume').addEventListener('click', function () { resumeGame(); });
+  if ($('btn-load')) $('btn-load').addEventListener('click', showLoad);
   /* v1.9 : l'écran d'ouverture du studio disparaît tout seul (ou d'un toucher) */
   (function () {
     var sp = $('splash'); if (!sp) return;

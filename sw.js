@@ -1,6 +1,6 @@
 /* Politik — service worker : rend le jeu installable et jouable sans internet.
    À chaque nouvelle version du jeu, changer VERSION pour que les téléphones se mettent à jour. */
-var VERSION = 'politik-v3.8.0';
+var VERSION = 'politik-v3.8.1';
 var FILES = [
   './', 'index.html', 'manifest.webmanifest', 'css/style.css', 'css/debate-clarity.css', 'css/desktop.css',
   'js/data.js', 'js/map.js', 'js/art.js', 'js/press.js', 'js/fx.js', 'js/engine.js', 'js/perso.js', 'js/ai.js', 'js/legis.js', 'js/govern.js', 'js/cabinet.js', 'js/oppo.js', 'js/cards.js', 'js/tuto.js', 'js/ui.js', 'js/govui.js',
@@ -24,7 +24,7 @@ self.addEventListener('fetch', function (e) {
   // les polices sont livrées avec le jeu (dossier fonts/) : plus besoin d'internet pour elles
   if (url.origin !== location.origin) return;
   // fichiers du jeu : le réseau d'abord (pour avoir la dernière version), le cache si on est hors ligne
-  e.respondWith(fetch(req).then(function (res) {
+  e.respondWith(fetch(req, { cache: 'no-cache' }).then(function (res) {
     if (res.ok) { var copy = res.clone(); caches.open(VERSION).then(function (c) { c.put(req, copy); }); }
     return res;
   }).catch(function () {
