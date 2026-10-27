@@ -59,7 +59,8 @@
     var pl = player(g, pid);
     return pl && pl.human ? 1 + D.BETA.player.bonus * Math.max(0, 1 - startShare(g, pid) / 33) : 1;
   }
-  function newWeight(g, rid, pid) { var w = weight(g, rid, pid); return w < 1 ? w + (1 - w) * D.BETA.elan.k : w; }
+  function elanK(g, pid) { var E2 = D.BETA.elan, s = startShare(g, pid); return E2.k + (E2.kSmall - E2.k) * Math.max(0, 1 - s / E2.small); }
+  function newWeight(g, rid, pid) { var w = weight(g, rid, pid); return w < 1 ? w + (1 - w) * elanK(g, pid) : w; }
   /* L'élan pour les médias : jusqu'à +k pour un parti parti de très bas (et le coup de pouce du joueur) */
   function elan(g, pid) {
     if (g.mode !== 'beta' || !g.start) return 1;
@@ -250,7 +251,7 @@
   function interview(g, pid, qid, fmt, segBoost) {
     var q = QBY[qid], th = q.theme, pl = player(g, pid), c = cred(g, pid, th), hot = isHot(g, th);
     var maj = isMajority(pid), tw = (D.TEMPERS[pid] || { w: {} }).w, sc = D.MEDIA.scale[fmt || 'tele'];
-    if (g.mode === 'beta' && pid === D.BETA.eco.party && th === 'ecologie') sc *= D.BETA.eco.media;   // v4.2
+    if (g.mode === 'beta' && D.BETA.fief[pid] === th) sc *= D.BETA.fiefMedia;   // v4.3
     var segs = {}; SEG.forEach(function (s) { segs[s] = (q.segs[s] || 0.5) * ((segBoost && segBoost[s]) || 1); });
     function card(key, quote, h, t, notes, extra, flat) {
       var gains = {};
@@ -501,8 +502,8 @@
   /* Impact d'un message de 0 à 4 : crédibilité (0-2) + préoccupation de la région (0-1) + actualité (0-1) */
   function impact(g, pid, rid, th) {
     var n = cred(g, pid, th) + (rid && concerns(rid, th) ? 1 : 0) + (hotHere(g, rid, th) ? 1 : 0);
-    if (g.mode === 'beta' && pid === D.BETA.eco.party && th === 'ecologie') n += D.BETA.eco.impact;   // v4.2 : les écolos font foi
-    return Math.min(4, n);
+    if (g.mode === 'beta' && D.BETA.fief[pid] === th) n += D.BETA.fiefImpact;   // v4.3 : les petits partis font foi sur leur sujet
+    return Math.min(g.mode === 'beta' ? 5 : 4, n);
   }
   /* Le meilleur thème d'un parti pour une région (sert aux choix par défaut et à l'IA) */
   function bestTheme(g, pid, rid) {
@@ -624,7 +625,7 @@
     return order;
   }
   function mediaCubes(g, pid, rid, th) {
-    var n = R.mediaCubes[impact(g, pid, rid, th)], prof = REG[rid].profile;
+    var n = R.mediaCubes[Math.min(R.mediaCubes.length - 1, impact(g, pid, rid, th))], prof = REG[rid].profile;
     if (n > 0 && pid === 'VP' && prof === 'urbaine') n++;
     if (n > 0 && pid === 'MN' && prof === 'industrielle') n++;
     if (n > 0 && g.bingo && zapped(g, pid, rid)) n--;

@@ -1496,7 +1496,7 @@
     }
     return '';
   }
-  function impactDots(n) { var h = ''; for (var i = 0; i < 4; i++) h += '<i class="' + (i < n ? 'on' : '') + '"></i>'; return '<span class="imp">' + h + '</span>'; }
+  function impactDots(n) { var h = ''; for (var i = 0; i < Math.max(4, n); i++) h += '<i class="' + (i < n ? 'on' : '') + '"></i>'; return '<span class="imp">' + h + '</span>'; }
   function renderMessage() {
     var b = $('message'), t = th(theme);
     b.innerHTML = '<span class="msg-k">Message</span><span class="msg-t">' + t.icon + ' ' + esc(t.name) + (E.isHot(g, theme) ? ' 🔥' : '') + '</span>' +

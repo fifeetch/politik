@@ -636,6 +636,7 @@ section('Bêta : élan de l\'outsider et écologie (v4.2)');
   ok(w < 1 && s1 - s0 > 2 * w + 1e-9, 'Bêta : les soutiens gagnés par un petit parti pèsent plus que son poids historique');
   ok(E.elan(g, 'VP') > E.elan(g, 'MN') && E.elan(g, 'MN') === 1, 'Bêta : élan des petits partis en interview, pas pour le favori');
   ok(E.impact(g, 'VP', 'idf', 'ecologie') > E.impact(g2, 'VP', 'idf', 'ecologie') || E.impact(g2, 'VP', 'idf', 'ecologie') === 4, 'Bêta : les Enracinés font foi sur l\'écologie (+1 d\'impact)');
+  ok(D.BETA.fief.PC === 'emploi' && D.BETA.fief.RQ === 'immigration', 'Bêta : chaque petit parti a son sujet de prédilection');
   ok(D.BETA.player.bonus === 0, 'pas de bonus pour le joueur');
 })();
 
