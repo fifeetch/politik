@@ -1212,7 +1212,7 @@
   /* ---------- Rendu ---------- */
   function render() {
     if (!g) return;
-    estCache = {};
+    estCache = {}; hideTip();
     var pl = mePl(), pr = projected();
     $('turn-label').textContent = 'Tour ' + g.turn + ' sur ' + R.maxTurns;
     $('phase-label').textContent = E.isDebateTurn(g) ? 'Débat télévisé ce soir' : '3 actions à jouer';
@@ -1483,18 +1483,19 @@
     var tag = c === me ? '<span class="stamp">À toi</span>'
       : c ? '<span class="tag" style="background:' + party(c).color + ';color:' + party(c).ink + '">' + c + '</span>'
       : '<span class="tag tag-yellow">À prendre</span>';
-    var v = E.regionVoters(g, selected), echo = E.echoBonus(g, me, selected), rk = rankIn(selected, me), n = E.cubes(g, selected, me);
-    box.innerHTML = '<div class="region-head"><h2 class="region-name">' + esc(r.name) + '</h2>' +
+    // v4.7 : épuré : le nom (on le touche pour la fiche complète) et ce qui préoccupe les habitants, rien d'autre
+    var echo = E.echoBonus(g, me, selected);
+    box.innerHTML = '<div class="region-head"><button type="button" class="region-name region-btn" id="btn-reg-more" aria-label="Fiche de la région">' + esc(r.name) + ' <span class="reg-chev">›</span></button>' +
       (echo > 0 ? '<span class="chip chip-good">❤️ De cœur</span>' : echo < 0 ? '<span class="chip chip-bad">👎 Hostile</span>' : '') + tag + '</div>' +
-      '<div class="region-line"><span>' + mio(v.ins) + ' M inscrits · ' + pctFr(v.abst) + ' % d\'abstention · tu es <b>' + rk + (rk === 1 ? 'er' : 'ᵉ') + '</b> ici (' + n + ' soutien' + (n > 1 ? 's' : '') + ')</span>' +
-      '<button type="button" class="linkbtn" id="btn-reg-more">Détails</button></div>' +
       '<div class="region-concerns"><span>Ce qui les préoccupe :</span>' + concernsHtml(selected) + '</div>';
     $('btn-reg-more').addEventListener('click', regionDetails);
   }
   function regionDetails() {
     if (!selected) return;
     var r = E.REG[selected];
-    var html = '<div class="chips"><span class="chips-k">Soucis</span>' + r.concerns.map(function (x) { return '<span class="chip chip-theme' + (E.isHot(g, x) ? ' hot' : '') + '">' + th(x).icon + ' ' + esc(th(x).short) + (E.isHot(g, x) ? ' 🔥' : '') + '</span>'; }).join('') + '</div>';
+    var v0 = E.regionVoters(g, selected), rk0 = rankIn(selected, me), n0 = E.cubes(g, selected, me);
+    var html = '<p class="reg-facts">' + mio(v0.ins) + ' M inscrits · ' + pctFr(v0.abst) + ' % d\'abstention · pèse ' + pctTxt(regionShare(selected)) + ' des votants · tu es <b>' + rk0 + (rk0 === 1 ? 'er' : 'ᵉ') + '</b> ici (' + n0 + ' soutien' + (n0 > 1 ? 's' : '') + ')</p>' +
+      '<div class="chips"><span class="chips-k">Soucis</span>' + r.concerns.map(function (x) { return '<span class="chip chip-theme' + (E.isHot(g, x) ? ' hot' : '') + '">' + th(x).icon + ' ' + esc(th(x).short) + (E.isHot(g, x) ? ' 🔥' : '') + '</span>'; }).join('') + '</div>';
     var real = !!g.weight;   // v3.2 : en Réaliste, chaque soutien pèse selon le score historique du parti ici
     if (real) {
       var ln = E.regionLean(g.base, selected), myW = E.weight(g, selected, me);
@@ -1647,8 +1648,9 @@
   function renderMessage() {
     var b = $('message'), t = th(theme);
     b.innerHTML = '<span class="msg-k">Message</span><span class="msg-t">' + t.icon + ' ' + esc(t.name) + (E.isHot(g, theme) ? ' 🔥' : '') + '</span>' +
-      (selected ? '<span class="msg-w">' + impactWord(E.impact(g, me, selected, theme)) + '</span>' : '') + '<span class="msg-change">Changer</span>';
+      (selected ? '<span class="msg-w">· ' + IMPACT_WORD[E.impact(g, me, selected, theme)] + '</span>' : '') + '<span class="msg-change">▾</span>';
   }
+  $('btn-how').addEventListener('click', function () { if (g) howModal(); });
   $('message').addEventListener('click', function () {
     if (!g || g.phase !== 'actions') return;
     var list = D.THEMES.map(function (t) { return { t: t, imp: E.impact(g, me, selected, t.id) }; })
@@ -1672,6 +1674,38 @@
         });
       } });
   });
+  /* v4.7 : l'appui long (ou le survol à la souris) montre le détail d'une action ; un appui court la joue */
+  var tipEl = null;
+  function showTip(anchor, html) {
+    hideTip();
+    tipEl = el('div', { class: 'hold-tip', role: 'tooltip' }, html);
+    document.body.appendChild(tipEl);
+    var r = anchor.getBoundingClientRect(), w = tipEl.offsetWidth, h = tipEl.offsetHeight;
+    var x = Math.max(8, Math.min(window.innerWidth - w - 8, r.left + r.width / 2 - w / 2)), y = r.top - h - 8;
+    if (y < 8) y = r.bottom + 8;
+    tipEl.style.left = x + 'px'; tipEl.style.top = y + 'px';
+  }
+  function hideTip() { if (tipEl) { tipEl.remove(); tipEl = null; } }
+  function holdTip(btn, html, act) {
+    var timer = null, shown = false, startX = 0, startY = 0, moved = false;
+    btn.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+    btn.addEventListener('pointerdown', function (e) {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      shown = false; moved = false; startX = e.clientX; startY = e.clientY;
+      clearTimeout(timer);
+      if (e.pointerType !== 'mouse') timer = setTimeout(function () { shown = true; showTip(btn, html()); if (navigator.vibrate) try { navigator.vibrate(12); } catch (x) {} }, 380);
+    });
+    btn.addEventListener('pointermove', function (e) { if (Math.abs(e.clientX - startX) + Math.abs(e.clientY - startY) > 12) { moved = true; clearTimeout(timer); } });
+    btn.addEventListener('pointerup', function () {
+      clearTimeout(timer);
+      if (shown) { hideTip(); shown = false; return; }
+      if (!moved && !btn.disabled) act();
+    });
+    btn.addEventListener('pointercancel', function () { clearTimeout(timer); hideTip(); shown = false; });
+    btn.addEventListener('mouseenter', function () { clearTimeout(btn._hov); btn._hov = setTimeout(function () { showTip(btn, html()); }, 300); });
+    btn.addEventListener('mouseleave', function () { clearTimeout(btn._hov); hideTip(); });
+    btn.addEventListener('click', function (e) { if (e.detail === 0) act(); });   // clavier (Entrée, Espace)
+  }
   var MAIN = ['terrain', 'medias', 'mobiliser'];
   function renderActions() {
     var box = $('actions'); box.innerHTML = '';
@@ -1686,21 +1720,29 @@
         big = e ? ptNum(e.hi) + '<small>pt</small>' : '—';
         sub = n0 + ' soutien' + (n0 > 1 ? 's' : '') + ' ici';
       }
-      var b = el('button', { class: 'tile', type: 'button', 'data-act': type, 'aria-label': def.name + ', ' + costLabel(act) },
-        '<span class="tile-n">' + def.icon + ' ' + (tv ? 'Médias' : def.name) + '</span><span class="tile-mid"><span class="tile-big' + (on ? ' tile-pt' : '') + '">' + big + '</span></span><span class="tile-sub">' + sub + '</span>' +
-        (on && tiring(act) && !canQueue(act) ? '<span class="tile-cost tile-warn" title="Ta forme tomberait à 0 : un candidat épuisé a 4 chances sur 10 de faire une gaffe (aucun soutien, +1 casserole). Elle remonte de 2 au tour suivant, ou tout de suite avec 😴 Repos (menu Plus).">⚡ épuisé : 4/10 de gaffe</span>' : '<span class="tile-cost' + (on && /argent|influence|épuisé/.test(canQueue(act) || '') ? ' tile-cost-no' : '') + '">' + costLabel(act, true) + '</span>'));
+      var warn = on && tiring(act) && !canQueue(act), poor = on && /argent|influence|épuisé/.test(canQueue(act) || '');
+      var b = el('button', { class: 'tile tile-min', type: 'button', 'data-act': type, 'aria-label': def.name + ', ' + costLabel(act) + '. Reste appuyé pour le détail.' },
+        '<span class="tile-n">' + def.icon + ' ' + (tv ? 'Médias' : def.name) + '</span><span class="tile-big' + (on ? ' tile-pt' : '') + '">' + big + '</span><span class="tile-sub">' + (tv ? 'partout' : on ? sub.replace(' ici', '') : 'choisis une région') + '</span>' +
+        (warn ? '<span class="tile-flag" aria-hidden="true">⚠️</span>' : poor ? '<span class="tile-flag" aria-hidden="true">€</span>' : ''));
       if (!on) b.disabled = true;
       else if (canQueue(act)) b.classList.add('dim');
-      b.addEventListener('click', function () { if (tv) mediaMenu(act.theme); else addAction(act); });
+      (function (act0, tv0, sub0, warn0) {
+        holdTip(b, function () {
+          var c = canQueue(act0);
+          return '<b>' + def.icon + ' ' + (tv0 ? 'Médias' : esc(def.name)) + '</b>' +
+            '<span>' + (tv0 ? 'Une interview : des électeurs dans toute la France. Jusqu\u2019à ' + teleEstimate(act0.theme).replace(/<[^>]+>/g, ' ').trim() + ' au sondage.' : esc(sub0) + (selected ? ' en ' + esc(E.REG[selected].name) : '') + '.') + '</span>' +
+            '<span>Coût : ' + esc(costLabel(act0)) + '</span>' +
+            (warn0 ? '<span class="tip-warn">Ton énergie tomberait à 0 : 4 chances sur 10 de faire une gaffe.</span>' : c ? '<span class="tip-warn">' + esc(c) + '</span>' : '') +
+            '<small>Touche pour l\u2019ajouter · ⓘ pour le calcul</small>';
+        }, function () { if (tv0) mediaMenu(act0.theme); else addAction(act0); });
+      })(act, tv, sub, warn);
       box.appendChild(b);
     });
-    var more = el('button', { class: 'tile tile-more', type: 'button', id: 'btn-more' }, '<span class="tile-n">Plus</span><span class="tile-mid"><span class="tile-big">⋯</span></span><span class="tile-cost">' + (projected().forme <= 1 ? '😴 Repos dispo' : traitKey(me) ? D.TRAITS[traitKey(me)].icon + ' + 8 actions' : '8 actions') + '</span>');
+    var more = el('button', { class: 'tile tile-more tile-min', type: 'button', id: 'btn-more' }, '<span class="tile-n">Plus</span><span class="tile-big">' + (projected().forme <= 1 ? '😴' : '⋯') + '</span>');
     if (projected().forme <= 1) more.classList.add('tile-rest');   // v3.6.6 : candidat fatigué, le repos est dans « Plus »
     more.addEventListener('click', moreMenu);
     box.appendChild(more);
-    var how = el('button', { class: 'linkbtn how-link', type: 'button' }, 'Comment c\u2019est calculé ?');
-    how.addEventListener('click', howModal);
-    box.appendChild(how);
+
   }
   /* ---------- v3.8 : la Télé, une interview en direct ---------- */
   var SEGBY = {}; D.SEGMENTS.forEach(function (s) { SEGBY[s.id] = s; });
