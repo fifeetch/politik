@@ -1319,3 +1319,7 @@ button { font-family: inherit; color: inherit; }
 
 /* v4.0.2 : pourquoi ça baisse */
 .pos-note { flex-basis: 100%; margin: 6px 0 0; font-size: 12.5px; line-height: 1.35; color: #E9E5FF; }
+
+/* v4.1 : le mode Bêta */
+.beta-note { margin: 8px 0 0; padding: 10px 12px; background: var(--hot); border-radius: 12px; font-size: 13px; line-height: 1.4; }
+.beta-note ul { margin: 4px 0 0; padding-left: 18px; }

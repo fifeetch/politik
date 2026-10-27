@@ -16,7 +16,7 @@
   function savePerso() { try { localStorage.setItem('politik_perso', JSON.stringify(perso)); localStorage.setItem('politik_parti', JSON.stringify(founded)); localStorage.setItem('politik_lead', leadOn ? '1' : '0'); } catch (e) {} }
   var gameMode = 'reel';   // v1.1 : 'reel' (Réaliste) ou 'egal' (Simulation : égalité des chances)
   var gameBase = 'e2024';  // v1.2 : point de départ du mode Réaliste : 'p2022', 'e2024' ou 'sond'
-  try { if (localStorage.getItem('politik_mode') === 'egal') gameMode = 'egal'; var sb = localStorage.getItem('politik_base'); if (D.BASES[sb]) gameBase = sb; } catch (e) {}
+  try { var sm = localStorage.getItem('politik_mode'); if (sm === 'egal' || sm === 'beta') gameMode = sm; var sb = localStorage.getItem('politik_base'); if (D.BASES[sb]) gameBase = sb; } catch (e) {}
   var gameFormat = 'classique';   // v2.8 : 'classique' (8 tours) ou 'eclair' (3 tours)
   try { if (localStorage.getItem('politik_format') === 'eclair') gameFormat = 'eclair'; } catch (e) {}
   /* v2.8 : la sauvegarde automatique, au début de chaque tour de campagne */
@@ -239,11 +239,16 @@
     return s / w;
   }
   function renderSetup() {
-    var modes = [['reel', 'Réaliste', 'Les partis partent avec leurs vrais scores.'], ['egal', 'Simulation', 'Tout le monde part du même point : mêmes électeurs partout, aucun bonus caché.']];
+    var modes = [['reel', 'Réaliste', 'Les partis partent avec leurs vrais scores.'], ['egal', 'Simulation', 'Tout le monde part du même point : mêmes électeurs partout, aucun bonus caché.'], ['beta', D.BETA.name, D.BETA.text]];
     $('mode-pick').innerHTML = modes.map(function (m) {
       return '<button type="button" role="radio" class="mode-btn' + (gameMode === m[0] ? ' on' : '') + '" data-mode="' + m[0] + '" aria-checked="' + (gameMode === m[0]) + '"><b>' + m[1] + '</b><small>' + m[2] + '</small></button>';
     }).join('');
-    $('base-wrap').hidden = gameMode !== 'reel';
+    $('base-wrap').hidden = gameMode === 'egal';
+    // v4.1 : ce qui change en mode Bêta
+    var bx = $('beta-note');
+    if (!bx) { bx = el('div', { id: 'beta-note', class: 'beta-note' }); $('mode-pick').parentNode.insertBefore(bx, $('mode-pick').nextSibling); }
+    bx.hidden = gameMode !== 'beta';
+    bx.innerHTML = '<b>🧪 À l\u2019essai dans ce mode :</b><ul>' + D.BETA.changes.map(function (c) { return '<li>' + esc(c) + '</li>'; }).join('') + '</ul>';
     $('format-pick').innerHTML = ['classique', 'eclair'].map(function (k) {
       var F = D.FORMATS[k]; return '<button type="button" role="radio" class="mode-btn' + (gameFormat === k ? ' on' : '') + '" data-format="' + k + '" aria-checked="' + (gameFormat === k) + '"><b>' + (k === 'eclair' ? '⚡ ' : '') + esc(F.name) + '</b><small>' + esc(F.text) + '</small></button>';
     }).join('');
@@ -285,7 +290,7 @@
   function renderChoose() {
     PS.reset(A);   // v2.5 : les partis retrouvent leurs candidats, le parti fondé n'est pas encore en lice
     renderPersoStrip();
-    $('choose-kicker').textContent = gameFormat === 'eclair' ? '⚡ Campagne éclair : 3 tours' : quick ? 'Touche un parti, puis lance-toi' : gameMode === 'egal' ? 'Simulation : tout le monde part à égalité' : 'Réaliste : départ « ' + D.BASES[gameBase].short + ' »';
+    $('choose-kicker').textContent = gameFormat === 'eclair' ? '⚡ Campagne éclair : 3 tours' : quick ? 'Touche un parti, puis lance-toi' : gameMode === 'egal' ? 'Simulation : tout le monde part à égalité' : (gameMode === 'beta' ? '🧪 Bêta' : 'Réaliste') + ' : départ « ' + D.BASES[gameBase].short + ' »';
     $('screen-choose').classList.toggle('quick', quick);
     $('choose-back').setAttribute('data-go', quick ? 'title' : 'setup');
     $('choose-back').textContent = quick ? '‹ Accueil' : '‹ Paramètres de la partie';
@@ -315,7 +320,7 @@
     });
     var p = party(chosen), lead = leadOn && perso && perso.name;
     $('party-detail').innerHTML = '<div class="cand-line">' + (lead ? A.face(PS.faceCfg(perso, p.color)) : A.portrait(p.id)) + '<div><b class="cand-name">' + esc(lead ? perso.name : p.candidate) + '</b><span>' + (lead ? 'à la tête du parti · ' + esc(PS.TRAITS[perso.trait].name.toLowerCase()) : esc(p.candTitle) + ' · tempérament ' + D.TEMPERS[p.id].label) + '</span></div></div>' +
-      (gameMode === 'reel' ? '<div class="score24"><span>Score de départ</span><b>' + pctFr(natScore(gameBase, p.id) / 100, 1) + ' %</b><small>' + esc(D.BASES[gameBase].text) + ' <button type="button" class="linkbtn" data-learn="' + D.BASES[gameBase].learn + '">Pourquoi ce chiffre ?</button></small></div>'
+      (gameMode !== 'egal' ? '<div class="score24"><span>Score de départ</span><b>' + pctFr(natScore(gameBase, p.id) / 100, 1) + ' %</b><small>' + esc(D.BASES[gameBase].text) + ' <button type="button" class="linkbtn" data-learn="' + D.BASES[gameBase].learn + '">Pourquoi ce chiffre ?</button></small></div>'
         : '<div class="score24"><span>Mode Égalité</span><b>2</b><small>électeurs dans chaque région pour chaque parti : personne ne part en tête.</small></div>') +
       axisHtml(p.id) +
  ((p.pos <= 1 || p.pos >= 6) ? '<div><b>Au bout de l\'axe.</b> Au second tour, les reports de voix seront plus durs à obtenir : il faudra bien négocier entre les deux tours.</div>' : '') +
@@ -2464,6 +2469,7 @@
       '<p><b>🎙️ Le débat télévisé</b> (tours 3, 6 et 8) : chaque parti affronte 3 adversaires, une vraie question de journaliste à chaque fois. Tu choisis ta réponse (❤️ émotion, 💡 ta mesure ou 🛡️ le bilan, 🥊 attaque, 🙃 recentrer). Certaines contrent les autres : ❤️ bat 📊 chiffres (mesure, bilan), 📊 bat 🥊 attaque, 🥊 bat ❤️, et 🥊 comme 📊 démontent une 🎲 promesse improvisée. La réponse qui contre gagne 30 %, celle qui est contrée perd la moitié. Les points = l\u2019audience gagnée dans les classes sociales, et elle compte vraiment dans toute la France. Chaque ★ de préparation (3 au plus) = +15 % et la fiche de ton adversaire. Le vainqueur gagne en plus +0,8 d\u2019audience dans toutes les classes (doublé au débat final).</p>' +
       '<p><b>🎙️ Le face-à-face</b> (entre les deux tours) : 3 questions entre les deux finalistes. Le gagnant fait basculer jusqu\u2019à 3 % des électeurs de l\u2019autre pour le second tour.</p>' +
       '<p><b>⚖️ Mode Réaliste : le poids des urnes.</b> Chaque soutien pèse selon le score historique de son parti dans la région : un soutien du parti en tête de la région compte beaucoup, celui d\u2019un petit parti beaucoup moins. Et la moitié des électeurs vote par fidélité (le <b>socle électoral</b>) : la campagne se joue sur l\u2019autre moitié. Résultat : les petits partis ont du mal à dépasser leur score historique, et chaque région garde sa couleur (terre de gauche, de droite ou disputée, dans la fiche de la région). En mode Simulation, tout le monde pèse pareil.</p>' +
+      '<p><b>🧪 Mode Bêta.</b> Le mode Réaliste avec les règles à l\u2019essai : ' + D.BETA.changes.map(esc).join(' ') + '</p>' +
       '<p><b>Sous les projecteurs :</b> le premier des sondages paie 2 ★ ou perd des soutiens à chaque fin de tour.</p>' +
       '<p><b>🎭 Les traits satiriques.</b> Huit partis vivent un gag qui se joue de l\u2019intérieur, avec un avantage et un coût : ' + Object.keys(D.TRAITS).map(function (k) { var t = D.TRAITS[k]; return t.icon + ' <b>' + esc(t.name) + '</b> (' + t.parties.map(function (p) { return esc(party(p).short); }).join(', ') + ')'; }).join(' · ') + '. Le détail est dans l\u2019onglet de ton parti, et les actions propres à ton parti dans le menu « Plus ».</p>' });
   }

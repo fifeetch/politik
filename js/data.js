@@ -888,6 +888,22 @@
     dissolveIfPop: 45                      // gouvernement renversé : le président dissout s'il est à 45 % ou plus (et si c'est permis), sinon il nomme un nouveau Premier ministre
   };
 
+  /* ---------- v4.1 : le mode Bêta ----------
+     Une copie du mode Réaliste qui sert de banc d'essai : chaque nouvelle règle ou simplification y est testée
+     avant de passer dans les autres modes. La liste ci-dessous s'affiche au menu. */
+  var BETA = {
+    name: 'Bêta 🧪',
+    text: 'Le mode Réaliste, avec les nouvelles règles à tester.',
+    rules: {
+      incumbentBonus: 1,   // pas de prime au sortant : tenir une région ne donne plus +25 % de voix cachées
+      socle: 0.3           // socle figé : 30 % du vote reste fidèle aux scores historiques (50 % en Réaliste)
+    },
+    changes: [
+      'Pas de prime au sortant : tenir une région ne donne plus de voix en plus.',
+      'Socle figé à 30 % (au lieu de 50 %) : plus de voix bougent pendant la campagne.'
+    ]
+  };
+
   /* ---------- v3.8 : les médias et les classes sociales ----------
      Le terrain (Meeting, Mobiliser…) gagne des soutiens dans UNE région. Les médias (Télé, Matinale, 20h, Débat)
      gagnent de l'audience auprès d'une CLASSE SOCIALE, partout en France à la fois. */
@@ -1188,7 +1204,7 @@
 
   var DATA = { REFERENCE_2027: REFERENCE_2027, POLLS: POLLS, BASES: BASES, REGIONS: REGIONS, PROFILES: PROFILES, THEMES: THEMES, HEADLINES: HEADLINES, PARTIES: PARTIES, ACTIONS: ACTIONS,
                CARDS: CARDS, EVENTS: EVENTS, DILEMMAS: DILEMMAS, CRISES: CRISES, REPLIES: REPLIES, TEMPERS: TEMPERS, TRAITS: TRAITS, NOSTALGIA: NOSTALGIA, PETALS: PETALS, MICRO: MICRO, BINGO: BINGO, BINGO_LINES: BINGO_LINES,
-               MEASURES: MEASURES, FUNDING: FUNDING, SEGMENTS: SEGMENTS, VOTE_PROP: VOTE_PROP, CLASS_PROF: CLASS_PROF, CLASS_SRC: CLASS_SRC, HEART: HEART, MAJORITY: MAJORITY, MEDIA: MEDIA, ANSWERS: ANSWERS, STATIONS: STATIONS, DEB_REG: DEB_REG, DEB_BEATS: DEB_BEATS, DEB_REG_NAME: DEB_REG_NAME, DEBATE: DEBATE, STATION_FIT: STATION_FIT, VINGT: VINGT, QUESTIONS: QUESTIONS, SEGMENTS_SRC: SEGMENTS_SRC, AFFAIRS: AFFAIRS, LEARN: LEARN, BUDGET_AFFAIR: BUDGET_AFFAIR, REACTIONS: REACTIONS, ADVISOR: ADVISOR, OBJECTIVES: OBJECTIVES, RULES: RULES, FORMATS: FORMATS, LEGIS: LEGIS, MINISTRY: MINISTRY, OPPO: OPPO, validate: validate };
+               MEASURES: MEASURES, FUNDING: FUNDING, SEGMENTS: SEGMENTS, VOTE_PROP: VOTE_PROP, CLASS_PROF: CLASS_PROF, CLASS_SRC: CLASS_SRC, HEART: HEART, MAJORITY: MAJORITY, BETA: BETA, MEDIA: MEDIA, ANSWERS: ANSWERS, STATIONS: STATIONS, DEB_REG: DEB_REG, DEB_BEATS: DEB_BEATS, DEB_REG_NAME: DEB_REG_NAME, DEBATE: DEBATE, STATION_FIT: STATION_FIT, VINGT: VINGT, QUESTIONS: QUESTIONS, SEGMENTS_SRC: SEGMENTS_SRC, AFFAIRS: AFFAIRS, LEARN: LEARN, BUDGET_AFFAIR: BUDGET_AFFAIR, REACTIONS: REACTIONS, ADVISOR: ADVISOR, OBJECTIVES: OBJECTIVES, RULES: RULES, FORMATS: FORMATS, LEGIS: LEGIS, MINISTRY: MINISTRY, OPPO: OPPO, validate: validate };
   if (typeof module !== 'undefined' && module.exports) module.exports = DATA;
   else root.PolitikData = DATA;
 })(this);

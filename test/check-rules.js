@@ -612,5 +612,19 @@ section('Correctifs v4.0.2');
   ok(q.meas.indexOf('classes') < 0, 'question sur les médecins : « classes de 20 élèves » n\'est pas une réponse valable');
 })();
 
+section('Le mode Bêta (v4.1)');
+(function () {
+  var gr = E.createGame('SM', { seed: 140, base: 'sond' }), pr = E.poll(gr).map(function (x) { return x.pid + x.pct.toFixed(4); }).join();
+  ok(D.RULES.incumbentBonus === 1.25 && D.RULES.socle === 0.5, 'Réaliste : prime au sortant et socle à 50 % inchangés');
+  var gb = E.createGame('SM', { seed: 140, base: 'sond', mode: 'beta' });
+  ok(gb.mode === 'beta' && D.RULES.incumbentBonus === 1 && D.RULES.socle === 0.3, 'Bêta : sans prime au sortant, socle à 30 %');
+  ok(gb.hist && Object.keys(gb.regions.idf.cubes).length >= 12, 'Bêta : même départ que le Réaliste (vrais scores, socle historique)');
+  var gr2 = E.createGame('SM', { seed: 141 });
+  ok(D.RULES.incumbentBonus === 1.25 && D.RULES.socle === 0.5, 'une nouvelle partie Réaliste remet les règles normales');
+  var back = E.loadGame(E.saveGame(gb));
+  ok(back.mode === 'beta' && D.RULES.socle === 0.3, 'reprendre une sauvegarde Bêta remet les règles Bêta');
+  E.loadGame(E.saveGame(gr)); ok(D.RULES.socle === 0.5, 'reprendre une sauvegarde Réaliste remet les règles Réaliste');
+})();
+
 console.log('\n' + passes + ' vérifications réussies, ' + fails + ' en échec.');
 process.exit(fails ? 1 : 0);

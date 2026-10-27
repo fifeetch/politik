@@ -19,6 +19,8 @@
   }
   /* v2.8 : le format de la campagne (classique ou éclair) : on remet les règles d'origine, puis on applique celles du format */
   var BASE_RULES = JSON.parse(JSON.stringify(D.RULES));
+  /* v4.1 : le mode Bêta = le Réaliste + les règles à l'essai (après le format, pour la durée de la partie) */
+  function applyMode(g) { if (g && g.mode === 'beta') Object.keys(D.BETA.rules).forEach(function (k) { D.RULES[k] = D.BETA.rules[k]; }); return g; }
   function setFormat(name) {
     var F = D.FORMATS[name] || D.FORMATS.classique;
     Object.keys(BASE_RULES).forEach(function (k) { D.RULES[k] = JSON.parse(JSON.stringify(BASE_RULES[k])); });
@@ -28,7 +30,7 @@
   /* v2.8 : la sauvegarde : tout l'état de la partie, plus l'état du hasard */
   function saveGame(g) { var s = JSON.stringify(g, function (k, v) { return typeof v === 'function' || k === '_cp' || k === '_cpTurn' ? undefined : v; }); var o = JSON.parse(s); o.rngState = g.rng.getState(); return JSON.stringify(o); }
   function loadGame(str) {
-    var g = JSON.parse(str); setFormat(g.format);
+    var g = JSON.parse(str); setFormat(g.format); applyMode(g);
     g.rng = makeRng(1); g.rng.setState(g.rngState); delete g.rngState;
     ensureTraits(g);   // v3.1 : une partie sauvegardée avant les traits les reçoit à la reprise
     return g;
@@ -757,7 +759,7 @@
     var ids = humanParty ? [humanParty].concat(ai) : ai;
     var objs = shuffle(D.OBJECTIVES.map(function (o) { return o.id; }), rng);
     var g = {
-      seed: seed, rng: rng, format: format, mode: opts.mode === 'egal' ? 'egal' : 'reel', base: D.BASES[opts.base] ? opts.base : 'e2024', turn: 0, phase: 'setup', winner: null, over: false, result: null,
+      seed: seed, rng: rng, format: format, mode: opts.mode === 'egal' ? 'egal' : opts.mode === 'beta' ? 'beta' : 'reel', base: D.BASES[opts.base] ? opts.base : 'e2024', turn: 0, phase: 'setup', winner: null, over: false, result: null,
       alliances: {}, betrayed: {}, offers: [], hot: [], nextHot: [], news: null,
       bases: {}, pending: [], markers: [], crisis: null, dilemma: null, dilemmas: [], lastPoll: null,
       affairs: [], nextAffairs: [], affairDeck: [], affairIdx: 0,
@@ -771,6 +773,7 @@
       regions: {}, events: shuffle(D.EVENTS.map(function (e) { return e.id; }), rng),
       event: null, mods: {}, cancel: {}, log: [], history: []
     };
+    applyMode(g);   // v4.1
     // v1.0 : chaque région démarre avec ses vrais inscrits, sa vraie abstention et son vrai vote blanc (2022),
     // et chaque parti avec des électeurs proportionnels à son score de départ (mode Réaliste) ou à égalité (mode Égalité)
     D.REGIONS.forEach(function (r) {
@@ -1927,6 +1930,7 @@
     makeDeal: makeDeal, weight: weight, strength: strength, controlShares: controlShares, regionVote: regionVote, regionLean: regionLean, natLean: natLean, regionShares: regionShares,
     traitOf: traitOf, nostalgiaPreview: nostalgiaPreview, petalsCount: petalsCount, lostPetals: lostPetals, jammed: jammed, zapped: zapped, isHidden: isHidden, retireeRegion: retireeRegion, resolvePrimaire: resolvePrimaire, actionsFor: actionsFor, centrists: centrists, tickBingo: tickBingo, ensureTraits: ensureTraits,
     classPoll: classPoll, addAudience: addAudience, previewGain: previewGain, quickGain: quickGain, interview: interview, applyInterview: applyInterview, aiAnswer: aiAnswer, pickQuestion: pickQuestion, stationFit: stationFit, stationBoost: stationBoost, vingtError: vingtError, matinaleError: matinaleError, stageRisk: stageRisk, isMajority: isMajority, audOf: audOf, SEG: SEG,
+    applyMode: applyMode,
     REG: REG, PARTY: PARTY, sigle: sigle, THEME: THEME, makeRng: makeRng, setFormat: setFormat, saveGame: saveGame, loadGame: loadGame, registerParty: registerParty, unregisterParty: unregisterParty
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;
