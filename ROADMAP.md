@@ -304,3 +304,10 @@ Inspiré des « modes de carte » des jeux Paradox : le bouton 🗺️ au-dessus
 - **Le terrain** : Abstention · Classe sociale (choix de la classe sous la carte) · Préoccupation (le sujet n° 1 de chaque région) · Accueil de ton programme (de cœur, moyen, hostile).
 - **Où faire campagne** : Rendement d'un Meeting (ce qu'il rapporterait en points de sondage dans chaque région, avec ton message actuel).
 - Le moteur garde la photo des scores régionaux à chaque début de tour (pour le filtre Progression).
+
+## v4.7 — fait : un panneau de campagne épuré (téléphone)
+Avant, sur téléphone, la ligne « Action 1 / 2 / 3 · Valider » passait sous la barre du bas.
+- **La région** : son nom et ce qui préoccupe ses habitants, rien d'autre. Toucher le nom ouvre sa fiche (inscrits, abstention, poids dans les votants, ton rang, qui mène, calcul du Meeting).
+- **Le message** sur une seule ligne fine (« Pouvoir d'achat · moyen ▾ »), avec **ⓘ** à côté pour « Comment c'est calculé ? ».
+- **Les cases d'action** : le nom, le gain en points en gros, une petite ligne (« 3 soutiens », « partout »). **Appui long** (ou survol à la souris) : une bulle avec le gain au sondage, les soutiens, le poids de la région, le coût et les avertissements. Appui court : l'action est ajoutée. Un ⚠️ ou un € en coin signale l'énergie ou l'argent qui manque.
+- La ligne Action 1 / 2 / 3 · Valider est gardée, un peu plus basse.

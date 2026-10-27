@@ -1526,7 +1526,7 @@
     else if (need > 0) html += '<p>Il te manque <b>' + need + ' soutien' + (need > 1 ? 's' : '') + '</b> pour prendre la région (au moins ' + (E.minControl(me) - (real ? 1 : 0)) + ' et être devant tout le monde).</p>';
     if ((g.bases[selected] || []).indexOf(me) >= 0) html += '<p>👥 Tes militants sont implantés ici : +1 électeur par tour.</p>';
     var bd = E.terrainBreakdown(g, me, selected, theme), room = R.maxCubes - E.cubes(g, selected, me);
-    html += '<div class="calc-line">📣 Meeting ici : ' + bd.parts.map(function (x, i) { return (i ? (x.n >= 0 ? ' + ' : ' − ') : '') + esc(x.label) + ' <b>' + (i ? Math.abs(x.n) : x.n) + '</b>'; }).join('') +
+    html += '<div class="calc-line">📣 Meeting ici : ' + bd.parts.map(function (x, i) { return x.k === 'base' ? 'message ' + IMPACT_WORD[E.impact(g, me, selected, theme)] + ' <b>' + x.n + '</b>' : (x.n >= 0 ? ' + ' : ' − ') + esc(x.label) + ' <b>' + Math.abs(x.n) + '</b>'; }).join('') +
       ' = ' + bd.total + ' soutien' + (bd.total > 1 ? 's' : '') + (function () { var m = estRange({ type: 'terrain', region: selected, theme: theme }); return m ? ' → <b>' + m.txt + ' au sondage</b>' : ''; })() + '<br><span class="muted">La région pèse ' + pctTxt(regionShare(selected)) + ' des votants de France.</span>' + (E.poachTarget(g, me, selected, true) ? ' <span class="muted">· et peut-être 1 électeur pris à un parti voisin</span>' : '') + (room < bd.total ? ' <span class="calc-warn">(plafond : +' + Math.max(0, room) + ' seulement)</span>' : '') + '</div>';
     var mk = E.markerAt(g, selected);
     if (mk) html += '<div class="mk-line">' + mk.icon + ' ' + esc(mk.title) + ' : ici, ' + th(mk.theme).icon + ' ' + esc(th(mk.theme).name) + ' compte comme à la une.</div>';
@@ -1730,7 +1730,8 @@
         holdTip(b, function () {
           var c = canQueue(act0);
           return '<b>' + def.icon + ' ' + (tv0 ? 'Médias' : esc(def.name)) + '</b>' +
-            '<span>' + (tv0 ? 'Une interview : des électeurs dans toute la France. Jusqu\u2019à ' + teleEstimate(act0.theme).replace(/<[^>]+>/g, ' ').trim() + ' au sondage.' : esc(sub0) + (selected ? ' en ' + esc(E.REG[selected].name) : '') + '.') + '</span>' +
+            (tv0 ? '<span>Une interview : des électeurs dans toute la France. Jusqu\u2019à <b>' + teleEstimate(act0.theme).replace(/<[^>]+>/g, ' ').trim() + '</b> au sondage national.</span>' :
+              (function () { var e = estRange(act0); return '<span><b>' + (e ? e.txt : '—') + '</b> au sondage national</span><span>' + esc(sub0) + (selected ? ' en ' + esc(E.REG[selected].name) : '') + '</span>' + (selected ? '<span>La région pèse ' + pctTxt(regionShare(selected)) + ' des votants</span>' : ''); })()) +
             '<span>Coût : ' + esc(costLabel(act0)) + '</span>' +
             (warn0 ? '<span class="tip-warn">Ton énergie tomberait à 0 : 4 chances sur 10 de faire une gaffe.</span>' : c ? '<span class="tip-warn">' + esc(c) + '</span>' : '') +
             '<small>Touche pour l\u2019ajouter · ⓘ pour le calcul</small>';
@@ -1738,7 +1739,7 @@
       })(act, tv, sub, warn);
       box.appendChild(b);
     });
-    var more = el('button', { class: 'tile tile-more tile-min', type: 'button', id: 'btn-more' }, '<span class="tile-n">Plus</span><span class="tile-big">' + (projected().forme <= 1 ? '😴' : '⋯') + '</span>');
+    var more = el('button', { class: 'tile tile-more tile-min', type: 'button', id: 'btn-more' }, '<span class="tile-n">Plus</span><span class="tile-big">' + (projected().forme <= 1 ? '😴' : '⋯') + '</span><span class="tile-sub">' + (projected().forme <= 1 ? 'repos dispo' : '8 actions') + '</span>');
     if (projected().forme <= 1) more.classList.add('tile-rest');   // v3.6.6 : candidat fatigué, le repos est dans « Plus »
     more.addEventListener('click', moreMenu);
     box.appendChild(more);
