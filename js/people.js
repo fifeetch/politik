@@ -56,7 +56,7 @@
          ['Valérie Patraque', 'f', 'increvable', 'gaffeur', 'la présidente de région qui tousse'],
          ['David Lissé', 'm', 'plateau', 'fragile', 'le maire au brushing parfait'],
          ['Rachida Dorures', 'f', 'tribun', 'casserole', 'la maire des beaux quartiers']],
-    MN: [['Marine La Pénible', 'f', 'plateau', 'casserole', 'l’éternelle candidate'],
+    MN: [['Marine La Pénible', 'f', 'increvable', 'casserole', 'l’éternelle candidate'],
          ['Jordan Brushing', 'm', 'plateau', 'gaffeur', 'le président lisse comme un selfie'],
          ['Sébastien Chenille', 'm', 'increvable', 'clivant', 'le porte-parole qui ne lâche rien'],
          ['Jean-Philippe Tangage', 'm', 'carnet', 'casserole', 'le député qui tangue'],
