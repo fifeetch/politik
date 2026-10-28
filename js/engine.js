@@ -808,7 +808,7 @@
         return { id: id, human: id === humanParty, money: Math.round(p.money * (1 - R.moneyBlend) + 5 * R.moneyBlend), infl: p.infl,   // v2.8.1 : en éclair, les cagnottes de départ se rapprochent
                  cards: p.cards.slice(), objective: objs[i % objs.length], debateWins: 0,
                  forme: R.formeStart, cas: 0, momentum: 0, cred: Object.assign({}, p.cred), talk: {}, militants: 0,
-                 programme: null, phare: null, budget: 0, cand: candFor(id, (opts.cands || {})[id]) };
+                 programme: null, phare: null, budget: 0, cand: opts.cands ? candFor(id, opts.cands[id]) : null };   // v4.8 : les personnalités (actives quand le menu les choisit)
       }),
       regions: {}, events: shuffle(D.EVENTS.map(function (e) { return e.id; }), rng),
       event: null, mods: {}, cancel: {}, log: [], history: []
@@ -1668,8 +1668,10 @@
         if (!(act && player(g, pid) && s < actionsFor(g, pid))) return;   // v4.4 : un parti rallié ne joue plus
         var entry = resolveOne(g, pid, act); log.push(entry);
         if (prev) {   // v4.5 : ce que cette action a changé au sondage, pour son auteur et pour les autres
-          var now = pollMap(g);
-          Object.keys(prev).concat(Object.keys(now)).forEach(function (p) {
+          var now = pollMap(g), keys = {};
+          // v4.8 : chaque parti une seule fois (avant, les clés étaient en double et le bilan comptait tout deux fois)
+          Object.keys(prev).concat(Object.keys(now)).forEach(function (p) { keys[p] = 1; });
+          Object.keys(keys).forEach(function (p) {
             var d = (now[p] || 0) - (prev[p] || 0); if (!d) return;
             if (p === pid) { ledAdd(g, 'acts', p, d); entry.pt = d; }
             else {

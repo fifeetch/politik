@@ -835,7 +835,66 @@
       (a.id === 'main' ? '<div class="art-pic">' + Press.scene(a.scene) + '</div>' : '') +
       '<h3>' + esc(a.title) + '</h3>' +
       (a.rule ? '<p class="art-rule"><b>' + esc(a.ruleLabel || 'Pour la campagne') + ' :</b> ' + esc(a.rule) + '</p>' : '') +
-      '<div class="art-body">' + (p && a.id !== 'main' ? '<span class="art-face" style="--pc:' + p.color + '">' + A.portrait(a.pid) + '</span>' : '') + '<p>' + esc(a.text) + '</p></div></article>';
+      '<div class="art-body">' + (p && a.id !== 'main' ? '<span class="art-face" style="--pc:' + p.color + '">' + A.portrait(a.pid) + '</span>' : '') + '<p>' + esc(a.text) + '</p></div>' +
+      (a.why ? '<button type="button" class="art-more" data-why="' + esc(a.id) + '">🔎 Les coulisses <span aria-hidden="true">›</span></button>' : '') + '</article>';
+  }
+  /* v4.8 : les coulisses d'un article. Le journal raconte ; ici, on explique ce qui s'est passé DANS LE JEU :
+     l'action jouée, sa règle, son effet chiffré, et le trait du parti quand c'est un gag. Plus on fouille, plus on comprend. */
+  var curPaper = null;
+  function specOf(pid, k, part) { var f = D.FICHES[k]; return f ? f[part].replace(/\{(\d+)\}/g, function (m, n) { return String(E.spec ? E.spec(g, pid, +n) : +n); }) : ''; }
+  function ruleBlock(pid, key) {
+    if (!key) return '';
+    var A0 = D.ACTIONS[key], C0 = D.CARDS[key], f = D.FICHES[key];
+    var name = A0 ? (A0.icon ? A0.icon + ' ' : '') + A0.name : C0 ? '🃏 ' + C0.name : key;
+    var h = '<div class="cl-box"><span class="kicker">La règle · ' + esc(name) + (A0 && A0.only ? ' (action propre au parti)' : C0 ? ' (carte unique du parti)' : '') + '</span>';
+    if (f) h += '<p><b>Quand :</b> ' + esc(specOf(pid, key, 'quand')) + '</p><p><b>Effet :</b> ' + esc(specOf(pid, key, 'effet')) + '</p>' + (f.risque !== 'Aucun.' ? '<p><b>Risque :</b> ' + esc(specOf(pid, key, 'risque')) + '</p>' : '');
+    else h += '<p>' + esc((A0 || C0 || {}).text || '') + '</p>' + (A0 && A0.cost ? '<p class="muted">Coût : ' + esc(costTxtOf(A0.cost)) + '</p>' : '');
+    return h + '</div>';
+  }
+  function costTxtOf(c) { var t = []; if (c.money) t.push(c.money + ' €'); if (c.infl) t.push(c.infl + ' ★'); if (c.forme) t.push(c.forme + ' ⚡'); return t.join(' + ') || 'gratuit'; }
+  function traitBlock(tk) {
+    var T0 = D.TRAITS[tk]; if (!T0) return '';
+    return '<div class="cl-box cl-trait"><span class="kicker">Le trait du parti · ' + T0.icon + ' ' + esc(T0.name) + '</span><p><b>👍 L\u2019atout :</b> ' + esc(T0.plus) + '</p><p><b>👎 Le revers :</b> ' + esc(T0.minus) + '</p>' +
+      (T0.learn ? '<p class="cl-learn">📚 ' + esc(T0.learn) + '</p>' : '') + '</div>';
+  }
+  function coulisses(a) {
+    var w = a.why || {}, h = '', who = a.pid ? party(a.pid) : null, mine = a.pid === me;
+    if (who) h += '<p class="cl-who">' + chip(a.pid) + ' <b>' + esc(who.candidate) + '</b> · ' + esc(who.name) + (mine ? ' <em>(ton parti)</em>' : '') + '</p>';
+    if (w.k === 'act' && w.l) {
+      var l = w.l;
+      h += '<div class="cl-box"><span class="kicker">Ce qui s\u2019est passé dans le jeu</span><p>' + esc(who ? who.short : '') + ' a joué <b>' + esc(l.action) + '</b>' +
+        (l.region ? ' en <b>' + esc(E.REG[l.region].name) + '</b>' : '') + (l.target ? ' contre <b>' + esc(party(l.target).short) + '</b>' : '') +
+        (l.theme && th(l.theme) ? ', avec le message ' + th(l.theme).icon + ' <b>' + esc(th(l.theme).name) + '</b>' : '') + '.</p>' +
+        (l.text ? '<p><b>Résultat :</b> ' + esc(l.text) + '</p>' : '') +
+        (l.pt ? '<p><b>Effet au sondage pour ' + esc(who ? who.short : '') + ' :</b> <span class="' + (l.pt > 0 ? 'up' : 'down') + '">' + ptStr(l.pt) + '</span></p>' : '') + '</div>';
+      h += ruleBlock(a.pid, w.key);
+      if (w.trait) h += traitBlock(w.trait);
+      if (!mine && w.key && D.ACTIONS[w.key] && D.ACTIONS[w.key].only) h += '<p class="hint">Cette action n\u2019existe que pour ce parti. Tu peux voir toutes ses forces en touchant son nom dans l\u2019onglet Sondage.</p>';
+    } else if (w.k === 'trait') {
+      h += traitBlock(w.trait);
+    } else if (w.k === 'event') {
+      h += '<div class="cl-box"><span class="kicker">Pourquoi c\u2019est important</span><p>Chaque tour, un sujet fait la une : ' + (th(w.theme) ? th(w.theme).icon + ' <b>' + esc(th(w.theme).name) + '</b>' : 'un thème') + '. Tous les messages sur ce thème gagnent <b>+1 d\u2019impact</b> ce tour-ci : un Meeting sur ce sujet rapporte plus de soutiens.</p>' +
+        (w.quiet ? '' : '<p>L\u2019événement lui-même peut aussi donner ou retirer des soutiens, de l\u2019argent ou de l\u2019influence à certains partis : c\u2019est la règle indiquée sous le titre.</p>') +
+        (w.crisis ? '<p>Une crise dure plusieurs tours, en plusieurs actes : prépare-toi à ce que le même sujet revienne.</p>' : '') + '</div>';
+    } else if (w.k === 'bascule') {
+      h += '<div class="cl-box"><span class="kicker">Comment une région change de main</span><p>Une région revient au parti qui y fait le plus de voix' + (g.hist ? ' (le socle des électeurs fidèles plus les soutiens gagnés en campagne)' : '') + ', à condition d\u2019y avoir au moins ' + (R.minControl - (g.hist ? 1 : 0)) + ' soutiens.</p>' +
+        '<p>Tenir une région ne compte pas en soi pour l\u2019élection : ce sont les voix qui comptent. Mais certains objectifs secrets demandent de tenir des régions, et chaque région tenue rapporte un peu d\u2019argent à chaque tour.</p></div>';
+    } else if (w.k === 'affair') {
+      var x = w.x;
+      h += '<div class="cl-box"><span class="kicker">D\u2019où viennent les affaires</span><p>Chaque casserole 🍳 donne environ ' + Math.round(100 * R.affairPerCasserole) + ' % de risque qu\u2019une affaire sorte à chaque tour. On en récolte en attaquant un rival, en faisant une promesse hors programme, en gaffant quand le candidat est épuisé, ou quand un rival enquête sur toi.</p>' +
+        '<p><b>Réaction choisie :</b> ' + esc(x.reaction) + '.' + (x.effects && x.effects.length ? ' <b>Conséquences :</b> ' + esc(x.effects.join(', ')) + '.' : '') + '</p>' +
+        '<p>Une affaire fait aussi monter un peu l\u2019abstention partout : « tous pourris ».</p></div>';
+    } else if (w.k === 'dilemma') {
+      var dx = w.x;
+      h += '<div class="cl-box"><span class="kicker">Le dilemme</span><p>À chaque tour, un parti doit trancher un choix délicat. ' + esc(who ? who.short : '') + ' a choisi : <b>' + esc(dx.choice) + '</b>.</p>' +
+        (dx.effects && dx.effects.length ? '<p><b>Effets :</b> ' + esc(dx.effects.join(', ')) + '.</p>' : '') + '<p>Ton tour viendra : chaque option a un prix et un avantage.</p></div>';
+    } else if (w.k === 'prog') {
+      h += '<div class="cl-box"><span class="kicker">Les mesures choc</span><p>Une mesure choc fait parler d\u2019elle dès le premier tour : +1 soutien dans 2 régions qui s\u2019en préoccupent, mais aussi <b>+1 casserole</b>, car elle est attaquée de toutes parts.</p></div>';
+    } else if (w.k === 'poll') {
+      h += '<div class="cl-box"><span class="kicker">Comment se fait le sondage</span><p>Chaque région vote selon ' + (g.hist ? 'son socle d\u2019électeurs fidèles (les vrais résultats de référence) et ' : '') + 'les soutiens gagnés par chaque parti, puis on additionne toutes les régions selon leur nombre de votants. L\u2019audience dans les médias s\u2019ajoute, classe sociale par classe sociale.</p>' +
+        '<p>Seuls les deux premiers vont au second tour. Le bilan de fin de tour te montre, ligne par ligne, d\u2019où viennent tes hausses et tes baisses.</p></div>';
+    }
+    modal({ kicker: 'Les coulisses', title: a.title, html: '<div class="coulisses">' + h + '</div>', buttons: [{ label: 'Retour au journal', primary: true }] });
   }
   function articlesHtml(paper) {
     return '<div class="pages-in">' + paper.articles.map(articleHtml).join('') +
@@ -860,6 +919,7 @@
   }
   function showPaper(paper, contLabel, cont) {
     closeModal(); $('toast').hidden = true;
+    curPaper = paper;
     paperCont = cont;
     $('paper-front').innerHTML = frontHtml(paper);
     $('paper-inside').innerHTML = '<div class="pages-head"><button type="button" class="linkbtn" id="paper-back">‹ La une</button><span>Le Quotidien National · ' + esc(paper.when || 'tour ' + g.turn) + '</span></div>' + articlesHtml(paper);
@@ -882,6 +942,8 @@
   $('paper-go').addEventListener('click', closePaper);
   $('paper-open').addEventListener('click', function () { openPages(); });
   $('paper').addEventListener('click', function (e) {
+    var wb = e.target.closest('[data-why]');
+    if (wb && curPaper) { var art = curPaper.articles.filter(function (x) { return x.id === wb.getAttribute('data-why'); })[0]; if (art) return coulisses(art); }
     var t = e.target.closest('[data-art]'); if (t) return openPages(t.getAttribute('data-art'));
     if (e.target.closest('#paper-back')) { $('paper-inside').hidden = true; $('paper-front').hidden = false; $('paper-open').hidden = false; }
   });
@@ -919,16 +981,51 @@
   /* v1.4 : Lulu parle dans une bulle de BD. Elle s'écrit lettre par lettre quand le conseil change,
      et Lulu réagit quelques secondes à chaque action que tu programmes. */
   var advShown = null, advTyper = null, advReact = null, advReactTimer = null;
+  /* v4.8 : Lulu peut être coupée pour de bon (réglage gardé sur le téléphone), et rallumée depuis « Mon parti » */
+  var luluOff = (function () { try { return localStorage.getItem('politik-lulu-off') === '1'; } catch (e) { return false; } })();
+  function setLuluOff(v) { luluOff = !!v; try { localStorage.setItem('politik-lulu-off', v ? '1' : '0'); } catch (e) { /* stockage indisponible */ } }
+  /* v4.8 : l'astuce du tour (au plus une nouvelle par tour, jamais deux fois la même dans une partie) */
+  function tipCtx() { return { g: g, me: me, pl: mePl(), E: E, R: R, sel: selected }; }
+  function tipOfTurn() {
+    var TP = window.PolitikTips; if (!TP || !g) return null;
+    g.tips = g.tips || { seen: {}, turn: {} };
+    var id = g.tips.turn[g.turn];
+    if (!id) { var t = TP.next(tipCtx(), g.tips.seen); if (!t) return null; id = t.id; g.tips.turn[g.turn] = id; g.tips.seen[id] = true; }
+    return TP.TIPS.filter(function (x) { return x.id === id; })[0] || null;
+  }
+  function anotherTip() {
+    var TP = window.PolitikTips; if (!TP || !g) return null;
+    g.tips = g.tips || { seen: {}, turn: {} };
+    var t = TP.next(tipCtx(), g.tips.seen);
+    if (!t) { var all = TP.TIPS; t = all[Math.floor(Math.random() * all.length)]; }
+    g.tips.seen[t.id] = true;
+    return t;
+  }
+  function luluModal(extraTip) {
+    var tip = extraTip || tipOfTurn();
+    var h = '<div class="learn">' + A.advisor() + '<div class="lulu-m">' +
+      '<span class="kicker">Mon conseil du tour</span><p>' + esc(advice()) + '</p>' +
+      (tip ? '<span class="kicker">💡 Astuce</span><p>' + esc(tip.text) + '</p>' : '') + '</div></div>';
+    modal({ kicker: D.ADVISOR.title, title: D.ADVISOR.name + ' te conseille', html: h,
+      buttons: [{ label: 'Une autre astuce', onClick: function () { luluModal(anotherTip()); } },
+                { label: 'Merci Lulu', primary: true },
+                { label: '🔕 Je ne veux plus de conseils', onClick: function () {
+                  setLuluOff(true); renderAdvisor();
+                  toast('Lulu se tait. Pour la rappeler : onglet « Mon parti » → « Réactiver Lulu ».');
+                } }] });
+  }
   function renderAdvisor() {
     var box = $('advisor');
-    if (!g || g.phase !== 'actions' || advisorHidden || T.isActive()) { box.hidden = true; advShown = null; return; }
-    var text = advReact || advice();
+    if (!g || g.phase !== 'actions' || advisorHidden || luluOff || T.isActive()) { box.hidden = true; advShown = null; return; }
+    var tipT = advReact ? null : tipOfTurn();
+    var text = advReact || (tipT ? '💡 ' + tipT.text : advice());
     if (!box.hidden && text === advShown) return;
     box.hidden = false; advShown = text;
     if (!box.querySelector('.adv-bubble')) {
       box.innerHTML = '<span class="adv-face">' + A.advisor() + '</span><p class="adv-bubble" aria-live="polite"><b>' + D.ADVISOR.name + ' :</b> <span class="adv-txt"></span></p><button type="button" class="adv-close" aria-label="Masquer le conseil">✕</button>';
       box.querySelector('.adv-close').addEventListener('click', function (e) { e.stopPropagation(); advisorHidden = true; renderAdvisor(); });
-      box.querySelector('.adv-bubble').addEventListener('click', function () { modal({ kicker: D.ADVISOR.title, title: D.ADVISOR.name + ' te conseille', html: '<div class="learn">' + A.advisor() + '<p>' + esc(advShown || '') + '</p></div>' }); });
+      box.querySelector('.adv-bubble').addEventListener('click', function () { luluModal(); });
+      box.querySelector('.adv-face').addEventListener('click', function () { luluModal(); });
     }
     box.classList.toggle('react', !!advReact);
     var txt = box.querySelector('.adv-txt');
@@ -1039,6 +1136,7 @@
     var err = canQueue(act);
     if (err) { toast(err); return; }
     var wasTiring = tiring(act);
+    try { var mEst = estRange(act); act.est = mEst ? mEst.hi : null; } catch (e) { act.est = null; }   // v4.8 : le gain annoncé, pour le comparer au réel dans le bilan
     queue.push(act); justAdded = queue.length - 1;
     luluSay(luluLine(act, wasTiring));
     render(); T.notify(queue.length >= E.actionsFor(g, me) ? 'full' : 'queue');
@@ -2312,19 +2410,56 @@
       (o && o.heir ? ' Une partie de tes électeurs se reporte sur ' + esc(party(o.heir).short) + '.' : '') + '</p><p class="hint">Astuce : sous 5 % dans les sondages, fais « Chercher des parrainages » (menu Plus) dès les premiers tours.</p>' + learnBox('parrainages'),
       buttons: [{ label: 'Retour à l\u2019accueil', primary: true, onClick: function () { go('title'); } }] });
   }
-  /* v4.5 : le bilan du tour, toujours au même format : d'où vient ta hausse ou ta baisse */
+  /* v4.5 : le bilan du tour, toujours au même format : d'où vient ta hausse ou ta baisse.
+     v4.8 : chaque ligne se touche et s'ouvre sur son détail (action par action, rival par rival, événement par événement). */
   function bilanHtml(b) {
     var x = b && b.rows[me]; if (!x) return '';
-    function row(label, v, always) {
+    function cls(v) { return v > 0.0005 ? 'up' : v < -0.0005 ? 'down' : ''; }
+    function row(label, v, always, detail) {
       if (!always && Math.abs(v) < 0.0005) return '';
-      return '<div class="bilan-row"><span>' + label + '</span><b class="' + (v > 0.0005 ? 'up' : v < -0.0005 ? 'down' : '') + '">' + ptStr(v) + '</b></div>';
+      var head = '<span>' + label + '</span><b class="' + cls(v) + '">' + ptStr(v) + '</b>';
+      if (!detail) return '<div class="bilan-row">' + head + '</div>';
+      return '<details class="bilan-det"><summary class="bilan-row">' + head + '<i class="bilan-chev" aria-hidden="true">›</i></summary><div class="bilan-more">' + detail + '</div></details>';
     }
-    return '<div class="bilan">' +
-      row('Tes actions', x.acts, true) +
-      row(x.riv <= 0 ? 'Ce que les rivaux t’ont pris' : 'Les actions des rivaux', x.riv, true) +
-      row('Le débat télévisé', x.deb) +
-      row('Événements, affaires et imprévus', x.other, true) +
-      row('L’effet des médias qui s’estompe', x.wear) +
+    function li(icon, txt, v) { return '<div class="bm-line"><span class="bm-i">' + icon + '</span><span class="bm-t">' + txt + '</span>' + (v == null ? '' : '<b class="' + cls(v) + '">' + ptStr(v) + '</b>') + '</div>'; }
+    function where(a) {
+      return (a.region ? ' en ' + esc(E.REG[a.region].name) : a.target ? ' contre ' + esc(E.sigle(a.target)) : '') + (a.theme && th(a.theme) ? ' · ' + th(a.theme).icon + ' ' + esc(th(a.theme).short) : '');
+    }
+    // 1. Tes actions : prévu → réel, et pourquoi c'est différent
+    var dA = '', anyLess = false, anyFail = false;
+    (x.list || []).forEach(function (a) {
+      var name = '<b>' + esc(a.action) + '</b>' + where(a);
+      if (!a.ok) { anyFail = true; dA += li(a.gaffe ? '😬' : '✕', name + '<small>' + esc(a.text || 'Échouée') + '</small>', a.pt); return; }
+      var gap = a.est != null && Math.abs(a.est - a.pt) >= 0.0005;
+      if (gap && a.pt < a.est) anyLess = true;
+      dA += li(a.slot + '.', name + (gap ? '<small>annoncé ' + ptStr(a.est) + ', réel ' + ptStr(a.pt) + '</small>' : a.est != null ? '<small>comme annoncé</small>' : ''), a.pt);
+    });
+    if (!dA) dA = '<p class="bm-note">Aucune action ce tour-ci.</p>';
+    else dA += '<p class="bm-note">' + (anyLess ? 'Pourquoi moins que prévu ? Le chiffre annoncé est calculé sur la situation du début du tour. Mais les actions se jouent à tour de rôle (l’action 1 de chaque parti, puis l’action 2…) : quand un rival passe avant toi dans la même région ou sur le même public, il y a plus de monde à se partager les voix, et ton gain réel baisse. ' : '') +
+      (anyFail ? 'Une action échouée ne rapporte rien (ressources insuffisantes, gaffe ou contre-attaque). ' : '') + 'Le ⓘ à côté du message détaille le calcul de chaque action.</p>';
+    // 2. Les rivaux : qui t'a pris le plus, et avec quoi
+    var by = x.by || {}, ids = Object.keys(by).sort(function (p, q) { return by[p] - by[q]; }), dR = '';
+    ids.filter(function (p) { return Math.abs(by[p]) >= 0.0005; }).slice(0, 6).forEach(function (p) {
+      var hits = (x.hit || []).filter(function (h) { return h.pid === p; }).sort(function (u, v) { return u.d - v.d; }), top = hits[0];
+      dR += li(chip(p), '<b>' + esc(party(p).short) + '</b>' + (top ? '<small>surtout : ' + esc(top.action) + where(top) + ' (' + ptStr(top.d) + ')</small>' : ''), by[p]);
+    });
+    dR = (dR || '<p class="bm-note">Aucun rival n’a fait bouger ton score.</p>') +
+      '<p class="bm-note">Le sondage est une part du gâteau : chaque électeur gagné par un rival fait baisser ta part, même si tu n’en perds aucun. Une action d’un rival peut aussi te faire monter (s’il prend des voix à un parti plus gros que toi, par exemple).</p>';
+    // 3. Le débat
+    var dD = '<p class="bm-note">Ce que le débat télévisé a changé pour toi : ta prestation, et celle de tes adversaires. L’effet passe par l’audience auprès des classes sociales, dans toute la France, et s’estompe ensuite comme les autres médias.</p>';
+    // 4. Événements, affaires, imprévus : un par un
+    var dO = '';
+    (x.oth || []).filter(function (o) { return Math.abs(o.d) >= 0.0005; }).forEach(function (o) { dO += li(o.icon, esc(o.label), o.d); });
+    dO = (dO || '<p class="bm-note">Rien de notable ce tour-ci.</p>') +
+      '<p class="bm-note">Ces effets touchent tous les partis : un événement sur un thème que tu portes peut te faire monter, une affaire chez un rival peut te profiter.</p>';
+    // 5. L'usure des médias
+    var dW = '<p class="bm-note">À chaque fin de tour, l’effet de tous les passages dans les médias (télé, radio, 20 h, débat) baisse de 15 %. Ce tour-ci, cela t’a coûté <b>' + ptStr(x.wear) + '</b>. Pour garder cet effet, il faut repasser dans les médias. Les soutiens gagnés sur le terrain, eux, restent. Au dernier tour, il n’y a pas d’usure avant le vote.</p>';
+    return '<p class="bilan-hint">Touche une ligne pour voir le détail.</p><div class="bilan">' +
+      row('Tes actions', x.acts, true, dA) +
+      row(x.riv <= 0 ? 'Ce que les rivaux t’ont pris' : 'Les actions des rivaux', x.riv, true, dR) +
+      row('Le débat télévisé', x.deb, false, dD) +
+      row('Événements, affaires et imprévus', x.other, true, dO) +
+      row('L’effet des médias qui s’estompe', x.wear, false, dW) +
       '<div class="bilan-row bilan-tot"><span>Total du tour</span><b>' + ptStr(x.total) + '</b></div></div>' +
       '<p class="bilan-mini">Tu passes de ' + pctFr(x.start, 1) + ' % à ' + pctFr(x.end, 1) + ' %. Le sondage est une part du total : quand tes rivaux gagnent des électeurs, ta part baisse même si tu n’en perds aucun.</p>';
   }
@@ -2744,9 +2879,13 @@
       line('👥', '<b>' + pl.militants + ' / ' + R.militantsMax + ' équipes de militants</b> — chacune rapporte 1 soutien par tour.') +
       '</div><p><b>Force :</b> ' + esc(p.force) + '</p><p><b>Faiblesse :</b> ' + esc(p.weakness) + '</p>' + traitHtml(me, true) + specialsHtml() + credHtml(me);
     $('parti-body').innerHTML = '<span class="kicker">Ton parti</span><h1 class="h1 tab-title">' + esc(p.name) + '</h1>' + html +
-      '<div class="stack parti-btns">' + (g && !g.over && g.phase !== 'between' && turnSnap ? '<button type="button" class="btn btn-ink" id="pb-save">💾 Sauvegarder la partie</button>' : '') + '<button type="button" class="btn" id="pb-lib">📚 Comprendre la politique</button><button type="button" class="btn" id="pb-rules">Règles du jeu</button><button type="button" class="btn btn-ghost" id="pb-quit">Abandonner la partie</button></div>';
+      '<div class="stack parti-btns">' + (g && !g.over && g.phase !== 'between' && turnSnap ? '<button type="button" class="btn btn-ink" id="pb-save">💾 Sauvegarder la partie</button>' : '') + '<button type="button" class="btn" id="pb-lulu">' + (luluOff ? '🙋 Réactiver Lulu (conseils et astuces)' : '🔕 Couper les conseils de Lulu') + '</button><button type="button" class="btn" id="pb-lib">📚 Comprendre la politique</button><button type="button" class="btn" id="pb-rules">Règles du jeu</button><button type="button" class="btn btn-ghost" id="pb-quit">Abandonner la partie</button></div>';
     if ($('pb-save')) $('pb-save').addEventListener('click', saveNamed);
     $('pb-lib').addEventListener('click', library); $('pb-rules').addEventListener('click', showRules);
+    $('pb-lulu').addEventListener('click', function () {   // v4.8
+      setLuluOff(!luluOff); advisorHidden = false; renderAdvisor(); renderParti();
+      toast(luluOff ? 'Lulu se tait. Tu peux la rappeler ici quand tu veux.' : 'Lulu est de retour, avec ses astuces !');
+    });
     $('pb-quit').addEventListener('click', function () { modal({ title: 'Abandonner la partie ?', html: '<p>Ta campagne en cours sera perdue. Tes parties enregistrées sont gardées.</p>', buttons: [{ label: 'Abandonner', primary: true, onClick: function () { clearSave(); go('title'); } }, { label: 'Continuer à jouer' }] }); });
   }
   $('btn-menu').addEventListener('click', function () { showTab(activeTab === 'parti' ? 'carte' : 'parti'); });

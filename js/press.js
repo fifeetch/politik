@@ -242,6 +242,9 @@
   function lc(s) { return s.charAt(0).toLowerCase() + s.slice(1); }
   var ACTION_TYPE = {};
   Object.keys(D.ACTIONS).forEach(function (k) { ACTION_TYPE[D.ACTIONS[k].name] = k; });
+  var CARD_KEY = {};   // v4.8 : retrouver une carte d'après son nom
+  Object.keys(D.CARDS || {}).forEach(function (k) { CARD_KEY[D.CARDS[k].name] = k; });
+  function keyOf(l) { return ACTION_TYPE[l.action] || CARD_KEY[l.action] || null; }
 
   /* ctx : { g, me, E, info, aiAff, aiDil, log (actions du tour précédent), changes (régions qui ont basculé), before (sondage d'avant) } */
   function build(ctx) {
@@ -265,7 +268,7 @@
     var mainText = (quiet ? '' : lead + ' ') + (ev && !ev.theme && !quiet && g.news.headline ? 'Autre sujet qui agite le pays : ' + lc(g.news.headline) + '. ' : '') +
       'Ce matin, tout le monde parle ' + (TOPICS[hotTheme] ? TOPICS[hotTheme][0] : 'de la campagne') + ' : les candidats qui en parleront marqueront des points.';
     arts.push({ id: 'main', rub: crisis ? 'Crise · ' + crisis.name : 'L\'événement', title: mainTitle, text: mainText, scene: u[1], lead: quiet ? '' : lead,
-      rule: quiet ? '' : (crisis ? crisis.text : ev.text) });
+      rule: quiet ? '' : (crisis ? crisis.text : ev.text), why: { k: 'event', crisis: !!crisis, quiet: quiet, theme: hotTheme } });
 
     // 2. Les régions qui ont basculé hier soir
     (ctx.changes || []).slice(0, 2).forEach(function (c) {
@@ -273,7 +276,7 @@
       if (c.to) arts.push({ id: 'bascule-' + c.rid, rub: 'Régions', pid: c.to, mine: c.to === me || c.from === me,
         title: P(c.to).short + ' s\'empare ' + (c.rid === 'cor' ? 'de l\'outre-mer' : 'de la région ' + r.name),
         text: 'Hier soir, à ' + city + ', les militants de ' + P(c.to).short + ' ont sablé le champagne : la région ' + (c.from ? 'échappe à ' + P(c.from).short + ' et ' : '') + 'passe sous leur contrôle. ' +
-          'Avec ' + r.ins.toFixed(1).replace('.', ',') + ' millions d\'inscrits, c\'est une prise qui compte pour la présidentielle.' });
+          'Avec ' + r.ins.toFixed(1).replace('.', ',') + ' millions d\'inscrits, c\'est une prise qui compte pour la présidentielle.', why: { k: 'bascule', rid: c.rid, to: c.to, from: c.from } });
     });
 
     // 3. La campagne sur le terrain : un article par action marquante de la veille
@@ -286,7 +289,7 @@
       var p = P(l.pid), key = g.turn + l.pid + type + (l.region || ''), city = l.region ? pick(CITIES[l.region], key) : null;
       var topic = l.theme && TOPICS[l.theme] ? pick(TOPICS[l.theme], key + 't') : 'de ses propositions', m = l.theme ? measureOn(l.pid, l.theme) : null;
       var quote = m ? ' « ' + m + ', ce sera pour tout de suite ! », a promis ' + p.candidate + '.' : ' Pas de grande promesse ce jour-là : ' + p.candidate + ' est surtout venu écouter.';
-      var a = { pid: l.pid, mine: l.pid === me, rub: 'Campagne' };
+      var a = { pid: l.pid, mine: l.pid === me, rub: 'Campagne', why: { k: 'act', l: l, key: type } };
       if (type === 'terrain') {
         a.title = pick([p.short + ' à la rencontre des habitants de ' + city, p.candidate + ' fait salle comble à ' + city, 'À ' + city + ', ' + p.candidate + ' parle ' + topic], key);
         a.text = p.candidate + ' était à ' + city + ' (' + E.REG[l.region].name + ') ' + pick(CROWDS, key + 'c') + '. Il a surtout été question ' + topic + '.' + quote;
@@ -359,7 +362,7 @@
       if (!isCard && !BRIEF[type]) return;
       var key = isCard ? 'card-' + l.action : type; if (briefSeen[key]) return; briefSeen[key] = 1;
       var p = P(l.pid), b = isCard ? [l.action + ' : ' + p.short + ' sort le grand jeu', p.candidate + ' a abattu une carte maîtresse. '] : BRIEF[type];
-      arts.push({ id: 'brief-' + key.replace(/\W/g, ''), rub: 'Campagne', pid: l.pid, mine: true, title: b[0],
+      arts.push({ id: 'brief-' + key.replace(/\W/g, ''), rub: 'Campagne', pid: l.pid, mine: true, title: b[0], why: { k: 'act', l: l, key: keyOf(l) },
         text: b[1] + (l.ok ? 'bilan pour ' + p.short + ' : ' + l.text + '.' : 'raté : ' + l.text.replace(/^Échoue : /, '').toLowerCase()) });
     });
 
@@ -370,47 +373,47 @@
       var p = P(l.pid), mine = l.pid === me;
       if (l.nost) {
         var stone = l.nost.k === D.NOSTALGIA.length - 1;
-        gags.push({ id: 'gag-nost-' + l.pid, rub: 'Rétro', pid: l.pid, mine: mine,
+        gags.push({ id: 'gag-nost-' + l.pid, rub: 'Rétro', pid: l.pid, mine: mine, why: { k: 'act', l: l, key: 'nostalgie', trait: 'nostalgie' },
           title: stone ? p.candidate + ' promet le retour du feu de bois : fou rire général' : p.candidate + ' promet ' + l.nost.what,
           text: stone ? 'Cette fois, c\u2019est allé trop loin. Devant un parterre médusé, ' + p.candidate + ' a vanté « la simplicité de l\u2019âge de pierre ». Les retraités eux-mêmes ont ri. Sur les réseaux, les montages pleuvent.'
             : (l.nost.k ? 'Nouvelle étape dans la grande marche arrière : après avoir promis de revenir à ' + D.NOSTALGIA[l.nost.k - 1].year + ', ' + p.candidate + ' vise désormais ' + l.nost.year + '.' : 'C\u2019est le début d\u2019une grande marche arrière : ' + p.candidate + ' veut ramener la France en ' + l.nost.year + ', « quand tout allait mieux ».') + ' Dans les clubs du troisième âge, on applaudit. Chez les étudiants, on cherche sur Internet ce qu\u2019est ' + D.NOSTALGIA[l.nost.k].thing + '.' +
               (l.war ? ' Petit problème : ' + P(l.war).short + ' pêche dans le même étang, et les deux partis se sont volé des électeurs.' : '') });
       }
-      if (l.petal || l.book) gags.push({ id: 'gag-rose', rub: 'Coulisses', pid: l.pid, mine: mine,
+      if (l.petal || l.book) gags.push({ id: 'gag-rose', rub: 'Coulisses', pid: l.pid, mine: mine, why: { k: 'act', l: l, key: keyOf(l), trait: 'rose' },
         title: l.book ? 'François Hésitant publie « Ce que je n\u2019ai jamais osé dire » : le ' + p.short + ' en sueur' : 'François Hésitant sort de sa retraite et ramène des brebis égarées au ' + p.short,
         text: l.book ? 'Appelé à la rescousse, l\u2019ancien président a préféré régler ses comptes : 400 pages, des noms, des dates. Au siège du ' + p.short + ', on parle déjà d\u2019une affaire.'
           : 'Coup de téléphone, déjeuner discret, photo sur le marché : François Hésitant a convaincu d\u2019anciens électeurs de revenir.' + (l.bloom ? ' Avec ce retour, la rose a retrouvé tous ses pétales : au siège, on sort le champagne.' : '') });
-      if (l.micro) gags.push({ id: 'gag-fusion', rub: 'Centre', pid: l.pid, mine: mine,
+      if (l.micro) gags.push({ id: 'gag-fusion', rub: 'Centre', pid: l.pid, mine: mine, why: { k: 'act', l: l, key: keyOf(l), trait: 'centre' },
         title: p.short + ' absorbe « ' + l.micro + ' »',
         text: 'Fin de l\u2019aventure pour « ' + l.micro + ' », créé il y a quelques semaines à peine. Ses 300 militants rejoignent ' + p.short + '. Les deux autres partis du centre, qui n\u2019ont rien payé, s\u2019en frottent les mains. Les paris sont ouverts sur le nom du prochain.' });
-      if (l.eclat) gags.push({ id: 'gag-eclat', rub: 'Médias', pid: l.pid, mine: mine,
+      if (l.eclat) gags.push({ id: 'gag-eclat', rub: 'Médias', pid: l.pid, mine: mine, why: { k: 'act', l: l, key: 'eclat', trait: 'transparent' },
         title: p.candidate + ' sort la tronçonneuse : les caméras reviennent',
         text: 'Après des semaines d\u2019oubli, ' + p.candidate + ' a enfin fait parler de lui : coup de gueule, décor de chantier et tronçonneuse en main. Les chaînes d\u2019info ont rebranché leurs caméras.' });
-      if (l.bingo) gags.push({ id: 'gag-bingo', rub: 'Meeting', pid: l.pid, mine: mine,
+      if (l.bingo) gags.push({ id: 'gag-bingo', rub: 'Meeting', pid: l.pid, mine: mine, why: { k: 'act', l: l, key: keyOf(l), trait: 'disque' },
         title: 'Bingo ! ' + p.candidate + ' place « ' + l.bingo.words.join(' », « ') + ' »',
         text: 'Les militants l\u2019attendaient, ils ont été servis : en un seul discours, ' + p.candidate + ' a coché ' + l.bingo.words.length + ' cases de son bingo préféré. La salle exulte. Chez les indécis, en revanche, on a changé de chaîne.' });
     });
-    if (info.micro) gags.push({ id: 'gag-micro', rub: 'Centre', title: 'Naissance de « ' + info.micro + ' », nouveau parti du centre',
+    if (info.micro) gags.push({ id: 'gag-micro', rub: 'Centre', why: { k: 'trait', trait: 'centre' }, title: 'Naissance de « ' + info.micro + ' », nouveau parti du centre',
       text: 'Ils étaient trois au centre, les voici quatre. « Nous ne sommes ni pour ni contre, bien au contraire », explique le fondateur de « ' + info.micro + ' ». Chacun des grands partis du centre y perdra quelques électeurs, sauf si l\u2019un d\u2019eux se dévoue pour l\u2019absorber.' });
-    if (info.hidden && E.player(g, 'UG')) gags.push({ id: 'gag-avis', rub: 'Avis de recherche', pid: 'UG', mine: me === 'UG',
+    if (info.hidden && E.player(g, 'UG')) gags.push({ id: 'gag-avis', rub: 'Avis de recherche', pid: 'UG', mine: me === 'UG', why: { k: 'trait', trait: 'transparent' },
       title: 'Avez-vous vu ' + P('UG').candidate + ' ?',
       text: 'Signalement : costume bleu, rabot à la main, dernière apparition télévisée il y a plusieurs semaines. Coincés entre ' + P('MN').short + ' et ' + P('EM').short + ', ' + P('UG').short + ' ne passent plus à l\u2019antenne. Toute information est à transmettre au siège du parti, qui promet une récompense.' });
-    if (info.primaire && info.primaire.ai && info.primaire.text) gags.push({ id: 'gag-prim', rub: 'Coulisses', pid: 'SM',
+    if (info.primaire && info.primaire.ai && info.primaire.text) gags.push({ id: 'gag-prim', rub: 'Coulisses', pid: 'SM', why: { k: 'trait', trait: 'rose' },
       title: 'Primaire au ' + P('SM').short + ' : ' + (info.primaire.choice === 0 ? 'le débat interne s\u2019éternise' : 'un courant claque la porte'),
       text: 'Encore une primaire, encore des motions, encore des nuits blanches rue de Solférino. ' + info.primaire.text });
     gags.sort(function (x, y) { return (y.mine ? 1 : 0) - (x.mine ? 1 : 0); }).slice(0, 3).forEach(function (a) { arts.push(a); });
 
     // 4. Les affaires du matin
     (ctx.aiAff || []).forEach(function (x) {
-      arts.push({ id: 'aff-' + x.pid, rub: 'Affaires', pid: x.pid, title: 'Affaire « ' + x.title + ' » : ' + P(x.pid).short + ' choisit de ' + lc(x.reaction),
+      arts.push({ id: 'aff-' + x.pid, rub: 'Affaires', pid: x.pid, why: { k: 'affair', x: x }, title: 'Affaire « ' + x.title + ' » : ' + P(x.pid).short + ' choisit de ' + lc(x.reaction),
         text: 'Révélée ce matin, l\'affaire « ' + x.title + ' » embarrasse ' + who(x.pid) + '. Le parti a choisi de ' + lc(x.reaction) + '.' + (x.effects.length ? ' Conséquences : ' + x.effects.join(', ') + '.' : '') });
     });
     // le dilemme d'un rival
-    if (ctx.aiDil) arts.push({ id: 'dil', rub: 'Coulisses', pid: ctx.aiDil.pid, title: P(ctx.aiDil.pid).short + ' face à un choix délicat',
+    if (ctx.aiDil) arts.push({ id: 'dil', rub: 'Coulisses', pid: ctx.aiDil.pid, why: { k: 'dilemma', x: ctx.aiDil }, title: P(ctx.aiDil.pid).short + ' face à un choix délicat',
       text: '« ' + ctx.aiDil.title + ' » : dans les coulisses de ' + P(ctx.aiDil.pid).short + ', le débat a été vif. Finalement, ' + P(ctx.aiDil.pid).candidate + ' a tranché : ' + lc(ctx.aiDil.choice) + '.' + (ctx.aiDil.effects.length ? ' ' + ctx.aiDil.effects.join(', ') + '.' : '') });
     // au tour 1 : les programmes qui font parler
     if (info.programmes) info.programmes.filter(function (x) { return x.pid !== me && x.choc.length; }).slice(0, 2).forEach(function (x) {
-      arts.push({ id: 'prog-' + x.pid, rub: 'Programmes', pid: x.pid, title: '« ' + x.choc[0] + ' » : la promesse choc de ' + P(x.pid).short,
+      arts.push({ id: 'prog-' + x.pid, rub: 'Programmes', pid: x.pid, why: { k: 'prog', x: x }, title: '« ' + x.choc[0] + ' » : la promesse choc de ' + P(x.pid).short,
         text: P(x.pid).candidate + ' a dévoilé son programme. Sa mesure « ' + x.choc[0] + ' » fait déjà réagir tous les plateaux télé : les uns applaudissent, les autres crient au scandale.' });
     });
 
@@ -418,7 +421,7 @@
     var poll = E.poll(g), lead = poll[0], up = null, bestD = 0.4;
     poll.forEach(function (x) { var d = 100 * (x.pct - ((ctx.before || {})[x.pid] || x.pct)); if (d > bestD) { bestD = d; up = x; } });
     var myI = poll.findIndex(function (x) { return x.pid === me; });
-    arts.push({ id: 'sondage', rub: 'Sondage', pid: lead.pid, title: 'Sondage : ' + P(lead.pid).short + ' en tête' + (up && up.pid !== lead.pid ? ', ' + P(up.pid).short + ' grimpe' : ''),
+    arts.push({ id: 'sondage', rub: 'Sondage', pid: lead.pid, why: { k: 'poll' }, title: 'Sondage : ' + P(lead.pid).short + ' en tête' + (up && up.pid !== lead.pid ? ', ' + P(up.pid).short + ' grimpe' : ''),
       text: P(lead.pid).candidate + ' reste en tête des intentions de vote avec ' + Math.round(lead.pct * 100) + ' %, devant ' + P(poll[1].pid).short + ' (' + Math.round(poll[1].pct * 100) + ' %).' +
         (up && up.pid !== lead.pid ? ' La surprise vient de ' + P(up.pid).short + ', qui gagne ' + bestD.toFixed(1).replace('.', ',') + ' point en un tour.' : '') +
         ' ' + (myI < 2 ? 'Ton parti est qualifié pour le second tour… pour l\'instant.' : 'Ton parti pointe à la ' + (myI + 1) + 'ᵉ place : il faudra remonter pour atteindre le second tour.') });

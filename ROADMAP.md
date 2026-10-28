@@ -311,3 +311,15 @@ Avant, sur téléphone, la ligne « Action 1 / 2 / 3 · Valider » passait sous 
 - **Le message** sur une seule ligne fine (« Pouvoir d'achat · moyen ▾ »), avec **ⓘ** à côté pour « Comment c'est calculé ? ».
 - **Les cases d'action** : le nom, le gain en points en gros, une petite ligne (« 3 soutiens », « partout »). **Appui long** (ou survol à la souris) : une bulle avec le gain au sondage, les soutiens, le poids de la région, le coût et les avertissements. Appui court : l'action est ajoutée. Un ⚠️ ou un € en coin signale l'énergie ou l'argent qui manque.
 - La ligne Action 1 / 2 / 3 · Valider est gardée, un peu plus basse.
+
+## v4.7.1 — fait : le panneau d'actions fixe (téléphone)
+Le panneau du bas ne défile plus au toucher : il garde toujours sa taille et c'est la carte qui se réduit.
+
+## v4.8 — fait : comprendre en fouillant (bilan, journal, Lulu) et des meetings qui gardent leur valeur
+Dans l'esprit des jeux Paradox : le jeu ne montre pas tout d'emblée, mais plus on touche, plus on comprend.
+- **Correctif du bilan** : depuis la v4.5, « Tes actions » et « Ce que les rivaux t'ont pris » étaient comptés deux fois (et « Événements » compensait avec un chiffre faux). C'est réparé.
+- **Le bilan du tour se déplie** : chaque ligne se touche. Tes actions : une par une, le gain annoncé et le gain réel, avec l'explication quand c'est moins (les actions se jouent à tour de rôle). Les rivaux : qui t'a pris combien, et avec quelle action. Événements : chaque événement, affaire, dilemme, équipe de militants ou mise sous les projecteurs, nommé avec son effet. Médias : l'usure de 15 % expliquée.
+- **Les coulisses du journal** : sous chaque article, « 🔎 Les coulisses » : l'action jouée (région, message), son résultat et son effet au sondage, sa règle (fiche des actions propres aux partis), et le trait satirique du parti quand c'est un gag (ex. « C'était mieux avant »).
+- **Lulu, guide d'astuces** : 25 astuces qui arrivent au bon moment (au plus une nouvelle par tour). La toucher ouvre son conseil du tour, « Une autre astuce », ou « Je ne veux plus de conseils ». On la rallume dans « Mon parti ».
+- **Bêta — Salle comble** : un Meeting perdait plus de la moitié de sa valeur dès le tour 3 (2,3 pt → 0,9 pt), parce que chaque région se remplit de soutiens de tous les partis. Désormais le gain de base grandit comme la région s'est remplie depuis le début (× 1,5), plafond relevé à 25 soutiens par parti et par région : un bon Meeting vaut environ 2 pt du tour 1 au tour 6.
+- Préparé pour la suite (pas encore dans l'interface) : les personnalités de chaque parti avec une qualité et un défaut.
