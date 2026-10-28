@@ -338,3 +338,11 @@ Le jeu parlait en deux unités (les « soutiens », son calcul interne, et les p
 - **Carte** : pendant la tournée du candidat, le chiffre qui s'envole est l'évolution réelle de ton intention de vote dans la région (vert).
 - **Bilan** : chaque action indique « dans la région : 4,4 % → 12,0 % (+7,6 pts) » et « en France : +0,7 pt » ; l'écart annoncé/réel n'est signalé que s'il se voit une fois arrondi.
 - Le mot « soutiens » ne reste que dans les fiches détaillées (ⓘ, fiche de région). Légende des couleurs dans le tutoriel, le ⓘ et une astuce de Lulu au premier tour.
+
+## v4.9.3 — fait (Bêta) : moins de yo-yo, moins de plafond
+Constat (joueur doué au débat, PS parti de ~12 %) : le débat rapportait +3 pt en moyenne et jusqu'à +9 sur un tour, la « vague » amplifiait ensuite, puis le score plafonnait (usure des médias −0,7 pt/tour, actions qui rapportent moitié moins une fois haut, rivaux −1,8 pt/tour).
+- **Débat ÷ 1,5** (réponses et bonus du vainqueur).
+- **Vague adoucie** : Meeting +1 (au lieu de +2), médias +15 % (au lieu de +30 %).
+- **Usure des médias 10 % par tour** (au lieu de 15 %).
+- **Moins de frein pour un parti déjà haut** dans les médias (élasticité 0,6 au lieu de 0,75).
+Résultat simulé : premier débat +1,8 pt en moyenne (au lieu de +3), usure −0,5 au plus (au lieu de −0,7), et en fin de campagne les actions rapportent encore +2,7 pt par tour (au lieu de +1,5) : plus de plateau. Équilibre : RN qualifié 98 %, LFI 50 %, PS 38 %.
