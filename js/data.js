@@ -930,6 +930,7 @@
     text: 'Le mode Réaliste, avec les nouvelles règles à tester.',
     rules: {
       incumbentBonus: 1,   // pas de prime au sortant : tenir une région ne donne plus +25 % de voix cachées
+      maxCubes: 25,        // v4.8 : plafond relevé (les meetings de fin de campagne rapportent plus)
       socle: 0.3           // socle figé : 30 % du vote reste fidèle aux scores historiques (50 % en Réaliste)
     },
     /* v4.3 : la force des actions et cartes propres à chaque parti (cartes spéciales, actions de parti, atouts du parti).
@@ -946,7 +947,12 @@
             base: { PC: 380, MD: 420, VP: 320, DL: 240, RQ: 280, LO: 220 } },                 // signatures de départ (élus locaux du parti)
     union: { lastTurn: 4, maxDist: 2, transfer: 0.7, accept: { 1: 0.4, 2: 0.2 }, cordon: ['MN'], cordonOk: ['RQ', 'DL'] },   // même camp ; le RN ne peut rallier que les souverainistes et l'extrême droite
     defi: { refuseWin: 2, refuseLoss: 2 },
+    /* v4.8 : plus la campagne avance, plus il y a de monde aux meetings. Sans ça, un Meeting perdait plus de la moitié
+       de sa valeur dès le tour 3 : chaque région se remplit de soutiens de tous les partis, et un soutien de plus y pèse moins.
+       Bonus de soutiens selon l'avancée de la campagne (0 = début, 1 = dernier tour). */
+    crowd: { f: 1.5, max: 3 },   // gain de base × (soutiens de la région aujourd'hui ÷ au début − 1) × f, plafonné à × max
     changes: [
+      'Salle comble : plus une région s\u2019est remplie de soutiens depuis le début de la campagne, plus un Meeting y rassemble de monde. Un Meeting garde ainsi sa valeur au sondage jusqu\u2019au dernier tour (jusqu\u2019à 25 soutiens par parti et par région).',
       'Pas de prime au sortant : tenir une région ne donne plus de voix en plus.',
       'Dynamique de campagne : 3 tours de hausse d\u2019affilée, c\u2019est la vague (Meeting +2, médias +30 %) ; 3 tours de baisse, la démobilisation (Meeting −1, médias −20 %).',
       'Bombe de campagne : une fois par partie (tours 4 à 7), une grosse affaire tombe sur l\u2019un des deux premiers des sondages.',

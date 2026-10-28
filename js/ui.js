@@ -1558,7 +1558,7 @@
   /* Vrai si cette action viderait la forme du candidat (risque de gaffe) */
   function tiring(act) {
     var c = E.actionCost(g, me, act);
-    return c.forme > 0 && projected().forme - c.forme === 0;
+    return c.forme > 0 && projected().forme - c.forme <= E.gaffeLimit(g, me);   // v4.8 : un gaffeur dérape dès 1 ⚡
   }
   /* Ce que fait une action, en clair, sur son bouton (avec les chiffres réels du moment) */
   var PROF_PLURAL = { urbaine: 'urbaines', rurale: 'rurales', industrielle: 'industrielles', historique: 'historiques' };
@@ -1629,6 +1629,7 @@
         '<li>Ton message (' + th(thm).icon + ' ' + esc(th(thm).name) + ') est <b>' + IMPACT_WORD[E.impact(g, me, r, thm)] + '</b> ici : ta crédibilité sur le sujet, + si la région s’en préoccupe, + s’il fait l’actu.</li>' +
         '<li>Il te rapporte <b>' + bd.total + ' soutien' + (bd.total > 1 ? 's' : '') + '</b> (' + bd.parts.map(function (x) { return x.k === 'base' ? 'message ' + IMPACT_WORD[E.impact(g, me, r, thm)] + ' : ' + x.n : esc(x.label) + ' ' + (x.n > 0 ? '+' : '') + x.n; }).join(', ') + ').</li>' +
         (g.weight ? '<li>Un soutien pèse selon ton électorat historique ici : <b>' + (w >= 1.15 ? 'terrain favorable, il pèse lourd' : w <= 0.6 ? 'terrain difficile, il pèse peu' : 'poids normal') + '</b>. Plus tu as déjà de soutiens, moins le suivant ajoute.</li>' : '') +
+        (function () { var ci = E.crowdInfo(g, r); return ci && ci.now > ci.start ? '<li>🏟️ <b>Salle comble</b> : la région compte ' + ci.now + ' soutiens tous partis confondus (' + ci.start + ' au début). Chaque soutien y pèse moins qu\u2019au départ, mais ton Meeting rassemble plus de monde : ' + (E.crowdBonus(g, r, bd.parts[0].n) ? '<b>+' + E.crowdBonus(g, r, bd.parts[0].n) + '</b> soutiens.' : 'pas encore de bonus.') + '</li>' : ''; })() +
         '<li>La région représente <b>' + pctTxt(regionShare(r)) + ' des votants</b> de France.</li>' +
         '<li>Résultat : <b>' + (m ? m.txt : 'impossible ici') + '</b> au sondage national.</li></ol></div>';
       var mg = E.mobilizeGain(g, me, r), mo = estRange({ type: 'mobiliser', region: r });

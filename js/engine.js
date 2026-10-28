@@ -2,6 +2,7 @@
    Aucune dépendance à l'affichage : tout l'état de la partie est dans un objet « g ». */
 (function (root) {
   var D = (typeof module !== 'undefined' && module.exports) ? require('./data.js') : root.PolitikData;
+  if (typeof module !== 'undefined' && module.exports && !D.PEOPLE) require('./people.js');   // v4.8 : les personnalités
   var R = D.RULES;
 
   /* ---------- Outils ---------- */
@@ -47,6 +48,14 @@
   function sigle(pid) { return PARTY[pid] ? PARTY[pid].sigle || pid : pid; }
   function player(g, pid) { for (var i = 0; i < g.players.length; i++) if (g.players[i].id === pid) return g.players[i]; return null; }
   function pids(g) { return g.players.map(function (p) { return p.id; }); }
+  /* v4.8 : la qualité et le défaut du candidat de chaque parti */
+  function candQ(g, pid, q) { var pl = player(g, pid); return !!(pl && pl.cand && pl.cand.q === q); }
+  function candD(g, pid, d) { var pl = player(g, pid); return !!(pl && pl.cand && pl.cand.d === d); }
+  function candFor(pid, pick) {
+    if (pick && typeof pick === 'object') return { name: pick.name || null, q: D.QUALITIES && D.QUALITIES[pick.q] ? pick.q : null, d: D.DEFECTS && D.DEFECTS[pick.d] ? pick.d : null, title: pick.title || null };
+    var list = (D.PEOPLE && D.PEOPLE[pid]) || [], x = list[pick | 0] || list[0];
+    return x ? { name: x[0], q: x[2], d: x[3], title: x[4], idx: list.indexOf(x) } : null;
+  }
   function cubes(g, rid, pid) { return g.regions[rid].cubes[pid] || 0; }
   /* v3.2 : mode Réaliste, le poids électoral. Un soutien pèse selon le score historique du parti dans la région :
      au départ, le sondage colle aux vrais scores, et un petit parti a du mal à dépasser son électorat historique. */
@@ -166,11 +175,16 @@
     SEG.forEach(function (s) { out[s] = {}; ids.forEach(function (p) { out[s][p] = acc[s]._t ? acc[s][p] / acc[s]._t : 0; }); });
     return out;
   }
+  /* v4.8 : le candidat crève l'écran (×1,2) ou passe mal (×0,85) — seulement sur les gains */
+  function gaffeLimit(g, pid) { return candD(g, pid, 'gaffeur') ? 1 : 0; }
+  function candMedia(g, pid) { return candQ(g, pid, 'plateau') ? 1.2 : candD(g, pid, 'terne') ? 0.85 : 1; }
   function addAudience(g, pid, gains) {
     g.aud = g.aud || {}; g.aud[pid] = g.aud[pid] || {};
+    var cm = candMedia(g, pid);
     SEG.forEach(function (s) {
       if (!gains[s]) return;
-      g.aud[pid][s] = Math.max(D.MEDIA.min, Math.min(D.MEDIA.max, (g.aud[pid][s] || 0) + gains[s]));
+      var v = gains[s] > 0 ? gains[s] * cm : gains[s];
+      g.aud[pid][s] = Math.max(D.MEDIA.min, Math.min(D.MEDIA.max, (g.aud[pid][s] || 0) + v));
     });
     g.audOn = true;
   }
@@ -592,6 +606,9 @@
     if (pl && pl.phare && MEAS[pl.phare].theme === th) parts.push({ k: 'phare', label: 'mesure phare', n: R.pharBonus });
     var e = pl && pl.programme ? echoBonus(g, pid, rid) : 0;   // v0.8 : le programme plaît (ou déplaît) aux habitants
     if (e) parts.push({ k: 'echo', label: e > 0 ? 'région de cœur' : 'région hostile', n: e });
+    if (candQ(g, pid, 'tribun')) parts.push({ k: 'cand', label: 'candidat tribun', n: 1 });   // v4.8
+    if (e < 0 && candD(g, pid, 'clivant')) parts.push({ k: 'cand', label: 'candidat clivant', n: -1 });
+    var cr = crowdBonus(g, rid, R.terrainCubes[imp]); if (cr) parts.push({ k: 'foule', label: 'salle comble', n: cr });   // v4.8 (Bêta)
     if (pl && pl.momentum) parts.push({ k: 'dyn', label: pl.momentum >= 2 ? 'la vague' : pl.momentum > 0 ? 'dynamique' : 'passage à vide', n: pl.momentum });
     if (g.bingo && jammed(g, pid, rid)) parts.push({ k: 'jam', label: 'embouteillage au centre', n: -1 });
     if (g.bingo && zapped(g, pid, rid)) parts.push({ k: 'zap', label: 'les indécis zappent', n: -1 });
@@ -599,6 +616,20 @@
     if (pl && PARTY[pid] && PARTY[pid].novelty && g.turn <= R.novelty.turns) parts.push({ k: 'neuf', label: 'effet nouveauté', n: g.turn <= R.novelty.strongTurns ? 2 : 1 });
     var tot = 0; parts.forEach(function (x) { tot += x.n; });
     return { parts: parts, total: Math.max(1, tot) };
+  }
+  /* v4.8 (Bêta) : salle comble. Plus la région s'est remplie de soutiens (tous partis confondus) depuis le début,
+     plus un Meeting y rassemble de monde : le gain de base grandit dans la même proportion, pour qu'un Meeting
+     garde à peu près sa valeur au sondage du premier au dernier tour. */
+  function crowdInfo(g, rid) {
+    if (!g || g.mode !== 'beta' || !D.BETA.crowd || !rid || !g.regions[rid]) return null;
+    var reg = g.regions[rid], T = 0;
+    pids(g).forEach(function (id) { T += cubes(g, rid, id); });
+    if (reg.t0 == null) reg.t0 = Math.max(1, T);
+    return { now: T, start: reg.t0, grow: Math.max(0, Math.min(D.BETA.crowd.max, T / reg.t0 - 1)) };
+  }
+  function crowdBonus(g, rid, base) {
+    var c = crowdInfo(g, rid); if (!c) return 0;
+    return Math.round(base * c.grow * D.BETA.crowd.f);
   }
   function terrainCubes(g, pid, rid, th) { return terrainBreakdown(g, pid, rid, th).total; }
   /* L'ordre dans lequel les plans sont joués ce tour : action 1 de chacun, puis action 2… Le premier change à chaque tour. */
@@ -777,12 +808,13 @@
         return { id: id, human: id === humanParty, money: Math.round(p.money * (1 - R.moneyBlend) + 5 * R.moneyBlend), infl: p.infl,   // v2.8.1 : en éclair, les cagnottes de départ se rapprochent
                  cards: p.cards.slice(), objective: objs[i % objs.length], debateWins: 0,
                  forme: R.formeStart, cas: 0, momentum: 0, cred: Object.assign({}, p.cred), talk: {}, militants: 0,
-                 programme: null, phare: null, budget: 0 };
+                 programme: null, phare: null, budget: 0, cand: candFor(id, (opts.cands || {})[id]) };
       }),
       regions: {}, events: shuffle(D.EVENTS.map(function (e) { return e.id; }), rng),
       event: null, mods: {}, cancel: {}, log: [], history: []
     };
     applyMode(g);   // v4.1
+    g.players.forEach(function (pl) { if (pl.cand && pl.cand.d === 'casserole') pl.cas = 2; });   // v4.8 : une vieille casserole
     if (g.mode === 'beta') {   // v4.4 : la bombe de campagne (un tour tiré au sort) et les parrainages
       var BB = D.BETA.bomb, eclairB = format === 'eclair';
       g.bomb = { turn: eclairB ? BB.eclair : BB.from + Math.floor(rng() * (BB.to - BB.from + 1)), done: false };
@@ -921,8 +953,10 @@
     if (g.turn > 1) {
       g.players.forEach(function (pl) {
         var bonus = Math.min(R.incomeRegionMax, controlledRegions(g, pl.id).length * R.incomePerRegion);
+        if (candQ(g, pl.id, 'carnet')) bonus += 2;   // v4.8 : carnet d'adresses
         pl.money += R.incomeMoney + bonus; pl.infl += R.incomeInfl;
-        var f0 = pl.forme; pl.forme = Math.min(R.formeMax, pl.forme + R.formeRegen + (pl.id === 'EM' ? 1 : 0));
+        var cf = candQ(g, pl.id, 'increvable') ? 1 : candD(g, pl.id, 'fragile') ? -1 : 0;   // v4.8 : increvable / petite santé
+        var f0 = pl.forme; pl.forme = Math.max(0, Math.min(R.formeMax, pl.forme + R.formeRegen + (pl.id === 'EM' ? 1 : 0) + cf));
         out.income.push({ pid: pl.id, money: R.incomeMoney + bonus, infl: R.incomeInfl, forme: pl.forme - f0 });
       });
       // v4.4 (Bêta) : chaque tour, des élus signent d'eux-mêmes pour les petits partis
@@ -931,6 +965,7 @@
       Object.keys(g.bases).forEach(function (rid) {
         g.bases[rid].forEach(function (pid) { if (addCubes(g, rid, pid, 1)) out.militants.push({ pid: pid, rid: rid }); });
       });
+      updateAllControl(g); ledMark(g, 'Les militants de tous les partis sur le terrain (+1 soutien par équipe)', '👥');   // v4.8
       // conséquences différées
       g.pending = g.pending.filter(function (x) {
         if (x.pid && !player(g, x.pid)) return false;   // v4.4 : le parti n'est plus en lice
@@ -940,11 +975,12 @@
         out.later.push({ pid: x.pid, title: x.title, text: x.text, hit: hit, effects: hit ? applyFx(g, x.pid, x.fx) : [] });
         return false;
       });
+      updateAllControl(g); ledMark(g, 'Conséquences de décisions des tours passés', '⏳');   // v4.8
       // v0.7 : les affaires (dossiers des rivaux, programme non financé, casseroles, Le Canard)
       var list = g.nextAffairs.filter(function (x) { return player(g, x.pid); }); g.nextAffairs = [];
       g.players.forEach(function (pl) {
         var sm = scandalMult(g, pl.id);   // v4.3 (Bêta) : plus de scandales pour les favoris
-        var risk = pl.cas * R.affairPerCasserole * sm + Math.max(0, sm - 1) * 0.08;
+        var risk = (pl.cas * R.affairPerCasserole * sm + Math.max(0, sm - 1) * 0.08) * (candQ(g, pl.id, 'propre') ? 0.5 : 1);   // v4.8 : irréprochable
         if ((pl.cas > 0 || sm > 1) && g.rng() < risk && !list.some(function (x) { return x.pid === pl.id; })) list.push({ pid: pl.id, src: 'casseroles' });
       });
       if (!list.length && g.rng() < R.canardChance) {
@@ -975,6 +1011,7 @@
     if (em && g.turn === R.wearTurn) {   // v2.8.1 : le tour de l'usure dépend du format (5 en classique, 2 en éclair)
       var rid = strongestRegion(g, 'EM');
       if (rid) { addCubes(g, rid, 'EM', -1); out.usure = rid; g.log.push({ pid: 'EM', text: 'Usure du pouvoir : −1 soutien en ' + REG[rid].name }); }
+      updateAllControl(g); ledMark(g, 'Usure du pouvoir (' + sigle('EM') + ' perd 1 soutien)', '⌛');   // v4.8
     }
     // événement du tour : un acte de la crise, sinon une carte événement
     var ca = crisisAct(g);
@@ -990,6 +1027,8 @@
       pickNews(g, ev && ev.theme);
       out.event = { id: evId, effects: applyEvent(g, evId) };
     }
+    updateAllControl(g);
+    ledMark(g, ca ? 'Crise : ' + ca.act.title : 'Événement : ' + ((D.EVENTS.filter(function (e) { return e.id === g.event; })[0] || {}).title || 'le fait du jour'), '📰');   // v4.8
     out.news = g.news;
     // dilemme : un parti à tour de rôle
     // v2.0 : le joueur humain reçoit le sien au tour 2, pour que le premier tour soit tout de suite du jeu
@@ -1028,6 +1067,7 @@
   function resolveAffair(g, pid, idx) {
     var k = -1; g.affairs.forEach(function (a, i) { if (a.pid === pid && k < 0) k = i; });
     if (k < 0) return null;
+    ledMark(g, 'Autres effets du début de tour', '•');   // v4.8 : on isole l'effet de l'affaire
     var a = g.affairs.splice(k, 1)[0], rc = D.REACTIONS[idx] || D.REACTIONS[0], pl = player(g, pid);
     pl.cas = Math.max(0, pl.cas - 1);
     D.REGIONS.forEach(function (r) { g.regions[r.id].abst = Math.min(0.8, g.regions[r.id].abst + R.affairAbst); });   // « tous pourris » : un peu plus d'abstention
@@ -1035,6 +1075,7 @@
     var extra = Math.round(Math.max(0, scandalMult(g, pid) - 1) * 0.75);   // v4.3 (Bêta) : pour les favoris, l'affaire fait plus de bruit
     if (extra) fx = fx.concat(applyFx(g, pid, [{ k: 'loseTop', n: 1, count: extra }]).map(function (t) { return 'l\u2019affaire fait la une : ' + t; }));
     updateAllControl(g);
+    ledMark(g, 'Affaire « ' + a.title + ' » (' + sigle(pid) + ')', '🍳');   // v4.8
     return { pid: pid, title: a.title, reaction: rc.label, effects: fx };
   }
   /* v1.0 : combien d'abstentionnistes un parti peut-il convaincre ici ? */
@@ -1059,10 +1100,12 @@
   function resolveDilemma(g, pid, idx) {
     if (!g.dilemma || g.dilemma.pid !== pid) return null;
     var d = dilemmaDef(g.dilemma.id), o = d.options[idx] || d.options[0];
+    ledMark(g, 'Autres effets du début de tour', '•');   // v4.8
     var fx = applyFx(g, pid, o.fx);
     var res = { pid: pid, title: d.title, choice: o.label, effects: fx };
     g.dilemma = null;
     updateAllControl(g);
+    ledMark(g, 'Dilemme « ' + d.title + ' » (' + sigle(pid) + ' : ' + o.label + ')', '⚖️');
     return res;
   }
 
@@ -1333,7 +1376,8 @@
   }
   /* Le registre du tour : d'où vient chaque hausse ou baisse de chaque parti */
   function ledStart(g) {
-    g.led = { turn: g.turn, start: pollMap(g), acts: {}, riv: {}, deb: {} };
+    var st = pollMap(g);
+    g.led = { turn: g.turn, start: st, acts: {}, riv: {}, deb: {}, list: {}, by: {}, hit: {}, oth: {}, mark: st };   // v4.8 : le détail de chaque ligne
     // v4.6 : la photo des régions en début de tour (pour le filtre de carte « Progression »)
     g.regPrev = g.regNow || null; g.regNow = regionSnapshot(g);
   }
@@ -1344,13 +1388,27 @@
     return o;
   }
   function ledAdd(g, key, pid, d) { if (!g.led) return; g.led[key][pid] = (g.led[key][pid] || 0) + d; }
+  /* v4.8 : une étape du tour (événement, affaire, dilemme…) : ce qu'elle a changé pour chaque parti, avec son nom */
+  function ledMark(g, label, icon) {
+    var L = g.led; if (!L) return;
+    var now = pollMap(g), prev = L.mark || L.start;
+    Object.keys(now).forEach(function (p) {
+      var d = (now[p] || 0) - (prev[p] || 0); if (Math.abs(d) < 1e-6) return;
+      (L.oth[p] = L.oth[p] || []).push({ label: label, icon: icon || '•', d: d });
+    });
+    L.mark = now;
+  }
+  function ledSync(g) { if (g.led) g.led.mark = pollMap(g); }
   function ledClose(g) {
     var L = g.led; if (!L) return null;
     var end = pollMap(g), out = { turn: L.turn, rows: {} };
     Object.keys(L.start).concat(Object.keys(end)).forEach(function (pid) {
       if (out.rows[pid]) return;
       var tot = (end[pid] || 0) - (L.start[pid] || 0), a = L.acts[pid] || 0, rv = L.riv[pid] || 0, db = L.deb[pid] || 0, w = (g.lastWear && g.lastWear[pid]) || 0;
-      out.rows[pid] = { acts: a, riv: rv, deb: db, wear: w, other: tot - a - rv - db - w, total: tot, start: L.start[pid] || 0, end: end[pid] || 0 };
+      var oth = (L.oth[pid] || []).slice(), sum = 0; oth.forEach(function (x) { sum += x.d; });
+      var rest = tot - a - rv - db - w - sum; if (Math.abs(rest) >= 0.0002) oth.push({ label: 'Petits effets divers (vote utile, régions qui basculent…)', icon: '•', d: rest });
+      out.rows[pid] = { acts: a, riv: rv, deb: db, wear: w, other: tot - a - rv - db - w, total: tot, start: L.start[pid] || 0, end: end[pid] || 0,
+        list: L.list[pid] || [], by: L.by[pid] || {}, hit: L.hit[pid] || [], oth: oth };
     });
     g.bilan = out; g.led = null;
     return out;
@@ -1368,7 +1426,7 @@
     if (pl.money < c.money || pl.infl < c.infl || pl.forme < c.forme) { entry.ok = false; entry.text = 'Échoue : pas assez de ressources.'; return entry; }
     pl.money -= c.money; pl.infl -= c.infl; pl.forme -= c.forme;
     // v0.4 : un candidat épuisé peut faire une gaffe
-    if (c.forme && pl.forme === 0 && g.rng() < R.gaffeChance) {
+    if (c.forme && pl.forme <= gaffeLimit(g, pid) && g.rng() < R.gaffeChance) {   // v4.8 : un gaffeur dérape dès 1 ⚡
       pl.cas = Math.min(R.casseroleMax, pl.cas + 1);
       entry.ok = false; entry.gaffe = true; entry.text = '😬 GAFFE ! Épuisé, le candidat dérape : aucun soutien, +1 casserole.';
       return entry;
@@ -1602,6 +1660,7 @@
   /* plans : { pid: [act, act, act] } — résolution en alternance, le premier joueur tourne. */
   function resolveActions(g, plans) {
     var order = turnOrder(g);
+    ledMark(g, 'Autres effets du début de tour', '•');   // v4.8
     var log = [], prev = g.led ? pollMap(g) : null;
     for (var s = 0; s < R.actionsPerTurn; s++) {
       order.forEach(function (pid) {
@@ -1612,12 +1671,20 @@
           var now = pollMap(g);
           Object.keys(prev).concat(Object.keys(now)).forEach(function (p) {
             var d = (now[p] || 0) - (prev[p] || 0); if (!d) return;
-            if (p === pid) { ledAdd(g, 'acts', p, d); entry.pt = d; } else ledAdd(g, 'riv', p, d);
+            if (p === pid) { ledAdd(g, 'acts', p, d); entry.pt = d; }
+            else {
+              ledAdd(g, 'riv', p, d);
+              var L = g.led; L.by[p] = L.by[p] || {}; L.by[p][pid] = (L.by[p][pid] || 0) + d;   // v4.8 : qui t'a pris quoi
+              (L.hit[p] = L.hit[p] || []).push({ pid: pid, action: entry.action, region: entry.region, theme: entry.theme, target: entry.target, d: d });
+            }
           });
           prev = now;
+          (g.led.list[pid] = g.led.list[pid] || []).push({ action: entry.action, type: act.type, card: act.card || null, region: entry.region, theme: entry.theme, target: entry.target,
+            ok: entry.ok, gaffe: !!entry.gaffe, text: entry.text, pt: entry.pt || 0, est: act.est != null ? act.est : null, slot: s + 1 });
         }
       });
     }
+    ledSync(g);
     g.phase = isDebateTurn(g) ? 'debate' : 'spotlight';
     return log;
   }
@@ -1731,6 +1798,7 @@
     updateAllControl(g);
     var p1 = pollMap(g); res.delta = {};   // v4.5 : ce que le débat a changé au sondage, parti par parti
     Object.keys(p0).forEach(function (pid) { res.delta[pid] = (p1[pid] || 0) - p0[pid]; ledAdd(g, 'deb', pid, res.delta[pid]); });
+    ledSync(g);   // v4.8
     g.phase = 'spotlight';
     return res;
   }
@@ -1788,10 +1856,12 @@
       regs.forEach(function (r) { addCubes(g, r.id, pid, -1); out.regions.push(r.id); });
       updateAllControl(g);
     }
+    ledMark(g, 'Sous les projecteurs (' + sigle(pid) + (out.paid ? ' paie pour étouffer l\u2019affaire' : ' perd 2 soutiens') + ')', '🔦');   // v4.8
     return out;
   }
   function endTurn(g) {
     updateAllControl(g);
+    ledMark(g, 'Fin du tour (régions qui changent de main)', '•');   // v4.8
     if (g.turn >= R.maxTurns) g.lastWear = {};   // v4.5 : pas d'usure des médias au dernier tour
     var res = { winner: null, over: false };
     g.history.push(poll(g));
@@ -1813,11 +1883,13 @@
       g.players.forEach(function (pl) { g.lastWear[pl.id] = (nw[pl.id] || 0) - (now[pl.id] || 0); });
       g.lastPoll = nw;
     }
+    ledSync(g);   // v4.8 : l'usure des médias a sa propre ligne
     g.phase = 'next';
     if (isBeta(g) && g.turn === parrDeadline(g)) {   // v4.4 : sans ses 500 signatures, on ne se présente pas
       res.out = [];
       g.players.slice().forEach(function (pl) { if (pl.sign != null && pl.sign < D.BETA.parr.need) { var ro = removeParty(g, pl.id, null, 0.6, 'parrainages'); if (ro) res.out.push(ro); } });
       g.lastPoll = pollMap(g);
+      ledMark(g, 'Partis éliminés faute de 500 parrainages (leurs électeurs se reportent)', '✍️');   // v4.8
     }
     if (g.turn >= R.maxTurns) {
       // v1.6 : le 1er tour est voté et figé. Majorité absolue : c'est fini. Sinon : l'entre-deux-tours commence.
@@ -2136,10 +2208,10 @@
   }
 
   var API = {
-    estimate: estimate, ledStart: ledStart, regionSnapshot: regionSnapshot,
+    estimate: estimate, ledStart: ledStart, candQ: candQ, candD: candD, candFor: candFor, candMedia: candMedia, gaffeLimit: gaffeLimit, regionSnapshot: regionSnapshot,
     createGame: createGame, startTurn: startTurn, resolveActions: resolveActions, resolveDebate: resolveDebate, setupDebate: setupDebate, debateCards: debateCards, duelOutcome: duelOutcome, debateCounter: debateCounter, aiDebatePick: aiDebatePick, debateWeights: debateWeights, setupFace: setupFace, resolveFace: resolveFace, audScore: audScore, duelResult: duelResult, replyPoints: replyPoints,
     isDebateTurn: isDebateTurn, spotlightTarget: spotlightTarget, applySpotlight: applySpotlight, endTurn: endTurn,
-    finalScores: finalScores, firstRound: firstRound, openBetween: openBetween, betweenAct: betweenAct, betweenError: betweenError, answerCounter: answerCounter, answerBetweenOffer: answerBetweenOffer, setConsigne: setConsigne, concessionsFor: concessionsFor, dealChance: dealChance, aiBetweenStep: aiBetweenStep, aiConsigne: aiConsigne, rivalTargets: rivalTargets, threatCost: threatCost, transfersFor: transfersFor, projectSecond: projectSecond, closeBetween: closeBetween, autoBetween: autoBetween, objectiveMet: objectiveMet, objectiveProgress: objectiveProgress, objectiveShare: objectiveShare, terrainBreakdown: terrainBreakdown, turnOrder: turnOrder, election: election, poll: poll, votes: votes,
+    finalScores: finalScores, firstRound: firstRound, openBetween: openBetween, betweenAct: betweenAct, betweenError: betweenError, answerCounter: answerCounter, answerBetweenOffer: answerBetweenOffer, setConsigne: setConsigne, concessionsFor: concessionsFor, dealChance: dealChance, aiBetweenStep: aiBetweenStep, aiConsigne: aiConsigne, rivalTargets: rivalTargets, threatCost: threatCost, transfersFor: transfersFor, projectSecond: projectSecond, closeBetween: closeBetween, autoBetween: autoBetween, objectiveMet: objectiveMet, objectiveProgress: objectiveProgress, objectiveShare: objectiveShare, terrainBreakdown: terrainBreakdown, crowdBonus: crowdBonus, crowdInfo: crowdInfo, turnOrder: turnOrder, election: election, poll: poll, votes: votes,
     dist: dist, fundsGain: fundsGain, allyOf: allyOf, allianceError: allianceError, answerOffer: answerOffer, acceptChance: acceptChance,
     poachTarget: poachTarget, transferRate: transferRate,
     actionCost: actionCost, checkAction: checkAction, mediaRegions: mediaRegions, gain: gain, bestRegions: bestRegions,

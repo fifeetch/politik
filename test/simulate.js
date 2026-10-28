@@ -43,7 +43,7 @@ for (var i = 0; i < N; i++) {
       }
       // invariants
       Object.keys(g.regions).forEach(function (rid) {
-        Object.keys(g.regions[rid].cubes).forEach(function (pid) { var n = g.regions[rid].cubes[pid]; if (n < 0 || n > 10) throw new Error('cubes hors limites'); });
+        Object.keys(g.regions[rid].cubes).forEach(function (pid) { var n = g.regions[rid].cubes[pid]; if (n < 0 || n > D.RULES.maxCubes) throw new Error('cubes hors limites'); });
       });
       g.players.forEach(function (p) { if (p.money < 0 || p.infl < 0 || p.forme < 0) throw new Error('ressources négatives ' + p.id); });
     }
