@@ -379,7 +379,7 @@
     var list = PP.peopleOf(pid), cur = (partyEdits[pid] && partyEdits[pid].cand) || 0, sel = list[cur] || list[0];
     if (!list.length) return '';
     return '<div class="cand-pick"><span class="kicker">Choisis ton candidat · ' + list.length + ' personnalités</span><div class="cp-list">' + list.map(function (x) {
-      return '<button type="button" class="cp-card" data-cand="' + x.idx + '" aria-pressed="' + (x.idx === cur) + '"><span class="cp-face">' + A.face(PS.personFace(pid, x.idx)) + '</span><b>' + esc(x.name) + '</b><small>' + (x.leader ? 'chef de file' : esc(x.title)) + '</small><span class="qd-row">' + qdHtml(x.q, x.d) + '</span></button>';
+      return '<button type="button" class="cp-card" data-cand="' + x.idx + '" aria-pressed="' + (x.idx === cur) + '"><span class="cp-face">' + (x.leader ? A.basePortrait(pid) : A.face(PS.personFace(pid, x.idx))) + '</span><b>' + esc(x.name) + '</b><small>' + (x.leader ? 'chef de file' : esc(x.title)) + '</small><span class="qd-row">' + qdHtml(x.q, x.d) + '</span></button>';
     }).join('') + '</div><p class="hint cp-why"><b>' + esc(sel.name) + '</b> · ' + D.QUALITIES[sel.q].icon + ' ' + esc(D.QUALITIES[sel.q].text) + ' ' + D.DEFECTS[sel.d].icon + ' ' + esc(D.DEFECTS[sel.d].text) + '</p></div>';
   }
   /* ---------- v4.8 : régler le score de départ ---------- */

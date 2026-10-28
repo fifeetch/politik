@@ -290,6 +290,7 @@
   var ART = {
     portrait: function (pid) { return OVR[pid] ? OVR[pid]() : P[pid] ? P[pid]() : ''; },
     setPortrait: function (pid, fn) { if (fn) OVR[pid] = fn; else delete OVR[pid]; },
+    basePortrait: function (pid) { return P[pid] ? P[pid]() : ''; },   // v4.9.1 : le portrait dessiné du chef de file, même si un autre candidat est choisi
     face: face, SKINS: SKINS,
     advisor: advisor,
     vignette: function (k) { return V[k] ? V[k]() : ''; },

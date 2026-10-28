@@ -89,12 +89,84 @@
          ['Guillaume Pelletée', 'm', 'increvable', 'clivant', 'l’eurodéputé qui remue la terre']]
   };
 
+  /* v4.9.1 : le visage de chaque personnalité, dessiné d'après l'apparence de la personnalité qu'elle parodie
+     (peau, coupe et couleur de cheveux, lunettes, barbe ; cheveux gris pour les plus âgés).
+     peau : 0 très claire → 5 très foncée. Les chefs de file gardent leur portrait dessiné du parti. */
+  var BLACK = '#1E1A1A', DARK = '#3A2A20', BROWN = '#8A5A3B', BLOND = '#C9922E', GREY = '#9C9CA6', WHITE = '#D9D9E0', SALT = '#6E6A6A';
+  function F(skin, hair, hairColor, glasses, beard, mouth, outfit) { return { skin: skin, hair: hair, hairColor: hairColor, glasses: glasses || 'none', beard: !!beard, mouth: mouth || 'sourire', outfit: outfit || '#26305A' }; }
+  var FACES = {
+    // LFI
+    'Manuel Bombarde': F(1, 'court', DARK, 'none', true, 'serieux', '#4A4A55'),
+    'Mathilde Panique': F(0, 'long', DARK, 'none', false, 'grand', '#7A1E24'),
+    'Clémence Guérilla': F(0, 'carre', BROWN, 'none', false, 'sourire', '#7A1E24'),
+    'Éric Coquelicot': F(0, 'court', WHITE, 'none', true, 'serieux', '#4A4A55'),
+    'Louis Boucan': F(0, 'court', DARK, 'none', false, 'grand', '#26305A'),
+    'Sophia Chicane': F(2, 'long', BLACK, 'none', false, 'sourire', '#1F1F2A'),
+    // PS
+    'Olivier Fauteuil': F(0, 'court', GREY, 'carrees', false, 'sourire', '#26305A'),
+    'Boris Vaudeville': F(0, 'court', DARK, 'none', true, 'sourire', '#26305A'),
+    'Anne Hipster': F(0, 'carre', BLOND, 'none', false, 'sourire', '#7A1E24'),
+    'Carole Dégainée': F(0, 'carre', DARK, 'none', false, 'grand', '#4A4A55'),
+    'François Hésitant': F(0, 'chauve', GREY, 'rondes', false, 'sourire', '#26305A'),
+    'Johanna Roulette': F(0, 'long', BROWN, 'none', false, 'sourire', '#7A1E24'),
+    // Écologistes
+    'Sandrine Rouspète': F(0, 'court', WHITE, 'rondes', false, 'grand', '#2E6B45'),
+    'Yannick Jardinet': F(0, 'court', SALT, 'none', false, 'sourire', '#2E6B45'),
+    'Cyrielle Châtaigne': F(0, 'long', BROWN, 'none', false, 'sourire', '#2E6B45'),
+    'Éric Pédalo': F(0, 'court', DARK, 'none', false, 'sourire', '#2E6B45'),
+    'Grégory Doucement': F(0, 'court', DARK, 'carrees', true, 'sourire', '#2E6B45'),
+    // Renaissance
+    'Gérald Dans-le-Vent': F(1, 'court', BLACK, 'none', false, 'serieux', '#1F2A55'),
+    'Élisabeth Bornée': F(0, 'court', GREY, 'none', false, 'serieux', '#1F2A55'),
+    'Aurore Bergerie': F(0, 'long', BLOND, 'none', false, 'sourire', '#1F2A55'),
+    'Yaël Brouhaha-Pivot': F(0, 'long', DARK, 'none', false, 'sourire', '#1F2A55'),
+    'Stéphane Séjour': F(0, 'court', DARK, 'none', false, 'sourire', '#1F2A55'),
+    // LR
+    'Laurent Wapiti': F(0, 'court', WHITE, 'none', false, 'serieux', '#B23A2A'),
+    'Xavier Bougonnant': F(0, 'chauve', GREY, 'carrees', false, 'serieux', '#1F2A55'),
+    'Valérie Patraque': F(0, 'carre', BLOND, 'none', false, 'sourire', '#1F2A55'),
+    'David Lissé': F(0, 'court', DARK, 'none', false, 'sourire', '#1F2A55'),
+    'Rachida Dorures': F(2, 'long', BLACK, 'none', false, 'grand', '#1F1F2A'),
+    // RN
+    'Jordan Brushing': F(0, 'court', BLACK, 'none', false, 'sourire', '#1F2A55'),
+    'Sébastien Chenille': F(0, 'chauve', GREY, 'carrees', false, 'serieux', '#1F2A55'),
+    'Jean-Philippe Tangage': F(0, 'court', DARK, 'none', false, 'sourire', '#1F2A55'),
+    'Louis Alibi': F(0, 'court', GREY, 'none', false, 'sourire', '#1F2A55'),
+    'Laure Lavande': F(0, 'long', BLOND, 'none', false, 'sourire', '#1F2A55'),
+    // LO
+    'Jean-Pierre Merguez': F(0, 'court', WHITE, 'none', true, 'serieux', '#7A1E24'),
+    'Arlette Lagrève': F(0, 'carre', WHITE, 'none', false, 'grand', '#7A1E24'),
+    // PCF
+    'André Chasse-neige': F(0, 'chauve', WHITE, 'none', true, 'sourire', '#7A1E24'),
+    'Ian Brasero': F(0, 'court', DARK, 'none', false, 'sourire', '#7A1E24'),
+    'Stéphane Peuple': F(0, 'court', GREY, 'none', true, 'serieux', '#7A1E24'),
+    'Léon Défilé': F(0, 'court', BROWN, 'none', false, 'grand', '#7A1E24'),
+    // MoDem
+    'Marc Fermier': F(0, 'court', SALT, 'carrees', false, 'sourire', '#E1663A'),
+    'Jean-Noël Barrage': F(0, 'court', DARK, 'none', false, 'sourire', '#26305A'),
+    'Geneviève Discrète': F(0, 'court', BLOND, 'none', false, 'sourire', '#26305A'),
+    'Jean-Louis Bourdonnant': F(0, 'chauve', WHITE, 'rondes', false, 'serieux', '#26305A'),
+    // Horizons
+    'Christophe Béton': F(0, 'court', DARK, 'none', false, 'sourire', '#26305A'),
+    'Frédéric Valsetout': F(0, 'court', GREY, 'carrees', false, 'sourire', '#26305A'),
+    'Laurent Marchepied': F(0, 'court', BLACK, 'none', true, 'sourire', '#26305A'),
+    // Debout la France (personnages inventés)
+    'Dominique Jarretière': F(0, 'chignon', GREY, 'rondes', false, 'serieux', '#1F2A55'),
+    'Nicolas Dentelle': F(0, 'court', BROWN, 'none', true, 'sourire', '#1F2A55'),
+    'Hubert Fromageau': F(1, 'chauve', SALT, 'none', true, 'grand', '#2E6B45'),
+    // Reconquête
+    'Sarah Krampon': F(0, 'long', BLACK, 'none', false, 'sourire', '#1F1F2A'),
+    'Stanislas Rigolo': F(0, 'court', BROWN, 'none', false, 'sourire', '#1F2A55'),
+    'Guillaume Pelletée': F(0, 'court', DARK, 'carrees', false, 'serieux', '#1F2A55')
+  };
+
   /* La liste des personnalités d'un parti, sous forme d'objets */
   function peopleOf(pid) {
     return (PEOPLE[pid] || []).map(function (x, i) { return { id: pid + '-' + i, idx: i, name: x[0], sex: x[1], q: x[2], d: x[3], title: x[4], leader: i === 0 }; });
   }
   /* Le visage d'une personnalité (toujours le même pour un nom donné) */
   function faceOf(name, sex) {
+    if (FACES[name]) return Object.assign({}, FACES[name]);   // v4.9.1 : le visage dessiné d'après le modèle
     var h = 7; for (var i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 100003;
     var hairs = sex === 'f' ? ['long', 'carre', 'boucles', 'chignon', 'court'] : ['court', 'chauve', 'boucles', 'court', 'long'];
     return { skin: h % 6, hair: hairs[(h >> 3) % hairs.length], hairColor: ['#1E1A1A', '#3A2A20', '#8A5A3B', '#C9922E', '#C9C9D1', '#B23A2A'][(h >> 5) % 6],
@@ -103,6 +175,6 @@
   }
 
   D.QUALITIES = QUALITIES; D.DEFECTS = DEFECTS; D.PEOPLE = PEOPLE;
-  var API = { QUALITIES: QUALITIES, DEFECTS: DEFECTS, PEOPLE: PEOPLE, peopleOf: peopleOf, faceOf: faceOf };
+  var API = { QUALITIES: QUALITIES, DEFECTS: DEFECTS, PEOPLE: PEOPLE, FACES: FACES, peopleOf: peopleOf, faceOf: faceOf };
   if (node) module.exports = API; else root.PolitikPeople = API;
 })(this);
