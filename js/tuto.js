@@ -7,7 +7,7 @@
     { target: '.map-wrap', wait: 'region', pulse: true,
       text: '👆 Touche la région qui clignote.' },
     { target: '#actions [data-act="terrain"]', wait: 'queue',
-      text: '📣 Lance un <b>Meeting</b>. Le gros chiffre = ce que tu gagnes au sondage, en points.' },
+      text: '📣 Lance un <b>Meeting</b>. En <b style="color:#2B7445">vert</b> : ton intention de vote gagnée dans la région. En <b style="color:#2F6EBA">bleu</b> : ce que ça donne en France.' },
     { target: null, wait: 'full', pos: 'top',
       text: 'Bravo ! Ajoute une ou deux actions si tu as assez d\'argent (€), puis <b>Valider</b>.' },
     { target: '#btn-validate', wait: 'validate',

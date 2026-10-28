@@ -330,3 +330,11 @@ Dans l'esprit des jeux Paradox : le jeu ne montre pas tout d'emblée, mais plus 
 - **Modifier un parti existant** : nom, nom court, sigle, couleur, candidat et score. « Remettre ce parti d'origine » annule tout. Les réglages sont gardés sur le téléphone.
 - **Supprimer le parti fondé** : bouton bien visible sous sa fiche.
 - Dans « Mon parti », la qualité et le défaut de ton candidat sont rappelés.
+
+## v4.9.2 — fait : une seule unité, le % d'intention de vote (vert = région, bleu = France)
+Le jeu parlait en deux unités (les « soutiens », son calcul interne, et les points de sondage) : un « +14 » sur la carte était 14 soutiens, pas 14 %.
+- **Partout, le % d'intention de vote**, à deux échelles : 🟢 **vert = dans la région** (Meeting, Mobiliser), 🔵 **bleu = dans toute la France** (médias, score national, bilan). C'est le bleu qui décide de l'élection.
+- **Cases d'action** : Meeting et Mobiliser affichent en gros le gain dans la région choisie (ex. « +9,6 pts ») et en petit, en bleu, ce que ça donne en France (« +1,1 France ») ; les Médias, en bleu.
+- **Carte** : pendant la tournée du candidat, le chiffre qui s'envole est l'évolution réelle de ton intention de vote dans la région (vert).
+- **Bilan** : chaque action indique « dans la région : 4,4 % → 12,0 % (+7,6 pts) » et « en France : +0,7 pt » ; l'écart annoncé/réel n'est signalé que s'il se voit une fois arrondi.
+- Le mot « soutiens » ne reste que dans les fiches détaillées (ⓘ, fiche de région). Légende des couleurs dans le tutoriel, le ⓘ et une astuce de Lulu au premier tour.

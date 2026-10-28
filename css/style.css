@@ -1472,3 +1472,14 @@ button { font-family: inherit; color: inherit; }
 .score-set { display: grid; gap: 4px; }
 .sc-range { width: 100%; accent-color: var(--violet); height: 28px; }
 .score-set .sc-range { grid-column: 1 / -1; }
+
+/* v4.9.2 — une seule unité (le % d'intention de vote), deux échelles :
+   vert = dans la région, bleu = dans toute la France */
+:root { --reg: #2B7445; --nat: #2F6EBA; }
+.tile-big.tile-reg { color: var(--reg); }
+.tile-big.tile-nat { color: var(--nat); }
+.c-reg { color: var(--reg) !important; } .c-nat { color: var(--nat) !important; }
+.bilan-row .up, .bm-line .up { color: var(--nat); }
+.map .float.gain { fill: var(--reg); }
+.legend-scope { display: flex; gap: 10px; flex-wrap: wrap; font-size: 12.5px; margin: 0 0 6px; }
+.legend-scope b { font-weight: 800; }

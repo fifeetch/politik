@@ -1404,13 +1404,16 @@
     pl.money = 99; pl.infl = 99; pl.forme = Math.max(pl.forme, 9);
     (pre || []).forEach(function (a) { try { resolveOne(c, pid, a); } catch (e) { /* une action programmée impossible : on l'ignore */ } });
     var c0 = {}; D.REGIONS.forEach(function (x) { c0[x.id] = cubes(c, x.id, pid); });
-    var before = pollMap(c)[pid] || 0, entry;
+    var before = pollMap(c)[pid] || 0, entry, rg0 = act.region ? regScore(c, act.region, pid) : null;
     try { entry = resolveOne(c, pid, act); } catch (e) { return null; }
     if (!entry || !entry.ok) return null;
     updateAllControl(c);
     var after = pollMap(c)[pid] || 0, moved = [];
     D.REGIONS.forEach(function (x) { var d = cubes(c, x.id, pid) - c0[x.id]; if (d) moved.push({ rid: x.id, n: d }); });
-    return { pt: after - before, moved: moved };
+    // v4.9.2 : l'évolution de l'intention de vote DANS la région de l'action (avant → après)
+    var reg = act.region ? { rid: act.region, before: rg0, after: regScore(c, act.region, pid) } : null;
+    if (reg) reg.d = reg.after - reg.before;
+    return { pt: after - before, moved: moved, reg: reg };
   }
   /* Le registre du tour : d'où vient chaque hausse ou baisse de chaque parti */
   function ledStart(g) {
@@ -1419,6 +1422,8 @@
     // v4.6 : la photo des régions en début de tour (pour le filtre de carte « Progression »)
     g.regPrev = g.regNow || null; g.regNow = regionSnapshot(g);
   }
+  /* v4.9.2 : l'intention de vote d'un parti dans une région (en part des voix exprimées, « autres » compris) */
+  function regScore(g, rid, pid) { var sh = regionShares(g, rid); return (sh[pid] || 0) * (1 - othersShare(g, rid)); }
   /* Le score de chaque parti dans chaque région, en part des voix exprimées */
   function regionSnapshot(g) {
     var o = {};
@@ -1704,7 +1709,9 @@
       order.forEach(function (pid) {
         var act = (plans[pid] || [])[s];
         if (!(act && player(g, pid) && s < actionsFor(g, pid))) return;   // v4.4 : un parti rallié ne joue plus
+        var rg0 = act.region && g.regions[act.region] ? regScore(g, act.region, pid) : null;   // v4.9.2
         var entry = resolveOne(g, pid, act); log.push(entry);
+        if (rg0 != null) { var rg1 = regScore(g, act.region, pid); entry.reg = { rid: act.region, before: rg0, after: rg1, d: rg1 - rg0 }; }
         if (prev) {   // v4.5 : ce que cette action a changé au sondage, pour son auteur et pour les autres
           var now = pollMap(g), keys = {};
           // v4.8 : chaque parti une seule fois (avant, les clés étaient en double et le bilan comptait tout deux fois)
@@ -1720,7 +1727,8 @@
           });
           prev = now;
           (g.led.list[pid] = g.led.list[pid] || []).push({ action: entry.action, type: act.type, card: act.card || null, region: entry.region, theme: entry.theme, target: entry.target,
-            ok: entry.ok, gaffe: !!entry.gaffe, text: entry.text, pt: entry.pt || 0, est: act.est != null ? act.est : null, slot: s + 1 });
+            ok: entry.ok, gaffe: !!entry.gaffe, text: entry.text, pt: entry.pt || 0, est: act.est != null ? act.est : null, slot: s + 1,
+            reg: entry.reg || null, estReg: act.estReg != null ? act.estReg : null });
         }
       });
     }
@@ -2248,7 +2256,7 @@
   }
 
   var API = {
-    estimate: estimate, ledStart: ledStart, candQ: candQ, candD: candD, candFor: candFor, candMedia: candMedia, gaffeLimit: gaffeLimit, regionSnapshot: regionSnapshot,
+    estimate: estimate, ledStart: ledStart, regScore: regScore, candQ: candQ, candD: candD, candFor: candFor, candMedia: candMedia, gaffeLimit: gaffeLimit, regionSnapshot: regionSnapshot,
     createGame: createGame, startTurn: startTurn, resolveActions: resolveActions, resolveDebate: resolveDebate, setupDebate: setupDebate, debateCards: debateCards, duelOutcome: duelOutcome, debateCounter: debateCounter, aiDebatePick: aiDebatePick, debateWeights: debateWeights, setupFace: setupFace, resolveFace: resolveFace, audScore: audScore, duelResult: duelResult, replyPoints: replyPoints,
     isDebateTurn: isDebateTurn, spotlightTarget: spotlightTarget, applySpotlight: applySpotlight, endTurn: endTurn,
     finalScores: finalScores, firstRound: firstRound, openBetween: openBetween, betweenAct: betweenAct, betweenError: betweenError, answerCounter: answerCounter, answerBetweenOffer: answerBetweenOffer, setConsigne: setConsigne, concessionsFor: concessionsFor, dealChance: dealChance, aiBetweenStep: aiBetweenStep, aiConsigne: aiConsigne, rivalTargets: rivalTargets, threatCost: threatCost, transfersFor: transfersFor, projectSecond: projectSecond, closeBetween: closeBetween, autoBetween: autoBetween, objectiveMet: objectiveMet, objectiveProgress: objectiveProgress, objectiveShare: objectiveShare, terrainBreakdown: terrainBreakdown, crowdBonus: crowdBonus, crowdInfo: crowdInfo, turnOrder: turnOrder, election: election, poll: poll, votes: votes,

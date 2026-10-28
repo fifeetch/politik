@@ -8,6 +8,8 @@
 
   /* ctx : { g, me, pl (ton joueur), E (moteur), R (règles), sel (région choisie ou null) } */
   var TIPS = [
+    { id: 'couleurs', when: function (c) { return c.g.turn === 1; },
+      text: 'Tous les chiffres sont des % d\u2019intention de vote. 🟢 Vert : dans la région (Meeting, Mobiliser). 🔵 Bleu : dans toute la France (médias, ton score). C\u2019est le bleu qui décide de l\u2019élection.' },
     { id: 'sondage', when: function (c) { return c.g.turn === 1; },
       text: 'Le seul score qui compte, c’est ton % au sondage. Chaque action affiche ce qu’elle rapporte en points : vise les gros chiffres.' },
     { id: 'appui', when: function (c) { return c.g.turn === 1; },
