@@ -139,7 +139,7 @@
     // (élasticité e), mais en voix gagnées un gros parti profite un peu plus d'une même audience (temps de parole équitable).
     SEG.forEach(function (s) {
       var e = {}, se = 0, sa = 0;
-      ids.forEach(function (p) { e[p] = Math.max(0.3, Math.min(6, Math.pow(1 / (n * Math.max(1e-4, x[p][s])), 0.75))); se += x[p][s] * e[p]; sa += x[p][s] * e[p] * audOf(g, p, s); });
+      ids.forEach(function (p) { e[p] = Math.max(0.3, Math.min(6, Math.pow(1 / (n * Math.max(1e-4, x[p][s])), elastOf(g)))); se += x[p][s] * e[p]; sa += x[p][s] * e[p] * audOf(g, p, s); });
       var abar = se ? sa / se : 0;
       ids.forEach(function (p) { y[p] = y[p] || {}; y[p][s] = Math.max(x[p][s] * 0.2, x[p][s] * (1 + D.MEDIA.k * n * (audOf(g, p, s) - abar) * e[p])); });
     });
@@ -178,6 +178,9 @@
   /* v4.8 : le candidat crève l'écran (×1,2) ou passe mal (×0,85) — seulement sur les gains */
   function gaffeLimit(g, pid) { return candD(g, pid, 'gaffeur') ? 1 : 0; }
   function candMedia(g, pid) { return candQ(g, pid, 'plateau') ? 1.2 : candD(g, pid, 'terne') ? 0.85 : 1; }
+  /* v4.9.3 (Bêta) : l'usure des médias (part gardée d'un tour à l'autre) et le frein des médias pour les partis déjà hauts */
+  function keepOf(g) { return g && g.mode === 'beta' && D.BETA.media ? D.BETA.media.keep : D.MEDIA.keep; }
+  function elastOf(g) { return g && g.mode === 'beta' && D.BETA.media ? D.BETA.media.elast : 0.75; }
   function addAudience(g, pid, gains) {
     g.aud = g.aud || {}; g.aud[pid] = g.aud[pid] || {};
     var cm = candMedia(g, pid);
@@ -192,7 +195,7 @@
     if (!g.aud) return;
     var any = false;
     Object.keys(g.aud).forEach(function (p) { SEG.forEach(function (s) {
-      var v = (g.aud[p][s] || 0) * D.MEDIA.keep;
+      var v = (g.aud[p][s] || 0) * keepOf(g);
       if (Math.abs(v) < 0.05) v = 0; else any = true;
       g.aud[p][s] = v;
     }); });
@@ -217,7 +220,7 @@
     if (!g._cp || g._cpTurn !== g.turn) { g._cp = classPoll(g); g._cpTurn = g.turn; }
     var d = 0;
     var n = g.players.length;
-    SEG.forEach(function (s) { var x = Math.max(1e-4, g._cp[s][pid] || 0), e = Math.max(0.3, Math.min(6, Math.pow(1 / (n * x), 0.75))); d += NATSEGW[s] * D.MEDIA.k * n * x * e * (1 - x) * (gains[s] || 0); });
+    SEG.forEach(function (s) { var x = Math.max(1e-4, g._cp[s][pid] || 0), e = Math.max(0.3, Math.min(6, Math.pow(1 / (n * x), elastOf(g)))); d += NATSEGW[s] * D.MEDIA.k * n * x * e * (1 - x) * (gains[s] || 0); });
     return d;
   }
   /* ---------- v3.8 : les interviews (Télé, Matinale, 20h, Débat) ---------- */
@@ -243,7 +246,7 @@
      segBoost : un public particulier (la matinale d'une radio, par exemple) */
   function interview(g, pid, qid, fmt, segBoost) {
     var q = QBY[qid], th = q.theme, pl = player(g, pid), c = cred(g, pid, th), hot = isHot(g, th);
-    var maj = isMajority(pid), tw = (D.TEMPERS[pid] || { w: {} }).w, sc = D.MEDIA.scale[fmt || 'tele'];
+    var maj = isMajority(pid), tw = (D.TEMPERS[pid] || { w: {} }).w, sc = D.MEDIA.scale[fmt || 'tele'] * (fmt === 'debat' && isBeta(g) ? D.BETA.media.debate : 1);   // v4.9.3 (Bêta) : débat calmé
     var segs = {}; SEG.forEach(function (s) { segs[s] = (q.segs[s] || 0.5) * ((segBoost && segBoost[s]) || 1); });
     function card(key, quote, h, t, notes, extra, flat) {
       var gains = {};
@@ -1833,8 +1836,9 @@
     var mult = g.turn === R.maxTurns ? 2 : 1;
     var res = { ranking: list, duels: duels, rewards: [], grand: mult === 2, bingo: bingoDeb };
     function reward(pid, k) {
-      var gains = {}; SEG.forEach(function (s) { gains[s] = D.DEBATE.winBonus * k * mult; });
-      addAudience(g, pid, gains); res.rewards.push({ pid: pid, bonus: D.DEBATE.winBonus * k * mult });
+      var wb = D.DEBATE.winBonus * (isBeta(g) ? D.BETA.media.debate : 1);   // v4.9.3 (Bêta)
+      var gains = {}; SEG.forEach(function (s) { gains[s] = wb * k * mult; });
+      addAudience(g, pid, gains); res.rewards.push({ pid: pid, bonus: wb * k * mult });
     }
     var top = list[0].score, firsts = list.filter(function (x) { return x.score === top; });
     if (firsts.length === 1) {

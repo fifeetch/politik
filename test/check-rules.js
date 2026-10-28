@@ -663,7 +663,7 @@ section('Bêta : nouvelles mécaniques de campagne (v4.4)');
   // dynamique
   var g4 = E.createGame('SM', { seed: 173, base: 'sond', mode: 'beta' }); E.startTurn(g4);
   E.player(g4, 'SM').streak = 2; g4.lastPoll.SM = 0; E.endTurn(g4);
-  ok(E.player(g4, 'SM').streak === 3 && E.player(g4, 'SM').momentum === 2 && E.dynLabel(g4, 'SM') === 'vague', 'dynamique : 3 tours de hausse, la vague (Meeting +2)');
+  ok(E.player(g4, 'SM').streak === 3 && E.player(g4, 'SM').momentum === D.BETA.dyn.meeting && E.dynLabel(g4, 'SM') === 'vague', 'dynamique : 3 tours de hausse, la vague (Meeting +' + D.BETA.dyn.meeting + ')');
   // bombe
   var g5 = E.createGame('SM', { seed: 174, base: 'sond', mode: 'beta' }), hit = null;
   for (var k = 0; k < 8 && !hit; k++) { var inf = E.startTurn(g5); if (inf.bomb) hit = inf.bomb; g5.affairs.slice().forEach(function (a) { E.resolveAffair(g5, a.pid, 1); }); E.endTurn(g5); }

@@ -941,7 +941,7 @@
        Au-dessus de 1, chaque affaire coûte aussi plus cher : −1 soutien dans (chiffre − 1) × 0,75 régions parmi les plus fortes. */
     scandal: { MN: 5, FI: 3, SM: 1, HZ: 0.7, EM: 0.7, UG: 0.7, VP: 0.4, PC: 0.4, RQ: 0.6, DL: 0.4, LO: 0.4, MD: 0.4 },
     /* v4.4 : nouvelles mécaniques de campagne, à l'essai */
-    dyn: { step: 0.003, need: 3, meeting: 2, media: 1.3, downMeeting: -1, downMedia: 0.8 },   // 3 tours de hausse (≥ 0,3 pt) : la vague
+    dyn: { step: 0.003, need: 3, meeting: 1, media: 1.15, downMeeting: -1, downMedia: 0.8 },   // v4.9.3 : la vague adoucie (avant : Meeting +2, médias +30 %)   // 3 tours de hausse (≥ 0,3 pt) : la vague
     bomb: { from: 4, to: 7, eclair: 2, hit: 4, cas: 1, leader: 0.6 },                          // une bombe par partie, sur l'un des 2 premiers
     parr: { turn: 3, eclairTurn: 2, need: 500, auto: 5, perTurn: 40, action: 130, other: 220,
             base: { PC: 380, MD: 420, VP: 320, DL: 240, RQ: 280, LO: 220 } },                 // signatures de départ (élus locaux du parti)
@@ -950,11 +950,15 @@
     /* v4.8 : plus la campagne avance, plus il y a de monde aux meetings. Sans ça, un Meeting perdait plus de la moitié
        de sa valeur dès le tour 3 : chaque région se remplit de soutiens de tous les partis, et un soutien de plus y pèse moins.
        Bonus de soutiens selon l'avancée de la campagne (0 = début, 1 = dernier tour). */
-    crowd: { f: 1.5, max: 3 },   // gain de base × (soutiens de la région aujourd'hui ÷ au début − 1) × f, plafonné à × max
+    crowd: { f: 1.5, max: 3 },
+    /* v4.9.3 : les médias. debate = force du débat (÷ 1,5) ; keep = part de l'audience gardée d'un tour à l'autre (usure 10 % au lieu de 15 %) ;
+       elast = le frein des médias pour les partis déjà hauts (0,75 hors Bêta : plus bas = moins de frein). */
+    media: { debate: 0.67, keep: 0.9, elast: 0.6 },   // gain de base × (soutiens de la région aujourd'hui ÷ au début − 1) × f, plafonné à × max
     changes: [
       'Salle comble : plus une région s\u2019est remplie de soutiens depuis le début de la campagne, plus un Meeting y rassemble de monde. Un Meeting garde ainsi sa valeur au sondage jusqu\u2019au dernier tour (jusqu\u2019à 25 soutiens par parti et par région).',
       'Pas de prime au sortant : tenir une région ne donne plus de voix en plus.',
-      'Dynamique de campagne : 3 tours de hausse d\u2019affilée, c\u2019est la vague (Meeting +2, médias +30 %) ; 3 tours de baisse, la démobilisation (Meeting −1, médias −20 %).',
+      'Dynamique de campagne : 3 tours de hausse d\u2019affilée, c\u2019est la vague (Meeting +1, médias +15 %) ; 3 tours de baisse, la démobilisation (Meeting −1, médias −20 %).',
+      'Médias : le débat pèse un peu moins lourd (÷ 1,5), l\u2019effet des passages télé et radio s\u2019use moins vite (10 % par tour au lieu de 15 %), et un parti déjà haut garde mieux ses gains médiatiques.',
       'Bombe de campagne : une fois par partie (tours 4 à 7), une grosse affaire tombe sur l\u2019un des deux premiers des sondages.',
       'Les 500 parrainages : les partis sous 5 % doivent réunir 500 signatures d\u2019élus avant la fin du tour 3, sinon ils sont éliminés.',
       'Candidature commune : jusqu\u2019au tour 4, un parti peut proposer à un parti de son camp, proche et au moins deux fois plus petit, de se ranger derrière lui. 70 % de ses électeurs suivent. Le RN ne peut rallier que Rétroconquête ou Debout La Flemme.',
