@@ -355,14 +355,15 @@
   }
   var LEAN_NAT = {};
   function natLean(base) {
-    if (LEAN_NAT[base]) return LEAN_NAT[base];
+    var lk = base + '|' + editInfo(base).key;   // v4.8 : dépend aussi des scores réglés par le joueur
+    if (LEAN_NAT[lk]) return LEAN_NAT[lk];
     var t = { g: 0, c: 0, d: 0 }, sum = 0;
     D.REGIONS.forEach(function (r) {
       var ex = r.ins * (1 - r.abst / 100);
       D.PARTIES.forEach(function (p) { var b = BLOC[p.id]; if (!b) return; var v = ex * baseScore(base, r, p.id); t[b] += v; sum += v; });
     });
     Object.keys(t).forEach(function (k) { t[k] /= sum; });
-    return (LEAN_NAT[base] = t);
+    return (LEAN_NAT[lk] = t);
   }
   function minControl(pid) { return pid === 'MN' || pid === 'HZ' ? 4 : R.minControl; }
   /* Distance sur l'axe gauche-droite, de 1 (voisins) à 5 (opposés). v1.7 : positions décimales (12 partis), arrondies. */
@@ -748,10 +749,47 @@
     return n;
   })();
   var POLL_SCALE = (function () { var t = 0; Object.keys(D.POLLS.avg).forEach(function (k) { t += D.POLLS.avg[k]; }); return t > 100 ? 100 / t : 1; })();
-  function baseScore(base, r, pid) {
+  function rawBase(base, r, pid) {
     if (base === 'p2022') return (r.start22 && r.start22[pid]) || 0;
     if (base === 'sond') return NAT24[pid] ? (r.start[pid] || 0) * (D.POLLS.avg[pid] || 0) / NAT24[pid] * POLL_SCALE : 0;   // profil 2024 × tendance nationale des sondages
     return r.start[pid] || 0;
+  }
+  /* v4.8 : le score de départ réglé par le joueur (D.START_EDITS = { pid: % national voulu }).
+     Le parti réglé est multiplié pour atteindre ce score ; dans chaque région, tous les autres (petites listes comprises)
+     sont réduits ou grossis dans la même proportion, pour que le total reste à 100 %. */
+  D.START_EDITS = D.START_EDITS || {};
+  var EDIT_CACHE = { key: null, m: {}, raw: {} };
+  function natRaw(base, pid) {   // le score national « brut » d'un parti, pondéré par les votants de chaque région
+    var s = 0, w = 0;
+    D.REGIONS.forEach(function (r) { var ex = r.ins * (1 - r.abst / 100) * (1 - (r.blanc + r.nuls) / 100); s += ex * rawBase(base, r, pid); w += ex; });
+    return w ? s / w : 0;
+  }
+  function editInfo(base) {
+    var E0 = D.START_EDITS, ids = Object.keys(E0).filter(function (id) { return PARTY[id] && E0[id] > 0; });
+    var key = base + '|' + ids.map(function (id) { return id + ':' + E0[id]; }).join(',');
+    if (EDIT_CACHE.key === key) return EDIT_CACHE;
+    var m = {};
+    ids.forEach(function (id) { var p = natRaw(base, id); m[id] = p > 0.01 ? Math.max(0.02, Math.min(60, E0[id] / p)) : 1; });
+    EDIT_CACHE = { key: key, ids: ids, m: m };
+    return EDIT_CACHE;
+  }
+  function baseScore(base, r, pid) {
+    var v = rawBase(base, r, pid), ei = editInfo(base);
+    if (!ei.ids.length) return v;
+    var S = 0, Em = 0;
+    ei.ids.forEach(function (id) { var x = rawBase(base, r, id); S += x; Em += x * ei.m[id]; });
+    var cap = Em > 92 ? 92 / Em : 1;   // les partis réglés ne prennent jamais toute la région
+    if (ei.m[pid] != null) return v * ei.m[pid] * cap;
+    return S < 100 ? v * Math.max(0, 100 - Em * cap) / (100 - S) : v;
+  }
+  /* Le score national de départ d'un parti, tel que l'écran de choix l'affiche (réglages du joueur compris) */
+  function natScore(base, pid) {
+    function plain(id) { return base === 'sond' ? (D.POLLS.avg[id] || 0) : natRaw(base, id); }
+    var ei = editInfo(base);
+    if (!ei.ids.length) return plain(pid);
+    if (ei.m[pid] != null) return D.START_EDITS[pid];
+    var X = 0, P = 0; ei.ids.forEach(function (id) { X += D.START_EDITS[id]; P += plain(id); });
+    return P < 100 ? plain(pid) * Math.max(0, 100 - X) / (100 - P) : plain(pid);
   }
   /* Mode Réaliste : la part des « autres » (petites listes, partis absents de la partie). La campagne les écrase peu à peu :
      les électeurs se rangent derrière les grands candidats (vote utile). */
@@ -836,7 +874,7 @@
         var n = Math.max(1, Math.round(baseScore(g.base, r, pl.id) * R.startScale / 100));
         // v2.5 : un parti tout neuf n'a de sympathisants que là où ses thèmes parlent aux habitants, et dans ses régions de base
         var P = PARTY[pl.id];
-        if (P.custom) n = (P.bases.indexOf(r.id) >= 0 || (P.themes || []).some(function (t) { return r.concerns.indexOf(t) >= 0; })) ? 1 : 0;
+        if (P.custom && !D.START_EDITS[pl.id]) n = (P.bases.indexOf(r.id) >= 0 || (P.themes || []).some(function (t) { return r.concerns.indexOf(t) >= 0; })) ? 1 : 0;   // v4.8 : sauf si le joueur a réglé son score
         if (n) addCubes(g, r.id, pl.id, n);
       });
       // les électeurs des partis absents de la partie et des autres listes : « autres », qui pèsent dans les sondages
@@ -2228,7 +2266,7 @@
     traitOf: traitOf, nostalgiaPreview: nostalgiaPreview, petalsCount: petalsCount, lostPetals: lostPetals, jammed: jammed, zapped: zapped, isHidden: isHidden, retireeRegion: retireeRegion, resolvePrimaire: resolvePrimaire, actionsFor: actionsFor, centrists: centrists, tickBingo: tickBingo, ensureTraits: ensureTraits,
     classPoll: classPoll, addAudience: addAudience, previewGain: previewGain, quickGain: quickGain, interview: interview, applyInterview: applyInterview, aiAnswer: aiAnswer, pickQuestion: pickQuestion, stationFit: stationFit, stationBoost: stationBoost, vingtError: vingtError, matinaleError: matinaleError, stageRisk: stageRisk, isMajority: isMajority, audOf: audOf, SEG: SEG,
     applyMode: applyMode, isBeta: isBeta, parrDeadline: parrDeadline, removeParty: removeParty, unionError: unionError, unionChance: unionChance, defiError: defiError, defiAccept: defiAccept, dynLabel: dynLabel, spec: spec,
-    REG: REG, PARTY: PARTY, sigle: sigle, THEME: THEME, makeRng: makeRng, setFormat: setFormat, saveGame: saveGame, loadGame: loadGame, registerParty: registerParty, unregisterParty: unregisterParty
+    REG: REG, PARTY: PARTY, sigle: sigle, THEME: THEME, makeRng: makeRng, setFormat: setFormat, saveGame: saveGame, loadGame: loadGame, registerParty: registerParty, unregisterParty: unregisterParty, natScore: natScore, natRaw: natRaw
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;
   else root.PolitikEngine = API;

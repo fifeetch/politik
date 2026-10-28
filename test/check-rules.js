@@ -718,5 +718,45 @@ var AI = require('../js/ai.js');
   ok(good, 'le bilan de chaque tour tombe juste (somme des lignes = variation du sondage)');
 })();
 
+section('v4.8 : bilan détaillé, salle comble, personnalités, score de départ');
+(function () {
+  // le bilan : « Tes actions » = la somme des actions une par une (avant la v4.8, tout était compté deux fois)
+  var g = E.createGame('VP', { seed: 42 }), good = true, othOk = true;
+  for (var t = 0; t < 3; t++) {
+    var info = E.startTurn(g);
+    info.affairs.forEach(function (a) { E.resolveAffair(g, a.pid, 0); });
+    if (g.dilemma) E.resolveDilemma(g, g.dilemma.pid, 0);
+    var plans = {}; g.players.forEach(function (p) { plans[p.id] = AI.plan(g, p.id); }); E.resolveActions(g, plans);
+    var sp = E.spotlightTarget(g); if (sp) E.applySpotlight(g, sp, false);
+    var x = E.endTurn(g).bilan.rows.VP, sl = 0, so = 0;
+    x.list.forEach(function (a) { sl += a.pt; }); x.oth.forEach(function (o) { so += o.d; });
+    if (Math.abs(sl - x.acts) > 1e-9) good = false;
+    if (Math.abs(so - x.other) > 1e-9) othOk = false;
+  }
+  ok(good, 'bilan : « Tes actions » = la somme de tes actions une par une');
+  ok(othOk, 'bilan : « Événements et imprévus » = la somme des événements nommés');
+  // salle comble (Bêta) : plus la région s'est remplie, plus le Meeting rassemble
+  var gb = E.createGame('VP', { seed: 9, mode: 'beta' }); E.startTurn(gb);
+  ok(E.crowdBonus(gb, 'idf', 3) === 0, 'salle comble : rien au début de la campagne');
+  Object.keys(gb.regions.idf.cubes).forEach(function (pid) { gb.regions.idf.cubes[pid] *= 2; });
+  ok(E.crowdBonus(gb, 'idf', 3) >= 4, 'salle comble : région deux fois plus remplie → Meeting nettement plus gros');
+  var gr = E.createGame('VP', { seed: 9 }); E.startTurn(gr);
+  ok(E.crowdBonus(gr, 'idf', 3) === 0, 'salle comble : seulement en mode Bêta');
+  // personnalités : qualité et défaut
+  var gc = E.createGame('FI', { seed: 5, cands: { FI: 0, MN: 0 } });
+  ok(gc.players[0].cand && gc.players[0].cand.q === 'tribun', 'le chef de file de LFI est Tribun');
+  ok(E.player(gc, 'MN').cas === 2, 'Vieille casserole : 2 casseroles au départ');
+  E.startTurn(gc);
+  var bd = E.terrainBreakdown(gc, 'FI', 'idf', 'pouvoir');
+  ok(bd.parts.some(function (x) { return x.k === 'cand' && x.n === 1; }), 'Tribun : +1 soutien en Meeting');
+  var gn = E.createGame('FI', { seed: 5 });
+  ok(!gn.players[0].cand, 'sans choix de candidat, aucune qualité ni défaut (anciennes parties)');
+  // score de départ réglé
+  D.START_EDITS = { SM: 22 };
+  var gs = E.createGame('SM', { seed: 6, base: 'e2024' }), ps = E.poll(gs).filter(function (x) { return x.pid === 'SM'; })[0].pct;
+  ok(Math.abs(100 * ps - 22) < 1.5, 'score de départ réglé à 22 % : sondage de départ ' + (100 * ps).toFixed(1) + ' %');
+  D.START_EDITS = {};
+})();
+
 console.log('\n' + passes + ' vérifications réussies, ' + fails + ' en échec.');
 process.exit(fails ? 1 : 0);

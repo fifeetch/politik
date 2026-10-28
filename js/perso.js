@@ -92,8 +92,49 @@
   function reset(A) {
     Object.keys(backup).forEach(function (pid) { var p = E.PARTY[pid], b = backup[pid]; p.candidate = b.candidate; p.candTitle = b.candTitle; D.TEMPERS[pid] = b.temper; if (A) A.setPortrait(pid, null); });
     backup = {};
+    restoreEdits(A);
     D.PARTIES.filter(function (p) { return p.custom; }).forEach(function (p) { E.unregisterParty(p.id); });
   }
+
+  /* ---------- v4.8 : modifier un parti existant, et choisir son candidat ----------
+     edits = { pid: { name, short, sigle, color, cand (n° de la personnalité), score (% de départ) } }, gardé sur le téléphone.
+     On garde une copie des valeurs d'origine pour tout remettre à zéro. */
+  var EDIT_KEYS = ['name', 'short', 'sigle', 'color', 'ink', 'candidate', 'candTitle'];
+  var orig = {};
+  function people() { return root.PolitikPeople || (node ? require('./people.js') : null); }
+  function personFace(pid, idx) {
+    var P = people(), x = P && P.PEOPLE[pid] && P.PEOPLE[pid][idx]; if (!x) return null;
+    return Object.assign(P.faceOf(x[0], x[1]), { bg: lighten(E.PARTY[pid].color, 0.55) });
+  }
+  function applyEdits(edits, A) {
+    restoreEdits(A);
+    D.START_EDITS = {};
+    Object.keys(edits || {}).forEach(function (pid) {
+      var p = E.PARTY[pid], e = edits[pid]; if (!p || p.custom || !e) return;
+      orig[pid] = {}; EDIT_KEYS.forEach(function (k) { orig[pid][k] = p[k]; });
+      if (e.name) p.name = e.name;
+      if (e.short) p.short = e.short;
+      if (e.sigle) p.sigle = e.sigle;
+      if (e.color) { p.color = e.color; p.ink = inkOf(e.color); }
+      var P = people(), list = P && P.PEOPLE[pid];
+      if (e.cand && list && list[e.cand]) {
+        p.candidate = list[e.cand][0]; p.candTitle = list[e.cand][4];
+        if (A) { var idx = e.cand; A.setPortrait(pid, function () { return A.face(personFace(pid, idx)); }); }
+      }
+      if (e.score > 0) D.START_EDITS[pid] = e.score;
+    });
+  }
+  function restoreEdits(A) {
+    Object.keys(orig).forEach(function (pid) {
+      var p = E.PARTY[pid]; if (!p) return;
+      EDIT_KEYS.forEach(function (k) { p[k] = orig[pid][k]; });
+      if (A && !backup[pid]) A.setPortrait(pid, null);
+    });
+    orig = {};
+    D.START_EDITS = {};
+  }
+  /* Les valeurs d'origine d'un parti (même s'il a été modifié) */
+  function original(pid) { var p = E.PARTY[pid]; if (!p) return null; var o = {}; EDIT_KEYS.forEach(function (k) { o[k] = orig[pid] ? orig[pid][k] : p[k]; }); return o; }
   /* Fonder son parti pour de bon (juste avant de créer la partie) */
   function found(def, ch, A) {
     var p = buildParty(def, ch);
@@ -103,6 +144,7 @@
   }
 
   var API = { TRAITS: TRAITS, FACE: FACE, COLORS: COLORS, defaultChar: defaultChar, randomName: randomName, randomPartyName: randomPartyName, sigleOf: sigleOf, sigleError: sigleError,
-    familyOf: familyOf, buildParty: buildParty, temperOf: temperOf, faceCfg: faceCfg, lead: lead, reset: reset, found: found, lighten: lighten };
+    familyOf: familyOf, buildParty: buildParty, temperOf: temperOf, faceCfg: faceCfg, lead: lead, reset: reset, found: found, lighten: lighten,
+    applyEdits: applyEdits, restoreEdits: restoreEdits, original: original, personFace: personFace, inkOf: inkOf };
   if (node) module.exports = API; else root.PolitikPerso = API;
 })(this);

@@ -18,7 +18,7 @@ for (var i = 0; i < N; i++) {
   var parties = all.slice();
   for (var k = parties.length - 1; k > 0; k--) { var j = Math.floor(rng() * (k + 1)), tmp = parties[k]; parties[k] = parties[j]; parties[j] = tmp; }
   parties = parties.slice(0, NP);
-  var g = E.createGame(null, { seed: 5000 + i, aiParties: parties, mode: process.env.MODE, base: process.env.BASE, format: process.env.FORMAT });
+  var g = E.createGame(null, { seed: 5000 + i, aiParties: parties, mode: process.env.MODE, base: process.env.BASE, format: process.env.FORMAT, cands: process.env.CANDS ? {} : null });   // v4.8 : CANDS=1 → chaque parti avec son chef de file (qualité et défaut)
   try {
     while (!g.over) {
       var info = E.startTurn(g);

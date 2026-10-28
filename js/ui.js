@@ -13,6 +13,25 @@
   /* v2.5 : ton personnage et ton parti (gardés d'une partie à l'autre) */
   var PS = window.PolitikPerso, perso = null, founded = null, leadOn = false;
   try { perso = JSON.parse(localStorage.getItem('politik_perso') || 'null'); founded = JSON.parse(localStorage.getItem('politik_parti') || 'null'); leadOn = localStorage.getItem('politik_lead') === '1'; } catch (e) {}
+  /* v4.8 : les partis modifiés par le joueur (nom, sigle, couleur, candidat, score de départ) */
+  var partyEdits = {};
+  try { partyEdits = JSON.parse(localStorage.getItem('politik_edits') || '{}') || {}; } catch (e) { partyEdits = {}; }
+  function saveEdits() { try { localStorage.setItem('politik_edits', JSON.stringify(partyEdits)); } catch (e) {} }
+  function editOf(pid) { return partyEdits[pid] || (partyEdits[pid] = {}); }
+  function cleanEdit(pid) { var e = partyEdits[pid]; if (e && !Object.keys(e).some(function (k) { return e[k] != null && e[k] !== ''; })) delete partyEdits[pid]; }
+  /* Applique les modifications (et le score de ton parti fondé) aux données du jeu */
+  function applyEdits() {
+    PS.applyEdits(partyEdits, A);
+    if (founded && founded.score > 0) D.START_EDITS[founded.sigle] = founded.score;
+  }
+  /* Les candidats de tous les partis pour la partie : la personnalité choisie, ou toi */
+  function candsOpt(pid) {
+    var c = {};
+    D.PARTIES.forEach(function (p) { c[p.id] = (partyEdits[p.id] && partyEdits[p.id].cand) || 0; });
+    var meLead = (founded && pid === founded.sigle) || (leadOn && perso && perso.name);
+    if (meLead && perso) c[pid] = { name: perso.name, q: perso.q || 'tribun', d: perso.d || 'terne', title: 'toi' };
+    return c;
+  }
   function savePerso() { try { localStorage.setItem('politik_perso', JSON.stringify(perso)); localStorage.setItem('politik_parti', JSON.stringify(founded)); localStorage.setItem('politik_lead', leadOn ? '1' : '0'); } catch (e) {} }
   var gameMode = 'reel';   // v1.1 : 'reel' (Réaliste) ou 'egal' (Simulation : égalité des chances)
   var gameBase = 'e2024';  // v1.2 : point de départ du mode Réaliste : 'p2022', 'e2024' ou 'sond'
@@ -108,7 +127,7 @@
   function resumeGame(from) {
     var sv = (from && from.game) ? from : readSave(); if (!sv) return;
     perso = sv.perso; founded = sv.founded; leadOn = sv.lead;
-    PS.reset(A);
+    PS.reset(A); applyEdits();
     if (sv.foundedOn && founded) PS.found(founded, perso, A);
     else if (leadOn && perso && perso.name) PS.lead(sv.me, perso, A);
     g = E.loadGame(sv.game); me = sv.me; quickGame = sv.quick; selected = null; queue = []; theme = null; themePicked = false; advisorHidden = false;
@@ -250,13 +269,9 @@
 
   /* ---------- v1.2 : paramètres de la partie ---------- */
   /* Score national de départ d'un parti, en %, pour un point de départ donné */
-  function natScore(base, pid) {
-    if (base === 'sond') return D.POLLS.avg[pid];
-    var s = 0, w = 0;
-    D.REGIONS.forEach(function (r) { var ex = r.ins * (1 - r.abst / 100) * (1 - (r.blanc + r.nuls) / 100); s += ex * E.baseScore(base, r, pid); w += ex; });
-    return s / w;
-  }
+  function natScore(base, pid) { return E.natScore(base, pid); }   // v4.8 : réglages du joueur compris
   function renderSetup() {
+    PS.reset(A); applyEdits();   // v4.8 : l'aperçu des scores tient compte de tes réglages
     var modes = [['reel', 'Réaliste', 'Les partis partent avec leurs vrais scores.'], ['egal', 'Simulation', 'Tout le monde part du même point : mêmes électeurs partout, aucun bonus caché.'], ['beta', D.BETA.name, D.BETA.text]];
     $('mode-pick').innerHTML = modes.map(function (m) {
       return '<button type="button" role="radio" class="mode-btn' + (gameMode === m[0] ? ' on' : '') + '" data-mode="' + m[0] + '" aria-checked="' + (gameMode === m[0]) + '"><b>' + m[1] + '</b><small>' + m[2] + '</small></button>';
@@ -307,6 +322,7 @@
   /* ---------- Choix du parti ---------- */
   function renderChoose() {
     PS.reset(A);   // v2.5 : les partis retrouvent leurs candidats, le parti fondé n'est pas encore en lice
+    applyEdits();   // v4.8 : tes modifications de partis
     renderPersoStrip();
     $('choose-kicker').textContent = gameFormat === 'eclair' ? '⚡ Campagne éclair : 3 tours' : quick ? 'Touche un parti, puis lance-toi' : gameMode === 'egal' ? 'Simulation : tout le monde part à égalité' : (gameMode === 'beta' ? '🧪 Bêta' : 'Réaliste') + ' : départ « ' + D.BASES[gameBase].short + ' »';
     $('screen-choose').classList.toggle('quick', quick);
@@ -338,13 +354,94 @@
     });
     var p = party(chosen), lead = leadOn && perso && perso.name;
     $('party-detail').innerHTML = '<div class="cand-line">' + (lead ? A.face(PS.faceCfg(perso, p.color)) : A.portrait(p.id)) + '<div><b class="cand-name">' + esc(lead ? perso.name : p.candidate) + '</b><span>' + (lead ? 'à la tête du parti · ' + esc(PS.TRAITS[perso.trait].name.toLowerCase()) : esc(p.candTitle) + ' · tempérament ' + D.TEMPERS[p.id].label) + '</span></div></div>' +
-      (gameMode !== 'egal' ? '<div class="score24"><span>Score de départ</span><b>' + pctFr(natScore(gameBase, p.id) / 100, 1) + ' %</b><small>' + esc(D.BASES[gameBase].text) + ' <button type="button" class="linkbtn" data-learn="' + D.BASES[gameBase].learn + '">Pourquoi ce chiffre ?</button></small></div>'
+      candPickHtml(p.id, lead) +
+      (gameMode !== 'egal' ? scoreHtml(p.id, D.BASES[gameBase].text, '<button type="button" class="linkbtn" data-learn="' + D.BASES[gameBase].learn + '">Pourquoi ce chiffre ?</button>')
         : '<div class="score24"><span>Mode Égalité</span><b>2</b><small>électeurs dans chaque région pour chaque parti : personne ne part en tête.</small></div>') +
       axisHtml(p.id) +
  ((p.pos <= 1 || p.pos >= 6) ? '<div><b>Au bout de l\'axe.</b> Au second tour, les reports de voix seront plus durs à obtenir : il faudra bien négocier entre les deux tours.</div>' : '') +
       '<div><b>Force.</b> ' + esc(p.force) + '</div><div><b>Faiblesse.</b> ' + esc(p.weakness) +
       '</div><div><b>Bases.</b> ' + p.bases.map(function (r) { return E.REG[r].name; }).join(', ') +
-      '</div><div><b>Cartes.</b> ' + p.cards.map(function (c) { return D.CARDS[c].name; }).join(' · ') + '</div>' + traitHtml(p.id, false);
+      '</div><div><b>Cartes.</b> ' + p.cards.map(function (c) { return D.CARDS[c].name; }).join(' · ') + '</div>' + traitHtml(p.id, false) +
+      '<div class="stack pe-actions"><button type="button" class="btn" id="pe-edit">✏️ Modifier ce parti</button>' + (partyEdits[p.id] ? '<button type="button" class="linkbtn" id="pe-reset">Remettre ce parti d\u2019origine</button>' : '') + '</div>';
+    wireChooseDetail(p.id, lead);
+  }
+  /* ---------- v4.8 : choisir le candidat du parti ---------- */
+  function qdHtml(q, d) {
+    var Q = D.QUALITIES[q], Dd = D.DEFECTS[d];
+    return (Q ? '<span class="qd qd-q" title="' + esc(Q.text) + '">' + Q.icon + ' ' + esc(Q.name) + '</span>' : '') + (Dd ? '<span class="qd qd-d" title="' + esc(Dd.text) + '">' + Dd.icon + ' ' + esc(Dd.name) + '</span>' : '');
+  }
+  function candPickHtml(pid, lead) {
+    var PP = window.PolitikPeople; if (!PP) return '';
+    if (lead) {
+      var q = perso.q || 'tribun', d = perso.d || 'terne';
+      return '<div class="cand-pick"><span class="kicker">Ton candidat : toi</span><div class="qd-row">' + qdHtml(q, d) + '</div><p class="hint">' + esc(D.QUALITIES[q].text) + ' ' + esc(D.DEFECTS[d].text) + ' Change-les avec « Modifier » sur ton personnage.</p></div>';
+    }
+    var list = PP.peopleOf(pid), cur = (partyEdits[pid] && partyEdits[pid].cand) || 0, sel = list[cur] || list[0];
+    if (!list.length) return '';
+    return '<div class="cand-pick"><span class="kicker">Choisis ton candidat · ' + list.length + ' personnalités</span><div class="cp-list">' + list.map(function (x) {
+      return '<button type="button" class="cp-card" data-cand="' + x.idx + '" aria-pressed="' + (x.idx === cur) + '"><span class="cp-face">' + A.face(PS.personFace(pid, x.idx)) + '</span><b>' + esc(x.name) + '</b><small>' + (x.leader ? 'chef de file' : esc(x.title)) + '</small><span class="qd-row">' + qdHtml(x.q, x.d) + '</span></button>';
+    }).join('') + '</div><p class="hint cp-why"><b>' + esc(sel.name) + '</b> · ' + D.QUALITIES[sel.q].icon + ' ' + esc(D.QUALITIES[sel.q].text) + ' ' + D.DEFECTS[sel.d].icon + ' ' + esc(D.DEFECTS[sel.d].text) + '</p></div>';
+  }
+  /* ---------- v4.8 : régler le score de départ ---------- */
+  function scoreHtml(pid, text, extra) {
+    var cur = natScore(gameBase, pid), set = partyEdits[pid] && partyEdits[pid].score;
+    var orig0 = (function () { var keep = D.START_EDITS; D.START_EDITS = {}; var v = E.natScore(gameBase, pid); D.START_EDITS = keep; return v; })();
+    var max = Math.max(25, Math.ceil(orig0 + 5)), val = Math.round(cur * 2) / 2;
+    return '<div class="score24 score-set"><span>Score de départ</span><b id="sc-val">' + pctFr(cur / 100, 1) + ' %</b>' +
+      '<input type="range" id="sc-range" class="sc-range" min="1" max="' + max + '" step="0.5" value="' + val + '" aria-label="Score de départ en %">' +
+      '<small>' + (set ? 'Réglé par toi (d\u2019origine : ' + pctFr(orig0 / 100, 1) + ' %). Les autres partis s\u2019ajustent en proportion. <button type="button" class="linkbtn" id="sc-reset">Revenir au vrai score</button>'
+        : esc(text) + ' ' + (extra || '') + ' Glisse le curseur pour changer : les autres partis s\u2019ajustent en proportion.') + '</small></div>';
+  }
+  function wireScore(pid, isFounded) {
+    var rg = $('sc-range'); if (!rg) return;
+    rg.addEventListener('input', function () { $('sc-val').textContent = String(rg.value).replace('.', ',') + ' %'; });
+    rg.addEventListener('change', function () {
+      var v = +rg.value;
+      if (isFounded) { founded.score = v; savePerso(); } else { editOf(pid).score = v; saveEdits(); }
+      renderChoose();
+    });
+    if ($('sc-reset')) $('sc-reset').addEventListener('click', function () {
+      if (isFounded) { delete founded.score; savePerso(); } else { delete editOf(pid).score; cleanEdit(pid); saveEdits(); }
+      renderChoose();
+    });
+  }
+  function wireChooseDetail(pid, lead) {
+    var onC = document.querySelector('.cp-card[aria-pressed="true"]');   // le candidat choisi reste en vue
+    if (onC && onC.parentNode) onC.parentNode.scrollLeft = Math.max(0, onC.offsetLeft - onC.parentNode.offsetLeft - 8);
+    Array.prototype.forEach.call(document.querySelectorAll('[data-cand]'), function (b) {
+      b.addEventListener('click', function () { var i = +b.getAttribute('data-cand'); if (i) editOf(pid).cand = i; else { delete editOf(pid).cand; cleanEdit(pid); } saveEdits(); renderChoose(); });
+    });
+    wireScore(pid, false);
+    $('pe-edit').addEventListener('click', function () { editParty(pid); });
+    if ($('pe-reset')) $('pe-reset').addEventListener('click', function () {
+      modal({ title: 'Remettre ' + PS.original(pid).name + ' d\u2019origine ?', html: '<p>Nom, sigle, couleur, candidat et score de départ reviennent comme au début.</p>',
+        buttons: [{ label: 'Remettre d\u2019origine', primary: true, onClick: function () { delete partyEdits[pid]; saveEdits(); renderChoose(); } }, { label: 'Annuler' }] });
+    });
+  }
+  /* ---------- v4.8 : modifier un parti existant (nom, nom court, sigle, couleur) ---------- */
+  function editParty(pid) {
+    var o = PS.original(pid), e = JSON.parse(JSON.stringify(partyEdits[pid] || {})), p = party(pid);
+    var cols = [o.color].concat(PS.COLORS, ['#C8323C', '#E87FA4', '#3B8A45', '#F5B335', '#2F6EBA', '#1F2A55', '#8B1E1E', '#E1663A']).filter(function (c, i, a) { return a.indexOf(c) === i; });
+    var curCol = e.color || o.color;
+    var html = '<label class="kicker" for="pe-name">Nom du parti</label><input id="pe-name" class="pc-input" maxlength="32" value="' + esc(e.name || o.name) + '">' +
+      '<label class="kicker" for="pe-short">Nom court (cartes, sondages)</label><input id="pe-short" class="pc-input" maxlength="22" value="' + esc(e.short || o.short) + '">' +
+      '<div class="fp-two"><div><label class="kicker" for="pe-sig">Sigle</label><input id="pe-sig" class="pc-input fp-sig" maxlength="4" value="' + esc(e.sigle || o.sigle || pid) + '"></div><div><span class="kicker">Couleur</span><div class="pc-row">' +
+      cols.map(function (c) { return '<button type="button" class="pc-sw" data-pcol="' + c + '" aria-pressed="' + (c === curCol) + '" style="background:' + c + '" aria-label="couleur"></button>'; }).join('') + '</div></div></div>' +
+      '<p class="hint">D\u2019origine : ' + esc(o.name) + ' (' + esc(o.sigle || pid) + '). Le candidat et le score de départ se choisissent juste sous le portrait.</p><p class="hint" id="pe-err"></p>';
+    modal({ kicker: 'Modifier un parti', title: p.name, html: html, buttons: [{ label: 'Enregistrer', primary: true, keep: true, onClick: function () {
+      var nm = $('pe-name').value.trim(), sh = $('pe-short').value.trim(), sg = $('pe-sig').value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+      if (!nm || !sh) { $('pe-err').textContent = 'Le nom et le nom court ne peuvent pas être vides.'; return; }
+      if (!/^[A-Z0-9]{2,4}$/.test(sg)) { $('pe-err').textContent = 'Le sigle doit faire 2 à 4 lettres.'; return; }
+      var ed = editOf(pid);
+      ed.name = nm !== o.name ? nm : undefined; ed.short = sh !== o.short ? sh : undefined; ed.sigle = sg !== (o.sigle || pid) ? sg : undefined; ed.color = curCol !== o.color ? curCol : undefined;
+      Object.keys(ed).forEach(function (k) { if (ed[k] === undefined) delete ed[k]; }); cleanEdit(pid); saveEdits();
+      closeModal(); renderChoose(); toast('✏️ Parti modifié.');
+    } }, { label: 'Annuler' }],
+      onOpen: function () {
+        Array.prototype.forEach.call(document.querySelectorAll('[data-pcol]'), function (b) {
+          b.addEventListener('click', function () { curCol = b.getAttribute('data-pcol'); Array.prototype.forEach.call(document.querySelectorAll('[data-pcol]'), function (x) { x.setAttribute('aria-pressed', x === b); }); });
+        });
+      } });
   }
   /* v2.0 : en partie rapide, le programme conseillé du parti est pris d'office */
   $('btn-start').addEventListener('click', function () {
@@ -354,7 +451,7 @@
   });
   /* v2.5 : juste avant la partie, ton parti entre en lice, ou tu prends la tête du parti choisi */
   function applyPerso() {
-    PS.reset(A);
+    PS.reset(A); applyEdits();
     if (founded && chosen === founded.sigle) PS.found(founded, perso, A);
     else if (leadOn && perso && perso.name) PS.lead(chosen, perso, A);
   }
@@ -377,15 +474,19 @@
       $('party-grid').appendChild(b);
     });
     $('party-detail').innerHTML = '<div class="cand-line">' + A.face(PS.faceCfg(perso || PS.defaultChar(), p.color)) + '<div><b class="cand-name">' + esc((perso && perso.name) || 'Toi') + '</b><span>à la tête de ' + esc(p.name) + ' · ' + esc(PS.TRAITS[(perso || PS.defaultChar()).trait].name.toLowerCase()) + '</span></div></div>' +
-      '<div class="score24"><span>Score de départ</span><b>≈ ' + D.RULES.novelty.start + ' %</b><small>Un parti tout neuf : des sympathisants seulement là où tes thèmes parlent aux habitants.</small></div>' +
+      (gameMode !== 'egal' ? '<div class="score24 score-set"><span>Score de départ</span><b id="sc-val">' + pctFr((founded.score || D.RULES.novelty.start) / 100, 1) + ' %</b>' +
+        '<input type="range" id="sc-range" class="sc-range" min="1" max="25" step="0.5" value="' + (founded.score || D.RULES.novelty.start) + '" aria-label="Score de départ en %">' +
+        '<small>' + (founded.score ? 'Réglé par toi. Les autres partis s\u2019ajustent en proportion. <button type="button" class="linkbtn" id="sc-reset">Revenir à 3 % (parti tout neuf)</button>' : 'Un parti tout neuf part d\u2019environ 3 %. Glisse le curseur (1 à 25 %) : les autres partis s\u2019ajustent en proportion.') + '</small></div>' : '') +
+      '<div class="cand-pick"><span class="kicker">Ton candidat : toi</span><div class="qd-row">' + qdHtml((perso && perso.q) || 'tribun', (perso && perso.d) || 'terne') + '</div></div>' +
       axisHtmlPos(p) +
       '<div><b>Tes thèmes.</b> ' + p.themes.map(function (t) { return th(t).icon + ' ' + esc(th(t).name); }).join(' · ') + '</div>' +
       '<div><b>Force.</b> ' + esc(p.force) + '</div><div><b>Faiblesse.</b> ' + esc(p.weakness) + '</div>' +
       '<div><b>Bases.</b> ' + p.bases.map(function (r) { return E.REG[r].name; }).join(', ') + '</div>' +
-      '<div class="stack"><button type="button" class="btn" id="fp-edit">Modifier ton parti</button><button type="button" class="linkbtn" id="fp-del">Dissoudre ton parti</button></div>';
+      '<div class="stack"><button type="button" class="btn" id="fp-edit">✏️ Modifier ton parti</button><button type="button" class="btn btn-ghost" id="fp-del">🗑️ Supprimer ton parti</button></div>';
+    wireScore(founded.sigle, true);
     $('fp-edit').onclick = function () { foundParty(); };
-    $('fp-del').onclick = function () { modal({ kicker: 'Ton parti', title: 'Dissoudre ' + founded.name + ' ?', html: '<p>Ton parti disparaît. Ton personnage reste : tu pourras prendre la tête d\'un autre parti, ou en fonder un nouveau.</p>',
-      buttons: [{ label: 'Dissoudre', primary: true, onClick: function () { founded = null; chosen = 'VP'; savePerso(); renderChoose(); } }, { label: 'Annuler' }] }); };
+    $('fp-del').onclick = function () { modal({ kicker: 'Ton parti', title: 'Supprimer ' + founded.name + ' ?', html: '<p>Ton parti disparaît. Ton personnage reste : tu pourras prendre la tête d\'un autre parti, ou en fonder un nouveau.</p>',
+      buttons: [{ label: 'Supprimer', primary: true, onClick: function () { founded = null; chosen = 'VP'; savePerso(); renderChoose(); } }, { label: 'Annuler' }] }); };
   }
   /* L'axe avec ton parti placé parmi les 12 */
   function axisHtmlPos(p) {
@@ -418,6 +519,13 @@
       '<div class="pc-row"><button type="button" class="pc-chip" id="pc-beard" aria-pressed="' + !!c.face.beard + '">Barbe</button></div>' +
       '<div class="kicker">Ton style en débat</div><div class="pick">' + Object.keys(PS.TRAITS).map(function (k) {
         var t = PS.TRAITS[k]; return '<button type="button" class="pick-row pc-trait" data-trait="' + k + '" aria-pressed="' + (c.trait === k) + '"><span class="lc-ai">' + t.icon + '</span><span class="pick-txt"><b>' + esc(t.name) + '</b><small>' + esc(t.text) + '</small></span></button>';
+      }).join('') + '</div>' +
+      // v4.8 : une qualité et un défaut, comme les personnalités des partis
+      '<div class="kicker">Ta qualité</div><div class="pick">' + Object.keys(D.QUALITIES).map(function (k) {
+        var t = D.QUALITIES[k]; return '<button type="button" class="pick-row" data-q="' + k + '" aria-pressed="' + ((c.q || 'tribun') === k) + '"><span class="lc-ai">' + t.icon + '</span><span class="pick-txt"><b>' + esc(t.name) + '</b><small>' + esc(t.text) + '</small></span></button>';
+      }).join('') + '</div>' +
+      '<div class="kicker">Ton défaut</div><div class="pick">' + Object.keys(D.DEFECTS).map(function (k) {
+        var t = D.DEFECTS[k]; return '<button type="button" class="pick-row" data-d="' + k + '" aria-pressed="' + ((c.d || 'terne') === k) + '"><span class="lc-ai">' + t.icon + '</span><span class="pick-txt"><b>' + esc(t.name) + '</b><small>' + esc(t.text) + '</small></span></button>';
       }).join('') + '</div>';
     modal({ kicker: 'Ton personnage', title: 'Qui es-tu ?', html: html, buttons: [{ label: 'C\'est moi !', primary: true, onClick: function () {
       c.name = ($('pc-name') ? $('pc-name').value : c.name).trim() || PS.randomName(); perso = c; savePerso(); if (onDone) onDone();
@@ -436,6 +544,11 @@
         });
         Array.prototype.forEach.call(document.querySelectorAll('[data-trait]'), function (b) {
           b.addEventListener('click', function () { c.trait = b.getAttribute('data-trait'); Array.prototype.forEach.call(document.querySelectorAll('[data-trait]'), function (x) { x.setAttribute('aria-pressed', x === b); }); });
+        });
+        ['q', 'd'].forEach(function (key) {   // v4.8
+          Array.prototype.forEach.call(document.querySelectorAll('[data-' + key + ']'), function (b) {
+            b.addEventListener('click', function () { c[key] = b.getAttribute('data-' + key); Array.prototype.forEach.call(document.querySelectorAll('[data-' + key + ']'), function (x) { x.setAttribute('aria-pressed', x === b); }); });
+          });
         });
       } });
   }
@@ -640,7 +753,7 @@
 
   /* ---------- Partie ---------- */
   function startGame(pid, prog, fin) {
-    g = E.createGame(pid, { mode: gameMode, base: gameBase, format: gameFormat }); me = pid; selected = null; queue = []; theme = null; themePicked = false; advisorHidden = false;
+    g = E.createGame(pid, { mode: gameMode, base: gameBase, format: gameFormat, cands: candsOpt(pid) }); me = pid; selected = null; queue = []; theme = null; themePicked = false; advisorHidden = false;
     quickGame = quick;
     E.setProgramme(g, pid, prog || party(pid).programme, fin || party(pid).financing);
     go('game');
@@ -649,7 +762,7 @@
   function mePl() { return E.player(g, me); }
   /* Raccourci : la campagne se joue toute seule, et tu l'emportes de justesse au second tour */
   function skipCampaign(pid, prog, fin) {
-    g = E.createGame(pid, { mode: gameMode, base: gameBase, format: gameFormat }); me = pid;
+    g = E.createGame(pid, { mode: gameMode, base: gameBase, format: gameFormat, cands: candsOpt(pid) }); me = pid;
     E.setProgramme(g, pid, prog, fin);
     while (!g.over) {
       var info = E.startTurn(g);
@@ -2873,6 +2986,8 @@
       }).join('') + (pl.financing || []).map(function (id) { return line('🏦', esc(E.measure(id).name)); }).join('') +
       line('❤️', 'Régions de cœur : ' + E.echoRanks(g, me).good.map(function (r) { return SHORT[r]; }).join(', ') + ' · 👎 hostiles : ' + E.echoRanks(g, me).bad.map(function (r) { return SHORT[r]; }).join(', ')) + '</div>' +
       '<div class="brief"><div class="kicker">Ton candidat</div>' +
+      (pl.cand && pl.cand.q ? line(D.QUALITIES[pl.cand.q].icon, '<b>' + esc(D.QUALITIES[pl.cand.q].name) + '</b> — ' + esc(D.QUALITIES[pl.cand.q].text)) : '') +
+      (pl.cand && pl.cand.d ? line(D.DEFECTS[pl.cand.d].icon, '<b>' + esc(D.DEFECTS[pl.cand.d].name) + '</b> — ' + esc(D.DEFECTS[pl.cand.d].text)) : '') +
       line('⚡', '<b>Forme ' + pl.forme + ' / ' + R.formeMax + '</b> — Meeting et Télé en coûtent 1. À 0, risque de gaffe. +' + (R.formeRegen + (me === 'EM' ? 1 : 0)) + ' par tour.') +
       line('🍳', '<b>' + pl.cas + ' casserole' + (pl.cas > 1 ? 's' : '') + '</b> — chacune = ' + Math.round(R.affairPerCasserole * 100) + ' % de risque d\'affaire par tour. Attaquer, enquêter, trahir, le 49.3 et certains choix en ajoutent.') +
       line(pl.momentum > 0 ? '↗' : pl.momentum < 0 ? '↘' : '→', pl.momentum > 0 ? '<b>En dynamique</b> : +1 soutien sur tes Meetings.' : pl.momentum < 0 ? '<b>Passage à vide</b> : −1 soutien sur tes Meetings.' : '<b>Dynamique stable.</b> Gagne 1,5 point au sondage en un tour pour être en dynamique.') +

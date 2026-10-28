@@ -323,3 +323,10 @@ Dans l'esprit des jeux Paradox : le jeu ne montre pas tout d'emblée, mais plus 
 - **Lulu, guide d'astuces** : 25 astuces qui arrivent au bon moment (au plus une nouvelle par tour). La toucher ouvre son conseil du tour, « Une autre astuce », ou « Je ne veux plus de conseils ». On la rallume dans « Mon parti ».
 - **Bêta — Salle comble** : un Meeting perdait plus de la moitié de sa valeur dès le tour 3 (2,3 pt → 0,9 pt), parce que chaque région se remplit de soutiens de tous les partis. Désormais le gain de base grandit comme la région s'est remplie depuis le début (× 1,5), plafond relevé à 25 soutiens par parti et par région : un bon Meeting vaut environ 2 pt du tour 1 au tour 6.
 - Préparé pour la suite (pas encore dans l'interface) : les personnalités de chaque parti avec une qualité et un défaut.
+
+## v4.9 — fait : les personnages et les partis
+- **Choisir son candidat** : en touchant un parti, une rangée de 3 à 6 personnalités (le chef de file, puis les figures du parti, en jeux de mots aux mêmes initiales). Chacune a **une qualité et un défaut** qui comptent vraiment : 🎤 Tribun (Meeting +1), 📺 Bête de plateau (médias +20 %), 🏃 Increvable (+1 ⚡ par tour), 💰 Carnet d'adresses (+2 € par tour), 🧼 Irréprochable (deux fois moins d'affaires) ; ⚔️ Clivant (Meeting −1 de plus en région hostile), 😐 Terne (médias −15 %), 🥱 Petite santé (−1 ⚡ par tour), 🙊 Gaffeur (gaffe possible dès 1 ⚡), 🍳 Vieille casserole (2 casseroles au départ). Les rivaux jouent avec leur chef de file (ou celui que tu leur as choisi). Ton propre personnage choisit aussi sa qualité et son défaut.
+- **Régler le score de départ** (Réaliste et Bêta) : un curseur sous le portrait. Le parti réglé prend ce score ; dans chaque région, tous les autres (petites listes comprises) s'ajustent en proportion. Ton parti fondé : de 1 à 25 % (3 % par défaut).
+- **Modifier un parti existant** : nom, nom court, sigle, couleur, candidat et score. « Remettre ce parti d'origine » annule tout. Les réglages sont gardés sur le téléphone.
+- **Supprimer le parti fondé** : bouton bien visible sous sa fiche.
+- Dans « Mon parti », la qualité et le défaut de ton candidat sont rappelés.
