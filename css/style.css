@@ -1407,3 +1407,16 @@ button { font-family: inherit; color: inherit; }
 @media (max-height: 700px) { .tile.tile-min { min-height: 50px; } .tile-min .tile-big, .tile-min .tile-big.tile-pt { font-size: 21px; } }
 .tile-min .tile-sub { font-size: 11px; line-height: 1.1; }
 .tile.tile-min { padding-top: 5px; padding-bottom: 5px; gap: 2px; }
+
+/* =====================================================================
+   v4.7.1 — Téléphone : le panneau d'actions est FIXE.
+   Avant, il défilait (max-height + overflow) : un léger glissement du doigt le faisait
+   monter ou descendre et coupait le texte. Désormais il garde toujours sa taille,
+   ne défile jamais, et c'est la carte qui se réduit pour lui laisser la place.
+   (Le PC garde sa mise en page, voir desktop.css.)
+   ===================================================================== */
+@media not all and (min-width: 1024px) and (min-height: 560px) {
+  .screen-game .panel { max-height: none; overflow: visible; flex-shrink: 0; touch-action: manipulation; overscroll-behavior: none; }
+  .screen-game .map-wrap { min-height: 0; flex: 1 1 0; overflow: hidden; }
+  .screen-game .map { min-height: 0; }
+}
