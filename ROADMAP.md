@@ -346,3 +346,8 @@ Constat (joueur doué au débat, PS parti de ~12 %) : le débat rapportait +3 pt
 - **Usure des médias 10 % par tour** (au lieu de 15 %).
 - **Moins de frein pour un parti déjà haut** dans les médias (élasticité 0,6 au lieu de 0,75).
 Résultat simulé : premier débat +1,8 pt en moyenne (au lieu de +3), usure −0,5 au plus (au lieu de −0,7), et en fin de campagne les actions rapportent encore +2,7 pt par tour (au lieu de +1,5) : plus de plateau. Équilibre : RN qualifié 98 %, LFI 50 %, PS 38 %.
+
+## v4.9.4 — fait : un seul chiffre par action, celui du sondage national
+Constat (Meeting en Nouvelle-Aquitaine) : la case Meeting annonçait **+22,8 pts** quand la carte et le bilan disaient **+2,2 pt**. Le +22,8 était le même gain ramené à la seule région (2,2 ÷ 10 % de poids), un chiffre qui ne parlait à personne.
+- Cases d'action, info-bulles, Lulu, bilan du tour et tournée sur la carte : on affiche **le gain en France** (bleu), le même partout.
+- Fiche région : « Qui mène ici » affiche la même intention de vote que le reste du jeu (avant : 7 % dans la fiche, 5,6 % dans l'info-bulle).

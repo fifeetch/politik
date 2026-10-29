@@ -1163,8 +1163,8 @@
     if (wasTiring) return 'Doucement ! Le candidat tire la langue (⚡ à 0) : à ce rythme, la gaffe nous guette.';
     if (queue.length >= R.actionsPerTurn) return 'Les 3 actions sont prêtes. Tu valides quand tu veux, on fonce !';
     switch (act.type) {
-      case 'terrain': var rgL = estReg(act);
-        return rgL && rgL.d >= 0.03 ? regStr(rgL.d) + ' en ' + rn + ' ? Je réserve la plus grande salle de la ville !' : 'Un meeting en ' + rn + ' : je préviens la presse locale.';
+      case 'terrain': var mL = estRange(act);
+        return mL && mL.hi >= 0.003 ? mL.txt + ' au sondage avec ' + rn + ' ? Je réserve la plus grande salle de la ville !' : 'Un meeting en ' + rn + ' : je préviens la presse locale.';
       case 'medias': return 'La télé, ça touche toute la France d\u2019un coup. Mais l\u2019effet s\u2019use : pense aussi au terrain.';
       case 'mobiliser': return 'Aller chercher ceux qui ne votent plus en ' + rn + ' : c\'est souvent là que tout se joue.';
       case 'reseaux': return 'Les réseaux sociaux… carton ou flop. Croisons les doigts !';
@@ -1713,12 +1713,13 @@
       html += '<div class="calc-line">🧭 <b>' + esc(ln.label) + '</b> · gauche ' + Math.round(100 * ln.g) + ' % · centre ' + Math.round(100 * ln.c) + ' % · droite ' + Math.round(100 * ln.d) + ' % <span class="muted">(' + esc(D.BASES[g.base].short) + ')</span><br>' +
         (myW >= 1.15 ? '💪 Terrain favorable : chacun de tes soutiens pèse lourd ici.' : myW <= 0.6 ? '🪶 Terrain difficile : tes soutiens pèsent peu ici, ton électorat historique y est faible.' : '⚖️ Tes soutiens pèsent normalement ici.') + '</div>';
     }
-    var sh = real ? E.regionShares(g, selected) : null;
+    // v4.9.4 : la même intention de vote que les info-bulles (part des voix exprimées, « autres » compris)
+    var sh = null; if (real) { sh = {}; g.players.forEach(function (p) { sh[p.id] = E.regScore(g, selected, p.id); }); }
     var rows = g.players.filter(function (p) { return E.cubes(g, selected, p.id) > 0; }).sort(function (a, b) { return real ? sh[b.id] - sh[a.id] : E.cubes(g, selected, b.id) - E.cubes(g, selected, a.id); });
     if (real) rows = rows.slice(0, 6);
     html += '<div class="kicker">Qui mène ici</div><div class="brief">' + rows.map(function (p, i) {
       var nn = E.cubes(g, selected, p.id), bar = real ? Math.min(100, 100 * sh[p.id] / Math.max(0.01, sh[rows[0].id])) : 10 * nn;
-      return '<div class="vote-row' + (p.id === me ? ' qual' : '') + '"><span class="vote-lbl">' + chip(p.id) + (p.id === me ? 'Toi' : esc(party(p.id).short)) + '</span><span class="vote-bar"><i style="width:' + bar + '%;background:' + party(p.id).color + '"></i></span><b>' + (real ? Math.round(100 * sh[p.id]) + ' %' : nn) + '</b></div>';
+      return '<div class="vote-row' + (p.id === me ? ' qual' : '') + '"><span class="vote-lbl">' + chip(p.id) + (p.id === me ? 'Toi' : esc(party(p.id).short)) + '</span><span class="vote-bar"><i style="width:' + bar + '%;background:' + party(p.id).color + '"></i></span><b>' + (real ? pctFr(sh[p.id], 1) + ' %' : nn) + '</b></div>';
     }).join('') + '</div>';
     var c = g.regions[selected].controller, need = 0;
     if (c !== me) {
@@ -1838,8 +1839,8 @@
   function impactWord(n) { return 'Message ' + IMPACT_WORD[Math.max(0, Math.min(4, n))]; }
   /* « Comment c'est calculé ? » : la chaîne de calcul de chaque action principale, en mots */
   function howModal() {
-    var h = '<p>Tous les chiffres du jeu sont des <b>% d’intention de vote</b>, à deux échelles :</p><p class="legend-scope"><span>🟢 <b class="c-reg">Vert</b> : dans la région (Meeting, Mobiliser)</span><span>🔵 <b class="c-nat">Bleu</b> : dans toute la France (médias, ton score)</span></p>' +
-      '<p>Le seul score qui décide de l’élection, c’est <b>le bleu, ton intention de vote en France</b>. Une région qui monte de 4 pts ne fait monter la France que d’une fraction, selon son poids. Les rivaux jouent en même temps : leur progression fait baisser ta part.</p>' +
+    var h = '<p>Tous les chiffres du jeu sont des <b>% d’intention de vote</b>, <b>en France</b> : chaque action affiche ce qu’elle te fait gagner au sondage national, celui qui décide de l’élection.</p>' +
+      '<p>Une action en région rapporte selon le poids de cette région parmi les votants de France. Les rivaux jouent en même temps : leur progression fait baisser ta part.</p>' +
       '<p class="hint">Sous le capot, le jeu compte des <b>soutiens</b> (les électeurs que tu gagnes) : ce sont eux qui font bouger les %. Le détail est ci-dessous.</p>';
     var r = selected, thm = theme || E.bestTheme(g, me, r || null);
     if (r) {
@@ -1937,9 +1938,10 @@
       var big = '—', sub = tv ? 'toute la France' : 'touche une région', scope = tv ? ' tile-nat' : ' tile-reg';
       if (tv) { big = '+' + teleEstimate(act.theme); sub = 'France'; }
       else if (on) {
-        var e = estRange(act), rg = estReg(act);
-        big = rg ? regNum(rg.d) + '<small>pts</small>' : '—';
-        sub = e ? '<b class="c-nat">' + ptNum(e.hi) + '</b> France' : 'impossible ici';
+        // v4.9.4 : le gros chiffre = le gain en France (bleu, le même que sur la carte et le bilan) ; le gain « dans la région » (+22…) ne s'affiche plus
+        var e = estRange(act);
+        big = e ? ptNum(e.hi) + '<small>pt</small>' : '—'; scope = ' tile-nat';
+        sub = e ? 'France' : 'impossible ici';
       }
       var warn = on && tiring(act) && !canQueue(act), poor = on && /argent|influence|épuisé/.test(canQueue(act) || '');
       var b = el('button', { class: 'tile tile-min', type: 'button', 'data-act': type, 'aria-label': def.name + ', ' + costLabel(act) + '. Reste appuyé pour le détail.' },
@@ -1952,7 +1954,7 @@
           var c = canQueue(act0);
           return '<b>' + def.icon + ' ' + (tv0 ? 'Médias' : esc(def.name)) + '</b>' +
             (tv0 ? '<span>Une interview : des électeurs dans toute la France. Jusqu\u2019à <b class="c-nat">' + teleEstimate(act0.theme).replace(/<[^>]+>/g, ' ').trim() + '</b> d\u2019intention de vote en France.</span>' :
-              (function () { var e = estRange(act0), rg = estReg(act0); return (rg ? '<span>🟢 En ' + esc(E.REG[selected].name) + ' : <b class="c-reg">' + regLine(rg) + '</b></span>' : '') + '<span>🔵 En France : <b class="c-nat">' + (e ? e.txt : '—') + '</b></span>' + (selected ? '<span>La région pèse ' + pctTxt(regionShare(selected)) + ' des votants de France</span>' : ''); })()) +
+              (function () { var e = estRange(act0); return '<span>🔵 En France : <b class="c-nat">' + (e ? e.txt : '—') + '</b></span>' + (selected ? '<span>La région pèse ' + pctTxt(regionShare(selected)) + ' des votants de France</span>' : ''); })()) +
             '<span>Coût : ' + esc(costLabel(act0)) + '</span>' +
             (warn0 ? '<span class="tip-warn">Ton énergie tomberait à 0 : 4 chances sur 10 de faire une gaffe.</span>' : c ? '<span class="tip-warn">' + esc(c) + '</span>' : '') +
             '<small>Touche pour l\u2019ajouter · ⓘ pour le calcul</small>';
@@ -2266,10 +2268,10 @@
      v4.9.2 : le chiffre est en POINTS DE SONDAGE (le gain réel, rivaux compris), comme sur les cases d'action et dans le bilan.
      Avant, c'était le nombre de soutiens gagnés dans la région (+9…), une autre unité : c'était trompeur. */
   function replayTurn(acts, cubes0, log, done) {
-    var ptBy = {}, okBy = {};   // v4.9.2 : l'évolution de ton intention de vote DANS la région (vert)
+    var ptBy = {}, okBy = {};   // v4.9.4 : le gain en France de tes actions dans chaque région
     (log || []).forEach(function (l) {
       if (l.pid !== me || !l.region) return;
-      ptBy[l.region] = (ptBy[l.region] || 0) + (l.reg ? l.reg.d : 0);
+      ptBy[l.region] = (ptBy[l.region] || 0) + (l.pt || 0);   // v4.9.4 : le gain en France, comme la carte et le bilan
       okBy[l.region] = okBy[l.region] || l.ok;
     });
     var stops = [];
@@ -2305,7 +2307,7 @@
           shown[st.rid] = 1;
           var pt = ptBy[st.rid] || 0;
           if (okBy[st.rid] === false) FX.floatText(s, m.x + 2, m.y - 12, 'raté', 'loss');
-          else if (Math.abs(pt) >= 0.0005) FX.floatText(s, m.x + 2, m.y - 12, regStr(pt), pt > 0 ? 'gain' : 'loss');
+          else if (Math.abs(pt) >= 0.0005) FX.floatText(s, m.x + 2, m.y - 12, ptStr(pt), pt > 0 ? 'gain' : 'loss');
           if (st.mob) FX.voters(s, m.x, m.y + 22, Math.max(1, d), party(me).color);
         }
         FX.wait(st.mob ? 1500 : 500, next);
@@ -2565,8 +2567,7 @@
       // v4.9.2 : l'écart n'est signalé que s'il se voit une fois arrondi
       var gap = a.est != null && ptStr(a.est) !== ptStr(a.pt);
       if (gap && a.pt < a.est) anyLess = true;
-      var regTxt = a.reg ? '<small class="c-reg">🟢 dans la région : ' + regLine(a.reg) + '</small>' : '';
-      dA += li(a.slot + '.', name + regTxt + '<small>🔵 en France : ' + (gap ? 'annoncé ' + ptStr(a.est) + ', réel ' + ptStr(a.pt) : ptStr(a.pt) + (a.est != null ? ', comme annoncé' : '')) + '</small>', a.pt);
+      dA += li(a.slot + '.', name + '<small>🔵 en France : ' + (gap ? 'annoncé ' + ptStr(a.est) + ', réel ' + ptStr(a.pt) : ptStr(a.pt) + (a.est != null ? ', comme annoncé' : '')) + '</small>', a.pt);
     });
     if (!dA) dA = '<p class="bm-note">Aucune action ce tour-ci.</p>';
     else dA += '<p class="bm-note">' + (anyLess ? 'Pourquoi moins que prévu ? Le chiffre annoncé est calculé sur la situation du début du tour. Mais les actions se jouent à tour de rôle (l’action 1 de chaque parti, puis l’action 2…) : quand un rival passe avant toi dans la même région ou sur le même public, il y a plus de monde à se partager les voix, et ton gain réel baisse. ' : '') +
@@ -2588,7 +2589,7 @@
       '<p class="bm-note">Ces effets touchent tous les partis : un événement sur un thème que tu portes peut te faire monter, une affaire chez un rival peut te profiter.</p>';
     // 5. L'usure des médias
     var dW = '<p class="bm-note">À chaque fin de tour, l’effet de tous les passages dans les médias (télé, radio, 20 h, débat) baisse de 15 %. Ce tour-ci, cela t’a coûté <b>' + ptStr(x.wear) + '</b>. Pour garder cet effet, il faut repasser dans les médias. Les soutiens gagnés sur le terrain, eux, restent. Au dernier tour, il n’y a pas d’usure avant le vote.</p>';
-    return '<p class="bilan-hint">Ton intention de vote en France 🔵 (c\u2019est elle qui décide de l\u2019élection). Touche une ligne pour voir le détail ; 🟢 = dans une région.</p><div class="bilan">' +
+    return '<p class="bilan-hint">Ton intention de vote en France 🔵 (c\u2019est elle qui décide de l\u2019élection). Touche une ligne pour voir le détail.</p><div class="bilan">' +
       row('Tes actions', x.acts, true, dA) +
       row(x.riv <= 0 ? 'Ce que les rivaux t’ont pris' : 'Les actions des rivaux', x.riv, true, dR) +
       row('Le débat télévisé', x.deb, false, dD) +
