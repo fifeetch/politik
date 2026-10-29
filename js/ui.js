@@ -806,6 +806,7 @@
     mine.forEach(function (a) { alerts.push('AFFAIRE · Toi : ' + a.title); });
     aiAff.forEach(function (x) { alerts.push('AFFAIRE · ' + party(x.pid).short + ' : ' + x.title); });
     info.later.forEach(function (x) { if (x.hit) alerts.push(x.title + (x.pid === me ? '' : ' (' + party(x.pid).short + ')')); });
+    (info.clan || []).forEach(function (x) { alerts.unshift('SCANDALE · ' + (x.pid === me ? 'Toi' : party(x.pid).short) + ' : « ' + x.name + ' » révélé'); });
     if (info.bomb) alerts.unshift('BOMBE · ' + (info.bomb.pid === me ? 'Toi' : party(info.bomb.pid).short) + ' : ' + info.bomb.title.replace('💣 ', ''));
     FX.breaking('Alerte info', alerts);
     var jp = journalParts(info, aiDil, aiAff);
@@ -858,10 +859,24 @@
   }
   function startActions() {
     render();
+    spyReveal();
     if (g.turn === 1 && (forceTuto || !T.isActive())) {
       var before = T.isActive(); T.maybeStart(forceTuto, { region: tutoRegion() }); tutoGame = !before && T.isActive(); forceTuto = false;
       if (tutoGame) render();
     }
+  }
+  /* v5.0 (Bêta) : ta taupe a parlé. Le plan du rival est calculé maintenant et verrouillé : c'est lui qui sera joué. */
+  function spyReveal() {
+    var it = g.clan && g.clan.intel && g.clan.intel[me];
+    if (!it || it.turn !== g.turn || !E.player(g, it.target)) return;
+    delete g.clan.intel[me];
+    var plan = AI.plan(g, it.target); g.clan.locked[it.target] = { turn: g.turn, plan: plan };
+    var a = plan[0];
+    var nm = !a ? 'rien' : a.type === 'card' ? D.CARDS[a.card].name : a.type === 'clan' ? 'une opération clandestine (« ' + E.clanOp(a.op).name + ' »)' : D.ACTIONS[a.type].name;
+    var where = a && a.region ? ' en ' + E.REG[a.region].name : a && a.target ? ' contre ' + (a.target === me ? 'toi' : party(a.target).short) : '';
+    var thm = a && a.theme && th(a.theme) ? ' sur ' + th(a.theme).icon + ' ' + th(a.theme).name : '';
+    modal({ kicker: '🕵️ Espionnage politique', title: 'Ta taupe chez ' + party(it.target).short, html: '<p>Sa <b>prochaine action prévue</b> : <b>' + esc(nm) + '</b>' + esc(where) + esc(thm) + '.</p><p class="hint">C\u2019est bien ce qu\u2019il jouera en premier ce tour-ci. À toi d\u2019en profiter (ou de lui couper l\u2019herbe sous le pied).</p>',
+      buttons: [{ label: 'Bien reçu', primary: true }] });
   }
   /* v2.0 : la région que le tutoriel fait clignoter : celle où un Meeting rapporte le plus (puis la plus peuplée) */
   function tutoRegion() {
@@ -886,7 +901,7 @@
     // ---- les rubriques intérieures ----
     var mine = [], rivals = [];
     var inc = info.income.filter(function (x) { return x.pid === me; })[0];
-    if (inc) mine.push(line('💰', 'Ta caisse : <b>+' + inc.money + ' €</b> · <b>+' + inc.infl + ' ★</b>' + (inc.forme ? ' · <b>+' + inc.forme + ' ⚡</b>' : '')));
+    if (inc) mine.push(line('💰', 'Ta caisse : <b>+' + inc.money + ' €</b>' + (inc.forme ? ' · <b>+' + inc.forme + ' ⚡</b>' : '')));
     var myMil = info.militants.filter(function (x) { return x.pid === me; });
     if (myMil.length) mine.push(line('👥', 'Tes militants : +1 soutien en ' + myMil.map(function (x) { return SHORT[x.rid]; }).join(', ')));
     if (info.event) info.event.effects.filter(function (f) { return f.pid === me; }).forEach(function (f) { mine.push(line('📰', esc(f.text))); });
@@ -906,6 +921,10 @@
     (aiAff || []).forEach(function (x) {
       rivals.push(line('💥', '<b>Affaire pour ' + esc(party(x.pid).short) + '</b> : « ' + esc(x.title) + ' ». Réaction : <b>' + esc(x.reaction) + '</b>' + (x.effects.length ? ' — ' + esc(x.effects.join(', ')) : '') + '.'));
     });
+    (info.clan || []).forEach(function (x) {   // v5.0 : une enquête révèle une vieille opération clandestine
+      var txt = '<b>Enquête : « ' + esc(x.name) + ' » (tour ' + x.turn + ')</b>' + (x.target ? ', contre ' + (x.target === me ? 'toi' : esc(party(x.target).short)) : '') + '. ' + (x.pid === me ? 'Les journalistes remontent jusqu\u2019à toi : ' : esc(party(x.pid).short) + ' est démasqué : ') + esc(E.ptLabel(x.pt)) + (x.money ? ', −' + x.money + ' € d\u2019amende' : '') + '.';
+      (x.pid === me ? mine : rivals).push(line('🚨', txt));
+    });
     if (info.usure) rivals.push(line('🕰️', 'Usure du pouvoir : Réforme Encore perd 1 soutien en ' + esc(E.REG[info.usure].name) + '.'));
     if (aiDil) rivals.push(line('🤔', esc(party(aiDil.pid).short) + ', face à « ' + esc(aiDil.title) + ' », choisit : <b>' + esc(aiDil.choice) + '</b>' + (aiDil.effects.length ? ' — ' + esc(aiDil.effects.join(', ')) : '') + '.'));
     var country = [];
@@ -916,12 +935,14 @@
     var learn = learnKey ? learnBox(learnKey) : '';
     // ---- les 2 ou 3 brèves de la une : seulement ce qui change ton tour ----
     var briefs = [];
-    if (E.isDebateTurn(g)) briefs.push({ k: 'Ce soir', t: '🎙️ Débat télévisé', s: 'Garde des ★ pour te préparer.' });
+    if (E.isDebateTurn(g)) briefs.push({ k: 'Ce soir', t: '🎙️ Débat télévisé', s: 'Garde quelques € pour te préparer.' });
+    var myClan = (info.clan || []).filter(function (x) { return x.pid === me; })[0];
+    if (myClan) briefs.push({ k: 'Scandale', t: '🚨 « ' + esc(myClan.name) + ' » révélé', s: esc(E.ptLabel(myClan.pt)) + ' au sondage' + (myClan.money ? ', −' + myClan.money + ' €' : '') + '.' });
     var myHit = info.later.filter(function (x) { return x.pid === me && x.hit; })[0];
     if (myHit) briefs.push({ k: 'Te concerne', t: '⏳ ' + esc(myHit.title), s: esc(myHit.effects.join(', ')) });
     briefs.push({ k: 'Sujet du jour', t: g.hot.map(function (x) { return th(x).icon + ' ' + esc(th(x).short); }).join(' + '), s: 'Parles-en : +1 d\'impact.' });
     if (aiAff && aiAff.length) briefs.push({ k: 'Affaires', t: '💥 ' + (aiAff.length > 1 ? aiAff.length + ' rivaux visés' : esc(party(aiAff[0].pid).short)), s: aiAff.length > 1 ? aiAff.map(function (x) { return esc(party(x.pid).short); }).join(', ') : 'Dans la tourmente.' });
-    if (inc) briefs.push({ k: 'Ta caisse', t: '+' + inc.money + ' € · +' + inc.infl + ' ★', s: myMil.length ? '👥 Tes militants rapportent.' : 'De quoi faire campagne.' });
+    if (inc) briefs.push({ k: 'Ta caisse', t: '+' + inc.money + ' €' + (inc.forme ? ' · +' + inc.forme + ' ⚡' : ''), s: myMil.length ? '👥 Tes militants rapportent.' : 'De quoi faire campagne.' });
     briefs = briefs.slice(0, 3);
     var front = '<div class="np np-in"><div class="np-mast"><span class="np-name">Le Quotidien National</span>' +
       '<span class="np-date"><span>Tour ' + g.turn + ' sur ' + R.maxTurns + '</span><span>' + JOUR[(g.turn - 1) % 7] + ' · édition du matin</span><span>1,20 €</span></span></div>' +
@@ -954,17 +975,24 @@
   /* v4.8 : les coulisses d'un article. Le journal raconte ; ici, on explique ce qui s'est passé DANS LE JEU :
      l'action jouée, sa règle, son effet chiffré, et le trait du parti quand c'est un gag. Plus on fouille, plus on comprend. */
   var curPaper = null;
-  function specOf(pid, k, part) { var f = D.FICHES[k]; return f ? f[part].replace(/\{(\d+)\}/g, function (m, n) { return String(E.spec ? E.spec(g, pid, +n) : +n); }) : ''; }
+  function specOf(pid, k, part) {
+    var f = D.FICHES[k], card = !!D.CARDS[k];
+    return f ? f[part].replace(/\{(\d+(?:\.\d+)?)\}/g, function (m, n) {   // v5.0 : points de sondage (décimales) et force des cartes
+      if (n.indexOf('.') >= 0) return String(card ? E.specPt(g, pid, +n) : +n).replace('.', ',');
+      return String(E.spec ? E.spec(g, pid, +n) : +n);
+    }) : '';
+  }
   function ruleBlock(pid, key) {
     if (!key) return '';
+    if (key === 'clan') return '<div class="cl-box"><span class="kicker">La règle · 🕵️ Les actions clandestines (Bêta)</span><p>Une opération par tour au plus. Chacune a un risque d\u2019être découverte, qui grimpe avec la suspicion autour du parti. Découverte : scandale (' + E.ptLabel(D.BETA.clan.scandal.pt / 100) + ' au sondage, ' + (-D.BETA.clan.scandal.money) + ' € d\u2019amende) et aucun effet. Réussie : elle peut quand même ressortir plus tard, au fil des enquêtes.</p></div>';
     var A0 = D.ACTIONS[key], C0 = D.CARDS[key], f = D.FICHES[key];
-    var name = A0 ? (A0.icon ? A0.icon + ' ' : '') + A0.name : C0 ? '🃏 ' + C0.name : key;
-    var h = '<div class="cl-box"><span class="kicker">La règle · ' + esc(name) + (A0 && A0.only ? ' (action propre au parti)' : C0 ? ' (carte unique du parti)' : '') + '</span>';
+    var name = A0 ? (A0.icon ? A0.icon + ' ' : '') + A0.name : C0 ? (C0.icon || '🃏') + ' ' + C0.name : key;
+    var h = '<div class="cl-box"><span class="kicker">La règle · ' + esc(name) + (A0 && A0.only ? ' (action propre au parti)' : C0 ? ' (action spécifique du parti)' : '') + '</span>';
     if (f) h += '<p><b>Quand :</b> ' + esc(specOf(pid, key, 'quand')) + '</p><p><b>Effet :</b> ' + esc(specOf(pid, key, 'effet')) + '</p>' + (f.risque !== 'Aucun.' ? '<p><b>Risque :</b> ' + esc(specOf(pid, key, 'risque')) + '</p>' : '');
     else h += '<p>' + esc((A0 || C0 || {}).text || '') + '</p>' + (A0 && A0.cost ? '<p class="muted">Coût : ' + esc(costTxtOf(A0.cost)) + '</p>' : '');
     return h + '</div>';
   }
-  function costTxtOf(c) { var t = []; if (c.money) t.push(c.money + ' €'); if (c.infl) t.push(c.infl + ' ★'); if (c.forme) t.push(c.forme + ' ⚡'); return t.join(' + ') || 'gratuit'; }
+  function costTxtOf(c) { var t = []; if (c.money) t.push(c.money + ' €'); if (c.forme) t.push(c.forme + ' ⚡'); return t.join(' + ') || 'gratuit'; }
   function traitBlock(tk) {
     var T0 = D.TRAITS[tk]; if (!T0) return '';
     return '<div class="cl-box cl-trait"><span class="kicker">Le trait du parti · ' + T0.icon + ' ' + esc(T0.name) + '</span><p><b>👍 L\u2019atout :</b> ' + esc(T0.plus) + '</p><p><b>👎 Le revers :</b> ' + esc(T0.minus) + '</p>' +
@@ -987,7 +1015,7 @@
       h += traitBlock(w.trait);
     } else if (w.k === 'event') {
       h += '<div class="cl-box"><span class="kicker">Pourquoi c\u2019est important</span><p>Chaque tour, un sujet fait la une : ' + (th(w.theme) ? th(w.theme).icon + ' <b>' + esc(th(w.theme).name) + '</b>' : 'un thème') + '. Tous les messages sur ce thème gagnent <b>+1 d\u2019impact</b> ce tour-ci : un Meeting sur ce sujet rapporte plus de soutiens.</p>' +
-        (w.quiet ? '' : '<p>L\u2019événement lui-même peut aussi donner ou retirer des soutiens, de l\u2019argent ou de l\u2019influence à certains partis : c\u2019est la règle indiquée sous le titre.</p>') +
+        (w.quiet ? '' : '<p>L\u2019événement lui-même peut aussi donner ou retirer des soutiens, de l\u2019argent ou des points de sondage à certains partis : c\u2019est la règle indiquée sous le titre.</p>') +
         (w.crisis ? '<p>Une crise dure plusieurs tours, en plusieurs actes : prépare-toi à ce que le même sujet revienne.</p>' : '') + '</div>';
     } else if (w.k === 'bascule') {
       h += '<div class="cl-box"><span class="kicker">Comment une région change de main</span><p>Une région revient au parti qui y fait le plus de voix' + (g.hist ? ' (le socle des électeurs fidèles plus les soutiens gagnés en campagne)' : '') + ', à condition d\u2019y avoir au moins ' + (R.minControl - (g.hist ? 1 : 0)) + ' soutiens.</p>' +
@@ -1064,8 +1092,8 @@
   function advice() {
     var pl = mePl(), ph = E.measure(pl.phare), hot = g.hot || [];
     if (g.turn === 1) return 'Parle de ta mesure phare (' + th(ph.theme).icon + ' ' + th(ph.theme).short + ') : choisis une région, puis 📣 Meeting.';
-    if (E.isDebateTurn(g) && pl.infl < 2) return 'Débat ce soir 🎙️ et presque plus de ★ : évite la Télé ce tour-ci.';
-    if (E.isDebateTurn(g)) return 'Débat ce soir 🎙️ ! Garde 2 ou 3 ★ : chaque ★ de préparation = +15 % sur tes réponses, et la fiche de ton adversaire.';
+    if (E.isDebateTurn(g) && pl.money < 4) return 'Débat ce soir 🎙️ et presque plus d\u2019argent : fais une 💰 Collecte pour pouvoir te préparer.';
+    if (E.isDebateTurn(g)) return 'Débat ce soir 🎙️ ! Garde 2 ou 3 € : chaque € de préparation = +15 % sur tes réponses, et la fiche de ton adversaire.';
     if (pl.forme <= 1) return 'Candidat épuisé (⚡ ' + pl.forme + ') : préfère 🚪 Mobiliser ou 💰 Collecte.';
     if (pl.cas >= 3) return pl.cas + ' casseroles 🍳 : une affaire peut tomber. N\'attaque pas ce tour-ci.';
     var mineHot = hot.filter(function (t) { return pl.programme.some(function (id) { return E.measure(id).theme === t; }); })[0];
@@ -1173,7 +1201,8 @@
       case 'militants': return 'Des militants en ' + rn + ' : ils rapporteront à chaque tour.';
       case 'fonds': return 'On renfloue les caisses. Les donateurs adorent les petits-fours.';
       case 'reforme': return 'Montrer ce qu\'on fait là où on gouverne : du concret, j\'adore.';
-      case 'card': return 'Tu sors une carte maîtresse : « ' + D.CARDS[act.card].name + ' » !';
+      case 'card': return E.cardHot(g, act.card) ? 'Pile le sujet du jour : « ' + D.CARDS[act.card].name + ' » va faire un carton (+50 %) !' : 'Tu sors une carte maîtresse : « ' + D.CARDS[act.card].name + ' » !';
+      case 'clan': return 'Je n\u2019ai rien vu, rien entendu. Mais si ça sort, on est cuits 🙈';
       case 'enquete': return 'On fouille… mais si on se fait prendre, ça nous retombe dessus.';
       case 'rupture': return 'Rompre ? Leurs électeurs ne l\'oublieront pas de sitôt.';
     }
@@ -1222,30 +1251,32 @@
 
   /* Ressources projetées après les actions déjà programmées */
   function projected() {
-    var pl = mePl(), m = pl.money, f = pl.infl, fo = pl.forme;
+    var pl = mePl(), m = pl.money, fo = pl.forme;
     queue.forEach(function (a) {
-      var c = E.actionCost(g, me, a); m -= c.money; f -= c.infl; fo -= c.forme;
-      if (a.type === 'fonds') { m += E.fundsGain(me).money; f += E.fundsGain(me).infl; }
+      var c = E.actionCost(g, me, a); m -= c.money; fo -= c.forme;
+      if (a.type === 'fonds') m += E.fundsGain(me).money;
       if (a.type === 'repos') fo = Math.min(R.formeMax, fo + R.reposForme);
-      if (a.type === 'card' && a.card === 'primaire') f += 3;
-      if (a.type === 'card' && a.card === 'rassemblement') { m += 3; f += 1; }
     });
-    return { money: m, infl: f, forme: fo };
+    return { money: m, forme: fo };
   }
   function canQueue(act) {
     if (g.phase !== 'actions') return 'Ce n’est pas le moment.';
     if (queue.length >= E.actionsFor(g, me)) return 'Tes ' + E.actionsFor(g, me) + ' actions sont déjà choisies.';
-    if (act.type === 'card' && queue.some(function (q) { return q.card === act.card; })) return 'Carte déjà programmée.';
+    if (act.type === 'card' && queue.some(function (q) { return q.card === act.card; })) return 'Déjà programmée ce tour.';
+    if (act.type === 'clan' && queue.some(function (q) { return q.type === 'clan'; })) return 'Une seule opération clandestine par tour.';
     if (['rappel', 'fusion', 'eclat', 'matinale', 'vingt', 'defi'].indexOf(act.type) >= 0 && queue.some(function (q) { return q.type === act.type; })) return 'Déjà programmé ce tour.';
     if (act.type === 'nostalgie' && queue.some(function (q) { return q.type === 'nostalgie'; })) return 'Un seul retour en arrière par tour.';
     var err = E.checkAction(g, me, act); if (err) return err;
     var c = E.actionCost(g, me, act), pr = projected();
     if (pr.money < c.money) return 'Pas assez d’argent.';
-    if (pr.infl < c.infl) return 'Pas assez d’influence.';
     if (pr.forme < c.forme) return 'Ton candidat est épuisé (⚡ 0). Il récupère au prochain tour.';
     return null;
   }
+  var lastAdd = { t: 0, k: '' };
   function addAction(act) {
+    var key = JSON.stringify([act.type, act.region, act.card, act.op, act.target, act.theme, act.reply]);
+    if (key === lastAdd.k && Date.now() - lastAdd.t < 600) return;   // v5.0 : un double clic n'ajoute pas l'action deux fois
+    lastAdd = { t: Date.now(), k: key };
     var err = canQueue(act);
     if (err) { toast(err); return; }
     var wasTiring = tiring(act);
@@ -1428,7 +1459,9 @@
     $('turn-label').textContent = 'Tour ' + g.turn + ' sur ' + R.maxTurns;
     $('phase-label').textContent = E.isDebateTurn(g) ? 'Débat télévisé ce soir' : '3 actions à jouer';
     function pill(id, sym, now, before, word) { $(id).innerHTML = '<span>' + sym + ' ' + now + (now !== before ? '<small>/' + before + '</small>' : '') + '</span><small class="pill-w">' + word + '</small>'; }
-    pill('res-money', '€', pr.money, pl.money, 'argent'); pill('res-infl', '★', pr.infl, pl.infl, 'influence'); pill('res-forme', '⚡', pr.forme, pl.forme, 'énergie');
+    var myPoll = E.pollMap(g)[me] || 0;   // v5.0 : l'influence ★ a disparu ; à sa place, ton score au sondage
+    $('res-poll').innerHTML = '<span>' + pctFr(myPoll, 1) + ' %</span><small class="pill-w">sondage</small>';
+    pill('res-money', '€', pr.money, pl.money, 'argent'); pill('res-forme', '⚡', pr.forme, pl.forme, 'énergie');
     $('res-forme').classList.toggle('low', pr.forme <= 0);
     // dynamique et casseroles : une seule ligne discrète dans l'encadré du sondage
     var st = [];
@@ -1750,10 +1783,10 @@
       var a = queue[i];
       if (!a && i >= E.actionsFor(g, me)) { box.appendChild(el('div', { class: 'slot slot-lock', title: 'Perdue à cause de la primaire' }, '🌹 Primaire')); continue; }
       if (!a) { box.appendChild(el('div', { class: 'slot' }, 'Action ' + (i + 1))); continue; }
-      var name = a.type === 'card' ? D.CARDS[a.card].name : D.ACTIONS[a.type].name;
+      var name = a.type === 'card' ? D.CARDS[a.card].name : a.type === 'clan' ? E.clanOp(a.op).name : D.ACTIONS[a.type].name;
       var sub = (a.reply ? D.ANSWERS[a.reply].icon + ' ' : a.theme ? th(a.theme).icon + ' ' : '') + (a.station ? D.STATIONS.filter(function (s) { return s.id === a.station; })[0].name : a.region ? SHORT[a.region] : a.target ? E.sigle(a.target) : a.theme ? th(a.theme).short : '✕ retirer');
       var b = el('button', { class: 'slot full' + (i === justAdded ? ' flip' : ''), type: 'button', 'aria-label': 'Retirer ' + name },
-        '<span class="slot-in"><span class="face front">' + esc(name) + '<small>' + sub + '</small></span><span class="face back" aria-hidden="true">★</span></span>');
+        '<span class="slot-in"><span class="face front">' + esc(name) + '<small>' + sub + '</small></span><span class="face back" aria-hidden="true">✔</span></span>');
       (function (idx) { b.addEventListener('click', function () { queue.splice(idx, 1); render(); }); })(i);
       box.appendChild(b);
     }
@@ -1764,7 +1797,7 @@
   }
   function costLabel(act, compact) {
     var c = E.actionCost(g, me, act), parts = [], sp = compact ? '' : ' ';
-    if (c.money) parts.push(c.money + sp + '€'); if (c.infl) parts.push(c.infl + sp + '★'); if (c.forme) parts.push(c.forme + sp + '⚡');
+    if (c.money) parts.push(c.money + sp + '€'); if (c.forme) parts.push(c.forme + sp + '⚡');
     return parts.length ? parts.join(compact ? ' ' : ' + ') : 'gratuit';
   }
   /* Vrai si cette action viderait la forme du candidat (risque de gaffe) */
@@ -1788,7 +1821,7 @@
       case 'imposer': return 'ton thème <b>à la une</b>';
       case 'contre': return 'rival en tête <b>−2 soutiens</b> · +1 🍳';
       case 'militants': return '<b>+1 soutien</b> ici à chaque tour · ' + (R.militantsMax - mePl().militants) + ' équipe' + (R.militantsMax - mePl().militants > 1 ? 's' : '') + ' dispo';
-      case 'fonds': return '<b>+' + E.fundsGain(me).money + ' €' + (E.fundsGain(me).infl ? ' +' + E.fundsGain(me).infl + ' ★' : '') + '</b>';
+      case 'fonds': return '<b>+' + E.fundsGain(me).money + ' €</b>';
       case 'nostalgie': {
         var k0 = g.nost[me] || 0;
         if (k0 >= D.NOSTALGIA.length) return 'la machine est cassée';
@@ -1962,7 +1995,7 @@
       })(act, tv, sub, warn);
       box.appendChild(b);
     });
-    var more = el('button', { class: 'tile tile-more tile-min', type: 'button', id: 'btn-more' }, '<span class="tile-n">Plus</span><span class="tile-big">' + (projected().forme <= 1 ? '😴' : '⋯') + '</span><span class="tile-sub">' + (projected().forme <= 1 ? 'repos dispo' : '8 actions') + '</span>');
+    var more = el('button', { class: 'tile tile-more tile-min', type: 'button', id: 'btn-more' }, '<span class="tile-n">Plus</span><span class="tile-big">' + (projected().forme <= 1 ? '😴' : '⋯') + '</span><span class="tile-sub">' + (projected().forme <= 1 ? 'repos dispo' : (mePl().cards || []).some(function (k) { return E.cardHot(g, k) && E.cardReady(g, me, k) <= g.turn; }) ? '🔥 ta carte' : '5 onglets') + '</span>');
     if (projected().forme <= 1) more.classList.add('tile-rest');   // v3.6.6 : candidat fatigué, le repos est dans « Plus »
     more.addEventListener('click', moreMenu);
     box.appendChild(more);
@@ -2072,96 +2105,175 @@
   function specialsHtml() {
     var rows = [];
     Object.keys(D.ACTIONS).forEach(function (k) { var a = D.ACTIONS[k]; if (a.only && a.only.indexOf(me) >= 0 && D.FICHES[k]) rows.push({ icon: a.icon, name: a.name + ' · ' + costLabel({ type: k }), k: k }); });
-    mePl().cards.forEach(function (k) { if (D.FICHES[k]) rows.push({ icon: '🃏', name: D.CARDS[k].name + ' · carte unique', k: k }); });
+    mePl().cards.forEach(function (k) { if (D.FICHES[k]) rows.push({ icon: D.CARDS[k].icon || '🃏', name: D.CARDS[k].name + ' · ' + costLabel({ type: 'card', card: k }) + (E.cardHot(g, k) ? ' · 🔥 à la une' : ''), k: k }); });
     if (!rows.length) return '';
-    return '<div class="specials"><div class="kicker">Tes actions spéciales et tes cartes</div>' + rows.map(function (r) {
+    return '<div class="specials"><div class="kicker">Tes 2 actions spécifiques (menu Plus)</div>' + rows.map(function (r) {
       return '<div class="special"><b>' + r.icon + ' ' + esc(r.name) + '</b><span class="pick-txt">' + ficheHtml(r.k) + '</span></div>';
     }).join('') + '</div>';
   }
   /* v4.3 : la fiche d'une action ou d'une carte propre à ton parti : quand · effet chiffré · risque */
-  function ficheTxt(k, part) { var f = D.FICHES[k]; return f ? f[part].replace(/\{(\d+)\}/g, function (m, n) { return String(E.spec ? E.spec(g, me, +n) : +n); }) : ''; }
+  function ficheTxt(k, part) {
+    var f = D.FICHES[k], card = !!D.CARDS[k];
+    return f ? f[part].replace(/\{(\d+(?:\.\d+)?)\}/g, function (m, n) {
+      if (n.indexOf('.') >= 0) return String(card ? E.cardPt(g, me, k, +n) : E.specPt(g, me, +n)).replace('.', ',');   // v5.0 : des points de sondage
+      return String(card ? E.cardN(g, me, k, +n) : E.spec ? E.spec(g, me, +n) : +n);
+    }) : '';
+  }
   function ficheHtml(k) {
     var f = D.FICHES[k]; if (!f) return '';
     return '<span class="fiche-l"><b>Effet :</b> ' + esc(ficheTxt(k, 'effet')) + '</span><span class="fiche-l"><b>Quand :</b> ' + esc(ficheTxt(k, 'quand')) + '</span>' +
       (f.risque !== 'Aucun.' ? '<span class="fiche-l fiche-r"><b>Risque :</b> ' + esc(ficheTxt(k, 'risque')) + '</span>' : '');
   }
-  /* Les autres actions, dans une fenêtre où l'on a la place de les expliquer */
-  /* v3.1 : une ligne courte par action ; le détail arrive ensuite dans le journal */
+  /* ---------- v5.0 : le menu « Plus » en 5 onglets, une carte compacte par action ----------
+     Plus de doublons : la Matinale et le 20 h sont dans « Médias » ; Meeting, Médias et Mobiliser restent sur l'écran.
+     Chaque carte : icône, nom, une ligne, le coût et l'effet principal. Toucher la carte déplie le détail ; « Lancer » l'ajoute. */
   var MORE_SHORT = {
-    repos: '+2 ⚡ tout de suite : le candidat récupère', reseaux: 'Un coup de dé sur les réseaux', militants: '+1 soutien ici à chaque tour', imposer: 'Ton thème à la une demain',
+    repos: 'Le candidat récupère', reseaux: 'Une vidéo, un coup de dé', militants: 'Une équipe sur le terrain, chaque tour', imposer: 'Ton thème à la une demain',
     contre: 'Affaiblir le rival en tête ici', fonds: 'Remplir la caisse', reforme: 'Gagner les régions du même type',
-    nostalgie: 'Promettre le retour du passé', rappel: 'Faire revenir d\u2019anciens électeurs', fusion: 'Absorber le micro-parti', eclat: 'Faire revenir les caméras',
-    marche_pop: 'Grosse mobilisation en ville', censure: 'Tous tes rivaux perdent 1 ★', fete_rose: 'Fête dans 2 régions', primaire: 'Gagner de l\u2019influence',
-    climat: 'Grosse mobilisation verte', canicule: 'Tous tes rivaux reculent', art493: 'Bloquer le rival en tête', remaniement: 'Déplacer tes soutiens ici',
-    appel18: 'Toutes les régions historiques', rassemblement: 'Argent et influence', plateau_tele: 'Passer à la télé dans 3 régions', grand_meeting: 'Gros meeting ici'
+    nostalgie: 'Promettre le retour du passé', rappel: 'Faire revenir d’anciens électeurs', fusion: 'Absorber le micro-parti', eclat: 'Faire revenir les caméras',
+    enquete: 'Fouiller le passé d’un rival', parrainages: 'La tournée des mairies', union: 'Rallier un parti de ton camp', defi: 'Un face-à-face avec un rival'
   };
-  function moreMenu() {
-    if (g.phase !== 'actions') return;
-    var items = [];
-    ['repos', 'reseaux', 'militants', 'imposer', 'contre', 'fonds', 'reforme'].forEach(function (type) {
-      var def = D.ACTIONS[type], act = { type: type, region: def.target === 'region' ? selected : undefined, theme: def.theme ? theme : undefined };
-      var err = def.target === 'region' && !selected ? 'choisis d\'abord une région' : canQueue(act);
-      items.push({ act: act, icon: def.icon, name: def.name, cost: costLabel(act), fx: MORE_SHORT[type], err: err });
-    });
-    Object.keys(D.ACTIONS).forEach(function (type) {   // v3.1 : les actions propres à ton parti
+  var MORE_TABS = [
+    { k: 'spec', name: 'Spécifiques', icon: '🎭' }, { k: 'inter', name: 'Interventions', icon: '🎤' }, { k: 'strat', name: 'Stratégie', icon: '♟️' },
+    { k: 'recup', name: 'Récupération', icon: '🔋' }, { k: 'clan', name: 'Clandestines', icon: '🕵️', beta: true }
+  ];
+  var moreTab = 'spec', moreLock = 0;
+  var SLOW = { repos: '0 pt au sondage', fonds: '0 pt au sondage', parrainages: '0 pt au sondage',
+    imposer: '0 pt maintenant · effet au tour suivant', militants: '0 pt maintenant · effet chaque tour suivant' };
+  function ptLine(it) {
+    if (it.ptTxt) return '<span class="ac-pt">' + it.ptTxt + '</span>';
+    if (it.err || !it.act) return '';
+    if (SLOW[it.act.type]) return '<span class="ac-pt muted">' + SLOW[it.act.type] + '</span>';
+    var e = null; try { e = estRange(it.act); } catch (x) { e = null; }
+    if (!e) return '';
+    var hi = Math.max(e.lo, e.hi);
+    if (Math.abs(hi) < 0.0005 && Math.abs(e.lo) < 0.0005) return '<span class="ac-pt muted">moins de 0,1 pt au sondage</span>';
+    return '<span class="ac-pt">🔵 <b>' + e.txt + '</b>' + (it.act.type === 'reseaux' ? ' (selon le dé)' : '') + '</span>';
+  }
+  function costChips(act) {
+    var c = E.actionCost(g, me, act), h = '';
+    if (c.money) h += '<span class="chip-c c-money">' + c.money + ' €</span>';
+    if (c.forme) h += '<span class="chip-c c-forme">' + c.forme + ' ⚡</span>';
+    return h || '<span class="chip-c">gratuit</span>';
+  }
+  function cardMoreItem(k) {   // une carte de parti
+    var C = D.CARDS[k], act = { type: 'card', card: k, region: C.target === 'region' ? selected : undefined };
+    var err = C.target === 'region' && !selected ? 'Choisis d’abord une région sur la carte' : canQueue(act), hot = E.cardHot(g, k), rd = E.cardReady(g, me, k);
+    return { act: act, icon: C.icon || '🃏', name: C.name, short: C.short || C.text, err: err, mine: true, hot: hot,
+      tag: rd > g.turn ? 'Prête au tour ' + rd : hot ? '🔥 À la une : +50 %' : C.kind === 'mob' ? 'Mobilisation' : 'Débat',
+      detail: ficheHtml(k) + '<span class="fiche-l"><b>Coût :</b> ' + costLabel(act) + ' · se rejoue ' + D.CARD_RULES.recharge + ' tours plus tard</span>' +
+        '<span class="fiche-l"><b>Sujet :</b> ' + th(C.theme).icon + ' ' + esc(th(C.theme).name) + ' — quand il fait l’actu nationale, la carte vaut 50 % de plus' + (hot ? ' <b>(c’est le cas ce tour-ci)</b>' : '') + '.</span>' };
+  }
+  function moreItems() {
+    var pl4 = mePl(), T = { spec: [], inter: [], strat: [], recup: [], clan: [] };
+    function std(tab, type, extra) {
+      var def = D.ACTIONS[type], act = { type: type, region: def.target === 'region' ? selected : undefined, theme: def.theme ? (theme || E.bestTheme(g, me, selected || null)) : undefined };
+      var err = def.target === 'region' && !selected ? 'Choisis d’abord une région sur la carte' : canQueue(act);
+      T[tab].push(Object.assign({ act: act, icon: def.icon, name: def.name, short: MORE_SHORT[type] || def.text, err: err, detail: '<span class="fiche-l">' + esc(def.text) + '</span>' }, extra || {}));
+    }
+    // 1. Spécifiques : exactement 2 par parti (son gag satirique + une carte, ou deux cartes)
+    Object.keys(D.ACTIONS).forEach(function (type) {
       var def = D.ACTIONS[type]; if (!def.only || def.only.indexOf(me) < 0) return;
       var act = { type: type, region: def.target === 'region' ? selected : undefined };
-      var err = def.target === 'region' && !selected ? 'choisis d\u2019abord une région' : canQueue(act);
-      items.unshift({ act: act, icon: def.icon, name: def.name, cost: costLabel(act), fx: D.FICHES[type] ? ficheHtml(type) : MORE_SHORT[type], err: err, mine: true });
+      var err = def.target === 'region' && !selected ? 'Choisis d’abord une région sur la carte' : canQueue(act);
+      T.spec.push({ act: act, icon: def.icon, name: def.name, short: MORE_SHORT[type], err: err, mine: true, tag: '🎭 Ton gag',
+        detail: (D.FICHES[type] ? ficheHtml(type) : '') + '<span class="fiche-l"><b>Coût :</b> ' + costLabel(act) + '</span>' });
     });
-    mePl().cards.forEach(function (k) {
-      var def = D.CARDS[k], act = { type: 'card', card: k, region: def.target === 'region' ? selected : undefined };
-      var err = def.target === 'region' && !selected ? 'choisis d\'abord une région' : canQueue(act);
-      items.push({ act: act, icon: '🃏', name: def.name, cost: 'carte unique', fx: D.FICHES[k] ? ficheHtml(k) : MORE_SHORT[k] || esc(def.text), err: err });
+    (pl4.cards || []).forEach(function (k) { if (D.CARDS[k]) T.spec.push(cardMoreItem(k)); });
+    // 2. Interventions : sur le terrain, sur les réseaux, dans le débat
+    std('inter', 'reseaux'); std('inter', 'contre'); std('inter', 'reforme'); std('inter', 'imposer');
+    if (E.isBeta(g) && !pl4.defiUsed) T.inter.push({ special: 'defi', icon: '🎤', name: 'Défier en débat', short: MORE_SHORT.defi, cost: { type: 'defi', target: null }, err: null,
+      detail: '<span class="fiche-l">Un face-à-face avec le rival de ton choix, une fois par campagne. S’il refuse, la chaise vide lui coûte cher.</span>' });
+    // 3. Stratégie : organisation, soutiens, dossiers
+    std('strat', 'militants');
+    T.strat.push({ special: 'enquete', icon: '🔎', name: 'Enquêter sur un rival', short: MORE_SHORT.enquete, cost: { type: 'enquete', target: null }, err: g.turn >= R.maxTurns ? 'Trop tard pour sortir un dossier' : null,
+      detail: '<span class="fiche-l">Plus le rival traîne de casseroles 🍳, plus tu as de chances de trouver un dossier. S’il y en a un, l’affaire sort au prochain tour.</span>' });
+    if (E.isBeta(g) && pl4.sign != null && pl4.sign < D.BETA.parr.need) std('strat', 'parrainages', { mine: true, ptTxt: '<b>' + pl4.sign + ' / ' + D.BETA.parr.need + '</b> signatures · avant la fin du tour ' + E.parrDeadline(g) });
+    if (E.isBeta(g) && g.turn <= D.BETA.union.lastTurn) T.strat.push({ special: 'union', icon: '🤝', name: 'Candidature commune', short: MORE_SHORT.union, cost: { type: 'union', target: null }, err: null,
+      detail: '<span class="fiche-l">Un parti de ton camp, au moins deux fois plus petit, se range derrière toi : 70 % de ses électeurs te rejoignent (jusqu’au tour ' + D.BETA.union.lastTurn + ').</span>' });
+    // 4. Récupération
+    std('recup', 'repos', { ptTxt: '<b>+' + Math.min(R.reposForme, R.formeMax - pl4.forme) + ' ⚡</b> tout de suite' });
+    std('recup', 'fonds', { ptTxt: '<b>+' + E.fundsGain(me).money + ' €</b> dans la caisse' });
+    // 5. Clandestines (Bêta seulement)
+    if (E.clanOn(g)) D.BETA.clan.order.forEach(function (k) {
+      var o = E.clanOp(k), probe = { type: 'clan', op: k, target: o.target ? E.ranking(g).filter(function (x) { return x !== me; })[0] : undefined };
+      var risk = Math.round(100 * E.clanRisk(g, me, k));
+      T.clan.push({ special: 'clan', op: k, icon: o.icon, name: o.name, short: o.short, cost: probe, err: canQueue(probe), risk: risk, clan: true,
+        ptTxt: o.pt ? 'Cible : <b>' + E.ptLabel(o.pt / 100) + '</b>' : o.money ? '<b>+' + o.money + ' €</b>' : k === 'sabotage' ? 'Meeting adverse <b>−50 %</b>' : 'Le plan d’un rival',
+        detail: '<span class="fiche-l"><b>Si ça passe :</b> ' + esc(o.effet) + '</span><span class="fiche-l fiche-r"><b>Risque d’être découvert :</b> ' + risk + ' %' + (risk > Math.round(o.risk * 100) ? ' (dont ' + (risk - Math.round(o.risk * 100)) + ' points de suspicion)' : '') + '. Scandale : ' + E.ptLabel(D.BETA.clan.scandal.pt / 100) + ' et ' + (-D.BETA.clan.scandal.money) + ' € d’amende' + (o.revealPt ? ', plus ' + E.ptLabel(o.revealPt / 100) : '') + '. Même réussie, une opération peut être révélée plus tard par une enquête.</span>' });
     });
-    // v3.9 : la matinale et le 20 h
-    var mErr = E.matinaleError(g, me) || (queue.some(function (q) { return q.type === 'matinale'; }) ? 'déjà programmée ce tour' : canQueue({ type: 'matinale', theme: theme || E.bestTheme(g, me, null), station: 'rmc' }));
-    items.unshift({ special: 'matinale', icon: '📻', name: 'Matinale radio', cost: costLabel({ type: 'matinale' }), fx: 'Une radio, un public : gagne des classes sociales', err: mErr ? mErr.replace(/\.$/, '') : null });
-    var vErr = E.vingtError(g, me) || (queue.some(function (q) { return q.type === 'vingt'; }) ? 'déjà programmé ce tour' : canQueue({ type: 'vingt', theme: theme || E.bestTheme(g, me, null) }));
-    items.unshift({ special: 'vingt', icon: '🕗', name: 'Le 20 h', cost: costLabel({ type: 'vingt' }), fx: '<b>Tu es invité !</b> Une fois par campagne : gros gain… ou gros raté', err: vErr ? vErr.replace(/\.$/, '') : null, mine: !vErr });
-    if (E.isBeta(g)) {   // v4.4 : les nouvelles mécaniques de la Bêta
-      var pl4 = mePl();
-      if (pl4.sign != null && pl4.sign < D.BETA.parr.need) items.unshift({ act: { type: 'parrainages' }, icon: '✍️', name: 'Chercher des parrainages', cost: costLabel({ type: 'parrainages' }),
-        fx: '<b>' + pl4.sign + ' / ' + D.BETA.parr.need + ' signatures</b> · +' + D.BETA.parr.action + ' par tournée · date limite : fin du tour ' + E.parrDeadline(g), err: canQueue({ type: 'parrainages' }), mine: true });
-      if (g.turn <= D.BETA.union.lastTurn) items.push({ special: 'union', icon: '🤝', name: 'Candidature commune', cost: costLabel({ type: 'union', target: null }), fx: 'Rallier un petit parti de ton camp : 70 % de ses électeurs te rejoignent (jusqu\u2019au tour ' + D.BETA.union.lastTurn + ')', err: null });
-      if (!pl4.defiUsed) items.push({ special: 'defi', icon: '🎤', name: 'Défier en débat', cost: costLabel({ type: 'defi', target: null }), fx: 'Un face-à-face avec le rival de ton choix. S\u2019il refuse : la chaise vide lui coûte cher (une fois par campagne)', err: null });
-    }
-    items.push({ special: 'enquete', icon: '🔎', name: 'Enquêter sur un rival', cost: costLabel({ type: 'enquete', target: null }),
-      fx: 'Fouiller le passé d\u2019un rival', err: g.turn >= R.maxTurns ? 'trop tard pour sortir un dossier' : null });
-    // v4.5 : chaque action dit ce qu'elle rapporte au sondage (ou qu'elle n'y touche pas tout de suite)
-    var SLOW = { repos: '0 pt au sondage', fonds: '0 pt au sondage', parrainages: '0 pt au sondage',
-      imposer: '0 pt maintenant · effet au tour suivant', militants: '0 pt maintenant · effet à chaque tour suivant' };
-    function ptLine(it) {
-      if (it.err || !it.act) return '';
-      if (SLOW[it.act.type]) return '<span class="pt-line muted">' + SLOW[it.act.type] + '</span>';
-      var e = estRange(it.act);
-      if (!e) return '';
-      var lo = Math.min(e.lo, e.hi), hi = Math.max(e.lo, e.hi);
-      if (Math.abs(hi) < 0.0005 && Math.abs(lo) < 0.0005) return '<span class="pt-line muted">' + (hi > 0 ? 'moins de +0,1 pt au sondage' : hi < 0 ? 'moins de −0,1 pt au sondage' : '0 pt au sondage') + '</span>';
-      return '<span class="pt-line"><b>' + e.txt + '</b> au sondage' + (it.act.type === 'reseaux' ? ' (selon le dé)' : '') + '</span>';
-    }
-    var html = '<div class="pick">' + items.map(function (it, i) {
-      return '<button type="button" class="pick-row' + (it.err ? ' off' : '') + (it.mine ? ' mine' : '') + '" data-i="' + i + '"><span class="pick-i">' + it.icon + '</span>' +
-        '<span class="pick-txt"><b>' + esc(it.name) + '</b>' + ptLine(it) + '<small>' + (it.err ? '<span class="fiche-err">' + esc(it.err) + '</span>' : '') + (!it.err || /fiche-l/.test(it.fx || '') ? it.fx : '') + '</small></span><span class="pick-cost">' + esc(it.cost) + '</span></button>';
+    return T;
+  }
+  function moreMenu() {
+    if (g.phase !== 'actions') return;
+    var T = moreItems(), tabs = MORE_TABS.filter(function (t) { return !t.beta || E.clanOn(g); });
+    if (!tabs.some(function (t) { return t.k === moreTab; })) moreTab = 'spec';
+    var flat = [];
+    var head = '<div class="mt-tabs" role="tablist">' + tabs.map(function (t) {
+      return '<button type="button" role="tab" class="mt-tab' + (t.k === moreTab ? ' on' : '') + (t.beta ? ' mt-beta' : '') + '" data-tab="' + t.k + '" aria-selected="' + (t.k === moreTab) + '"><span>' + t.icon + '</span>' + t.name + (t.beta ? '<i>Bêta</i>' : '') + '</button>';
     }).join('') + '</div>';
-    modal({ kicker: 'Autres actions', title: 'Plus d\'options', html: html, buttons: [{ label: 'Fermer' }],
+    var panels = tabs.map(function (t) {
+      var list = T[t.k], intro = '';
+      if (t.k === 'spec') intro = '<div class="mt-intro"><span class="mt-face">' + A.portrait(me) + '</span><span><b>' + esc(party(me).short) + '</b><small>' + list.length + ' actions propres à ton parti</small></span><b class="mt-count">' + list.length + '/2</b></div>';
+      if (t.k === 'clan') {
+        var sp = E.suspicion(g, me), lvl = sp >= 60 ? 'élevée' : sp >= 30 ? 'moyenne' : sp > 0 ? 'faible' : 'nulle';
+        intro = '<div class="mt-warn">⚠️ <b>Une seule opération clandestine par tour.</b> Suspicion autour de ton parti : <b>' + lvl + '</b>.</div>';
+      }
+      return '<div class="mt-panel" data-panel="' + t.k + '"' + (t.k === moreTab ? '' : ' hidden') + '>' + intro + '<div class="ac-grid">' + (list.length ? list.map(function (it) {
+        var i = flat.push(it) - 1;
+        return '<div class="ac-card' + (it.err ? ' off' : '') + (it.mine ? ' mine' : '') + (it.hot ? ' hot' : '') + (it.clan ? ' clan' : '') + '">' +
+          '<button type="button" class="ac-main" data-more="' + i + '" aria-expanded="false"><span class="ac-ic">' + it.icon + '</span><span class="ac-txt"><b>' + esc(it.name) + '</b><small>' + esc(it.short || '') + '</small></span>' +
+          (it.risk != null ? '<span class="ac-risk">Risque<b>' + it.risk + ' %</b></span>' : it.tag ? '<span class="ac-tag">' + esc(it.tag) + '</span>' : '') + '</button>' +
+          '<div class="ac-foot"><span class="ac-chips">' + costChips(it.act || it.cost) + ptLine(it) + '</span><button type="button" class="ac-go" data-launch="' + i + '"' + (it.err ? ' aria-disabled="true"' : '') + '>Lancer</button></div>' +
+          (it.err ? '<p class="ac-err">' + esc(it.err.replace(/\.$/, '')) + '</p>' : '') +
+          '<div class="ac-more" hidden>' + (it.detail || '') + '</div></div>';
+      }).join('') : '<p class="hint">Rien ici pour l’instant.</p>') + '</div></div>';
+    }).join('');
+    modal({ kicker: 'Autres actions', title: 'Plus d’actions', cls: 'more-modal', html: head + panels, buttons: [{ label: 'Fermer' }],
       onOpen: function () {
-        Array.prototype.forEach.call(document.querySelectorAll('.pick-row'), function (row) {
-          row.addEventListener('click', function () {
-            var it = items[+row.getAttribute('data-i')];
-            if (it.err) { toast(it.err.charAt(0).toUpperCase() + it.err.slice(1) + '.'); return; }
+        var body = $('modal-body');
+        Array.prototype.forEach.call(body.querySelectorAll('.mt-tab'), function (b) {
+          b.addEventListener('click', function () {
+            moreTab = b.getAttribute('data-tab');
+            Array.prototype.forEach.call(body.querySelectorAll('.mt-tab'), function (x) { var on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-selected', on); });
+            Array.prototype.forEach.call(body.querySelectorAll('.mt-panel'), function (pn) { pn.hidden = pn.getAttribute('data-panel') !== moreTab; });
+          });
+        });
+        Array.prototype.forEach.call(body.querySelectorAll('.ac-main'), function (b) {
+          b.addEventListener('click', function () { var m = b.parentNode.querySelector('.ac-more'); m.hidden = !m.hidden; b.setAttribute('aria-expanded', !m.hidden); });
+        });
+        Array.prototype.forEach.call(body.querySelectorAll('.ac-go'), function (b) {
+          b.addEventListener('click', function () {
+            var it = flat[+b.getAttribute('data-launch')];
+            if (it.err) { toast(it.err.charAt(0).toUpperCase() + it.err.slice(1).replace(/\.?$/, '.')); return; }
+            if (Date.now() - moreLock < 600) return;   // v5.0 : un double toucher n'ajoute pas l'action deux fois
+            moreLock = Date.now();
             closeModal();
             if (it.special === 'enquete') enqueteMenu();
-            else if (it.special === 'matinale') matinaleMenu();
             else if (it.special === 'union') unionMenu();
             else if (it.special === 'defi') defiMenu();
-            else if (it.special === 'vingt') vingtInterview();
-            else if (it.special === 'alliance') allianceMenu();
-            else if (it.special === 'break') confirmBreak();
+            else if (it.special === 'clan') clanMenu(it.op);
             else addAction(it.act);
           });
         });
       } });
+  }
+  /* v5.0 (Bêta) : lancer une opération clandestine. Viser un parti (si besoin), puis confirmer en voyant le risque. */
+  function clanMenu(k) {
+    var o = E.clanOp(k), risk = Math.round(100 * E.clanRisk(g, me, k));
+    var html = '<div class="clan-head"><span class="ac-ic">' + o.icon + '</span><span><b>' + esc(o.name) + '</b><small>' + esc(o.effet) + '</small></span><span class="ac-risk">Risque<b>' + risk + ' %</b></span></div>' +
+      '<p class="hint">Si l’opération est découverte : <b>scandale</b> (' + E.ptLabel(D.BETA.clan.scandal.pt / 100) + ' au sondage et ' + (-D.BETA.clan.scandal.money) + ' € d’amende), et elle ne produit pas son effet. Même réussie, elle peut ressortir dans les tours suivants.</p>';
+    if (!o.target) {
+      return modal({ kicker: costLabel({ type: 'clan', op: k }) + ' · 1 action', title: 'Lancer l’opération ?', html: html,
+        buttons: [{ label: 'Lancer', primary: true, onClick: function () { addAction({ type: 'clan', op: k }); } }, { label: 'Annuler' }] });
+    }
+    var pm = E.pollMap(g);
+    var buttons = E.ranking(g).filter(function (x) { return x !== me; }).map(function (pid) {
+      var err = canQueue({ type: 'clan', op: k, target: pid });
+      return { label: party(pid).short + ' · ' + pctFr(pm[pid] || 0, 1) + ' %' + (err ? ' — ' + err.replace(/\.$/, '') : ''), disabled: !!err, onClick: function () { addAction({ type: 'clan', op: k, target: pid }); } };
+    });
+    buttons.push({ label: 'Annuler' });
+    modal({ kicker: costLabel({ type: 'clan', op: k, target: null }) + ' · 1 action', title: 'Quel parti viser ?', html: html, buttons: buttons });
   }
   /* v4.4 : candidature commune */
   function unionMenu() {
@@ -2217,11 +2329,11 @@
       buttons.push({ label: label, disabled: !!err, onClick: function () { addAction({ type: 'alliance', target: p.id }); } });
     });
     buttons.push({ label: 'Annuler' });
-    modal({ kicker: 'Coûte 1 ★ et 1 action', title: 'Proposer une alliance', html: html, buttons: buttons });
+    modal({ kicker: '1 action', title: 'Proposer une alliance', html: html, buttons: buttons });
   }
   function confirmBreak() {
     var ally = E.allyOf(g, me);
-    modal({ kicker: 'Rupture', title: 'Trahir ' + party(ally).short + ' ?', html: '<p>Tu perds <b>' + R.breakCost + ' ★</b>, et ses électeurs ne te reporteront presque rien au second tour (' + Math.round(R.betrayedTransfer * 100) + ' %). En échange, tu peux de nouveau l\'attaquer et lui prendre des électeurs.</p>',
+    modal({ kicker: 'Rupture', title: 'Trahir ' + party(ally).short + ' ?', html: '<p>Tu perds <b>' + String(R.breakCost).replace('.', ',') + ' pt</b> au sondage, et ses électeurs ne te reporteront presque rien au second tour (' + Math.round(R.betrayedTransfer * 100) + ' %). En échange, tu peux de nouveau l\'attaquer et lui prendre des électeurs.</p>',
       buttons: [{ label: 'Rompre l\'alliance (1 action)', primary: true, onClick: function () { addAction({ type: 'rupture' }); } }, { label: 'Garder l\'alliance' }] });
   }
 
@@ -2252,8 +2364,15 @@
     var cubes0 = {}; D.REGIONS.forEach(function (r) { cubes0[r.id] = E.cubes(g, r.id, me); });
     var mine = queue.slice();
     var plans = {}; plans[me] = queue.slice();
-    g.players.forEach(function (p) { if (!p.human) plans[p.id] = AI.plan(g, p.id); });
-    var log = E.resolveActions(g, plans);
+    g.players.forEach(function (p) {
+      if (p.human) return;
+      var lk = g.clan && g.clan.locked && g.clan.locked[p.id];   // v5.0 : le plan vu par ta taupe est bien celui qui est joué
+      plans[p.id] = lk && lk.turn === g.turn ? lk.plan : AI.plan(g, p.id);
+    });
+    var raw = E.resolveActions(g, plans);
+    // v5.0 : une opération clandestine non découverte d'un rival n'apparaît nulle part (ni flash, ni journal) ; on sait seulement qu'une rumeur circule
+    var log = raw.filter(function (l) { return !(l.secret && l.pid !== me); });
+    lastVictim = raw.filter(function (l) { return l.secret && l.pid !== me && l.clan && l.clan.target === me; });
     pressLog = log; pressBefore = before;   // v2.2 : le journal de demain racontera ce tour
     queue = []; advReact = null;
     // v1.4 : on montre d'abord la tournée du candidat sur la carte, puis les régions qui basculent, puis le flash info
@@ -2332,6 +2451,7 @@
     open();
   }
   function who(pid) { return pid === me ? 'Toi' : party(pid).short; }
+  var lastVictim = [];
   /* Les gros titres de la soirée, du plus important au moins important */
   function flashData(log, before, ctrl0, allies0) {
     var heads = [], changed = [];
@@ -2344,7 +2464,7 @@
       if (c1) heads.push({ w: r.pts + (c1 === me || c0 === me ? 20 : 0), me: c1 === me || c0 === me, t: (c1 === me ? 'Tu prends ' : party(c1).short + ' prend ') + nm + (c0 ? (c0 === me ? ' : tu la perds' : ' à ' + party(c0).short) : '') });
       else heads.push({ w: r.pts / 2 + (c0 === me ? 20 : 0), me: c0 === me, t: nm + ' : ' + (c0 === me ? 'tu perds' : party(c0).short + ' perd') + ' le contrôle' });
     });
-    var fails = log.filter(function (l) { return l.pid === me && !l.ok && !l.gaffe; });
+    var fails = log.filter(function (l) { return l.pid === me && !l.ok && !l.gaffe && !l.clan; });
     if (fails.length) heads.push({ w: 16, me: true, t: '❌ ' + (fails.length > 1 ? fails.length + ' de tes actions échouent' : 'Ton action « ' + fails[0].action + ' » échoue') });
     log.filter(function (l) { return l.gaffe; }).forEach(function (l) { heads.push({ w: 15, me: l.pid === me, t: '😬 Gaffe de ' + who(l.pid) + (l.region ? ' en ' + SHORT[l.region] : '') }); });
     Object.keys(g.alliances).forEach(function (pid) {
@@ -2352,6 +2472,14 @@
       if (pid < o && allies0[pid] !== o) heads.push({ w: 14, t: '🤝 Alliance ' + who(pid) + ' – ' + who(o) });
     });
     log.filter(function (l) { return l.credUp && l.pid === me; }).forEach(function (l) { heads.push({ w: 9, me: true, t: '📈 Tu deviens crédible sur ' + th(l.credUp).name }); });
+    // v5.0 (Bêta) : les opérations clandestines. Le joueur sait ce qu'il a fait ; des autres, il ne voit que les scandales.
+    log.filter(function (l) { return l.clan; }).forEach(function (l) {
+      var o = E.clanOp(l.clan.op);
+      if (l.clan.found) heads.push({ w: l.pid === me ? 40 : 26, me: l.pid === me, t: '🚨 Scandale : ' + (l.pid === me ? 'ton opération' : party(l.pid).short + ' pris la main dans le sac,') + ' « ' + o.name + ' »' + (l.pid === me ? ' est découverte' : '') });
+      else if (l.pid === me) heads.push({ w: 12, me: true, t: '🕵️ « ' + o.name + ' » : opération réussie, personne n\u2019a rien vu… pour l\u2019instant' });
+    });
+    lastVictim.forEach(function (l) { heads.push({ w: 18, me: true, t: '🕵️ Une rumeur anonyme circule sur toi' + (l.clan.pt ? ' (' + ptStr(l.clan.pt) + ')' : '') }); });
+    log.filter(function (l) { return l.sabotaged && l.pid === me; }).forEach(function (l) { heads.push({ w: 17, me: true, t: '🧨 Incidents à ton meeting' + (l.region ? ' en ' + SHORT[l.region] : '') + ' : la salle est à moitié vide' }); });
     heads.sort(function (a, b) { return b.w - a.w; });
     var poll = E.poll(g).map(function (x) { return { pid: x.pid, pct: x.pct, d: (x.pct - (before[x.pid] || 0)) * 100 }; });
     var rank = 1 + poll.findIndex(function (x) { return x.pid === me; });
@@ -2418,7 +2546,7 @@
     return '<div class="undec"><div class="undec-k">Les indécis devant leur écran</div><div class="undec-bar"><i class="u-me" data-w="' + x.toFixed(1) + '" style="width:50%;background:' + party(me).color + '"></i><i class="u-op" style="background:' + party(o).color + '"></i></div>' +
       '<div class="undec-l"><b>Toi' + (la ? ' · ' + la : '') + '</b><b>' + esc(party(o).short) + (lb ? ' · ' + lb : '') + '</b></div></div>';
   }
-  /* Les duels d'une soirée (débat du 1er tour ou face-à-face). cfg : { kicker, host, duels, prep (pid → ★), fiche, done(picks) } */
+  /* Les duels d'une soirée (débat du 1er tour ou face-à-face). cfg : { kicker, host, duels, prep (pid → niveaux de préparation payés en €), fiche, done(picks) } */
   function runDuels(cfg) {
     var picks = [], n = cfg.duels.length;
     function step(k) {
@@ -2466,20 +2594,20 @@
   function debate() {
     var deb = E.setupDebate(g), grand = g.turn === R.maxTurns;
     var mine = deb.duels.filter(function (d) { return d.a === me || d.b === me; });
-    var max = Math.min(mePl().infl, R.debatePrepMax), mult = grand ? 2 : 1;
+    var max = Math.min(Math.floor(mePl().money / R.prepCost), R.debatePrepMax), mult = grand ? 2 : 1;   // v5.0 : préparation en €
     var html = '<p>' + mine.length + ' questions, ' + mine.length + ' adversaires. À chaque question, tu choisis ta réponse ; certaines contrent les autres :</p>' +
       '<div class="rps">L\u2019émotion bat les chiffres · les chiffres battent l\u2019attaque · l\u2019attaque bat l\u2019émotion · attaque et chiffres démontent une promesse</div>' +
       '<div class="brief">' + mine.map(function (d) {
         var o = d.a === me ? d.b : d.a;
         return line(th(d.theme).icon, '<b>' + esc(party(o).short) + '</b> sur ' + esc(th(d.theme).name) + ' <span class="muted">· ' + D.TEMPERS[o].label + '</span>');
       }).join('') + '</div>' +
-      '<p><b>Préparation</b> : chaque ★ influence dépensée = +' + Math.round(D.DEBATE.prep * 100) + ' % sur le gain de tes réponses, et la fiche de ton adversaire (sa réponse favorite).</p>' +
-      '<div class="bid"><input id="bid" type="range" min="0" max="' + max + '" value="' + Math.min(1, max) + '" aria-label="Préparation en influence"><output id="bid-out">' + Math.min(1, max) + ' ★</output></div>' +
+      '<p><b>Préparation</b> : chaque € dépensé (un conseiller, une répétition) = +' + Math.round(D.DEBATE.prep * 100) + ' % sur le gain de tes réponses, et la fiche de ton adversaire (sa réponse favorite).</p>' +
+      '<div class="bid"><input id="bid" type="range" min="0" max="' + max + '" value="' + Math.min(1, max) + '" aria-label="Préparation en euros"><output id="bid-out">' + Math.min(1, max) + ' €</output></div>' +
       '<p class="hint">Chaque réponse affiche ce qu\u2019elle rapporte à ton score au sondage national (partout en France). Si ta réponse contre celle d\u2019en face, ton gain grimpe. Le vainqueur de la soirée reçoit en plus un bonus au sondage.' + (grand ? ' <b>Grand débat final : bonus doublé !</b>' : '') + '</p>' + learnBox('debat');
     var prep = {};
     g.players.forEach(function (p) { if (!p.human) prep[p.id] = AI.prep(g, p.id); });
     modal({ kicker: grand ? 'Grand débat final' : 'Débat télévisé', title: 'Ce soir, sur le plateau !', html: html,
-      onOpen: function () { var r = $('bid'); r.addEventListener('input', function () { $('bid-out').textContent = r.value + ' ★'; }); },
+      onOpen: function () { var r = $('bid'); r.addEventListener('input', function () { $('bid-out').textContent = r.value + ' €'; }); },
       buttons: [{ label: 'Entrer sur le plateau', primary: true, keep: true, onClick: function () {
         prep[me] = parseInt($('bid').value, 10) || 0; closeModal();
         runDuels({ kicker: grand ? 'Grand débat final' : 'Débat télévisé', host: 'Les deux journalistes du débat', duels: mine, prep: prep, fiche: prep[me] > 0, done: function (myPicks) {
@@ -2530,9 +2658,9 @@
     var t = E.spotlightTarget(g);
     if (!t) return finishTurn(null);
     if (t === me) {
-      var can = mePl().infl >= R.spotlightCost;
-      modal({ kicker: 'Sous les projecteurs', title: 'Tu es en tête des sondages !', html: '<p>Les médias fouillent ton passé. Paie <b>2 ★</b> pour étouffer l\'affaire, ou perds 1 soutien dans tes 2 plus grandes régions.</p>',
-        buttons: [{ label: 'Payer 2 ★', primary: true, disabled: !can, onClick: function () { finishTurn(E.applySpotlight(g, me, true)); } },
+      var can = mePl().money >= R.spotlightCost;
+      modal({ kicker: 'Sous les projecteurs', title: 'Tu es en tête des sondages !', html: '<p>Les médias fouillent ton passé. Paie <b>' + R.spotlightCost + ' €</b> (avocats, communicants) pour étouffer l\'affaire, ou perds 1 soutien dans tes 2 plus grandes régions.</p>',
+        buttons: [{ label: 'Payer ' + R.spotlightCost + ' €', primary: true, disabled: !can, onClick: function () { finishTurn(E.applySpotlight(g, me, true)); } },
                   { label: 'Perdre 2 soutiens', onClick: function () { finishTurn(E.applySpotlight(g, me, false)); } }] });
     } else finishTurn(E.applySpotlight(g, t, AI.paySpotlight(g, t)));
   }
@@ -2606,7 +2734,7 @@
   function finishTurn(spot) {
     var res = E.endTurn(g); render();
     if (spot && !spot.paid && spot.pid !== me) toast(party(spot.pid).short + ' sous les projecteurs : −1 soutien en ' + spot.regions.map(function (x) { return SHORT[x]; }).join(', '));
-    else if (spot && spot.paid && spot.pid !== me) toast(party(spot.pid).short + ' paie 2 ★ pour éviter le scandale');
+    else if (spot && spot.paid && spot.pid !== me) toast(party(spot.pid).short + ' paie ' + R.spotlightCost + ' € pour éviter le scandale');
     if (g.humanOut) return humanOut();   // v4.4 : pas tes 500 parrainages
     if (res.out && res.out.length) {   // v4.4 : les partis sans leurs 500 signatures quittent la course
       var outH = '<p>Sans leurs 500 signatures d\u2019élus, ces partis ne seront pas candidats :</p><div class="brief">' + res.out.map(function (o) {
@@ -3052,21 +3180,22 @@
       axisHtml(me || chosen) +
       '<p><b>Partis proches :</b> quand tu fais un Meeting ou passes à la Télé là où un parti voisin sur l\'axe est présent, tu lui prends 1 électeur (distance 2 : sur un dé de 4 à 6).</p>' +
       '<p><b>🤝 Pas d\'alliance avant le 1er tour :</b> chaque parti fait campagne seul. Les accords se négocient <b>entre les deux tours</b> (voir plus bas).</p>' +
-      '<p><b>Chaque tour :</b> revenus (' + R.incomeMoney + ' € + 1 € par région contrôlée, max +3 ; +2 ★), un événement, puis <b>3 actions secrètes</b>. Tout le monde choisit en secret, puis les plans sont joués <b>chacun son tour</b> : l\'action 1 de chaque parti, puis l\'action 2, puis la 3. Le parti qui commence change à chaque tour (l\'ordre est affiché dans le flash info). Une action peut donc échouer si un rival a changé la situation juste avant : le flash info te dit pourquoi.</p>' +
+      '<p><b>Chaque tour :</b> revenus (' + R.incomeMoney + ' € + 1 € par région contrôlée, max +3), un événement, puis <b>3 actions secrètes</b>. Tout le monde choisit en secret, puis les plans sont joués <b>chacun son tour</b> : l\'action 1 de chaque parti, puis l\'action 2, puis la 3. Le parti qui commence change à chaque tour (l\'ordre est affiché dans le flash info). Une action peut donc échouer si un rival a changé la situation juste avant : le flash info te dit pourquoi.</p>' +
       '<p><b>Ton message.</b> Meeting, Télé, Buzz et Faire la une portent un <b>thème</b> (💶 🏭 🏥 🌿 🚓 🛂). Son <b>impact</b>, de 0 à 4 = ta crédibilité sur le thème (0 à 2) + 1 si la région s\'en préoccupe + 1 si le thème fait l\'actu. Le bon message au bon endroit rapporte deux fois plus.</p>' +
       '<p><b>Les actions :</b></p><ul class="rules-acts">' +
         '<li>📣 <b>Meeting</b> (2 €) : des soutiens dans la région. <b>Base</b> de 1 à 4 selon l\'impact du message (de 2 à 5 en campagne éclair), <b>plus les bonus</b> : mesure phare +1, région de cœur +1 (hostile −1), dynamique ±1, et pour le Parti Survivant +1 là où il a déjà 5 soutiens. Le détail s\'affiche quand tu touches une région. Une région compte au plus 10 soutiens par parti.</li>' +
         '<li>📻 <b>Matinale radio</b> (1 ⚡, une fois tous les deux tours) : une interview sur une radio au choix. Chaque radio a son public (France Intérieure : cadres et profs ; Radio Nouba : les jeunes ; Europe Hier : retraités et petits patrons ; Radio Mon Comptoir : ouvriers et artisans). Si les auditeurs sont de ton bord, +25 % ; s\u2019ils sont loin, −30 %.</li>' +
         '<li>🕗 <b>Le 20 h</b> (1 ⚡, une fois par campagne, réservé aux 4 premiers du sondage) : le gain d\u2019une interview multiplié par deux… mais le trac du direct peut tourner au trou de mémoire (25 % de risque, 5 % de moins par ⚡ qu\u2019il te reste).</li>' +
-        '<li>📺 <b>Télé</b> (3 € + 1 ★ + 1 ⚡) : une interview sur ton thème. Tu choisis ta réponse (❤️ émotion, 💡 ta mesure, 🥊 attaque ou 🛡️ bilan, 🙃 recentrer) : elle te fait gagner des voix dans une ou plusieurs <b>classes sociales</b>, dans toutes les régions à la fois. L\u2019effet s\u2019use de 15 % par tour.</li>' +
+        '<li>📺 <b>Télé</b> (4 € + 1 ⚡) : une interview sur ton thème. Tu choisis ta réponse (❤️ émotion, 💡 ta mesure, 🥊 attaque ou 🛡️ bilan, 🙃 recentrer) : elle te fait gagner des voix dans une ou plusieurs <b>classes sociales</b>, dans toutes les régions à la fois. L\u2019effet s\u2019use de 15 % par tour.</li>' +
         '<li>🚪 <b>Mobiliser</b> (2 €) : du porte-à-porte pour faire voter des abstentionnistes. 1 soutien, +1 avec tes militants, +1 si ton programme parle à ceux qui votent peu ici, +1 si la région s\'abstient beaucoup (3 au plus). Jusqu\'au tour 3, tu fais aussi inscrire de nouveaux électeurs.</li>' +
         '<li>📱 <b>Buzz</b> (1 €, menu Plus) : un coup de dé, de −1 à +4 soutiens. +1 si le thème fait l\'actu.</li>' +
-        '<li>🗞️ <b>Faire la une</b> (2 € + 2 ★) : ton thème fera l\'actu au tour suivant… pour tout le monde.</li>' +
-        '<li>🥊 <b>Attaquer</b> (2 € + 1 ★) : le rival le plus fort de la région perd 2 soutiens (il faut y avoir 1 soutien).</li>' +
+        '<li>🗞️ <b>Faire la une</b> (4 €) : ton thème fera l\'actu au tour suivant… pour tout le monde.</li>' +
+        '<li>🥊 <b>Attaquer</b> (3 €) : le rival le plus fort de la région perd 2 soutiens (il faut y avoir 1 soutien).</li>' +
         '<li>💰 <b>Collecte</b> (gratuit) : +3 € dans la caisse.</li>' +
-        '<li>📜 <b>Promesse</b> (4 ★) : dans une région que tu tiens, +1 soutien dans toutes les régions du même type.</li>' +
+        '<li>📜 <b>Promesse</b> (4 €) : dans une région que tu tiens, +1 soutien dans toutes les régions du même type.</li>' +
         '<li>👥 <b>Militants</b> (3 €) : une équipe dans la région, +1 soutien à chaque début de tour (3 équipes au plus).</li>' +
-        '<li>🃏 2 cartes spéciales par parti.</li></ul>' +
+        '<li>🃏 <b>2 actions spécifiques par parti</b> (menu Plus) : son gag satirique et une carte, ou deux cartes. Une carte coûte ' + D.CARD_RULES.cost.money + ' € + ' + D.CARD_RULES.cost.forme + ' ⚡, se rejoue tous les ' + D.CARD_RULES.recharge + ' tours, et vaut 50 % de plus quand son sujet fait l\u2019actu nationale.</li></ul>' +
+      '<p><b>📊 Plus d\u2019influence ★.</b> Les trois compteurs sont ton score au sondage, ton argent et ton énergie. Ce qui rapportait ou coûtait des ★ rapporte ou coûte désormais directement des points de sondage (quelques dixièmes de point), ou se paie en €.</p>' +
       '<p><b>⚡ La forme du candidat</b> (4 au plus, +2 par tour). Meeting et Télé coûtent 1 ⚡. Si une action la fait tomber à 0, le candidat épuisé peut faire une <b>gaffe</b> (4 chances sur 10) : aucun soutien et une casserole.</p>' +
       '<p><b>↗ La dynamique.</b> Si tu gagnes 1,5 point au sondage en un tour, tes Meetings rapportent 1 soutien de plus au tour suivant. Si tu en perds 1,5, 1 de moins.</p>' +
       '<p><b>Crédibilité qui évolue.</b> Après 3 actions sur un même thème, ta crédibilité dessus augmente (2 au plus). Le bonus compte à partir de l\'action suivante.</p>' +
@@ -3079,7 +3208,7 @@
       '<p><b>🎙️ Le face-à-face</b> (entre les deux tours) : 3 questions entre les deux finalistes. Le gagnant fait basculer jusqu\u2019à 3 % des électeurs de l\u2019autre pour le second tour.</p>' +
       '<p><b>⚖️ Mode Réaliste : le poids des urnes.</b> Chaque soutien pèse selon le score historique de son parti dans la région : un soutien du parti en tête de la région compte beaucoup, celui d\u2019un petit parti beaucoup moins. Et la moitié des électeurs vote par fidélité (le <b>socle électoral</b>) : la campagne se joue sur l\u2019autre moitié. Résultat : les petits partis ont du mal à dépasser leur score historique, et chaque région garde sa couleur (terre de gauche, de droite ou disputée, dans la fiche de la région). En mode Simulation, tout le monde pèse pareil.</p>' +
       '<p><b>🧪 Mode Bêta.</b> Le mode Réaliste avec les règles à l\u2019essai : ' + D.BETA.changes.map(esc).join(' ') + '</p>' +
-      '<p><b>Sous les projecteurs :</b> le premier des sondages paie 2 ★ ou perd des soutiens à chaque fin de tour.</p>' +
+      '<p><b>Sous les projecteurs :</b> le premier des sondages paie ' + R.spotlightCost + ' € ou perd des soutiens à chaque fin de tour.</p>' +
       '<p><b>🎭 Les traits satiriques.</b> Huit partis vivent un gag qui se joue de l\u2019intérieur, avec un avantage et un coût : ' + Object.keys(D.TRAITS).map(function (k) { var t = D.TRAITS[k]; return t.icon + ' <b>' + esc(t.name) + '</b> (' + t.parties.map(function (p) { return esc(party(p).short); }).join(', ') + ')'; }).join(' · ') + '. Le détail est dans l\u2019onglet de ton parti, et les actions propres à ton parti dans le menu « Plus ».</p>' });
   }
 

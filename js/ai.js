@@ -75,7 +75,7 @@
     var pl = E.player(v, pid);
     if (E.checkAction(v, pid, act)) return null;
     var cost = E.actionCost(v, pid, act);
-    if (pl.money < cost.money || pl.infl < cost.infl || pl.forme < cost.forme) return null;
+    if (pl.money < cost.money || pl.forme < cost.forme) return null;
     var val = 0, eff = [];
     function boost(rid, n) { val += E.gain(v, pid, rid, n); eff.push([rid, pid, n]); }
     var prof = act.region ? E.REG[act.region].profile : null;
@@ -158,26 +158,26 @@
         E.bestRegions(v, pid, E.spec(v, pid, D.RULES.eclatGain), null, 1).forEach(function (rid) { boost(rid, 1); });
         val += 2.4 * Math.min(3, D.RULES.maxTurns - v.turn + 1) / 3;
         break; }
-      case 'fonds': val += (pl.money < 3 ? 4 : pl.money < 6 ? 1.5 : 0.2) + (E.fundsGain(pid).infl ? (pl.infl < 3 ? 2.5 : 1) : 0); break;
-      case 'card': {
-        var c = act.card;
-        var sp = function (n) { return E.spec ? E.spec(v, pid, n) : n; };   // v4.3 : la force réglée des cartes (Bêta)
-        if (c === 'marche_pop' || c === 'climat') boost(act.region, sp(3));
-        else if (c === 'grand_meeting') boost(act.region, sp(4));
-        else if (c === 'fete_rose') { boost(act.region, sp(2)); val += 1.5 * sp(2) / 2; }
-        else if (c === 'remaniement') { val += E.gain(v, pid, act.region, 2) - 2; eff.push([act.region, pid, 2]); }
+      case 'fonds': val += (pl.money < 3 ? 4 : pl.money < 6 ? 1.5 : 0.2); break;
+      case 'card': {   // v5.0 : les cartes de parti (rechargeables, bonus quand leur sujet fait l'actu)
+        var c = act.card, C = D.CARDS[c] || {};
+        var sp = function (n) { return E.cardN(v, pid, c, n); }, pp = function (x) { return E.cardPt(v, pid, c, x) * 5.5; };   // 1 pt de sondage ≈ 5,5 en valeur
+        if (c === 'marche_pop' || c === 'climat' || c === 'piquet' || c === 'grand_meeting') boost(act.region, sp(C.n));
+        else if (c === 'fete_rose' || c === 'huma') { boost(act.region, sp(2)); val += 1.5 * sp(2) / 2; }
+        else if (c === 'remaniement') { val += E.gain(v, pid, act.region, sp(2)) - sp(2); eff.push([act.region, pid, sp(2)]); }
         else if (c === 'plateau_tele') E.bestRegions(v, pid, 3, function (r) { return r.profile === 'rurale' || r.profile === 'industrielle'; }, 2).forEach(function (rid) { boost(rid, sp(2)); });
+        else if (c === 'clochers') E.bestRegions(v, pid, 2, function (r) { return r.profile === 'rurale'; }, 2).forEach(function (rid) { boost(rid, sp(2)); });
         else if (c === 'appel18') D.REGIONS.forEach(function (r) { if (r.profile === 'historique') boost(r.id, sp(1)); });
-        else if (c === 'canicule') val += 2 + v.turn * 0.4;
-        else if (c === 'art493') val += 1.4 + v.turn * 0.4 - pl.cas * 0.35;
-        else if (c === 'censure') val += 1.5 + v.turn * 0.2;
-        else if (c === 'primaire' || c === 'rassemblement') val += pl.infl < 3 || pl.money < 4 ? 3.5 : 1;
-        val -= v.turn < 5 ? 1.5 : 0; // garde ses cartes pour plus tard
+        else if (c === 'canicule') val += (E.cardHot(v, c) ? 3 : 2) + v.turn * 0.3;
+        else if (c === 'art493') val += 1.4 + v.turn * 0.4 - (E.cardHot(v, c) ? 0 : pl.cas * 0.35);
+        else if (c === 'censure') val += pp(C.pt) * 0.5 + 0.5;
+        else if (c === 'nationaliser' || c === 'depassement') val += pp(C.pt);
+        else if (c === 'greve' || c === 'referendum') val += pp(C.pt) + 0.8;
         break; }
     }
     // fatigue : si l'action vide la forme du candidat, risque de gaffe
     if (cost.forme && pl.forme - cost.forme === 0) val = val * (1 - D.RULES.gaffeChance) - D.RULES.gaffeChance * 1.5;
-    val -= cost.money * 0.35 + cost.infl * 0.6 + cost.forme * 0.4;
+    val -= cost.money * 0.35 + cost.forme * 0.4;
     val += rng() * 0.6;
     return { v: val, cost: cost, eff: eff, act: act };
   }
@@ -193,11 +193,11 @@
       });
       if (!best) { out.push({ type: 'fonds' }); continue; }
       var pl = E.player(v, pid);
-      // garde un peu d'influence pour le débat
-      if (debate && best.cost.infl > 0 && pl.infl - best.cost.infl < 2 && best.v < 4) { out.push({ type: 'fonds' }); pl.money += E.fundsGain(pid).money; continue; }
-      pl.money -= best.cost.money; pl.infl -= best.cost.infl; pl.forme -= best.cost.forme;
+      // garde un peu d'argent pour préparer le débat (v5.0 : la préparation se paie en €)
+      if (debate && best.cost.money > 0 && pl.money - best.cost.money < 2 && best.v < 4) { out.push({ type: 'fonds' }); pl.money += E.fundsGain(pid).money; continue; }
+      pl.money -= best.cost.money; pl.forme -= best.cost.forme;
       if (best.act.type === 'militants') { v.bases[best.act.region] = (v.bases[best.act.region] || []).concat([pid]); pl.militants += 1; }
-      if (best.act.type === 'fonds') { pl.money += E.fundsGain(pid).money; pl.infl += E.fundsGain(pid).infl; }
+      if (best.act.type === 'fonds') pl.money += E.fundsGain(pid).money;
       if (best.act.type === 'enquete') { v.enq = v.enq || {}; v.enq[pid + best.act.target] = 1; }
       if (best.act.type === 'alliance') { v.alliances[pid] = best.act.target; v.alliances[best.act.target] = pid; }
       if (best.act.type === 'matinale') pl.matinaleTurn = g.turn;
@@ -210,12 +210,35 @@
       if (best.act.type === 'rappel') pl.rappelTurn = g.turn;
       if (best.act.type === 'fusion') v.micro = null;
       if (best.act.type === 'eclat') { v.hidden = false; v.eclatUntil = g.turn + D.RULES.eclatTurns - 1; }
-      if (best.act.type === 'card') pl.cards = pl.cards.filter(function (k) { return k !== best.act.card; });
+      if (best.act.type === 'card') { pl.cardCd = Object.assign({}, pl.cardCd); pl.cardCd[best.act.card] = g.turn + D.CARD_RULES.recharge; }
       best.eff.forEach(function (e) { add(v, e[0], e[1], e[2]); });
       Object.keys(v.regions).forEach(function (rid) { recompute(v, rid); });
       out.push(best.act);
     }
+    clanPick(g, pid, out);   // v5.0 (Bêta)
     return out;
+  }
+  /* v5.0 (Bêta) : l'ordinateur tente parfois une opération clandestine, avec les mêmes règles et les mêmes risques que le joueur.
+     Fréquence limitée (une par tour au plus, pas tous les tours), jamais quand il est déjà très suspect.
+     Cible : le rival juste devant lui au sondage (ou le premier s'il est 2e). L'espionnage ne lui sert à rien : il ne le joue pas.
+     Aucun parti n'a de bonus ou de malus selon son bord politique. */
+  function clanPick(g, pid, out) {
+    if (!E.clanOn(g) || !out.length) return;
+    var C = D.BETA.clan, pl = E.player(g, pid);
+    if (E.suspicion(g, pid) > C.ai.suspMax || g.rng() >= C.ai.chance) return;
+    var rk = E.ranking(g), me = rk.indexOf(pid), tgt = me > 0 ? rk[me - 1] : rk[1];
+    var money = pl.money, forme = pl.forme;
+    out.forEach(function (a) { var c = E.actionCost(g, pid, a); money -= c.money; forme -= c.forme; });
+    var last = out[out.length - 1], lc = E.actionCost(g, pid, last); money += lc.money; forme += lc.forme;   // l'opération remplace sa dernière action
+    var prefs = money < 4 ? ['occulte'] : me <= 3 ? ['fakenews', 'denigrement', 'sabotage', 'fuite'] : ['denigrement', 'fakenews', 'fuite', 'occulte'];
+    var off = Math.floor(g.rng() * prefs.length);   // un peu de variété dans le choix de l'opération
+    prefs = prefs.slice(off).concat(prefs.slice(0, off));
+    for (var i = 0; i < prefs.length; i++) {
+      var op = E.clanOp(prefs[i]), act = { type: 'clan', op: prefs[i], target: op.target ? tgt : undefined };
+      if ((op.cost.money || 0) > money || (op.cost.forme || 0) > forme || E.clanError(g, pid, act)) continue;
+      if (E.clanRisk(g, pid, prefs[i]) > 0.6) continue;
+      out[out.length - 1] = act; return;
+    }
   }
   function recompute(v, rid) {
     var best = -1, leaders = [];
@@ -226,10 +249,10 @@
     else v.regions[rid].controller = null;
   }
 
-  /* v0.6 : débat. Préparation en ★, puis choix des répliques selon le tempérament et la situation. */
+  /* v0.6 : débat. Préparation (v5.0 : en €, 1 € par niveau), puis choix des répliques selon le tempérament et la situation. */
   function prep(g, pid) {
-    var pl = E.player(g, pid), max = Math.min(pl.infl, D.RULES.debatePrepMax);
-    var want = g.turn === D.RULES.maxTurns ? 3 : pl.infl >= 6 ? 2 : pl.infl >= 3 ? 1 : 0;
+    var pl = E.player(g, pid), max = Math.min(Math.floor(pl.money / D.RULES.prepCost), D.RULES.debatePrepMax);
+    var want = g.turn === D.RULES.maxTurns ? 3 : pl.money >= 8 ? 2 : pl.money >= 4 ? 1 : 0;
     return Math.min(max, want);
   }
   /* v4.0 : la carte de réponse choisie en débat (d : le duel, avec sa question ; sinon une question sur le thème) */
@@ -237,7 +260,7 @@
     var duel = d && d.qid ? d : { a: pid, b: opp, theme: theme, qid: E.pickQuestion(g, theme, 31).id };
     return E.aiDebatePick(g, pid, duel);
   }
-  function payspotlight(g, pid) { return E.player(g, pid).infl >= 4; }
+  function payspotlight(g, pid) { return E.player(g, pid).money >= D.RULES.spotlightCost + 3; }   // v5.0 : en €
 
   /* Dilemmes : l'IA estime la valeur moyenne de chaque option */
   function fxValue(g, pid, list) {
@@ -245,7 +268,7 @@
     (list || []).forEach(function (e) {
       switch (e.k) {
         case 'money': v += e.n * (pl.money < 4 ? 0.5 : 0.3); break;
-        case 'infl': v += e.n * 0.55; break;
+        case 'pt': v += e.n * 5.5; break;   // v5.0 : points de sondage
         case 'forme': v += e.n * 0.5; break;
         case 'cas': v -= e.n * (0.9 + pl.cas * 0.25); break;
         case 'strong': v += e.n * 1.6; break;

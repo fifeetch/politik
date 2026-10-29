@@ -1359,8 +1359,8 @@ button { font-family: inherit; color: inherit; }
 .tile-big.tile-pt small { font-size: 10px; margin-left: 1px; }
 .tile-mid { gap: 3px; min-width: 0; max-width: 100%; }
 @media (max-width: 380px) { .tile-big.tile-pt { font-size: 21px; } }
-#res-money, #res-infl, #res-forme { flex-direction: column; align-items: center; gap: 0; line-height: 1.05; padding-top: 3px; padding-bottom: 3px; }
-#res-money .pill-w, #res-infl .pill-w, #res-forme .pill-w { margin: 0; }
+#res-money, #res-poll, #res-forme { flex-direction: column; align-items: center; gap: 0; line-height: 1.05; padding-top: 3px; padding-bottom: 3px; }
+#res-money .pill-w, #res-poll .pill-w, #res-forme .pill-w { margin: 0; }
 .ans-h { display: flex; align-items: center; gap: 8px; width: 100%; }
 
 /* ---------- v4.6 : les filtres de carte ---------- */
@@ -1483,3 +1483,56 @@ button { font-family: inherit; color: inherit; }
 .map .float.gain { fill: var(--reg); }
 .legend-scope { display: flex; gap: 10px; flex-wrap: wrap; font-size: 12.5px; margin: 0 0 6px; }
 .legend-scope b { font-weight: 800; }
+
+/* ---------- v5.0 : le menu « Plus » en 5 onglets, des cartes compactes ---------- */
+.modal-card { overscroll-behavior: contain; }   /* défiler dans une fenêtre ne fait jamais défiler (ni quitter) l'écran derrière */
+.more-modal { max-height: 92%; }
+.mt-tabs { display: grid; grid-template-columns: repeat(auto-fit, minmax(86px, 1fr)); gap: 6px; position: sticky; top: -20px; z-index: 2; background: var(--paper); padding: 4px 0 8px; margin-top: -4px; }
+.mt-tab { display: flex; align-items: center; justify-content: center; gap: 5px; min-height: 40px; padding: 4px 8px; border-radius: 999px; border: 1.5px solid var(--rule); background: var(--sheet); font-size: 13px; font-weight: 700; color: var(--ink-2); cursor: pointer; position: relative; touch-action: manipulation; }
+.mt-tab span { font-size: 15px; }
+.mt-tab.on { background: var(--violet); border-color: #2E1F70; color: #fff; }
+.mt-tab i { position: absolute; top: -7px; right: 6px; font-style: normal; font-size: 10px; background: var(--red); color: #fff; padding: 1px 5px; border-radius: 999px; }
+.mt-intro { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; background: var(--sheet); border: 1.5px solid var(--rule); }
+.mt-intro span { display: flex; flex-direction: column; flex: 1; line-height: 1.25; }
+.mt-intro small { color: var(--muted); font-size: 13px; }
+.mt-count { font-size: 14px; padding: 4px 10px; border-radius: 999px; background: var(--violet-2); color: var(--violet); }
+.mt-warn { padding: 9px 12px; border-radius: 12px; background: var(--red-2); color: #7A1A17; font-size: 13.5px; line-height: 1.4; }
+.mt-panel { display: flex; flex-direction: column; gap: 10px; }
+.ac-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+@media (min-width: 700px) { .ac-grid { grid-template-columns: 1fr 1fr; } }
+.ac-card { border: 1.5px solid var(--ink); border-radius: 14px; background: var(--sheet); box-shadow: 0 2px 0 var(--ink); display: flex; flex-direction: column; overflow: hidden; }
+.ac-card.mine { border-color: var(--violet); box-shadow: 0 2px 0 var(--violet); }
+.ac-card.hot { box-shadow: 0 2px 0 var(--violet), inset 0 0 0 2px var(--hot); }
+.ac-card.clan { border-color: #2B2740; box-shadow: 0 2px 0 #2B2740; }
+.ac-card.off { opacity: .62; box-shadow: none; }
+.ac-main { display: flex; align-items: center; gap: 10px; padding: 10px 12px 6px; background: none; border: 0; text-align: left; cursor: pointer; font: inherit; touch-action: manipulation; }
+.ac-ic { width: 40px; height: 40px; flex: none; display: grid; place-items: center; font-size: 22px; border-radius: 12px; background: var(--violet-2); }
+.ac-card.clan .ac-ic { background: #2B2740; }
+.ac-txt { display: flex; flex-direction: column; flex: 1; min-width: 0; line-height: 1.25; }
+.ac-txt b { font-size: 15.5px; }
+.ac-txt small { color: var(--muted); font-size: 13px; }
+.ac-tag { flex: none; font-size: 11.5px; font-weight: 700; padding: 3px 8px; border-radius: 999px; background: var(--paper); color: var(--ink-2); border: 1px solid var(--rule); max-width: 46%; text-align: center; }
+.ac-card.hot .ac-tag { background: var(--hot); border-color: #C9A93A; color: var(--ink); }
+.ac-risk { flex: none; display: flex; flex-direction: column; align-items: center; padding: 3px 8px; border-radius: 10px; background: var(--red-2); color: var(--red); font-size: 11px; font-weight: 700; line-height: 1.15; }
+.ac-risk b { font-size: 16px; }
+.ac-foot { display: flex; align-items: center; gap: 8px; padding: 2px 12px 10px 62px; }
+.ac-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; flex: 1; min-width: 0; font-size: 13px; }
+.chip-c { padding: 2px 8px; border-radius: 999px; font-size: 12.5px; font-weight: 700; background: var(--paper); border: 1px solid var(--rule); white-space: nowrap; }
+.chip-c.c-money { background: #FFF4D6; border-color: #E5C66B; }
+.chip-c.c-forme { background: #FDE7DF; border-color: #EBAE98; }
+.ac-pt { font-size: 13px; color: var(--ink-2); }
+.ac-pt b { color: var(--violet); }
+.ac-go { flex: none; min-height: 38px; padding: 0 16px; border-radius: 10px; border: 1.5px solid #2E1F70; background: var(--violet); color: #fff; font-weight: 700; font-size: 14px; box-shadow: 0 2px 0 #2E1F70; cursor: pointer; touch-action: manipulation; }
+.ac-go:active { transform: translateY(1px); box-shadow: 0 1px 0 #2E1F70; }
+.ac-go[aria-disabled="true"] { background: var(--rule); border-color: var(--rule); color: var(--ink-2); box-shadow: none; }
+.ac-card.clan .ac-go:not([aria-disabled]) { background: #2B2740; border-color: #15122A; box-shadow: 0 2px 0 #15122A; }
+.ac-err { margin: -4px 12px 10px 62px !important; font-size: 12.5px; color: var(--red); }
+.ac-more { margin: 0 12px 12px; padding: 10px 12px; border-radius: 10px; background: var(--paper); display: flex; flex-direction: column; gap: 4px; font-size: 13.5px; line-height: 1.4; }
+.clan-head { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; background: var(--sheet); border: 1.5px solid #2B2740; }
+.clan-head .ac-ic { background: #2B2740; }
+.clan-head > span:nth-child(2) { display: flex; flex-direction: column; flex: 1; line-height: 1.3; }
+.clan-head small { color: var(--muted); font-size: 13px; }
+@media (max-width: 360px) { .ac-foot, .ac-err { padding-left: 12px; margin-left: 12px !important; } .ac-foot { padding-left: 12px; } }
+.ac-more .fiche-l { display: block; }
+.mt-intro .mt-face { width: 44px; height: 44px; flex: none; display: block; border-radius: 50%; overflow: hidden; }
+.mt-face svg { width: 100%; height: 100%; display: block; }

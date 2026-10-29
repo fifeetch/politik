@@ -366,6 +366,16 @@
         text: b[1] + (l.ok ? 'bilan pour ' + p.short + ' : ' + l.text + '.' : 'raté : ' + l.text.replace(/^Échoue : /, '').toLowerCase()) });
     });
 
+    // 3 quater. v5.0 (Bêta) : les opérations clandestines prises sur le fait (les autres restent secrètes)
+    (ctx.log || []).forEach(function (l) {
+      if (!l.clan || !l.clan.found || !E.clanOp) return;
+      var p = P(l.pid), o = E.clanOp(l.clan.op), sc = l.clan.scandal || {}, tg = l.clan.target ? P(l.clan.target) : null;
+      arts.push({ id: 'clan-' + l.pid, rub: 'Affaires', pid: l.pid, mine: l.pid === me, why: { k: 'act', l: l, key: 'clan' },
+        title: (l.pid === me ? 'Ton équipe' : 'L\u2019équipe de ' + p.candidate) + ' prise la main dans le sac',
+        text: 'Scandale au QG de ' + p.short + ' : « ' + o.name + ' »' + (tg ? ', une opération montée contre ' + tg.short : '') + ', a été découverte avant même d\u2019avoir produit son effet. ' +
+          (sc.pt != null ? 'Conséquence immédiate : ' + E.ptLabel(sc.pt) + ' au sondage' + (sc.money ? ' et ' + sc.money + ' € d\u2019amende' : '') + '. ' : '') + 'Les juges promettent d\u2019aller jusqu\u2019au bout.' });
+    });
+
     // 3 bis. v3.1 : les gags des partis (au plus 3 articles)
     var gags = [];
     (ctx.log || []).forEach(function (l) {

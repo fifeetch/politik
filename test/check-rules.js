@@ -196,8 +196,8 @@ section('12 partis');
   ids.forEach(function (a) { ids.forEach(function (b) { var d = E.dist(a, b); ok(a === b ? d === 0 : d >= 1 && d <= 5, 'distance ' + a + '-' + b + ' entre 1 et 5'); }); });
   var g = E.createGame('LO', { mode: 'egal' }), rur = 'naq', ind = 'hdf';
   ok(E.actionCost(g, 'LO', { type: 'militants', region: rur }).money === 2, 'LO : militants à 2 €');
-  ok(E.actionCost(g, 'LO', { type: 'medias', region: rur, theme: 'emploi' }).money === 4 && E.actionCost(g, 'DL', { type: 'medias', region: rur, theme: 'emploi' }).money === 4, 'LO et DL : Télé à 4 €');
-  ok(E.actionCost(g, 'HZ', { type: 'reforme', region: rur }).infl === 3, 'HZ : Promesse à 3 ★');
+  ok(E.actionCost(g, 'LO', { type: 'medias', region: rur, theme: 'emploi' }).money === 5 && E.actionCost(g, 'DL', { type: 'medias', region: rur, theme: 'emploi' }).money === 5, 'LO et DL : Télé à 5 € (4 € + 1)');
+  ok(E.actionCost(g, 'HZ', { type: 'reforme', region: rur }).money === 3, 'HZ : Promesse à 3 €');
   ok(E.minControl('HZ') === 4, 'HZ : 4 cubes pour contrôler');
   ok(E.fundsGain('PC').money === 2 && E.fundsGain('MD').money === 2, 'PC et MD : Collecte à 2 €');
   ok(E.mobilizeGain(g, 'PC', ind).n === E.mobilizeGain(g, 'SM', ind).n + 1 || E.mobilizeGain(g, 'PC', ind).n === 4, 'PC : Mobiliser +1 en région industrielle');
@@ -572,12 +572,12 @@ section('Le nouveau débat et le face-à-face (v4.0)');
   var d = deb.duels[0], o1 = E.duelOutcome(g, d, 'emotion', 'mesure', 0, 0), o0 = E.duelOutcome(g, d, 'emotion', 'recentrer', 0, 0);
   ok(o1.beat === 'a' && o1.sa > o0.sa, 'contrer l\'adversaire rapporte plus de points');
   var o2 = E.duelOutcome(g, d, 'emotion', 'recentrer', 3, 0);
-  ok(o2.sa > o0.sa * 1.3, 'la préparation (★) augmente les points');
-  var infl0 = {}; g.players.forEach(function (p) { infl0[p.id] = p.infl; });
+  ok(o2.sa > o0.sa * 1.3, 'la préparation augmente les points');
+  var money0 = {}; g.players.forEach(function (p) { money0[p.id] = p.money; }); E.player(g, 'SM').money = Math.max(1, money0.SM); money0.SM = E.player(g, 'SM').money;
   var aud0 = E.classPoll(g);
   var res = E.resolveDebate(g, { SM: 1 }, deb.duels.map(function (x) { return { ra: AI.chooseReply(g, x.a, x.theme, x.b, x), rb: AI.chooseReply(g, x.b, x.theme, x.a, x) }; }));
   ok(res.ranking.length === g.players.length && res.winner && E.player(g, res.winner).debateWins === 1, 'un vainqueur de la soirée (' + res.winner + ')');
-  ok(E.player(g, 'SM').infl === infl0.SM - 1, 'la préparation coûte ses ★');
+  ok(E.player(g, 'SM').money === money0.SM - D.RULES.prepCost, 'la préparation se paie en € (v5.0)');
   ok(g.audOn && E.audOf(g, res.winner, 'pop') > 0, 'le débat fait gagner de l\'audience (classes sociales)');
   var res2 = E.resolveDebate(Object.assign(g, { debate: E.setupDebate(g) }), {}, g.debate.duels.map(function () { return { ra: 'chiffres', rb: 'esquive' }; }));
   ok(res2.duels.length > 0 && res2.duels[0].kb === 'recentrer', 'les anciens noms de répliques marchent encore (tests, sauvegardes)');
@@ -756,6 +756,76 @@ section('v4.8 : bilan détaillé, salle comble, personnalités, score de départ
   var gs = E.createGame('SM', { seed: 6, base: 'e2024' }), ps = E.poll(gs).filter(function (x) { return x.pid === 'SM'; })[0].pct;
   ok(Math.abs(100 * ps - 22) < 1.5, 'score de départ réglé à 22 % : sondage de départ ' + (100 * ps).toFixed(1) + ' %');
   D.START_EDITS = {};
+})();
+
+(function () {
+  section('v5.0 : plus d\'influence ★, 2 actions spécifiques, actions clandestines');
+  // plus aucune trace d'influence
+  Object.keys(D.ACTIONS).forEach(function (k) { ok(D.ACTIONS[k].cost.infl == null, 'pas de coût en ★ : ' + k); });
+  var g = E.createGame('VP', { seed: 11, mode: 'beta', base: 'sondages' });
+  ok(g.players.every(function (p) { return p.infl == null; }), 'aucun parti n\'a de ★');
+  E.startTurn(g);
+  ok(g.players.every(function (p) { return p.infl == null; }), 'pas de revenu en ★');
+  // exactement 2 actions spécifiques par parti, sans doublon de carte d'un parti à l'autre
+  var used = {};
+  D.PARTIES.forEach(function (P) {
+    var acts = Object.keys(D.ACTIONS).filter(function (k) { return D.ACTIONS[k].only && D.ACTIONS[k].only.indexOf(P.id) >= 0; });
+    ok(acts.length + P.cards.length === 2, P.id + ' : 2 actions spécifiques (' + acts.concat(P.cards).join(', ') + ')');
+    P.cards.forEach(function (c) { ok(!used[c], 'carte ' + c + ' propre à un seul parti'); used[c] = P.id; ok(D.CARDS[c] && D.CARDS[c].theme && D.FICHES[c], 'carte ' + c + ' : thème et fiche'); });
+  });
+  // effet direct au sondage
+  var p0 = E.pollMap(g).VP, d = E.pollShift(g, 'VP', 0.003);
+  ok(Math.abs(d - 0.003) < 0.0006 && Math.abs(E.pollMap(g).VP - p0 - d) < 1e-9, 'pollShift : +0,3 pt (obtenu ' + (100 * d).toFixed(2) + ')');
+  // carte rechargeable, bonus quand le sujet fait la une
+  g.hot = ['ecologie'];
+  ok(E.cardHot(g, 'climat') && E.cardN(g, 'VP', 'climat', 3) === Math.ceil(E.spec(g, 'VP', 3) * 1.5), 'Marche pour le climat : +50 % quand l\'écologie fait la une');
+  var urb = D.REGIONS.filter(function (r) { return r.profile === 'urbaine'; })[0].id, vp = E.player(g, 'VP'); vp.money = 20; vp.forme = 4;
+  var c0 = E.cubes(g, urb, 'VP');
+  E.resolveActions(g, { VP: [{ type: 'card', card: 'climat', region: urb }] });
+  ok(E.cubes(g, urb, 'VP') > c0, 'la carte rapporte des soutiens');
+  ok(E.checkAction(g, 'VP', { type: 'card', card: 'climat', region: urb }) !== null, 'la carte se recharge (indisponible tout de suite)');
+  ok(E.cardReady(g, 'VP', 'climat') === g.turn + D.CARD_RULES.recharge, 'de nouveau jouable ' + D.CARD_RULES.recharge + ' tours plus tard');
+  // clandestines : Bêta seulement
+  var gr = E.createGame('VP', { seed: 12, mode: 'reel' }); E.startTurn(gr);
+  ok(E.checkAction(gr, 'VP', { type: 'clan', op: 'fakenews', target: 'MN' }) === 'Seulement en mode Bêta.', 'pas d\'actions clandestines hors Bêta');
+  var gb = E.createGame('VP', { seed: 13, mode: 'beta', base: 'sondages' }); E.startTurn(gb);
+  var me = E.player(gb, 'VP'); me.money = 30; me.forme = 4;
+  ok(E.checkAction(gb, 'VP', { type: 'clan', op: 'fakenews' }) !== null, 'une fake news demande une cible');
+  ok(Math.abs(E.clanRisk(gb, 'VP', 'fakenews') - 0.35) < 1e-9, 'risque de base : 35 %');
+  // réussite forcée
+  gb.rng = (function (r) { var f = function () { return 0.99; }; f.getState = r.getState; f.setState = r.setState; return f; })(gb.rng);
+  var mn0 = E.pollMap(gb).MN, log = E.resolveActions(gb, { VP: [{ type: 'clan', op: 'fakenews', target: 'MN' }, { type: 'clan', op: 'fuite', target: 'MN' }] });
+  ok(log[0].clan && !log[0].clan.found && log[0].secret, 'fake news non découverte : secrète');
+  ok(E.pollMap(gb).MN < mn0 - 0.004, 'la cible perd environ 0,5 pt (' + (100 * (E.pollMap(gb).MN - mn0)).toFixed(2) + ')');
+  ok(!log[1].ok, 'une seule opération clandestine par tour');
+  ok(E.suspicion(gb, 'VP') === D.BETA.clan.ops.fakenews.susp, 'la suspicion monte');
+  ok(E.clanRisk(gb, 'VP', 'fakenews') > 0.35, 'la suspicion augmente le risque');
+  // sauvegarde : opérations en attente et suspicion gardées
+  var gs = E.loadGame(E.saveGame(gb));
+  ok(gs.clan && gs.clan.ops.length === 1 && E.suspicion(gs, 'VP') === E.suspicion(gb, 'VP'), 'sauvegarde : opérations et suspicion gardées');
+  // révélation différée, une seule fois
+  gb.rng = function () { return 0; };
+  gb.turn += 2;   // l'enquête ne peut aboutir qu'au moins 2 tours après l'opération
+  var outA = E.startTurn(gb), outB = E.startTurn(gb);
+  ok(outA.clan.length === 1 && outA.clan[0].pid === 'VP' && outA.clan[0].late, 'révélation différée : scandale des tours plus tard');
+  ok(outB.clan.length === 0, 'une opération révélée ne fait jamais deux fois scandale');
+  // découverte immédiate : pas d'effet, scandale
+  var gd = E.createGame('VP', { seed: 14, mode: 'beta', base: 'sondages' }); E.startTurn(gd);
+  E.player(gd, 'VP').money = 30; gd.rng = function () { return 0; };
+  var vp0 = E.pollMap(gd).VP, m0 = E.player(gd, 'VP').money, ld = E.resolveActions(gd, { VP: [{ type: 'clan', op: 'occulte' }] });
+  ok(ld[0].clan.found && !ld[0].ok, 'découverte immédiate');
+  ok(E.player(gd, 'VP').money === m0 - 10, 'pas de +20 €, et 10 € d\'amende');
+  ok(E.pollMap(gd).VP < vp0 - 0.008, 'scandale : environ −1,2 pt (' + (100 * (E.pollMap(gd).VP - vp0)).toFixed(2) + ')');
+  // sabotage : le prochain meeting de la cible rapporte moitié moins
+  var gx = E.createGame('VP', { seed: 15, mode: 'beta', base: 'sondages' }); E.startTurn(gx);
+  gx.clan.sabo.MN = { by: 'VP', until: gx.turn + 1, cut: 0.5 };
+  var full = E.terrainBreakdown(gx, 'MN', 'hdf', 'securite').total, mn = E.player(gx, 'MN'); mn.money = 20; mn.forme = 4;
+  var lx = E.resolveActions(gx, { MN: [{ type: 'terrain', region: 'hdf', theme: 'securite' }] });
+  ok(lx[0].sabotaged && /à moitié vide/.test(lx[0].text) && !gx.clan.sabo.MN, 'meeting saboté (prévu ' + full + ' soutiens) : ' + lx[0].text.slice(0, 60));
+  // l'ordinateur joue aussi, avec les mêmes règles
+  var gai = E.createGame(null, { seed: 16, mode: 'beta', base: 'sondages' }), ops = 0;
+  for (var k = 0; k < 6; k++) { E.startTurn(gai); var pl = {}; gai.players.forEach(function (p) { pl[p.id] = AI.plan(gai, p.id); }); E.resolveActions(gai, pl).forEach(function (l) { if (l.clan) ops++; }); E.endTurn(gai); }
+  ok(ops > 0 && ops < 6 * gai.players.length * 0.5, 'l\'ordinateur tente parfois une opération (' + ops + ' en 6 tours, 12 partis)');
 })();
 
 console.log('\n' + passes + ' vérifications réussies, ' + fails + ' en échec.');

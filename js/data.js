@@ -379,7 +379,7 @@
   var REACTIONS = [
     { id: 'nier',    label: 'Nier en bloc',                hint: 'Pile ou face : ça passe… ou −3 soutiens et +1 casserole', fx: [{ k: 'dice', chance: 0.5, win: [], lose: [{ k: 'strong', n: -3 }, { k: 'cas', n: 1 }] }] },
     { id: 'excuses', label: 'S\'excuser publiquement',     hint: '−1 soutien dans tes 2 meilleures régions, mais −2 casseroles : la page est tournée', fx: [{ k: 'loseTop', n: 1, count: 2 }, { k: 'cas', n: -2 }] },
-    { id: 'fusible', label: 'Sacrifier un collaborateur',  hint: '−1 soutien, −1 ★, −1 casserole', fx: [{ k: 'strong', n: -1 }, { k: 'infl', n: -1 }, { k: 'cas', n: -1 }] },
+    { id: 'fusible', label: 'Sacrifier un collaborateur',  hint: '−1 soutien, −0,1 pt, −1 casserole', fx: [{ k: 'strong', n: -1 }, { k: 'pt', n: -0.1 }, { k: 'cas', n: -1 }] },
     { id: 'medias',  label: 'Accuser les médias',          hint: '1 chance sur 3 que ta base se mobilise (+1 soutien) ; sinon −2 soutiens et +2 casseroles', fx: [{ k: 'dice', chance: 0.34, win: [{ k: 'regions', n: 1, count: 1 }], lose: [{ k: 'strong', n: -2 }, { k: 'cas', n: 2 }] }] }
   ];
   /* La conseillère de campagne */
@@ -450,154 +450,170 @@
   var PARTIES = [
     { id: 'FI', sigle: 'LFI', pos: 1, name: 'La France Indignée', short: 'France Indignée', family: 'Gauche radicale',
       candidate: 'Jean-Lutte Mégaphone', candTitle: 'le tribun au porte-voix', programme: ['smic', 'superprofits', 'medecins', 'train1', 'semaine4'], financing: ['isf', 'heritage', 'niches'],
-      color: '#C8323C', ink: '#FFFFFF', money: 5, infl: 4, bases: ['occ', 'bfc'],
+      color: '#C8323C', ink: '#FFFFFF', money: 5, bases: ['occ', 'bfc'],
       cred: { pouvoir: 2, services: 2, ecologie: 1, emploi: 1, securite: 0, immigration: 0 },
       force: 'Réseaux sociaux : en Buzz, relance le dé si le résultat est mauvais (1 ou 2).',
       weakness: 'Un Meeting coûte 1 € de plus en région rurale.',
       cards: ['marche_pop', 'censure'] },
     { id: 'SM', sigle: 'PS', pos: 3, name: 'Le Parti Survivant', short: 'Parti Survivant', family: 'Centre gauche',
       candidate: 'Raphaël Grandsmots', candTitle: 'le beau parleur européen', programme: ['classes', 'apprentissage', 'cheque', 'proximite', 'plastique'], financing: ['fraudefisc', 'niches'],
-      color: '#E07AA0', ink: '#1B1F3B', money: 6, infl: 3, bases: ['naq', 'cvl'],
+      color: '#E07AA0', ink: '#1B1F3B', money: 6, bases: ['naq', 'cvl'],
       cred: { services: 2, emploi: 1, pouvoir: 1, securite: 1, ecologie: 1, immigration: 0 },
       force: "Réseau d'élus : +1 soutien en Meeting là où il a déjà 5 soutiens ou plus.",
       weakness: 'Primaire perpétuelle : au tour 4 (format classique), perdre une action ou voir un courant claquer la porte (voir 🌹).',
-      cards: ['fete_rose', 'primaire'] },
+      cards: ['fete_rose'] },
     { id: 'VP', sigle: 'LE', pos: 2, name: 'Les Enracinés', short: 'Les Enracinés', family: 'Écologie',
       candidate: 'Marine Tournesol', candTitle: 'l\'écolo qui suit le soleil', programme: ['renovation', 'train1', 'sp20', 'cheque', 'plastique'], financing: ['heritage', 'isf'],
-      color: '#3E9B5A', ink: '#FFFFFF', money: 6, infl: 3, bases: ['ara', 'cor'],
+      color: '#3E9B5A', ink: '#FFFFFF', money: 6, bases: ['ara', 'cor'],
       cred: { ecologie: 2, services: 1, pouvoir: 1, emploi: 0, securite: 0, immigration: 0 },
       force: 'À la Télé : +1 soutien en plus dans les régions urbaines.',
       weakness: 'Une Collecte ne rapporte que 2 €.',
       cards: ['climat', 'canicule'] },
     { id: 'EM', sigle: 'RE', pos: 4, name: 'Réforme Encore', short: 'Réforme Encore', family: 'Centre',
       candidate: 'Gabriel Agité', candTitle: 'le pressé de la réforme', programme: ['pme', 'retraites', 'video', 'plastique', 'medecins'], financing: ['trainvie'],
-      color: '#F2A93B', ink: '#1B1F3B', money: 8, infl: 4, bases: ['pdl', 'bre'],
+      color: '#F2A93B', ink: '#1B1F3B', money: 8, bases: ['pdl', 'bre'],
       cred: { emploi: 2, securite: 2, ecologie: 1, services: 1, immigration: 1, pouvoir: 0 },
-      force: 'Une Collecte rapporte 4 € et 1 ★. Candidat infatigable : récupère 3 ⚡ par tour (au lieu de 2).',
+      force: 'Une Collecte rapporte 4 €. Candidat infatigable : récupère 3 ⚡ par tour (au lieu de 2).',
       weakness: "Usure du pouvoir : au tour 5 (au tour 2 en campagne éclair), perd 1 soutien dans sa région la plus forte.",
-      cards: ['art493', 'remaniement'] },
+      cards: ['art493'] },
     { id: 'UG', sigle: 'LR', pos: 5, name: 'Les Rescapés', short: 'Les Rescapés', family: 'Droite',
       candidate: 'Bruno Raboteur', candTitle: 'le rabot à la main', programme: ['policiers', 'pme', 'controles', 'tva', 'nonremplacement'], financing: ['trainvie', 'gelpoint', 'chomage'],
-      color: '#4A7FD0', ink: '#FFFFFF', money: 5, infl: 4, bases: ['ges', 'nor'],
+      color: '#4A7FD0', ink: '#FFFFFF', money: 5, bases: ['ges', 'nor'],
       cred: { securite: 2, emploi: 2, immigration: 1, pouvoir: 1, services: 1, ecologie: 0 },
       force: 'Fidélité : en région historique, une attaque ne peut pas le faire descendre sous 2 soutiens.',
       weakness: 'Divisions : les événements « Division » lui coûtent 2 soutiens au lieu de 1.',
-      cards: ['appel18', 'rassemblement'] },
+      cards: ['appel18'] },
     { id: 'MN', sigle: 'RN', pos: 6, name: 'Rassemblement Nostalgique', short: 'Rass. Nostalgique', family: 'Droite nationale',
       candidate: 'Marine La Pénible', candTitle: 'l\'éternelle candidate', programme: ['referendum', 'planchers', 'tva', 'regroupement', 'video'], financing: ['trainvie'],
-      color: '#24325E', ink: '#FFFFFF', money: 7, infl: 3, bases: ['hdf', 'pac'],
+      color: '#24325E', ink: '#FFFFFF', money: 7, bases: ['hdf', 'pac'],
       cred: { immigration: 2, securite: 2, pouvoir: 1, emploi: 0, ecologie: 0, services: 0 },
       force: 'À la Télé : +1 soutien en plus dans les régions industrielles.',
       weakness: 'Peu de relais locaux : il lui faut 4 soutiens (au lieu de 3) pour contrôler une région.',
-      cards: ['plateau_tele', 'grand_meeting'] },
+      cards: ['plateau_tele'] },
     /* v1.7 : six partis de plus (12 au total). Positions sur l'axe : de 0,3 (extrême gauche) à 6,7 (droite identitaire). */
     { id: 'LO', sigle: 'LO', pos: 0.3, name: 'Lutte Obstinée', short: 'Lutte Obstinée', family: 'Extrême gauche',
       candidate: 'Nathalie Arrêtdetravail', candTitle: 'la grève dans le sang', programme: ['smic', 'superprofits', 'semaine4', 'sp20', 'accueil'], financing: ['isf', 'heritage', 'fraudefisc'],
-      color: '#7B1F2E', ink: '#FFFFFF', money: 3, infl: 3, bases: ['hdf', 'idf'],
+      color: '#7B1F2E', ink: '#FFFFFF', money: 3, bases: ['hdf', 'idf'],
       cred: { pouvoir: 2, emploi: 2, services: 1, ecologie: 0, securite: 0, immigration: 0 },
       force: 'Militantisme : une équipe de militants coûte 2 € (au lieu de 3).',
       weakness: 'Pas de relais médiatiques : la Télé coûte 1 € de plus.',
-      cards: ['marche_pop', 'censure'] },
+      cards: ['piquet', 'greve'] },
     { id: 'PC', sigle: 'PCF', pos: 1.5, name: 'Le Parti Camarade Français', short: 'Parti Camarade', family: 'Communistes',
       candidate: 'Fabien Rillettes', candTitle: 'le camarade bon vivant', programme: ['reindus', 'smic', 'energie', 'lignes', 'superprofits'], financing: ['isf', 'heritage'],
-      color: '#E2572B', ink: '#FFFFFF', money: 4, infl: 3, bases: ['hdf', 'idf'],
+      color: '#E2572B', ink: '#FFFFFF', money: 4, bases: ['hdf', 'idf'],
       cred: { emploi: 2, pouvoir: 2, services: 1, securite: 1, ecologie: 0, immigration: 0 },
       force: 'Bastions ouvriers : Mobiliser rapporte 1 soutien de plus en région industrielle.',
       weakness: 'Une Collecte ne rapporte que 2 €.',
-      cards: ['marche_pop', 'grand_meeting'] },
+      cards: ['huma', 'nationaliser'] },
     { id: 'MD', sigle: 'MoDem', pos: 3.6, name: 'Mollesse Démocrate', short: 'Mollesse Démocrate', family: 'Centre',
       candidate: 'François Bientôtprésident', candTitle: 'le candidat perpétuel', programme: ['classes', 'apprentissage', 'proximite', 'renovation', 'pme'], financing: ['niches', 'fraudefisc'],
-      color: '#9C6ADE', ink: '#FFFFFF', money: 5, infl: 3, bases: ['naq', 'pdl'],
+      color: '#9C6ADE', ink: '#FFFFFF', money: 5, bases: ['naq', 'pdl'],
       cred: { services: 2, emploi: 1, ecologie: 1, securite: 1, pouvoir: 1, immigration: 0 },
       force: 'Faiseur de rois : entre les deux tours, ses accords ont 15 points de chances en plus.',
       weakness: 'Une Collecte ne rapporte que 2 €.',
-      cards: ['primaire', 'remaniement'] },
+      cards: ['depassement'] },
     { id: 'HZ', sigle: 'HOR', pos: 4.4, name: 'Hors-Sol', short: 'Hors-Sol', family: 'Centre droit',
       candidate: 'Édouard Patience', candTitle: 'celui qui attend son heure', programme: ['retraites', 'pme', 'nonremplacement', 'policiers', 'fraude'], financing: ['trainvie', 'chomage', 'gelpoint'],
-      color: '#2BA6B8', ink: '#1B1F3B', money: 7, infl: 4, bases: ['nor', 'ara'],
+      color: '#2BA6B8', ink: '#1B1F3B', money: 7, bases: ['nor', 'ara'],
       cred: { emploi: 2, securite: 2, services: 1, immigration: 1, pouvoir: 0, ecologie: 0 },
-      force: 'Bâtisseur : une Promesse coûte 3 ★ (au lieu de 4).',
+      force: 'Bâtisseur : une Promesse coûte 3 € (au lieu de 4).',
       weakness: 'Parti jeune, peu implanté : il lui faut 4 soutiens (au lieu de 3) pour contrôler une région.',
-      cards: ['rassemblement', 'remaniement'] },
+      cards: ['remaniement'] },
     { id: 'DL', sigle: 'DLF', pos: 5.6, name: 'Debout La Flemme', short: 'Debout La Flemme', family: 'Souverainistes',
       candidate: 'Nigaud Dupont-Arriéré', candTitle: 'le gaulois en retard d\'une époque', programme: ['tva', 'controles', 'lignes', 'planchers', 'energie'], financing: ['trainvie', 'fraudefisc'],
-      color: '#7A8FA6', ink: '#FFFFFF', money: 3, infl: 2, bases: ['idf', 'bfc'],
+      color: '#7A8FA6', ink: '#FFFFFF', money: 3, bases: ['idf', 'bfc'],
       cred: { immigration: 2, pouvoir: 1, securite: 1, emploi: 1, services: 1, ecologie: 0 },
       force: 'La France des clochers : un Meeting rapporte 1 soutien de plus en région rurale.',
       weakness: 'Petit budget : la Télé coûte 1 € de plus.',
-      cards: ['appel18', 'plateau_tele'] },
+      cards: ['clochers', 'referendum'] },
     { id: 'RQ', sigle: 'REC', pos: 6.7, name: 'Rétroconquête', short: 'Rétroconquête', family: 'Droite identitaire',
       candidate: 'Éric Zéronuance', candTitle: 'le polémiste sans nuance', programme: ['regroupement', 'controles', 'referendum', 'planchers', 'fraude'], financing: ['trainvie', 'chomage'],
-      color: '#3B3B3B', ink: '#FFFFFF', money: 6, infl: 3, bases: ['pac', 'idf'],
+      color: '#3B3B3B', ink: '#FFFFFF', money: 6, bases: ['pac', 'idf'],
       cred: { immigration: 2, securite: 2, pouvoir: 0, emploi: 0, services: 0, ecologie: 0 },
       force: 'Polémiques : un Buzz sur l\'immigration rapporte 1 soutien de plus.',
       weakness: 'Repoussoir : entre les deux tours, ses accords ont 15 points de chances en moins.',
-      cards: ['grand_meeting', 'plateau_tele'] }
+      cards: ['grand_meeting'] }
   ];
 
-  /* Actions de base. cost = { money, infl } ; target : 'region' | 'party' | null ; theme : l'action porte un message (thème) */
+  /* Actions de base. cost = { money, forme } (v5.0 : plus d'influence ★) ; target : 'region' | 'party' | null ; theme : l'action porte un message (thème) */
   var ACTIONS = {
-    terrain:  { name: 'Meeting',        icon: '📣', cost: { money: 2, infl: 0, forme: 1 }, target: 'region', theme: true, text: 'Autant de soutiens que l\'impact du message (1 à 4)' },
-    medias:   { name: 'Télé',           icon: '📺', cost: { money: 3, infl: 1, forme: 1 }, target: null, theme: true, text: 'Une interview sur ton thème : gagne des classes sociales dans toute la France (v3.8)' },
-    reseaux:  { name: 'Buzz',           icon: '📱', cost: { money: 1, infl: 0 }, target: 'region', theme: true, text: 'Un dé : de −1 à +4 soutiens, +1 si le thème fait l\'actu' },
-    contre:   { name: 'Attaquer',       icon: '🥊', cost: { money: 2, infl: 1 }, target: 'region', text: '−2 soutiens au rival le plus fort de la région (il faut y avoir 1 soutien)' },
-    fonds:    { name: 'Collecte',       icon: '💰', cost: { money: 0, infl: 0 }, target: null,     text: '+3 €' },
-    reforme:  { name: 'Promesse',       icon: '📜', cost: { money: 0, infl: 4 }, target: 'region', text: '+1 soutien dans toutes les régions du même profil (région contrôlée)' },
-    imposer:  { name: 'Faire la une',   icon: '🗞️', cost: { money: 2, infl: 2 }, target: null,     theme: true, text: 'Ton thème fera l\'actu au prochain tour (pour tout le monde !)' },
-    mobiliser:{ name: 'Mobiliser',      icon: '🚪', cost: { money: 2, infl: 0 }, target: 'region', text: 'Porte-à-porte : fais voter des abstentionnistes. Plus efficace si ton programme plaît aux groupes qui votent peu ici' },
-    militants:{ name: 'Militants',      icon: '👥', cost: { money: 3, infl: 0 }, target: 'region', text: 'Implante une équipe de militants : +1 soutien ici au début de chaque tour (3 équipes au plus)' },
-    enquete:  { name: 'Enquêter',       icon: '🔎', cost: { money: 1, infl: 1 }, target: 'party', text: 'Fouiller le passé d\'un rival : si tu trouves quelque chose, une affaire lui tombe dessus au prochain tour' },
-    alliance: { name: 'Alliance',       cost: { money: 0, infl: 1 }, target: 'party',  text: "Proposer une alliance à un parti proche (distance 2 au plus)" },
-    rupture:  { name: 'Rupture',        cost: { money: 0, infl: 0 }, target: null,     text: "Rompre ton alliance : −2 ★, et ton ex-allié ne te reportera presque rien au second tour" },
-    matinale: { name: 'Matinale radio', icon: '📻', cost: { money: 0, infl: 0, forme: 1 }, target: null, theme: true, text: 'Une interview à la radio : le public dépend de la station (une fois tous les deux tours)' },   // v3.9
-    vingt:    { name: 'Le 20 h',        icon: '🕗', cost: { money: 0, infl: 0, forme: 1 }, target: null, theme: true, text: 'Invité au journal de 20 h : une fois par campagne, réservé aux 4 premiers du sondage' },   // v3.9
-    parrainages: { name: 'Chercher des parrainages', icon: '✍️', cost: { money: 1, infl: 0, forme: 1 }, target: null, beta: true, text: 'Faire le tour des mairies : +130 signatures (il en faut 500 avant la fin du tour 3)' },   // v4.4
-    union:    { name: 'Candidature commune', icon: '🤝', cost: { money: 0, infl: 2 }, target: 'party', beta: true, text: 'Proposer à un parti proche de se ranger derrière toi : 70 % de ses électeurs te rejoignent' },   // v4.4
-    defi:     { name: 'Défier en débat',   icon: '🎤', cost: { money: 0, infl: 1 }, target: 'party', beta: true, text: 'Défier un rival en face-à-face : s\u2019il refuse, la chaise vide lui coûte cher' },   // v4.4
-    repos:    { name: 'Repos',          icon: '😴', cost: { money: 0, infl: 0 }, target: null,     text: 'Une journée loin des caméras : +2 ⚡ tout de suite' },   // v3.6.6
+    terrain:  { name: 'Meeting',        icon: '📣', cost: { money: 2, forme: 1 }, target: 'region', theme: true, text: 'Autant de soutiens que l\'impact du message (1 à 4)' },
+    medias:   { name: 'Télé',           icon: '📺', cost: { money: 4, forme: 1 }, target: null, theme: true, text: 'Une interview sur ton thème : gagne des classes sociales dans toute la France (v3.8)' },
+    reseaux:  { name: 'Buzz',           icon: '📱', cost: { money: 1 }, target: 'region', theme: true, text: 'Un dé : de −1 à +4 soutiens, +1 si le thème fait l\'actu' },
+    contre:   { name: 'Attaquer',       icon: '🥊', cost: { money: 3 }, target: 'region', text: '−2 soutiens au rival le plus fort de la région (il faut y avoir 1 soutien)' },
+    fonds:    { name: 'Collecte',       icon: '💰', cost: { money: 0 }, target: null,     text: '+3 €' },
+    reforme:  { name: 'Promesse',       icon: '📜', cost: { money: 4 }, target: 'region', text: '+1 soutien dans toutes les régions du même profil (région contrôlée)' },
+    imposer:  { name: 'Faire la une',   icon: '🗞️', cost: { money: 4 }, target: null,     theme: true, text: 'Ton thème fera l\'actu au prochain tour (pour tout le monde !)' },
+    mobiliser:{ name: 'Mobiliser',      icon: '🚪', cost: { money: 2 }, target: 'region', text: 'Porte-à-porte : fais voter des abstentionnistes. Plus efficace si ton programme plaît aux groupes qui votent peu ici' },
+    militants:{ name: 'Militants',      icon: '👥', cost: { money: 3 }, target: 'region', text: 'Implante une équipe de militants : +1 soutien ici au début de chaque tour (3 équipes au plus)' },
+    enquete:  { name: 'Enquêter',       icon: '🔎', cost: { money: 2 }, target: 'party', text: 'Fouiller le passé d\'un rival : si tu trouves quelque chose, une affaire lui tombe dessus au prochain tour' },
+    alliance: { name: 'Alliance',       cost: { money: 0 }, target: 'party',  text: "Proposer une alliance à un parti proche (distance 2 au plus)" },
+    rupture:  { name: 'Rupture',        cost: { money: 0 }, target: null,     text: "Rompre ton alliance : −0,2 pt au sondage, et ton ex-allié ne te reportera presque rien au second tour" },
+    matinale: { name: 'Matinale radio', icon: '📻', cost: { money: 0, forme: 1 }, target: null, theme: true, text: 'Une interview à la radio : le public dépend de la station (une fois tous les deux tours)' },   // v3.9
+    vingt:    { name: 'Le 20 h',        icon: '🕗', cost: { money: 0, forme: 1 }, target: null, theme: true, text: 'Invité au journal de 20 h : une fois par campagne, réservé aux 4 premiers du sondage' },   // v3.9
+    parrainages: { name: 'Chercher des parrainages', icon: '✍️', cost: { money: 1, forme: 1 }, target: null, beta: true, text: 'Faire le tour des mairies : +130 signatures (il en faut 500 avant la fin du tour 3)' },   // v4.4
+    union:    { name: 'Candidature commune', icon: '🤝', cost: { money: 2 }, target: 'party', beta: true, text: 'Proposer à un parti proche de se ranger derrière toi : 70 % de ses électeurs te rejoignent' },   // v4.4
+    defi:     { name: 'Défier en débat',   icon: '🎤', cost: { money: 1 }, target: 'party', beta: true, text: 'Défier un rival en face-à-face : s\u2019il refuse, la chaise vide lui coûte cher' },   // v4.4
+    repos:    { name: 'Repos',          icon: '😴', cost: { money: 0 }, target: null,     text: 'Une journée loin des caméras : +2 ⚡ tout de suite' },   // v3.6.6
     /* v3.1 : les actions propres à un parti (voir TRAITS) */
-    nostalgie:{ name: 'C\u2019était mieux avant', icon: '⏪', only: ['MN', 'RQ'], cost: { money: 2, infl: 0, forme: 1 }, target: 'region', text: 'Promettre le retour du passé : plaît aux retraités, fait fuir les jeunes à mesure qu\u2019on recule' },
-    rappel:   { name: 'Rappeler un ancien', icon: '📞', only: ['SM'], cost: { money: 1, infl: 1 }, target: null, text: 'François Hésitant sort de sa retraite : il ramène un pétale… ou sort un livre qui règle ses comptes' },
-    fusion:   { name: 'Fusionner',      icon: '🧲', only: ['EM', 'MD', 'HZ'], cost: { money: 1, infl: 2 }, target: null, text: 'Absorber le micro-parti centriste du moment' },
-    eclat:    { name: 'Le coup d\u2019éclat', icon: '💥', only: ['UG'], cost: { money: 3, infl: 2 }, target: null, text: 'Faire parler de soi : les caméras reviennent pour 3 tours' }
+    nostalgie:{ name: 'C\u2019était mieux avant', icon: '⏪', only: ['MN', 'RQ'], cost: { money: 2, forme: 1 }, target: 'region', text: 'Promettre le retour du passé : plaît aux retraités, fait fuir les jeunes à mesure qu\u2019on recule' },
+    rappel:   { name: 'Rappeler un ancien', icon: '📞', only: ['SM'], cost: { money: 2 }, target: null, text: 'François Hésitant sort de sa retraite : il ramène un pétale… ou sort un livre qui règle ses comptes' },
+    fusion:   { name: 'Fusionner',      icon: '🧲', only: ['EM', 'MD', 'HZ'], cost: { money: 3 }, target: null, text: 'Absorber le micro-parti centriste du moment' },
+    eclat:    { name: 'Le coup d\u2019éclat', icon: '💥', only: ['UG'], cost: { money: 4 }, target: null, text: 'Faire parler de soi : les caméras reviennent pour 3 tours' }
   };
 
   /* v4.3 : les fiches des actions et cartes propres à un parti, toutes au même format :
      quand on peut la jouer · ce qu'elle fait (chiffré) · le risque. {n} = un nombre qui dépend du réglage du parti (mode Bêta). */
   var FICHES = {
     nostalgie:     { quand: 'Une fois par tour, dans une région au choix.', effet: '+{3} soutiens dans la région (+{4} à partir de 1962), +1 si c\u2019est une région de retraités.', risque: 'Chaque usage recule l\u2019année rêvée. Dès 1962 : −1 soutien dans 1, puis 2, puis 3 de tes régions où il y a le plus d\u2019étudiants et de chômeurs. Si l\u2019autre parti nostalgique est présent dans la région : −1 soutien chacun. Au 6e usage (l\u2019âge de pierre) : −1 soutien dans 3 régions et +1 casserole.' },
-    rappel:        { quand: 'Une fois par tour, s\u2019il manque au moins un pétale à ta rose (un courant est parti chez un voisin).', effet: '2 chances sur 3 : le premier courant parti revient, et ramène {3} soutiens (1 dans chacune de 3 régions), repris au parti qu\u2019il avait rejoint. Si ta rose est complète : +2 ★ et +1 soutien dans 3 régions.', risque: '1 chance sur 3 : l\u2019ancien sort un livre qui règle ses comptes, +2 casseroles.' },
+    rappel:        { quand: 'Une fois par tour, s\u2019il manque au moins un pétale à ta rose (un courant est parti chez un voisin).', effet: '2 chances sur 3 : le premier courant parti revient, et ramène {3} soutiens (1 dans chacune de 3 régions), repris au parti qu\u2019il avait rejoint. Si ta rose est complète : +0,2 pt au sondage et +1 soutien dans 3 régions.', risque: '1 chance sur 3 : l\u2019ancien sort un livre qui règle ses comptes, +2 casseroles.' },
     fusion:        { quand: 'Quand un micro-parti centriste existe (il apparaît au tour 4).', effet: '+1 soutien dans {3} régions, et le micro-parti cesse de prendre 6 % des voix des partis du centre.', risque: 'Les deux autres partis du centre profitent aussi de la fin du micro-parti.' },
     eclat:         { quand: 'Seulement quand tu es « transparent » (les caméras t\u2019ont oublié).', effet: '+1 soutien dans {3} régions, et tu restes visible pendant 3 tours.', risque: 'Aucun.' },
-    marche_pop:    { quand: 'Une fois par partie, dans une région urbaine.', effet: '+{3} soutiens dans la région.', risque: 'Aucun.' },
-    climat:        { quand: 'Une fois par partie, dans une région rurale ou urbaine.', effet: '+{3} soutiens dans la région.', risque: 'Aucun.' },
-    grand_meeting: { quand: 'Une fois par partie, dans n\u2019importe quelle région.', effet: '+{4} soutiens dans la région.', risque: 'Aucun.' },
-    fete_rose:     { quand: 'Une fois par partie, dans une région au choix.', effet: '+{2} soutiens dans la région, et +{2} dans ta meilleure autre région où tu es déjà présent.', risque: 'Aucun.' },
-    appel18:       { quand: 'Une fois par partie.', effet: '+{1} soutien dans chacune des 4 régions historiques (Normandie, Bourgogne-Franche-Comté, Centre-Val de Loire, Corse et outre-mer).', risque: 'Aucun.' },
-    plateau_tele:  { quand: 'Une fois par partie.', effet: '+{2} soutiens dans 3 régions rurales ou industrielles (celles où ça rapporte le plus).', risque: 'Aucun.' },
-    canicule:      { quand: 'Une fois par partie.', effet: 'Chaque adversaire perd 1 soutien dans ses 2 régions les plus fortes.', risque: 'Aucun.' },
-    censure:       { quand: 'Une fois par partie.', effet: 'Chaque adversaire perd 1 ★.', risque: 'Aucun.' },
-    art493:        { quand: 'Une fois par partie.', effet: 'La prochaine action du rival en tête des sondages est annulée ce tour.', risque: '+1 casserole.' },
-    remaniement:   { quand: 'Une fois par partie, vers une région au choix.', effet: 'Déplace 2 soutiens de ta région la plus forte vers cette région.', risque: 'Tu perds 2 soutiens dans ta région la plus forte.' },
-    primaire:      { quand: 'Une fois par partie.', effet: '+3 ★.', risque: 'Aucun.' },
-    rassemblement: { quand: 'Une fois par partie.', effet: '+3 € et +1 ★.', risque: 'Aucun.' }
+    marche_pop:    { quand: 'Une fois tous les 3 tours, dans une région urbaine.', effet: '+{3} soutiens dans la région.', risque: 'Aucun.' },
+    censure:       { quand: 'Une fois tous les 3 tours.', effet: 'Le parti du bloc au pouvoir (Réforme Encore, Mollesse Démocrate, Hors-Sol) le mieux placé perd {0.3} pt au sondage national.', risque: 'Aucun.' },
+    climat:        { quand: 'Une fois tous les 3 tours, dans une région rurale ou urbaine.', effet: '+{3} soutiens dans la région.', risque: 'Aucun.' },
+    canicule:      { quand: 'Une fois tous les 3 tours.', effet: 'Chaque adversaire perd 1 soutien dans ses 2 régions les plus fortes (3 si l\u2019écologie fait l\u2019actu).', risque: 'Aucun.' },
+    piquet:        { quand: 'Une fois tous les 3 tours, dans une région industrielle.', effet: '+{3} soutiens dans la région.', risque: 'Aucun.' },
+    greve:         { quand: 'Une fois tous les 3 tours, sauf au dernier tour.', effet: 'L\u2019emploi fera la une au prochain tour, et +{0.2} pt au sondage national tout de suite.', risque: 'Aucun.' },
+    huma:          { quand: 'Une fois tous les 3 tours, dans une région au choix.', effet: '+{2} soutiens dans la région, et +{2} dans ta meilleure région industrielle.', risque: 'Aucun.' },
+    nationaliser:  { quand: 'Une fois tous les 3 tours.', effet: '+{0.3} pt au sondage national.', risque: 'Aucun.' },
+    fete_rose:     { quand: 'Une fois tous les 3 tours, dans une région au choix.', effet: '+{2} soutiens dans la région, et +{2} dans ta meilleure autre région où tu es déjà présent.', risque: 'Aucun.' },
+    art493:        { quand: 'Une fois tous les 3 tours.', effet: 'La prochaine action du rival en tête des sondages est annulée ce tour.', risque: '+1 casserole (aucune si l\u2019emploi fait l\u2019actu).' },
+    depassement:   { quand: 'Une fois tous les 3 tours.', effet: '+{0.2} pt au sondage national, et les deux autres partis du centre perdent chacun 0,1 pt.', risque: 'Aucun.' },
+    remaniement:   { quand: 'Une fois tous les 3 tours, vers une région au choix.', effet: 'Déplace {2} soutiens de ta région la plus forte vers cette région.', risque: 'Tu perds ces soutiens dans ta région la plus forte.' },
+    appel18:       { quand: 'Une fois tous les 3 tours.', effet: '+{1} soutien dans chacune des 4 régions historiques (Normandie, Bourgogne-Franche-Comté, Centre-Val de Loire, Corse et outre-mer).', risque: 'Aucun.' },
+    clochers:      { quand: 'Une fois tous les 3 tours.', effet: '+{2} soutiens dans tes 2 meilleures régions rurales.', risque: 'Aucun.' },
+    referendum:    { quand: 'Une fois tous les 3 tours, sauf au dernier tour.', effet: 'L\u2019immigration fera la une au prochain tour, et +{0.2} pt au sondage national tout de suite.', risque: 'Aucun.' },
+    plateau_tele:  { quand: 'Une fois tous les 3 tours.', effet: '+{2} soutiens dans 3 régions rurales ou industrielles (celles où ça rapporte le plus).', risque: 'Aucun.' },
+    grand_meeting: { quand: 'Une fois tous les 3 tours, dans une région au choix.', effet: '+{4} soutiens dans la région.', risque: 'Aucun.' }
   };
 
-  /* Cartes spéciales : 1 utilisation par partie, prend 1 action. */
+  /* v5.0 : les 2 actions spécifiques de chaque parti. Un parti qui a un trait satirique avec une action (⏪ 🌹 🚦 🔍)
+     a cette action + 1 carte ; les autres ont 2 cartes. Pas de doublon d'un parti à l'autre.
+     kind : 'mob' = mobiliser son électorat (des soutiens dans des régions) · 'deb' = peser sur le débat (sondage national, actualité, rivaux).
+     theme : le sujet de la carte. Quand il fait l'actu nationale, la carte est plus forte (× CARD_RULES.hot, arrondi au-dessus).
+     n : soutiens gagnés · pt : points de sondage national. Réglés en Bêta par BETA.specific (comme avant). */
+  var CARD_RULES = { cost: { money: 2, forme: 1 }, recharge: 3, hot: 1.5 };
   var CARDS = {
-    marche_pop:    { name: 'Marche populaire',     target: 'region', profiles: ['urbaine'], text: '+3 soutiens dans une région urbaine.' },
-    censure:       { name: 'Motion de censure',    target: null, text: 'Chaque adversaire perd 1 ★.' },
-    fete_rose:     { name: 'Fête de la Rose',      target: 'region', text: '+2 soutiens dans cette région et dans une autre où tu es présent.' },
-    primaire:      { name: 'Primaire',             target: null, text: '+3 ★.' },
-    climat:        { name: 'Marche pour le climat', target: 'region', profiles: ['rurale', 'urbaine'], text: '+3 soutiens dans une région rurale ou urbaine.' },
-    canicule:      { name: 'Canicule',             target: null, text: 'Chaque adversaire perd 1 soutien dans ses 2 régions les plus fortes.' },
-    art493:        { name: '49.3',                 target: null, text: "Annule la prochaine action du rival en tête ce tour." },
-    remaniement:   { name: 'Remaniement',          target: 'region', text: "Déplace 2 soutiens de ta région la plus forte vers celle-ci." },
-    appel18:       { name: 'Appel du 18 juin',     target: null, text: '+1 soutien dans chaque région historique.' },
-    rassemblement: { name: 'Rassemblement',        target: null, text: '+3 € et +1 ★.' },
-    plateau_tele:  { name: 'Plateau télé',         target: null, text: '+2 soutiens dans 3 régions rurales ou industrielles.' },
-    grand_meeting: { name: 'Grand meeting',        target: 'region', text: '+4 soutiens dans une région.' }
+    marche_pop:    { party: 'FI', kind: 'mob', theme: 'pouvoir',     icon: '✊', name: 'Marche populaire',      target: 'region', profiles: ['urbaine'], n: 3, text: '+3 soutiens dans une région urbaine.', short: 'Grosse mobilisation en ville' },
+    censure:       { party: 'FI', kind: 'deb', theme: 'services',    icon: '🏛️', name: 'Motion de censure',     target: null, pt: 0.3, text: 'Le parti au pouvoir le mieux placé perd 0,3 pt.', short: 'Faire chuter le parti au pouvoir' },
+    climat:        { party: 'VP', kind: 'mob', theme: 'ecologie',    icon: '🌍', name: 'Marche pour le climat', target: 'region', profiles: ['rurale', 'urbaine'], n: 3, text: '+3 soutiens dans une région rurale ou urbaine.', short: 'Mobilise l\u2019électorat écologiste' },
+    canicule:      { party: 'VP', kind: 'deb', theme: 'ecologie',    icon: '🌡️', name: 'Alerte canicule',       target: null, text: 'Chaque adversaire perd 1 soutien dans ses 2 régions les plus fortes.', short: 'Met le climat au cœur du débat' },
+    piquet:        { party: 'LO', kind: 'mob', theme: 'emploi',      icon: '🔥', name: 'Piquet de grève',       target: 'region', profiles: ['industrielle'], n: 3, text: '+3 soutiens dans une région industrielle.', short: 'Les ouvriers en première ligne' },
+    greve:         { party: 'LO', kind: 'deb', theme: 'emploi',      icon: '📢', name: 'Appel à la grève générale', target: null, pt: 0.2, hotNext: 'emploi', text: 'L\u2019emploi à la une au prochain tour, +0,2 pt.', short: 'Imposer l\u2019emploi dans le débat' },
+    huma:          { party: 'PC', kind: 'mob', theme: 'pouvoir',     icon: '🎪', name: 'La fête de l\u2019Huma', target: 'region', n: 2, text: '+2 soutiens ici et +2 dans ta meilleure région industrielle.', short: 'La grande fête des camarades' },
+    nationaliser:  { party: 'PC', kind: 'deb', theme: 'emploi',      icon: '🏭', name: 'Nationaliser !',        target: null, pt: 0.3, text: '+0,3 pt au sondage national.', short: 'Sauver les usines' },
+    fete_rose:     { party: 'SM', kind: 'mob', theme: 'services',    icon: '🌹', name: 'Fête de la Rose',       target: 'region', n: 2, text: '+2 soutiens ici et dans une autre région où tu es présent.', short: 'La fête dans 2 régions' },
+    art493:        { party: 'EM', kind: 'deb', theme: 'emploi',      icon: '⚖️', name: '49.3',                  target: null, text: 'Annule la prochaine action du rival en tête ce tour.', short: 'Bloquer le rival en tête' },
+    depassement:   { party: 'MD', kind: 'deb', theme: 'services',    icon: '🤲', name: 'Appel au dépassement',  target: null, pt: 0.2, text: '+0,2 pt, et les autres partis du centre −0,1 pt.', short: 'Rassembler au-delà des partis' },
+    remaniement:   { party: 'HZ', kind: 'mob', theme: 'securite',    icon: '🔁', name: 'Remaniement',           target: 'region', n: 2, text: 'Déplace 2 soutiens de ta région la plus forte vers celle-ci.', short: 'Déplacer tes soutiens ici' },
+    appel18:       { party: 'UG', kind: 'mob', theme: 'securite',    icon: '🎙️', name: 'Appel du 18 juin',      target: null, n: 1, text: '+1 soutien dans chaque région historique.', short: 'Toutes les régions historiques' },
+    clochers:      { party: 'DL', kind: 'mob', theme: 'pouvoir',     icon: '⛪', name: 'La tournée des clochers', target: null, n: 2, text: '+2 soutiens dans tes 2 meilleures régions rurales.', short: 'La France des villages' },
+    referendum:    { party: 'DL', kind: 'deb', theme: 'immigration', icon: '🗳️', name: 'Référendum !',          target: null, pt: 0.2, hotNext: 'immigration', text: 'L\u2019immigration à la une au prochain tour, +0,2 pt.', short: 'Imposer l\u2019immigration dans le débat' },
+    plateau_tele:  { party: 'MN', kind: 'mob', theme: 'securite',    icon: '📺', name: 'Plateau télé',          target: null, n: 2, text: '+2 soutiens dans 3 régions rurales ou industrielles.', short: 'Passer à la télé dans 3 régions' },
+    grand_meeting: { party: 'RQ', kind: 'mob', theme: 'immigration', icon: '🏟️', name: 'Meeting du Trocadéro',  target: 'region', n: 4, text: '+4 soutiens dans une région.', short: 'Gros meeting ici' }
   };
+
 
   /* v3.1 : les traits satiriques. Chaque trait a un avantage ET un coût : le gag se joue de l'intérieur.
      Les chiffres sont réglés par simulation (test/simulate.js). */
@@ -607,15 +623,15 @@
       minus: 'Chaque usage recule l’année rêvée. Dès 1962, les jeunes fuient (−1 soutien dans 1 à 3 régions étudiantes). À l’âge de pierre : fou rire général. Et les deux nostalgiques se volent les mêmes électeurs.',
       learn: 'Les retraités votent beaucoup plus que les jeunes : les séduire rapporte. Mais promettre le passé a une limite.' },
     rose: { parties: ['SM'], icon: '🌹', name: 'La rose qui perd ses pétales',
-      plus: 'Action « Rappeler un ancien » (1 € + 1 ★) : 2 fois sur 3, un pétale revient et ramène des électeurs partis chez un voisin. Rose complète : elle refleurit (bonus).',
+      plus: 'Action « Rappeler un ancien » (2 €) : 2 fois sur 3, un pétale revient et ramène des électeurs partis chez un voisin. Rose complète : elle refleurit (bonus).',
       minus: 'Sinon, l’ancien sort un livre qui règle ses comptes (+2 casseroles). Et la primaire perpétuelle (au tour 4 en format classique) : soit tu perds une action, soit tu tranches et un courant claque la porte.',
       learn: 'Depuis 2017, une partie des électeurs socialistes est partie vers le centre, les écologistes ou la gauche radicale. Les querelles internes coûtent cher.' },
     centre: { parties: ['EM', 'MD', 'HZ'], icon: '🚦', name: 'L’embouteillage au milieu',
-      plus: 'Action « Fusionner » (1 € + 2 ★) : absorber le micro-parti et récupérer ses militants (+1 soutien dans 3 régions). Mais les deux autres partis du centre en profitent aussi, gratuitement.',
+      plus: 'Action « Fusionner » (3 €) : absorber le micro-parti et récupérer ses militants (+1 soutien dans 3 régions). Mais les deux autres partis du centre en profitent aussi, gratuitement.',
       minus: 'Là où les trois partis du centre ont chacun 4 soutiens ou plus, un Meeting rapporte 1 soutien de moins. Et en cours de campagne naît un micro-parti centriste qui grignote une part des voix de chacun, tant que personne ne l’absorbe.',
       learn: 'Quand plusieurs partis proposent presque la même chose, ils se partagent les mêmes électeurs. D’où l’appel au « vote utile ».' },
     transparent: { parties: ['UG'], icon: '🔍', name: 'Avis de recherche',
-      plus: 'Quand personne ne te regarde, on ne tire pas non plus sur toi : une attaque ne te fait perdre qu’un soutien. Action « Le coup d’éclat » (3 € + 2 ★) : +1 soutien dans 3 régions et les caméras reviennent pour 3 tours.',
+      plus: 'Quand personne ne te regarde, on ne tire pas non plus sur toi : une attaque ne te fait perdre qu’un soutien. Action « Le coup d’éclat » (4 €) : +1 soutien dans 3 régions et les caméras reviennent pour 3 tours.',
       minus: 'Quand le Rassemblement Nostalgique et Réforme Encore sont devant toi et que tu n’es pas dans le trio de tête, tu deviens transparent : une fois sur deux (une sur quatre en format éclair), ta Télé et tes Buzz tombent dans le vide.',
       learn: 'Coincée entre deux pôles plus forts, une famille politique peut disparaître des écrans : c’est la « tripartition ».' },
     disque: { parties: ['FI'], icon: '📀', name: 'Le disque rayé',
@@ -655,10 +671,10 @@
     { id: 'greve', theme: 'services',      title: 'Grève des transports',     text: 'Ce tour, les Meetings coûtent 1 € de plus.' },
     { id: 'scandale',   title: 'Scandale !',               text: 'Le parti en tête perd 2 soutiens dans sa plus grande région.' },
     { id: 'buzz',       title: 'Trend viral',              text: 'Ce tour, les Buzz sont gratuits.' },
-    { id: 'sondage',    title: 'Sondage surprise',         text: 'Le dernier au classement gagne 2 ★.' },
-    { id: 'fete',       title: 'Fête nationale',           text: 'Tous les partis gagnent 1 ★.' },
+    { id: 'sondage',    title: 'Sondage surprise',         text: 'Le dernier au classement gagne 0,3 pt au sondage.' },
+    { id: 'fete',       title: 'Fête nationale',           text: 'Trêve républicaine : la campagne fait une pause, sans effet sur les partis.' },
     { id: 'division',   title: 'Guerre des chefs',         text: "Division : chaque parti perd 1 soutien dans sa région la plus forte (2 pour Les Rescapés)." },
-    { id: 'fuite',      title: 'Fuite de documents',       text: 'Chaque parti perd 1 ★.' },
+    { id: 'fuite',      title: 'Fuite de documents',       text: 'Les documents visent le favori : le parti en tête perd 0,2 pt au sondage.' },
     { id: 'salon', theme: 'ecologie',      title: "Salon de l'agriculture",   text: 'Chaque parti gagne 1 soutien dans la région rurale où il est le plus fort.' },
     { id: 'usine', theme: 'emploi',      title: "Fermeture d'usine",        text: 'Dans les régions industrielles, le parti qui contrôle perd 1 soutien.' },
     { id: 'patrimoine', title: 'Journées du patrimoine',   text: 'Chaque parti gagne 1 soutien dans la région historique où il est le plus fort.' },
@@ -702,7 +718,7 @@
     moneyBlend: 0,               // 0 = chaque parti garde sa cagnotte de départ ; 1 = tout le monde part avec 5 €
     actionsPerTurn: 3,
     debateTurns: [3, 6, 8],
-    incomeMoney: 6, incomePerRegion: 1, incomeRegionMax: 3, incomeInfl: 2,   // v3.6.3 : 6 € par tour (4 avant) : 3 vraies actions même sans région
+    incomeMoney: 6, incomePerRegion: 1, incomeRegionMax: 3,   // v5.0 : plus de revenu d'influence ★ · v3.6.3 : 6 € par tour (4 avant) : 3 vraies actions même sans région
     minControl: 3, maxCubes: 10, startCubes: 3,
     socle: 0.5,                    // v3.2 : en Réaliste, la moitié des électeurs vote par fidélité (socle électoral)
     weightMin: 0.1, weightMax: 3,    // v3.2 : poids électoral d'un soutien en mode Réaliste (bornes)
@@ -711,13 +727,13 @@
     othersKeep: 0.82,            // v1.1 mode Réaliste : à chaque tour, les « autres listes » gardent 82 % de leurs électeurs
     othersTransfer: 0.6,         // au 2nd tour, 60 % des électeurs des autres listes votent pour un finaliste
     startScale: 10,              // mode Réaliste : cubes de départ = score moyen législatives + européennes 2024 (%) × 10 / 100
-    spotlightCost: 2,
+    spotlightCost: 3,            // v5.0 : 3 € (avant 2 ★) pour étouffer l'affaire quand on est en tête
     /* v1.6 : tous les partis du jeu se présentent au 1er tour (le joueur + les autres, menés par l'ordinateur) */
     rivals: 99,                  // nombre maximal d'adversaires (99 = tous les partis de data.js)
     debateDuels: 3,              // à chaque débat, chaque parti affronte 3 adversaires (et non tous)
     /* v0.2 : axe politique, transferts, élection */
     maxAllianceDistance: 2,
-    breakCost: 2,
+    breakCost: 0.2,              // v5.0 : rompre une alliance coûte 0,2 pt au sondage (avant 2 ★)
     incumbentBonus: 1.25,        // prime au sortant : les cubes du parti qui contrôle une région comptent ×1,25 dans les votes
     objectiveVotes: 0.6,         // un objectif réussi rapporte bonus × 0,6 « millions » de voix
     transfer: { 1: 0.55, 2: 0.42, 3: 0.25, 4: 0.12, 5: 0.06 },  // v3.6.4 : report au 2nd tour selon la distance (loin : on s'abstient plutôt)
@@ -743,7 +759,7 @@
     scandalCubes: 2,
     crisisStart: [2, 4],             // la crise de la partie commence entre le tour 2 et le tour 4
     /* v0.6 : débat télévisé */
-    debatePrepMax: 3,                // préparation : jusqu'à 3 ★, +1 point chacune
+    debatePrepMax: 3, prepCost: 1,  // préparation : jusqu'à 3 niveaux, 1 € chacun (v5.0 : avant, en ★)
     /* v0.7 : programme et affaires */
     programmeSize: 5,
     budgetCap: 25,                   // v0.8 : au-delà de 25 Md€ de reste à financer, le programme n'est pas financé
@@ -953,7 +969,34 @@
     crowd: { f: 1.5, max: 3 },
     /* v4.9.3 : les médias. debate = force du débat (÷ 1,5) ; keep = part de l'audience gardée d'un tour à l'autre (usure 10 % au lieu de 15 %) ;
        elast = le frein des médias pour les partis déjà hauts (0,75 hors Bêta : plus bas = moins de frein). */
-    media: { debate: 0.67, keep: 0.9, elast: 0.6 },   // gain de base × (soutiens de la région aujourd'hui ÷ au début − 1) × f, plafonné à × max
+    media: { debate: 0.67, keep: 0.9, elast: 0.6 },
+    /* v5.0 : les actions clandestines (Bêta seulement). Une seule par tour et par parti, comme une action normale.
+       risk = risque de découverte de base (validé) ; la suspicion du parti l'augmente.
+       pt = effet sur le sondage national de la cible (négatif) · money = argent gagné · cut = part du prochain Meeting adverse perdue.
+       susp = suspicion ajoutée quand on la joue (plus l'opération est risquée, plus elle attire l'attention). */
+    clan: {
+      ops: {
+        fakenews:    { name: 'Diffuser une fake news',    icon: '📰', cost: { money: 3 },           risk: 0.35, pt: -0.5, target: true, susp: 22,
+                       short: 'Sème le doute sur un rival', effet: 'La cible perd 0,5 pt au sondage national.' },
+        fuite:       { name: 'Fuite compromettante',      icon: '📂', cost: { money: 3 },           risk: 0.25, pt: -0.3, target: true, susp: 18,
+                       short: 'Un faux dossier « fuite » dans la presse', effet: 'La cible perd 0,3 pt au sondage national.' },
+        occulte:     { name: 'Financement occulte',       icon: '💼', cost: { forme: 1 },           risk: 0.45, money: 20, susp: 26,
+                       short: 'Des fonds non déclarés', effet: '+20 € dans ta caisse.' },
+        denigrement: { name: 'Campagne de dénigrement',   icon: '🗯️', cost: { money: 2 },           risk: 0.30, pt: -0.4, target: true, susp: 20, revealPt: -0.2,
+                       short: 'Des comptes anonymes attaquent un rival', effet: 'La cible perd 0,4 pt au sondage national. Si c\u2019est révélé : 0,2 pt de plus perdu pour toi.' },
+        espionnage:  { name: 'Espionnage politique',      icon: '🕵️', cost: { money: 1 },           risk: 0.20, target: true, susp: 16,
+                       short: 'Une taupe dans l\u2019équipe rivale', effet: 'Au prochain tour, tu vois la première action prévue par ce rival.' },
+        sabotage:    { name: 'Sabotage d\u2019un meeting', icon: '🧨', cost: { money: 2, forme: 1 }, risk: 0.40, cut: 0.5, target: true, susp: 24,
+                       short: 'Salle annulée, sono en panne…', effet: 'Le prochain Meeting de la cible (ce tour ou le suivant) rapporte 50 % de soutiens en moins.' }
+      },
+      order: ['fakenews', 'fuite', 'denigrement', 'sabotage', 'espionnage', 'occulte'],
+      scandal: { pt: -1.2, money: -10 },   // le scandale quand c'est révélé : −1,2 pt (popularité et crédibilité) et 10 € d'amende
+      suspRisk: 0.25,       // suspicion 100 = +25 points de risque de découverte
+      riskMax: 0.85,
+      suspDecay: 10,        // −10 de suspicion à chaque tour sans opération
+      late: { after: 2, base: 0.08, susp: 0.0025 },   // révélation différée : à partir de 2 tours après, 8 % par tour + 0,25 % par point de suspicion
+      ai: { chance: 0.18, suspMax: 45 }    // l'ordinateur : au plus 1 opération par tour, 18 % des tours, et pas s'il est déjà très suspect
+    },   // gain de base × (soutiens de la région aujourd'hui ÷ au début − 1) × f, plafonné à × max
     changes: [
       'Salle comble : plus une région s\u2019est remplie de soutiens depuis le début de la campagne, plus un Meeting y rassemble de monde. Un Meeting garde ainsi sa valeur au sondage jusqu\u2019au dernier tour (jusqu\u2019à 25 soutiens par parti et par région).',
       'Pas de prime au sortant : tenir une région ne donne plus de voix en plus.',
@@ -966,7 +1009,8 @@
       'Actions et cartes propres à chaque parti réglées selon son rang : plus fortes pour les petits, plus faibles pour les favoris.',
       'Scandales : plus fréquents pour les favoris (RN, LFI), plus rares pour les petits partis.',
       'Les Enracinés : chaque Meeting sur l\u2019écologie rapporte 2 soutiens de plus.',
-      'Socle figé à 30 % (au lieu de 50 %) : plus de voix bougent pendant la campagne.'
+      'Socle figé à 30 % (au lieu de 50 %) : plus de voix bougent pendant la campagne.',
+      'Actions clandestines (menu Plus) : fake news, fuite, financement occulte, dénigrement, espionnage, sabotage. Une par tour, avec un risque de scandale immédiat ou des semaines plus tard. Plus un parti en fait, plus il devient suspect.'
     ]
   };
 
@@ -1041,7 +1085,7 @@
   var DEB_REG_NAME = { emotion: '❤️ émotion', chiffres: '📊 chiffres (mesure, bilan)', attaque: '🥊 attaque', promesse: '🎲 promesse', esquive: '🙃 recentrer' };
   var DEBATE = {
     win: 1.3, lose: 0.5,     // la réponse qui contre l'autre gagne 30 % ; celle qui est contrée perd la moitié
-    prep: 0.15,              // chaque ★ de préparation : +15 % sur tes réponses (et tu lis la fiche de l'adversaire)
+    prep: 0.15,              // chaque niveau de préparation (1 €) : +15 % sur tes réponses (et tu lis la fiche de l'adversaire)
     winBonus: 0.8,           // le vainqueur de la soirée : +0,8 d'audience dans toutes les classes (×2 au grand débat final)
     faceSwing: 0.1, faceMax: 0.03   // face-à-face : l'écart de points déplace jusqu'à 3 % des voix du perdant vers le gagnant
   };
@@ -1179,7 +1223,7 @@
 
   /* ---------- v0.5 : dilemmes ----------
      Chaque tour, un parti (à tour de rôle) fait face à un dilemme. Effets possibles :
-     money, infl, forme, cas (casseroles) : +n / −n
+     money, forme, cas (casseroles) : +n / −n · pt : points de sondage national (v5.0, remplace l'influence ★)
      strong : n cubes dans sa région la plus forte · loseTop {n, count} : −n dans ses « count » régions les plus fortes
      regions {n, count, profile?} : +n cubes dans ses « count » meilleures régions
      rival : le rival en tête perd n cubes · dice {chance, win, lose} : pari
@@ -1187,16 +1231,16 @@
   var DILEMMAS = [
     { id: 'notes', title: 'Notes de frais', text: 'Le Canard Déchaîné révèle les notes de frais de ton trésorier : 12 000 € de dîners en un mois.', options: [
       { label: 'Nier en bloc', hint: 'Pile ou face : l\'affaire s\'éteint… ou −3 soutiens et +1 casserole', fx: [{ k: 'dice', chance: 0.5, win: [], lose: [{ k: 'strong', n: -3 }, { k: 'cas', n: 1 }] }] },
-      { label: 'S\'excuser à la télé', hint: '−2 ★, mais +1 soutien : on salue ta franchise', fx: [{ k: 'infl', n: -2 }, { k: 'strong', n: 1 }] },
-      { label: 'Contre-attaquer', hint: '−1 ★, le rival en tête perd 2 soutiens… mais +2 casseroles', fx: [{ k: 'infl', n: -1 }, { k: 'rival', n: 2 }, { k: 'cas', n: 2 }] } ] },
+      { label: 'S\'excuser à la télé', hint: '−0,2 pt, mais +1 soutien : on salue ta franchise', fx: [{ k: 'pt', n: -0.2 }, { k: 'strong', n: 1 }] },
+      { label: 'Contre-attaquer', hint: '−0,1 pt, le rival en tête perd 2 soutiens… mais +2 casseroles', fx: [{ k: 'pt', n: -0.1 }, { k: 'rival', n: 2 }, { k: 'cas', n: 2 }] } ] },
     { id: 'mecene', title: 'Le mécène généreux', text: 'Un riche industriel propose de financer ta campagne. Il ne demande rien… pour l\'instant.', options: [
       { label: 'Accepter l\'argent', hint: '+5 € et +1 casserole… et ça pourrait ressortir', fx: [{ k: 'money', n: 5 }, { k: 'cas', n: 1 },
         { k: 'later', turns: 3, chance: 0.5, title: 'L\'affaire du mécène', text: 'Les juges s\'intéressent aux dons de ton mécène.', fx: [{ k: 'strong', n: -2 }, { k: 'cas', n: 1 }] }] },
-      { label: 'Refuser poliment', hint: '+1 ★ : l\'intégrité, ça se remarque', fx: [{ k: 'infl', n: 1 }] } ] },
+      { label: 'Refuser poliment', hint: '+0,2 pt : l\'intégrité, ça se remarque', fx: [{ k: 'pt', n: 0.2 }] } ] },
     { id: 'derapage', title: 'Dérapage sur les réseaux', text: 'Un de tes militants publie un message très maladroit qui devient viral.', options: [
       { label: 'L\'exclure du parti', hint: '−1 soutien, mais −1 casserole', fx: [{ k: 'strong', n: -1 }, { k: 'cas', n: -1 }] },
       { label: 'Le défendre', hint: 'Ta base apprécie : +1 soutien. Mais +1 casserole', fx: [{ k: 'strong', n: 1 }, { k: 'cas', n: 1 }] },
-      { label: 'Ne rien dire', hint: 'Pile ou face : ça passe, ou −2 ★', fx: [{ k: 'dice', chance: 0.5, win: [], lose: [{ k: 'infl', n: -2 }] }] } ] },
+      { label: 'Ne rien dire', hint: 'Pile ou face : ça passe, ou −0,3 pt', fx: [{ k: 'dice', chance: 0.5, win: [], lose: [{ k: 'pt', n: -0.3 }] }] } ] },
     { id: 'emission', title: 'Le talk-show du dimanche', text: 'L\'émission la plus regardée du pays t\'invite. Ambiance survoltée garantie.', options: [
       { label: 'Y aller', hint: '−1 ⚡ · 2 chances sur 3 : +1 soutien dans 3 régions ; sinon gaffe', fx: [{ k: 'forme', n: -1 }, { k: 'dice', chance: 0.67, win: [{ k: 'regions', n: 1, count: 3 }], lose: [{ k: 'strong', n: -1 }, { k: 'cas', n: 1 }] }] },
       { label: 'Envoyer ton porte-parole', hint: '+1 soutien dans ta meilleure région, sans risque', fx: [{ k: 'regions', n: 1, count: 1 }] },
@@ -1204,11 +1248,11 @@
     { id: 'transfuge', title: 'Un ancien ministre veut te rejoindre', text: 'Connu de tous, il apporte ses réseaux… et sa réputation.', options: [
       { label: 'L\'accueillir', hint: '+1 soutien dans 3 régions, +1 casserole. Restera-t-il fidèle ?', fx: [{ k: 'regions', n: 1, count: 3 }, { k: 'cas', n: 1 },
         { k: 'later', turns: 2, chance: 0.35, title: 'Le transfuge claque la porte', text: 'Ton nouvel allié repart avec fracas, et ses électeurs avec lui.', fx: [{ k: 'strong', n: -2 }] }] },
-      { label: 'Refuser', hint: '+1 ★ auprès de tes militants', fx: [{ k: 'infl', n: 1 }] } ] },
+      { label: 'Refuser', hint: '+0,2 pt : tes militants apprécient', fx: [{ k: 'pt', n: 0.2 }] } ] },
     { id: 'promesse', title: 'La promesse qui fâche', text: 'Tes conseillers veulent promettre une baisse d\'impôts massive. Ça plaît… mais c\'est finançable ?', options: [
       { label: 'Promettre', hint: '+1 soutien dans 3 régions, mais les économistes vont faire les comptes', fx: [{ k: 'regions', n: 1, count: 3 },
-        { k: 'later', turns: 2, chance: 0.8, title: 'Les économistes font les comptes', text: 'Ta promesse coûterait 40 milliards. Les plateaux télé se régalent.', fx: [{ k: 'infl', n: -2 }, { k: 'cas', n: 1 }] }] },
-      { label: 'Rester sérieux', hint: '+1 ★', fx: [{ k: 'infl', n: 1 }] } ] },
+        { k: 'later', turns: 2, chance: 0.8, title: 'Les économistes font les comptes', text: 'Ta promesse coûterait 40 milliards. Les plateaux télé se régalent.', fx: [{ k: 'pt', n: -0.3 }, { k: 'cas', n: 1 }] }] },
+      { label: 'Rester sérieux', hint: '+0,2 pt', fx: [{ k: 'pt', n: 0.2 }] } ] },
     { id: 'enregistrement', title: 'L\'enregistrement volé', text: 'Un enregistrement de toi en privé circule. Tu y parles de tes électeurs avec… un certain mépris.', options: [
       { label: 'Démentir', hint: 'Pile ou face : ça passe, ou −2 soutiens et +2 casseroles', fx: [{ k: 'dice', chance: 0.5, win: [], lose: [{ k: 'strong', n: -2 }, { k: 'cas', n: 2 }] }] },
       { label: 'Assumer et t\'excuser', hint: '−1 soutien dans tes 2 meilleures régions, −1 casserole', fx: [{ k: 'loseTop', n: 1, count: 2 }, { k: 'cas', n: -1 }] } ] },
@@ -1216,7 +1260,7 @@
       { label: 'Organiser le concert', hint: '−3 €, +1 soutien dans 2 régions urbaines', fx: [{ k: 'money', n: -3 }, { k: 'regions', n: 1, count: 2, profile: 'urbaine' }] },
       { label: 'Trop cher', hint: 'Rien ne se passe', fx: [] } ] },
     { id: 'sondage_interne', title: 'Le sondage interne', text: 'Ton équipe a commandé un sondage secret. Il est catastrophique sur ton thème fétiche.', options: [
-      { label: 'Changer de cap', hint: '−2 € · +2 ★ (on te trouve à l\'écoute)', fx: [{ k: 'money', n: -2 }, { k: 'infl', n: 2 }] },
+      { label: 'Changer de cap', hint: '−2 € · +0,3 pt (on te trouve à l\'écoute)', fx: [{ k: 'money', n: -2 }, { k: 'pt', n: 0.3 }] },
       { label: 'Garder le cap', hint: '+1 ⚡ : tu restes serein', fx: [{ k: 'forme', n: 1 }] },
       { label: 'Le faire fuiter… en le truquant', hint: '+1 soutien dans 2 régions, mais ça peut se savoir', fx: [{ k: 'regions', n: 1, count: 2 },
         { k: 'later', turns: 2, chance: 0.5, title: 'Le sondage truqué', text: 'L\'institut dément avoir publié ces chiffres.', fx: [{ k: 'loseTop', n: 1, count: 2 }, { k: 'cas', n: 2 }] }] } ] }
@@ -1269,7 +1313,7 @@
   }
 
   var DATA = { REFERENCE_2027: REFERENCE_2027, POLLS: POLLS, BASES: BASES, REGIONS: REGIONS, PROFILES: PROFILES, THEMES: THEMES, HEADLINES: HEADLINES, PARTIES: PARTIES, ACTIONS: ACTIONS,
-               CARDS: CARDS, FICHES: FICHES, EVENTS: EVENTS, DILEMMAS: DILEMMAS, CRISES: CRISES, REPLIES: REPLIES, TEMPERS: TEMPERS, TRAITS: TRAITS, NOSTALGIA: NOSTALGIA, PETALS: PETALS, MICRO: MICRO, BINGO: BINGO, BINGO_LINES: BINGO_LINES,
+               CARDS: CARDS, CARD_RULES: CARD_RULES, FICHES: FICHES, EVENTS: EVENTS, DILEMMAS: DILEMMAS, CRISES: CRISES, REPLIES: REPLIES, TEMPERS: TEMPERS, TRAITS: TRAITS, NOSTALGIA: NOSTALGIA, PETALS: PETALS, MICRO: MICRO, BINGO: BINGO, BINGO_LINES: BINGO_LINES,
                MEASURES: MEASURES, FUNDING: FUNDING, SEGMENTS: SEGMENTS, VOTE_PROP: VOTE_PROP, CLASS_PROF: CLASS_PROF, CLASS_SRC: CLASS_SRC, HEART: HEART, MAJORITY: MAJORITY, BETA: BETA, MEDIA: MEDIA, ANSWERS: ANSWERS, STATIONS: STATIONS, DEB_REG: DEB_REG, DEB_BEATS: DEB_BEATS, DEB_REG_NAME: DEB_REG_NAME, DEBATE: DEBATE, STATION_FIT: STATION_FIT, VINGT: VINGT, QUESTIONS: QUESTIONS, SEGMENTS_SRC: SEGMENTS_SRC, AFFAIRS: AFFAIRS, LEARN: LEARN, BUDGET_AFFAIR: BUDGET_AFFAIR, REACTIONS: REACTIONS, ADVISOR: ADVISOR, OBJECTIVES: OBJECTIVES, RULES: RULES, FORMATS: FORMATS, LEGIS: LEGIS, MINISTRY: MINISTRY, OPPO: OPPO, validate: validate };
   if (typeof module !== 'undefined' && module.exports) module.exports = DATA;
   else root.PolitikData = DATA;

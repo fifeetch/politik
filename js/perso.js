@@ -70,10 +70,10 @@
     return {
       id: def.sigle, pos: def.pos, name: def.name, short: def.name.length > 18 ? def.sigle : def.name, family: familyOf(def.pos),
       candidate: (ch && ch.name) || 'Toi', candTitle: 'à l\'origine du parti', programme: prog, financing: (near[0].financing || []).slice(0, 2),
-      color: def.color, ink: inkOf(def.color), money: 6, infl: 3, bases: bases, cred: cred,
+      color: def.color, ink: inkOf(def.color), money: 6, bases: bases, cred: cred,
       force: 'Effet nouveauté : +2 soutiens en Meeting au tour 1, +1 aux tours 2 à 4.',
       weakness: 'Un parti tout neuf : environ 3 % des voix au départ, et pas encore d\'élus locaux.',
-      cards: near[0].cards.slice(), custom: true, novelty: true, themes: themes.slice()
+      cards: (function () { var c = []; near.forEach(function (p) { (p.cards || []).forEach(function (k) { if (c.length < 2 && c.indexOf(k) < 0) c.push(k); }); }); return c; })(), custom: true, novelty: true, themes: themes.slice()
     };
   }
   function temperOf(ch) { var t = TRAITS[(ch && ch.trait) || 'rassembleur'] || TRAITS.rassembleur; return { label: t.temper.label, w: Object.assign({}, t.temper.w) }; }

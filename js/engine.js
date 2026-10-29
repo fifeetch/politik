@@ -34,6 +34,9 @@
     var g = JSON.parse(str); setFormat(g.format); applyMode(g);
     g.rng = makeRng(1); g.rng.setState(g.rngState); delete g.rngState;
     ensureTraits(g);   // v3.1 : une partie sauvegardée avant les traits les reçoit à la reprise
+    // v5.0 : plus d'influence ★ ; les cartes de parti deviennent rechargeables (les 2 cartes du parti, selon data.js)
+    (g.players || []).forEach(function (pl) { delete pl.infl; if (PARTY[pl.id]) pl.cards = (PARTY[pl.id].cards || []).slice(); pl.cardCd = pl.cardCd || {}; });
+    initClan(g);
     return g;
   }
   function shuffle(arr, rng) {
@@ -201,6 +204,29 @@
     }); });
     g.audOn = any;
   }
+  /* v5.0 : un effet DIRECT sur le sondage national, en points (remplace l'influence ★).
+     Il passe par l'audience (toutes les classes sociales, dans toute la France), donc il s'estompe un peu chaque tour, comme un passage média.
+     pt = 0,003 pour +0,3 point. Renvoie la variation obtenue (même échelle). */
+  function pollShift(g, pid, pt) {
+    if (!pt || !player(g, pid)) return 0;
+    var base = pollMap(g)[pid] || 0;
+    function push(x) {
+      g.aud = g.aud || {}; g.aud[pid] = g.aud[pid] || {};
+      SEG.forEach(function (s) { g.aud[pid][s] = Math.max(D.MEDIA.min, Math.min(D.MEDIA.max, (g.aud[pid][s] || 0) + x)); });
+      g.audOn = true;
+    }
+    var keep = g.aud ? JSON.parse(JSON.stringify(g.aud)) : null, on = g.audOn;
+    push(pt > 0 ? 1 : -1);
+    var unit = (pollMap(g)[pid] || 0) - base;
+    g.aud = keep; g.audOn = on;
+    if (!unit || unit * pt < 0) return 0;
+    var x = (pt > 0 ? 1 : -1) * pt / unit;
+    push(x);
+    var d = (pollMap(g)[pid] || 0) - base;
+    if (Math.abs(d - pt) > 0.0003 && d) { push(x * (pt - d) / d); d = (pollMap(g)[pid] || 0) - base; }   // une correction suffit
+    return d;
+  }
+  function ptLabel(x) { return (x >= 0 ? '+' : '−') + Math.abs(Math.round(1000 * x) / 10).toFixed(1).replace('.', ',') + ' pt'; }
   /* Ce qu'un gain d'audience rapporterait au sondage (en points), sans rien changer à la partie */
   function previewGain(g, pid, gains) {
     var before = pollMap(g)[pid] || 0, keep = g.aud ? JSON.parse(JSON.stringify(g.aud)) : null, on = g.audOn;
@@ -372,7 +398,7 @@
   /* Distance sur l'axe gauche-droite, de 1 (voisins) à 5 (opposés). v1.7 : positions décimales (12 partis), arrondies. */
   function dist(a, b) { if (a === b) return 0; return Math.min(5, Math.max(1, Math.round(Math.abs(PARTY[a].pos - PARTY[b].pos)))); }
   /* Ce que rapporte une Collecte : 3 € en général, 4 € et 1 ★ pour En Mouvement, 2 € pour les petits partis */
-  function fundsGain(pid) { return pid === 'EM' ? { money: 4, infl: 1 } : pid === 'VP' || pid === 'PC' || pid === 'MD' ? { money: 2, infl: 0 } : { money: 3, infl: 0 }; }
+  function fundsGain(pid) { return pid === 'EM' ? { money: 4 } : pid === 'VP' || pid === 'PC' || pid === 'MD' ? { money: 2 } : { money: 3 }; }
   /* ---------- v3.1 : les traits satiriques (voir D.TRAITS) ---------- */
   var TRAIT_OF = {}; Object.keys(D.TRAITS).forEach(function (k) { D.TRAITS[k].parties.forEach(function (pid) { TRAIT_OF[pid] = k; }); });
   var CENTRE = D.TRAITS.centre.parties;
@@ -463,7 +489,7 @@
     if (choice === 0) { g.mods.fewer = g.mods.fewer || {}; g.mods.fewer.SM = 1; res.text = 'Le débat interne s\u2019éternise : 2 actions seulement ce tour.'; }
     else {
       var can = D.PETALS.filter(function (pt) { return g.petals[pt.id] && pt.to; });
-      if (!can.length) { var lost = Math.min(pl.infl, 2); pl.infl -= lost; res.text = 'Plus personne pour claquer la porte… mais la séance coûte ' + lost + ' ★.'; }
+      if (!can.length) { var dP = pollShift(g, 'SM', -0.002); res.text = 'Plus personne pour claquer la porte… mais la séance coûte ' + ptLabel(dP) + ' au sondage.'; }
       else {
         var pt = can[Math.floor(g.rng() * can.length)];
         g.petals[pt.id] = false; res.petal = pt.id;
@@ -478,7 +504,7 @@
   /* L'ordinateur tranche quand il a des pétales à perdre et que ses actions valent cher */
   function autoPrimaire(g) {
     var pl = player(g, 'SM'), petals = D.PETALS.filter(function (pt) { return g.petals[pt.id] && pt.to; }).length;
-    var choice = petals === 0 ? (pl.infl >= 4 ? 1 : 0) : (g.rng() < 0.25 ? 1 : 0);
+    var choice = petals === 0 ? (g.turn >= R.maxTurns - 1 ? 1 : 0) : (g.rng() < 0.25 ? 1 : 0);
     return resolvePrimaire(g, choice);
   }
   function actionsFor(g, pid) { return R.actionsPerTurn - ((g.mods && g.mods.fewer && g.mods.fewer[pid]) || 0); }
@@ -846,8 +872,8 @@
       affairs: [], nextAffairs: [], affairDeck: [], affairIdx: 0,
       players: ids.map(function (id, i) {
         var p = PARTY[id];
-        return { id: id, human: id === humanParty, money: Math.round(p.money * (1 - R.moneyBlend) + 5 * R.moneyBlend), infl: p.infl,   // v2.8.1 : en éclair, les cagnottes de départ se rapprochent
-                 cards: p.cards.slice(), objective: objs[i % objs.length], debateWins: 0,
+        return { id: id, human: id === humanParty, money: Math.round(p.money * (1 - R.moneyBlend) + 5 * R.moneyBlend),   // v2.8.1 : en éclair, les cagnottes de départ se rapprochent
+                 cards: (p.cards || []).slice(), cardCd: {}, objective: objs[i % objs.length], debateWins: 0,
                  forme: R.formeStart, cas: 0, momentum: 0, cred: Object.assign({}, p.cred), talk: {}, militants: 0,
                  programme: null, phare: null, budget: 0, cand: opts.cands ? candFor(id, opts.cands[id]) : null };   // v4.8 : les personnalités (actives quand le menu les choisit)
       }),
@@ -855,6 +881,7 @@
       event: null, mods: {}, cancel: {}, log: [], history: []
     };
     applyMode(g);   // v4.1
+    initClan(g);   // v5.0
     g.players.forEach(function (pl) { if (pl.cand && pl.cand.d === 'casserole') pl.cas = 2; });   // v4.8 : une vieille casserole
     if (g.mode === 'beta') {   // v4.4 : la bombe de campagne (un tour tiré au sort) et les parrainages
       var BB = D.BETA.bomb, eclairB = format === 'eclair';
@@ -995,10 +1022,10 @@
       g.players.forEach(function (pl) {
         var bonus = Math.min(R.incomeRegionMax, controlledRegions(g, pl.id).length * R.incomePerRegion);
         if (candQ(g, pl.id, 'carnet')) bonus += 2;   // v4.8 : carnet d'adresses
-        pl.money += R.incomeMoney + bonus; pl.infl += R.incomeInfl;
+        pl.money += R.incomeMoney + bonus;
         var cf = candQ(g, pl.id, 'increvable') ? 1 : candD(g, pl.id, 'fragile') ? -1 : 0;   // v4.8 : increvable / petite santé
         var f0 = pl.forme; pl.forme = Math.max(0, Math.min(R.formeMax, pl.forme + R.formeRegen + (pl.id === 'EM' ? 1 : 0) + cf));
-        out.income.push({ pid: pl.id, money: R.incomeMoney + bonus, infl: R.incomeInfl, forme: pl.forme - f0 });
+        out.income.push({ pid: pl.id, money: R.incomeMoney + bonus, forme: pl.forme - f0 });
       });
       // v4.4 (Bêta) : chaque tour, des élus signent d'eux-mêmes pour les petits partis
       if (isBeta(g) && g.turn <= parrDeadline(g)) g.players.forEach(function (pl) { if (pl.sign != null && pl.sign < D.BETA.parr.need) pl.sign = Math.min(D.BETA.parr.need, pl.sign + D.BETA.parr.perTurn); });
@@ -1017,6 +1044,8 @@
         return false;
       });
       updateAllControl(g); ledMark(g, 'Conséquences de décisions des tours passés', '⏳');   // v4.8
+      out.clan = clanTurn(g);   // v5.0 (Bêta) : la suspicion retombe, et une enquête peut révéler une vieille opération
+      if (out.clan.length) ledMark(g, 'Révélations : des opérations clandestines éclatent au grand jour', '🕵️');
       // v0.7 : les affaires (dossiers des rivaux, programme non financé, casseroles, Le Canard)
       var list = g.nextAffairs.filter(function (x) { return player(g, x.pid); }); g.nextAffairs = [];
       g.players.forEach(function (pl) {
@@ -1154,11 +1183,12 @@
   function applyFx(g, pid, list) {
     var out = [], pl = pid ? player(g, pid) : null;
     function say(t) { out.push(t); }
-    function clampRes(p) { p.money = Math.max(0, p.money); p.infl = Math.max(0, p.infl); p.forme = Math.max(0, Math.min(R.formeMax, p.forme)); p.cas = Math.max(0, Math.min(R.casseroleMax, p.cas)); }
+    function clampRes(p) { p.money = Math.max(0, p.money); p.forme = Math.max(0, Math.min(R.formeMax, p.forme)); p.cas = Math.max(0, Math.min(R.casseroleMax, p.cas)); }
     (list || []).forEach(function (e) {
       switch (e.k) {
         case 'money': pl.money += e.n; clampRes(pl); say((e.n > 0 ? '+' : '−') + Math.abs(e.n) + ' €'); break;
-        case 'infl': pl.infl += e.n; clampRes(pl); say((e.n > 0 ? '+' : '−') + Math.abs(e.n) + ' ★'); break;
+        case 'pt': case 'infl': {   // v5.0 : des points de sondage national ('infl' : vieilles sauvegardes, 1 ★ ≈ 0,1 pt)
+          var dp = pollShift(g, pid, (e.k === 'infl' ? e.n * 0.1 : e.n) / 100); say(ptLabel(dp) + ' au sondage'); break; }
         case 'forme': pl.forme += e.n; clampRes(pl); say((e.n > 0 ? '+' : '−') + Math.abs(e.n) + ' ⚡'); break;
         case 'cas': pl.cas += e.n; clampRes(pl); say(e.n > 0 ? '+' + e.n + ' casserole' + (e.n > 1 ? 's' : '') : '−' + (-e.n) + ' casserole'); break;
         case 'strong': {
@@ -1221,14 +1251,14 @@
         else say(null, 'Personne n’est en tête : le scandale fait pschitt.');
         break; }
       case 'buzz': g.mods.socialFree = true; say(null, 'Buzz gratuits ce tour.'); break;
-      case 'sondage': { var p = player(g, last(g)); p.infl += 2; say(p.id, PARTY[p.id].short + ' gagne 2 ★.'); break; }
-      case 'fete': g.players.forEach(function (p) { p.infl += 1; }); say(null, 'Tous les partis gagnent 1 ★.'); break;
+      case 'sondage': { var lp = last(g), dS = pollShift(g, lp, 0.003); say(lp, PARTY[lp].short + ' : ' + ptLabel(dS) + ' au sondage.'); break; }
+      case 'fete': say(null, 'Trêve républicaine : pas d\u2019effet sur la campagne.'); break;
       case 'division': case 'division2':
         g.players.forEach(function (p) {
           var n = p.id === 'UG' ? 2 : 1; var rid = strongestRegion(g, p.id);
           if (rid) { addCubes(g, rid, p.id, -n); say(p.id, PARTY[p.id].short + ' perd ' + n + ' soutien' + (n > 1 ? 's' : '') + ' en ' + REG[rid].name + '.'); }
         }); break;
-      case 'fuite': g.players.forEach(function (p) { p.infl = Math.max(0, p.infl - 1); }); say(null, 'Tous les partis perdent 1 ★.'); break;
+      case 'fuite': { var ld = leader(g), dF = pollShift(g, ld, -0.002); say(ld, PARTY[ld].short + ' : ' + ptLabel(dF) + ' au sondage.'); break; }
       case 'salon': case 'patrimoine': {
         var prof = id === 'salon' ? 'rurale' : 'historique';
         g.players.forEach(function (p) {
@@ -1250,16 +1280,17 @@
 
   /* ---------- Coûts et validité des actions ---------- */
   function actionCost(g, pid, act) {
-    if (act.type === 'card') return { money: 0, infl: 0, forme: 0 };
+    if (act.type === 'card') return { money: D.CARD_RULES.cost.money || 0, forme: D.CARD_RULES.cost.forme || 0 };   // v5.0 : les cartes coûtent comme une action
+    if (act.type === 'clan') { var oc = clanOp(act.op); return { money: oc ? oc.cost.money || 0 : 0, forme: oc ? oc.cost.forme || 0 : 0 }; }
     var base = D.ACTIONS[act.type].cost;
-    var c = { money: base.money, infl: base.infl, forme: base.forme || 0 };
+    var c = { money: base.money || 0, forme: base.forme || 0 };
     if (act.type === 'terrain') {
       c.money += g.mods.terrainExtra || 0;
       if (pid === 'FI' && act.region && REG[act.region].profile === 'rurale') c.money += 1;
     }
     if (act.type === 'medias' && (pid === 'LO' || pid === 'DL')) c.money += 1;   // v1.7 : petits partis, peu de relais médiatiques
     if (act.type === 'militants' && pid === 'LO') c.money -= 1;
-    if (act.type === 'reforme' && pid === 'HZ') c.infl -= 1;
+    if (act.type === 'reforme' && pid === 'HZ') c.money -= 1;
     if (act.type === 'reseaux' && g.mods.socialFree) c.money = 0;
     // (réduction MN retirée v0.1)
     return c;
@@ -1268,11 +1299,15 @@
   function checkAction(g, pid, act) {
     if (act.type === 'card') {
       var pl = player(g, pid), card = D.CARDS[act.card];
-      if (pl.cards.indexOf(act.card) < 0) return 'Carte déjà utilisée.';
+      if (!card || pl.cards.indexOf(act.card) < 0) return 'Action réservée à un autre parti.';
+      var cdT = cardReady(g, pid, act.card);
+      if (cdT > g.turn) return 'De nouveau disponible au tour ' + cdT + '.';
+      if (card.hotNext && g.turn >= R.maxTurns) return 'Plus de tour suivant : la campagne est finie.';
       if (card.target === 'region' && !act.region) return 'Choisis une région.';
       if (card.profiles && card.profiles.indexOf(REG[act.region].profile) < 0) return 'Pas le bon type de région.';
       return null;
     }
+    if (act.type === 'clan') return clanError(g, pid, act);
     var def = D.ACTIONS[act.type];
     if (!def) return 'Action inconnue.';
     if (def.only && def.only.indexOf(pid) < 0) return 'Action réservée à un autre parti.';
@@ -1404,7 +1439,7 @@
     var c = cloneGame(g), r = luck == null ? 0.999 : luck;
     c.rng = function () { return r; }; c.cancel = {};
     var pl = player(c, pid); if (!pl) return null;
-    pl.money = 99; pl.infl = 99; pl.forme = Math.max(pl.forme, 9);
+    pl.money = 99; pl.forme = Math.max(pl.forme, 9);
     (pre || []).forEach(function (a) { try { resolveOne(c, pid, a); } catch (e) { /* une action programmée impossible : on l'ignore */ } });
     var c0 = {}; D.REGIONS.forEach(function (x) { c0[x.id] = cubes(c, x.id, pid); });
     var before = pollMap(c)[pid] || 0, entry, rg0 = act.region ? regScore(c, act.region, pid) : null;
@@ -1463,14 +1498,15 @@
   /* ---------- Résolution des actions ---------- */
   function resolveOne(g, pid, act) {
     var pl = player(g, pid), P = PARTY[pid];
-    var name = act.type === 'card' ? D.CARDS[act.card].name : D.ACTIONS[act.type].name;
+    var name = act.type === 'card' ? D.CARDS[act.card].name : act.type === 'clan' ? (clanOp(act.op) || {}).name : D.ACTIONS[act.type].name;
     var entry = { pid: pid, action: name, region: act.region || null, target: act.target || null, theme: act.theme || null, text: '', ok: true };
     if (g.cancel[pid]) { g.cancel[pid] = false; entry.ok = false; entry.text = 'Annulée par le 49.3 !'; return entry; }
     var err = checkAction(g, pid, act);
     if (err) { entry.ok = false; entry.text = 'Échoue : ' + err; return entry; }
     var c = actionCost(g, pid, act);
-    if (pl.money < c.money || pl.infl < c.infl || pl.forme < c.forme) { entry.ok = false; entry.text = 'Échoue : pas assez de ressources.'; return entry; }
-    pl.money -= c.money; pl.infl -= c.infl; pl.forme -= c.forme;
+    if (pl.money < c.money || pl.forme < c.forme) { entry.ok = false; entry.text = 'Échoue : pas assez de ressources.'; return entry; }
+    pl.money -= c.money; pl.forme -= c.forme;
+    if (act.type === 'clan') { pl.clanTurn = g.turn; return resolveClan(g, pid, act, entry); }   // v5.0 : pas de gaffe en coulisses
     // v0.4 : un candidat épuisé peut faire une gaffe
     if (c.forme && pl.forme <= gaffeLimit(g, pid) && g.rng() < R.gaffeChance) {   // v4.8 : un gaffeur dérape dès 1 ⚡
       pl.cas = Math.min(R.casseroleMax, pl.cas + 1);
@@ -1482,6 +1518,8 @@
     switch (act.type) {
       case 'terrain': {
         var bd = terrainBreakdown(g, pid, act.region, act.theme);
+        var sab = sabotaged(g, pid);   // v5.0 (Bêta) : un meeting saboté rassemble moitié moins
+        if (sab) { var cut = bd.total - Math.floor(bd.total * (1 - sab)); bd = { total: bd.total - cut, parts: bd.parts.concat([{ k: 'sabo', label: 'salle à moitié vide (incidents)', n: -cut }]) }; entry.sabotaged = true; }
         var n = addCubes(g, act.region, pid, bd.total);
         t.push('+' + n + ' en ' + rn + ' (' + bd.parts.map(function (x) { return x.label + (x.k === 'base' ? ' : ' : ' ') + (x.n > 0 && x.k !== 'base' ? '+' : '') + x.n; }).join(', ') + (n < bd.total ? ', plafond atteint' : '') + ')');
         var pc = poach(g, pid, act.region, true); if (pc) t.push('récupère 1 électeur de ' + PARTY[pc].short);
@@ -1554,7 +1592,7 @@
         if (!g.nextHot.some(function (x) { return x.theme === act.theme; })) g.nextHot.push({ theme: act.theme, pid: pid });
         t.push(THEME[act.theme].name + ' fera l’actu au prochain tour'); break; }
       case 'fonds': {
-        var fg = fundsGain(pid), f = fg.money; pl.money += f; pl.infl += fg.infl; t.push('+' + f + ' €' + (pid === 'EM' ? ' +1 ★' : '')); break; }
+        var fg = fundsGain(pid), f = fg.money; pl.money += f; t.push('+' + f + ' €'); break; }
       case 'reforme': {
         var prof2 = REG[act.region].profile;
         D.REGIONS.forEach(function (r) { if (r.profile === prof2) { var x = addCubes(g, r.id, pid, 1); if (x) t.push('+1 ' + r.name); } });
@@ -1589,9 +1627,9 @@
           var mv = swing(g, player(g, lp.to) ? lp.to : null, pid, spec(g, pid, R.rappelSwing));
           t.push('François Hésitant ramène ' + lp.name + ' : +1 en ' + mv.map(function (r) { return REG[r].name; }).join(', ') + (player(g, lp.to) ? ' (repris à ' + PARTY[lp.to].short + ')' : ''));
           if (petalsCount(g) === D.PETALS.length && !g.roseBloom) {
-            g.roseBloom = true; entry.bloom = true; pl.infl += 2;
+            g.roseBloom = true; entry.bloom = true; var dB = pollShift(g, pid, 0.002);
             var bl = bestRegions(g, pid, 3, null, 1); bl.forEach(function (rid) { addCubes(g, rid, pid, 1); });
-            t.push('🌹 la rose refleurit ! +2 ★ et +1 en ' + bl.map(function (r) { return REG[r].name; }).join(', '));
+            t.push('🌹 la rose refleurit ! ' + ptLabel(dB) + ' et +1 en ' + bl.map(function (r) { return REG[r].name; }).join(', '));
           }
         } else {
           pl.cas = Math.min(R.casseroleMax, pl.cas + R.rappelCas); entry.book = true;
@@ -1636,7 +1674,7 @@
           t.push('🎤 ' + PARTY[tgD].short + ' refuse le débat : la chaise vide fait le tour des réseaux (+1 soutien pour toi dans ' + gotD.length + ' régions, −1 pour lui dans ' + DF.refuseLoss + ')');
         }
         break; }
-      case 'card': t = resolveCard(g, pid, act); pl.cards = pl.cards.filter(function (k) { return k !== act.card; }); break;
+      case 'card': t = resolveCard(g, pid, act); pl.cardCd = pl.cardCd || {}; pl.cardCd[act.card] = g.turn + D.CARD_RULES.recharge; entry.hotCard = cardHot(g, act.card); break;   // v5.0 : rechargeable
       case 'alliance': {
         var to = player(g, act.target);
         if (to.human) { g.offers.push({ from: pid, to: act.target }); t.push('propose une alliance à ' + PARTY[act.target].short); }
@@ -1647,8 +1685,8 @@
         var ex = allyOf(g, pid);
         delete g.alliances[pid]; delete g.alliances[ex]; g.betrayed[ex] = pid;
         pl.cas = Math.min(R.casseroleMax, pl.cas + 2);
-        var lostI = Math.min(pl.infl, R.breakCost); pl.infl -= lostI;
-        t.push('rompt avec ' + PARTY[ex].short + ' (−' + lostI + ' ★)'); break; }
+        var lostI = pollShift(g, pid, -R.breakCost / 100);
+        t.push('rompt avec ' + PARTY[ex].short + ' (' + ptLabel(lostI) + ')'); break; }
     }
     // v0.4 : parler souvent d'un thème rend crédible dessus. v1.5 : la crédibilité monte APRÈS l'action
     // (avant, l'action qui franchissait le seuil rapportait plus que ce qu'annonçait l'écran)
@@ -1669,38 +1707,152 @@
     return entry;
   }
 
+  /* ---------- v5.0 : les 2 actions spécifiques de chaque parti (cartes rechargeables) ---------- */
+  function cardReady(g, pid, k) { var pl = player(g, pid); return (pl && pl.cardCd && pl.cardCd[k]) || 0; }   // tour où la carte redevient jouable (0 = tout de suite)
+  function cardHot(g, k) { var c = D.CARDS[k]; return !!(c && c.theme && isHot(g, c.theme)); }
+  /* La force d'une carte : réglage du parti (Bêta) puis bonus d'actualité si son sujet fait la une. n = soutiens, p = points (0,3) */
+  function cardN(g, pid, k, n) { var v = spec(g, pid, n); return cardHot(g, k) ? Math.ceil(v * D.CARD_RULES.hot) : v; }
+  function specPt(g, pid, p) { if (!g || g.mode !== 'beta') return p; var f = (D.BETA.specific || {})[pid]; return f == null ? p : Math.round(p * f * 100) / 100; }
+  function cardPt(g, pid, k, p) { var v = specPt(g, pid, p); return cardHot(g, k) ? Math.round(v * D.CARD_RULES.hot * 100) / 100 : v; }
   function resolveCard(g, pid, act) {
-    var pl = player(g, pid), t = [];
+    var pl = player(g, pid), t = [], k = act.card, C = D.CARDS[k] || {};
     function others() { return g.players.filter(function (p) { return p.id !== pid; }); }
-    switch (act.card) {
-      case 'marche_pop': case 'climat': t.push('+' + addCubes(g, act.region, pid, spec(g, pid, 3)) + ' en ' + REG[act.region].name); break;
-      case 'grand_meeting': t.push('+' + addCubes(g, act.region, pid, spec(g, pid, 4)) + ' en ' + REG[act.region].name); break;
-      case 'censure': others().forEach(function (p) { p.infl = Math.max(0, p.infl - 1); }); t.push('chaque adversaire −1 ★'); break;
-      case 'primaire': pl.infl += 3; t.push('+3 ★'); break;
-      case 'rassemblement': pl.money += 3; pl.infl += 1; t.push('+3 € +1 ★'); break;
+    function N(n) { return cardN(g, pid, k, n); }
+    function P(p) { return cardPt(g, pid, k, p); }
+    if (cardHot(g, k)) t.push('🔥 ' + THEME[C.theme].name + ' fait l’actu : effet × ' + String(D.CARD_RULES.hot).replace('.', ','));
+    switch (k) {
+      case 'marche_pop': case 'climat': case 'piquet': case 'grand_meeting':
+        t.push('+' + addCubes(g, act.region, pid, N(C.n)) + ' en ' + REG[act.region].name); break;
+      case 'huma': {
+        t.push('+' + addCubes(g, act.region, pid, N(2)) + ' en ' + REG[act.region].name);
+        var hi = bestRegions(g, pid, 1, function (r) { return r.profile === 'industrielle' && r.id !== act.region; }, 2)[0];
+        if (hi) t.push('+' + addCubes(g, hi, pid, N(2)) + ' en ' + REG[hi].name); break; }
+      case 'censure': {
+        var gov = ranking(g).filter(function (x) { return x !== pid && isMajority(x); })[0] || ranking(g).filter(function (x) { return x !== pid; })[0];
+        var dC = pollShift(g, gov, -P(C.pt) / 100); t.push(PARTY[gov].short + ' ' + ptLabel(dC)); break; }
+      case 'greve': case 'referendum': {
+        if (!g.nextHot.some(function (x) { return x.theme === C.hotNext; })) g.nextHot.push({ theme: C.hotNext, pid: pid });
+        var dG = pollShift(g, pid, P(C.pt) / 100); t.push(THEME[C.hotNext].name + ' à la une au prochain tour · ' + ptLabel(dG)); break; }
+      case 'nationaliser': { var dN = pollShift(g, pid, P(C.pt) / 100); t.push(ptLabel(dN) + ' au sondage'); break; }
+      case 'depassement': {
+        var dD = pollShift(g, pid, P(C.pt) / 100); t.push(ptLabel(dD) + ' au sondage');
+        CENTRE.forEach(function (c) { if (c !== pid && player(g, c)) { var dc = pollShift(g, c, -0.001); t.push(PARTY[c].short + ' ' + ptLabel(dc)); } }); break; }
       case 'fete_rose': {
-        t.push('+' + addCubes(g, act.region, pid, spec(g, pid, 2)) + ' en ' + REG[act.region].name);
+        t.push('+' + addCubes(g, act.region, pid, N(2)) + ' en ' + REG[act.region].name);
         var o = bestRegions(g, pid, 1, function (r) { return cubes(g, r.id, pid) > 0; }, 2, [act.region])[0];
-        if (o) t.push('+' + addCubes(g, o, pid, spec(g, pid, 2)) + ' en ' + REG[o].name); break; }
-      case 'canicule':
+        if (o) t.push('+' + addCubes(g, o, pid, N(2)) + ' en ' + REG[o].name); break; }
+      case 'canicule': {
+        var nreg = cardHot(g, k) ? 3 : 2;
         others().forEach(function (p) {
-          var a = strongestRegion(g, p.id); if (a) addCubes(g, a, p.id, -1);
-          var b = strongestRegion(g, p.id, function (r) { return r.id !== a; }); if (b) addCubes(g, b, p.id, -1);
-        }); t.push('chaque adversaire −1 soutien dans 2 régions'); break;
+          var done = [];
+          for (var q = 0; q < nreg; q++) { var a = strongestRegion(g, p.id, function (r) { return done.indexOf(r.id) < 0; }); if (a) { addCubes(g, a, p.id, -1); done.push(a); } }
+        }); t.push('chaque adversaire −1 soutien dans ' + nreg + ' régions'); break; }
       case 'art493': {
         var rk = ranking(g).filter(function (x) { return x !== pid; })[0];
-        g.cancel[rk] = true; pl.cas = Math.min(R.casseroleMax, pl.cas + 1);
-        t.push('la prochaine action de ' + PARTY[rk].short + ' est annulée · +1 casserole'); break; }
+        g.cancel[rk] = true;
+        if (!cardHot(g, k)) pl.cas = Math.min(R.casseroleMax, pl.cas + 1);
+        t.push('la prochaine action de ' + PARTY[rk].short + ' est annulée' + (cardHot(g, k) ? '' : ' · +1 casserole')); break; }
       case 'remaniement': {
         var from = strongestRegion(g, pid, function (r) { return r.id !== act.region; });
-        if (from) { var mv = -addCubes(g, from, pid, -2); addCubes(g, act.region, pid, mv); t.push(mv + ' soutiens de ' + REG[from].name + ' vers ' + REG[act.region].name); }
+        if (from) { var mv = -addCubes(g, from, pid, -N(2)); addCubes(g, act.region, pid, mv); t.push(mv + ' soutiens de ' + REG[from].name + ' vers ' + REG[act.region].name); }
         break; }
-      case 'appel18': D.REGIONS.forEach(function (r) { if (r.profile === 'historique') addCubes(g, r.id, pid, spec(g, pid, 1)); }); t.push('+' + spec(g, pid, 1) + ' dans chaque région historique'); break;
+      case 'appel18': D.REGIONS.forEach(function (r) { if (r.profile === 'historique') addCubes(g, r.id, pid, N(1)); }); t.push('+' + N(1) + ' dans chaque région historique'); break;
+      case 'clochers':
+        bestRegions(g, pid, 2, function (r) { return r.profile === 'rurale'; }, 2).forEach(function (rid) { t.push('+' + addCubes(g, rid, pid, N(2)) + ' ' + REG[rid].name); }); break;
       case 'plateau_tele':
         bestRegions(g, pid, 3, function (r) { return r.profile === 'rurale' || r.profile === 'industrielle'; }, 2)
-          .forEach(function (rid) { t.push('+' + addCubes(g, rid, pid, spec(g, pid, 2)) + ' ' + REG[rid].name); }); break;
+          .forEach(function (rid) { t.push('+' + addCubes(g, rid, pid, N(2)) + ' ' + REG[rid].name); }); break;
     }
     return t;
+  }
+
+  /* ---------- v5.0 (Bêta) : les actions clandestines ----------
+     g.clan = { ops: [opérations jouées], susp: { pid: 0..100 }, sabo: { cible: { by, until, cut } }, intel: { pid: { target, turn } }, locked: { cible: { turn, plan } }, lastOp: { pid: tour } }
+     Chaque opération est gardée : tant qu'elle n'est pas révélée, une enquête peut la faire éclater (une seule fois). */
+  function clanOn(g) { return isBeta(g) && !!(D.BETA && D.BETA.clan); }
+  function clanOp(k) { return D.BETA && D.BETA.clan && D.BETA.clan.ops[k] || null; }
+  function initClan(g) { if (!g || g.clan) return; g.clan = { ops: [], susp: {}, sabo: {}, intel: {}, locked: {}, lastOp: {}, seq: 0 }; }
+  function suspicion(g, pid) { return (g.clan && g.clan.susp[pid]) || 0; }
+  /* Le risque d'être découvert : risque de base + suspicion du parti (le joueur voit le sien, jamais celui des autres) */
+  function clanRisk(g, pid, k) {
+    var o = clanOp(k), C = D.BETA.clan; if (!o) return 0;
+    return Math.min(C.riskMax, o.risk + C.suspRisk * suspicion(g, pid) / 100);
+  }
+  function clanError(g, pid, act) {
+    if (!clanOn(g)) return 'Seulement en mode Bêta.';
+    var o = clanOp(act.op); if (!o) return 'Opération inconnue.';
+    var pl = player(g, pid);
+    if (pl.clanTurn === g.turn) return 'Une seule opération clandestine par tour.';
+    if (o.target) {
+      if (!act.target || !player(g, act.target) || act.target === pid) return 'Choisis un parti à viser.';
+    }
+    if (act.op === 'espionnage' && g.turn >= R.maxTurns) return 'Plus de tour suivant à espionner.';
+    return null;
+  }
+  function sabotaged(g, pid) {
+    var sb = g.clan && g.clan.sabo[pid];
+    if (!sb) return 0;
+    delete g.clan.sabo[pid];
+    return sb.until >= g.turn ? sb.cut : 0;
+  }
+  /* Le scandale : le parti responsable paie (sondage, amende). Une opération ne fait scandale qu'une fois. */
+  function clanScandal(g, op, late) {
+    var C = D.BETA.clan, o = clanOp(op.op), pl = player(g, op.pid); if (!pl || op.revealed) return null;
+    op.revealed = g.turn; op.late = !!late;
+    var ptLoss = C.scandal.pt + (o.revealPt || 0);
+    var d = pollShift(g, op.pid, ptLoss / 100);
+    var m = Math.min(pl.money, -C.scandal.money); pl.money -= m;
+    g.clan.susp[op.pid] = Math.min(100, suspicion(g, op.pid) + 15);
+    var sc = { pid: op.pid, op: op.op, target: op.target || null, late: !!late, turn: op.turn, pt: d, money: m, name: o.name };
+    (g.clan.scandals = g.clan.scandals || []).push(sc);
+    return sc;
+  }
+  function resolveClan(g, pid, act, entry) {
+    var C = D.BETA.clan, o = clanOp(act.op), pl = player(g, pid);
+    var risk = clanRisk(g, pid, act.op), found = g.rng() < risk;
+    g.clan.susp[pid] = Math.min(100, suspicion(g, pid) + o.susp);
+    g.clan.lastOp[pid] = g.turn;
+    var op = { id: ++g.clan.seq, pid: pid, op: act.op, target: act.target || null, turn: g.turn, revealed: 0 };
+    g.clan.ops.push(op);
+    entry.clan = { op: act.op, target: act.target || null, found: found, risk: risk };
+    entry.secret = !found;   // v5.0 : une opération non découverte n'apparaît ni dans le journal ni dans le bilan des autres
+    var t = [];
+    if (found) {
+      var sc = clanScandal(g, op, false);
+      entry.clan.scandal = sc;
+      t.push('🚨 SCANDALE : l’opération « ' + o.name + ' » est découverte' + (act.target ? ' (visait ' + PARTY[act.target].short + ')' : '') + ' · ' + ptLabel(sc.pt) + (sc.money ? ' · −' + sc.money + ' € d’amende' : ''));
+      entry.ok = false;
+    } else {
+      switch (act.op) {
+        case 'fakenews': case 'fuite': case 'denigrement': {
+          var d = pollShift(g, act.target, o.pt / 100); entry.clan.pt = d;
+          t.push(PARTY[act.target].short + ' ' + ptLabel(d) + ' au sondage'); break; }
+        case 'occulte': pl.money += o.money; t.push('+' + o.money + ' € non déclarés'); break;
+        case 'espionnage': g.clan.intel[pid] = { target: act.target, turn: g.turn + 1 }; t.push('une taupe chez ' + PARTY[act.target].short + ' : tu verras son plan au prochain tour'); break;
+        case 'sabotage': g.clan.sabo[act.target] = { by: pid, until: g.turn + 1, cut: o.cut }; t.push('le prochain meeting de ' + PARTY[act.target].short + ' sera perturbé'); break;
+      }
+      t.push('opération non découverte… pour l’instant');
+    }
+    entry.text = '🕵️ ' + t.join(' · ');
+    updateAllControl(g);
+    return entry;
+  }
+  /* Début de tour : la suspicion retombe chez ceux qui n'ont rien fait, et les journalistes enquêtent sur les vieilles opérations */
+  function clanTurn(g) {
+    var out = []; if (!clanOn(g) || !g.clan) return out;
+    var C = D.BETA.clan;
+    g.players.forEach(function (p) {
+      if (g.clan.lastOp[p.id] !== g.turn - 1) g.clan.susp[p.id] = Math.max(0, suspicion(g, p.id) - C.suspDecay);
+    });
+    var hit = {};
+    g.clan.ops.forEach(function (op) {
+      if (op.revealed || hit[op.pid] || !player(g, op.pid) || g.turn - op.turn < C.late.after) return;
+      if (g.rng() < C.late.base + C.late.susp * suspicion(g, op.pid)) { var sc = clanScandal(g, op, true); if (sc) { hit[op.pid] = 1; out.push(sc); } }
+    });
+    Object.keys(g.clan.intel).forEach(function (k) { if (g.clan.intel[k].turn < g.turn) delete g.clan.intel[k]; });
+    Object.keys(g.clan.locked).forEach(function (k) { if (g.clan.locked[k].turn < g.turn) delete g.clan.locked[k]; });
+    Object.keys(g.clan.sabo).forEach(function (k) { if (g.clan.sabo[k].until < g.turn) delete g.clan.sabo[k]; });
+    return out;
   }
 
   /* plans : { pid: [act, act, act] } — résolution en alternance, le premier joueur tourne. */
@@ -1722,6 +1874,9 @@
           Object.keys(keys).forEach(function (p) {
             var d = (now[p] || 0) - (prev[p] || 0); if (!d) return;
             if (p === pid) { ledAdd(g, 'acts', p, d); entry.pt = d; }
+            else if (entry.secret) {   // v5.0 : une opération clandestine non découverte reste anonyme dans le bilan de la victime
+              (g.led.oth[p] = g.led.oth[p] || []).push({ label: 'Coup bas anonyme : une rumeur circule (auteur inconnu)', icon: '🕵️', d: d });
+            }
             else {
               ledAdd(g, 'riv', p, d);
               var L = g.led; L.by[p] = L.by[p] || {}; L.by[p][pid] = (L.by[p][pid] || 0) + d;   // v4.8 : qui t'a pris quoi
@@ -1730,7 +1885,7 @@
           });
           prev = now;
           (g.led.list[pid] = g.led.list[pid] || []).push({ action: entry.action, type: act.type, card: act.card || null, region: entry.region, theme: entry.theme, target: entry.target,
-            ok: entry.ok, gaffe: !!entry.gaffe, text: entry.text, pt: entry.pt || 0, est: act.est != null ? act.est : null, slot: s + 1,
+            ok: entry.ok, gaffe: !!entry.gaffe, text: entry.text, secret: !!entry.secret, clan: entry.clan || null, pt: entry.pt || 0, est: act.est != null ? act.est : null, slot: s + 1,
             reg: entry.reg || null, estReg: act.estReg != null ? act.estReg : null });
         }
       });
@@ -1821,8 +1976,8 @@
   function resolveDebate(g, prep, picks) {
     var tot = {}, prepSpent = {}, duels = [], bingoDeb = null, p0 = pollMap(g);
     g.players.forEach(function (p) {
-      var b = Math.max(0, Math.min(p.infl, R.debatePrepMax, Math.floor((prep || {})[p.id] || 0)));
-      p.infl -= b; prepSpent[p.id] = b; tot[p.id] = 0;
+      var b = Math.max(0, Math.min(Math.floor(p.money / R.prepCost), R.debatePrepMax, Math.floor((prep || {})[p.id] || 0)));   // v5.0 : la préparation se paie en € (avant : ★)
+      p.money -= b * R.prepCost; prepSpent[p.id] = b; tot[p.id] = 0;
     });
     g.debate.duels.forEach(function (d, i) {
       var o = duelOutcome(g, d, picks[i].ra, picks[i].rb, prepSpent[d.a], prepSpent[d.b]);
@@ -1902,7 +2057,7 @@
   function spotlightTarget(g) { return leader(g); }
   function applySpotlight(g, pid, pay) {
     var pl = player(g, pid), out = { pid: pid, paid: false, regions: [] };
-    if (pay && pl.infl >= R.spotlightCost) { pl.infl -= R.spotlightCost; out.paid = true; }
+    if (pay && pl.money >= R.spotlightCost) { pl.money -= R.spotlightCost; out.paid = true; }   // v5.0 : en € (avant : 2 ★)
     else {
       var regs = controlledRegions(g, pid).sort(function (a, b) { return b.pts - a.pts; }).slice(0, 2);
       regs.forEach(function (r) { addCubes(g, r.id, pid, -1); out.regions.push(r.id); });
@@ -2277,7 +2432,8 @@
     makeDeal: makeDeal, weight: weight, strength: strength, controlShares: controlShares, regionVote: regionVote, regionLean: regionLean, natLean: natLean, regionShares: regionShares,
     traitOf: traitOf, nostalgiaPreview: nostalgiaPreview, petalsCount: petalsCount, lostPetals: lostPetals, jammed: jammed, zapped: zapped, isHidden: isHidden, retireeRegion: retireeRegion, resolvePrimaire: resolvePrimaire, actionsFor: actionsFor, centrists: centrists, tickBingo: tickBingo, ensureTraits: ensureTraits,
     classPoll: classPoll, addAudience: addAudience, previewGain: previewGain, quickGain: quickGain, interview: interview, applyInterview: applyInterview, aiAnswer: aiAnswer, pickQuestion: pickQuestion, stationFit: stationFit, stationBoost: stationBoost, vingtError: vingtError, matinaleError: matinaleError, stageRisk: stageRisk, isMajority: isMajority, audOf: audOf, SEG: SEG,
-    applyMode: applyMode, isBeta: isBeta, parrDeadline: parrDeadline, removeParty: removeParty, unionError: unionError, unionChance: unionChance, defiError: defiError, defiAccept: defiAccept, dynLabel: dynLabel, spec: spec,
+    applyMode: applyMode, isBeta: isBeta, pollShift: pollShift, ptLabel: ptLabel, pollMap: pollMap,
+    cardReady: cardReady, cardHot: cardHot, cardN: cardN, cardPt: cardPt, specPt: specPt, clanOn: clanOn, clanOp: clanOp, clanRisk: clanRisk, clanError: clanError, suspicion: suspicion, initClan: initClan, parrDeadline: parrDeadline, removeParty: removeParty, unionError: unionError, unionChance: unionChance, defiError: defiError, defiAccept: defiAccept, dynLabel: dynLabel, spec: spec,
     REG: REG, PARTY: PARTY, sigle: sigle, THEME: THEME, makeRng: makeRng, setFormat: setFormat, saveGame: saveGame, loadGame: loadGame, registerParty: registerParty, unregisterParty: unregisterParty, natScore: natScore, natRaw: natRaw
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;

@@ -45,7 +45,7 @@
     { id: 'argent', when: function (c) { return c.pl.money <= 4; },
       text: '💰 Les caisses se vident ? La Collecte (menu Plus) renfloue, et chaque tour t’apporte un peu d’argent.' },
     { id: 'debat', when: function (c) { return c.E.isDebateTurn(c.g); },
-      text: '🎙️ Soir de débat : chaque ★ gardée pour la préparation rend tes réponses plus fortes.' },
+      text: '🎙️ Soir de débat : chaque € gardé pour la préparation rend tes réponses plus fortes.' },
     { id: 'objectif', when: function (c) { return c.g.turn >= 2 && c.g.turn <= 6; },
       text: '🎯 Ton objectif secret rapporte des voix en plus à la fin s’il est rempli. Touche la ligne « Objectif » pour le suivre.' },
     { id: 'bilan', when: function (c) { return c.g.turn >= 2; },
