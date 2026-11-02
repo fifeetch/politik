@@ -1,6 +1,6 @@
 /* Politik — v1.0 : l'écran « Gouverner » (le quinquennat). S'appuie sur js/govern.js pour les règles. */
 (function () {
-  var D = window.PolitikData, E = window.PolitikEngine, G = window.PolitikGov, LG = window.PolitikLegis, FX = window.PolitikFX, CB = window.PolitikCabinet, OP = window.PolitikOppo, CD = window.PolitikCards, A = window.PolitikArt, U = window.PolitikUI;
+  var D = window.PolitikData, E = window.PolitikEngine, G = window.PolitikGov, LG = window.PolitikLegis, FX = window.PolitikFX, CB = window.PolitikCabinet, OP = window.PolitikOppo, CD = window.PolitikCards, A = window.PolitikArt, U = window.PolitikUI, IB = window.PolitikInfobulle;
   var modal = U.modal, closeModal = U.closeModal, toast = U.toast, esc = U.esc, line = U.line, srcHtml = U.srcHtml;
   var gv = null, g = null, me = null, learned = {}, step = 0, lawsThisYear = 0;
   function $(id) { return document.getElementById(id); }
@@ -61,8 +61,8 @@
     $('gov-sub').textContent = gv.over ? '' : STEP_LABEL[current()];
     function gauge(icon, label, val, sub, cls) { return '<div class="gauge ' + (cls || '') + '"><span class="g-i">' + icon + '</span><span class="g-l">' + label + '</span><b>' + val + '</b><small>' + sub + '</small></div>'; }
     $('gov-gauges').innerHTML =
-      gauge('💶', 'Déficit', fr(gv.deficit, 1) + ' %', 'objectif ' + fr(tgt, 1) + ' %', gv.deficit > tgt + 0.3 ? 'bad' : 'ok') +
-      gauge('📈', 'Dette', fr(gv.debt, 0) + ' %', 'du PIB', gv.debt > G.C.debt0 + 4 ? 'bad' : '') +
+      gauge('💶', IB.mot('gov-deficit', 'Déficit'), fr(gv.deficit, 1) + ' %', 'objectif ' + fr(tgt, 1) + ' %', gv.deficit > tgt + 0.3 ? 'bad' : 'ok') +
+      gauge('📈', IB.mot('gov-dette', 'Dette'), fr(gv.debt, 0) + ' %', 'du PIB', gv.debt > G.C.debt0 + 4 ? 'bad' : '') +
       gauge('😊', 'Popularité', pop + ' %', pop >= 45 ? 'soutenu' : pop >= 30 ? 'contesté' : 'impopulaire', pop < 30 ? 'bad' : pop >= 45 ? 'ok' : '') +
       gauge('🏛️', 'Assemblée', bloc + ' / 577', MAJ_LABEL[G.majorityType(gv)], bloc >= 289 ? 'ok' : 'bad');
     $('gov-hemi').innerHTML = hemicycle(gv.seats) + legend(gv.seats);
@@ -86,6 +86,25 @@
     $('gov-dissolve').hidden = !!gv.cohab || !(G.canDissolve(gv) && current() === 'loi');   // en cohabitation, la dissolution appartient au président
     $('gov-next').textContent = gv.over ? 'Voir le bilan du mandat' : STEP_LABEL[current()];
   }
+  /* Les infobulles des jauges : les chiffres sont lus à l'ouverture */
+  IB.definir({
+    'gov-deficit': function () {
+      var tgt = G.C.target(gv.year), ecart = gv.deficit - tgt, ton = ecart > 0.3 ? 'mauvais' : 'bon';
+      return { titre: 'Déficit public', valeur: fr(gv.deficit, 1) + ' %', ton: ton,
+        texte: 'Ce que l\u2019État dépense en plus de ce qu\u2019il encaisse dans l\u2019année, rapporté au [[gov-pib|PIB]]. Il s\u2019ajoute chaque année à la [[gov-dette|dette]].',
+        lignes: [{ texte: 'Au début du mandat', valeur: fr(G.C.deficit0, 1) + ' %' }, { texte: 'Objectif de l\u2019année ' + gv.year, valeur: fr(tgt, 1) + ' %' }, { texte: 'Écart à l\u2019objectif', valeur: ecart, ton: ton }] };
+    },
+    'gov-dette': function () {
+      var ecart = gv.debt - G.C.debt0;
+      return { titre: 'Dette publique', valeur: fr(gv.debt, 0) + ' %', ton: gv.debt > G.C.debt0 + 4 ? 'mauvais' : 'neutre',
+        texte: 'Tout ce que l\u2019État doit, rapporté au [[gov-pib|PIB]]. Chaque année, le [[gov-deficit|déficit]] la gonfle, et la croissance l\u2019allège d\u2019environ ' + fr(G.C.debtDrift, 1) + ' points.',
+        lignes: [{ texte: 'Au début du mandat', valeur: fr(G.C.debt0, 0) + ' %' }, { texte: 'Depuis le début du mandat', valeur: ecart, ton: ecart > 0 ? 'mauvais' : ecart < 0 ? 'bon' : 'neutre' }] };
+    },
+    'gov-pib': function () {
+      return { titre: 'PIB', texte: 'Le produit intérieur brut : la richesse produite en France en un an.',
+        lignes: [{ texte: '1 point de PIB', valeur: '≈ ' + G.C.mdPerPoint + ' Md€' }] };
+    }
+  });
   function advice() {
     var pop = G.popularity(gv), tgt = G.C.target(gv.year), pend = gv.measures.filter(function (m) { return m.status === 'pending'; }).length;
     if (gv.over) return 'Cinq ans déjà ! Voyons ce que les Français retiendront de ton mandat.';

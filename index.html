@@ -14,8 +14,16 @@
 <meta name="apple-mobile-web-app-title" content="Politik">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preload" href="fonts/anybody.woff2" as="font" type="font/woff2" crossorigin>
+<!-- STYLES. Un fichier par ligne, dans son groupe : deux lots qui ajoutent chacun un fichier ne se gênent pas.
+     Tout fichier ajouté ici va aussi dans FILES de sw.js (test/check-socle.js le vérifie). -->
+<!-- styles : socle (jetons dans style.css :root) -->
 <link rel="stylesheet" href="css/style.css">
 <link rel="stylesheet" href="css/debate-clarity.css">
+<!-- styles : composants -->
+<link rel="stylesheet" href="css/infobulle.css">
+<!-- styles : écrans de campagne -->
+<!-- styles : écrans du mandat et de l'opposition -->
+<!-- styles : la version PC reste la dernière, elle surcharge les autres -->
 <link rel="stylesheet" href="css/desktop.css">
 </head>
 <body>
@@ -308,23 +316,36 @@
   <div id="toast" class="toast" hidden></div>
 </div>
 
+<!-- SCRIPTS. L'ordre compte. Un fichier par ligne, dans son groupe : deux lots qui ajoutent chacun un fichier ne se gênent pas.
+     Tout fichier ajouté ici va aussi dans FILES de sw.js (test/check-socle.js le vérifie).
+     Contrats figés, documentés au-dessus de leur fonction dans js/ui.js (exposés dans PolitikUI) :
+       go(name)      affiche l'écran #screen-<name>
+       modal(opts)   opts : { kicker, title, html, cls, onOpen, buttons: [{ label, primary, disabled, keep, onClick }] } -->
+<!-- scripts : socle (sans dépendance, chargé avant tout) -->
+<script src="js/bus.js"></script>
+<script src="js/infobulle.js"></script>
+<!-- scripts : données et moteurs -->
 <script src="js/data.js"></script>
 <script src="js/people.js"></script>
 <script src="js/map.js"></script>
 <script src="js/engine.js"></script>
 <script src="js/perso.js"></script>
 <script src="js/ai.js"></script>
+<!-- scripts : dessin et animations -->
 <script src="js/art.js"></script>
 <script src="js/press.js"></script>
 <script src="js/fx.js"></script>
 <script src="js/tuto.js"></script>
 <script src="js/tips.js"></script>
+<!-- scripts : moteurs du quinquennat -->
 <script src="js/legis.js"></script>
 <script src="js/economy.js"></script>
 <script src="js/govern.js"></script>
 <script src="js/cabinet.js"></script>
 <script src="js/oppo.js"></script>
 <script src="js/cards.js"></script>
+<!-- scripts : son -->
+<!-- scripts : écrans (ui.js expose PolitikUI, dont govui.js a besoin) -->
 <script src="js/ui.js"></script>
 <script src="js/govui.js"></script>
 <script>
