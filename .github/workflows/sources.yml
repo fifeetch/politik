@@ -26,6 +26,7 @@ jobs:
         run: |
           node test/check-bus.js
           node test/check-infobulle.js
+          node test/check-infobulle-dom.js
           node test/check-socle.js
       - name: Simulation courte de la présidentielle
         run: node test/simulate.js 20

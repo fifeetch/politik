@@ -238,17 +238,18 @@
       var entree = obj || trouver(id);
       if (!entree) { if (typeof console !== 'undefined') console.warn('Infobulle inconnue :', id); return null; }
       calqueDom();
-      var res = pile.ouvrir({ id: id, mode: mode, ancre: ancre, el: null }, parent);
+      // la bulle est complète avant d'entrer dans la pile : retirer() rafraîchit toute la pile, et un contenu qui plante ne la laisse pas bancale
+      var idTitre = 'ib-t-' + (++compteur), el = document.createElement('div');
+      el.className = 'ib-bulle';
+      el.setAttribute('role', 'dialog');
+      el.setAttribute('aria-labelledby', idTitre);
+      el.tabIndex = -1;
+      el.innerHTML = '<button type="button" class="ib-x"></button>' + contenuHtml(entree, idTitre);
+      var res = pile.ouvrir({ id: id, mode: mode, ancre: ancre, el: el }, parent);
       if (res.retires.length) retirer(res.retires, res.niveau + (res.deja ? 1 : 0));
       if (res.deja) return res.item;
-      var it = res.item, idTitre = 'ib-t-' + (++compteur);
-      it.el = document.createElement('div');
-      it.el.className = 'ib-bulle';
-      it.el.setAttribute('role', 'dialog');
-      it.el.setAttribute('aria-labelledby', idTitre);
-      it.el.tabIndex = -1;
-      it.el.innerHTML = '<button type="button" class="ib-x"></button>' + contenuHtml(entree, idTitre);
-      calque.appendChild(it.el);
+      var it = res.item;
+      calque.appendChild(el);
       if (ancre && ancre.setAttribute) ancre.setAttribute('aria-expanded', 'true');
       miseAJour();
       positionner(it);
@@ -269,6 +270,8 @@
     function fermerHaut() { fermerDepuis(pile.taille() - 1); }
     function fermerTout() { annulerTimers(); fermerDepuis(0, true); }
     function fixerTout() { annulerTimers(); pile.fixer(); miseAJour(); focusSur(pile.items[pile.taille() - 1]); }
+    /* Le survol n'écrase jamais une infobulle fixée : pour la remplacer, il faut cliquer */
+    function fixeAuDessus(niveau) { return pile.items.some(function (it, i) { return i > niveau && it.mode === 'fixe'; }); }
     function annulerTimers() { clearTimeout(timerOuvre); clearTimeout(timerFerme); timerOuvre = timerFerme = null; }
 
     function clicCalque(ev) {
@@ -307,7 +310,12 @@
       if (m) {
         var id = m.getAttribute('data-ib'), dej = pile.indexDe(id);
         if (dej > niveau && pile.items[dej].ancre === m) garde = dej;
-        else if (!pile.items[dej] || dej > niveau) timerOuvre = setTimeout(function () { if (connecte(m)) ouvrirCouche(id, m, niveauDe(m), 'survol'); }, DELAI_OUVRE);
+        else if ((!pile.items[dej] || dej > niveau) && !fixeAuDessus(niveau)) timerOuvre = setTimeout(function () {
+          if (!connecte(m) || fixeAuDessus(niveauDe(m))) return;
+          // la nouvelle bulle remplace déjà celle du dessus : la fermeture prévue la refermerait sous la souris
+          clearTimeout(timerFerme); timerFerme = null;
+          ouvrirCouche(id, m, niveauDe(m), 'survol');
+        }, DELAI_OUVRE);
       }
       clearTimeout(timerFerme); timerFerme = null;
       var aFermer = pile.items.some(function (it, i) { return i > garde && it.mode === 'survol'; });
