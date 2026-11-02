@@ -828,5 +828,19 @@ section('v4.8 : bilan détaillé, salle comble, personnalités, score de départ
   ok(ops > 0 && ops < 6 * gai.players.length * 0.5, 'l\'ordinateur tente parfois une opération (' + ops + ' en 6 tours, 12 partis)');
 })();
 
+/* ---------- Fuite de documents : sans favori, l'événement ne vise personne (il faisait planter la partie) ---------- */
+(function () {
+  function fuite(opts) {
+    var gf = E.createGame(null, opts);
+    gf.events = ['fuite'];
+    gf.crisis = null;
+    try { return E.startTurn(gf).event.effects[0]; } catch (e) { return { crash: e.message }; }
+  }
+  var sans = fuite({ seed: 9000, aiParties: ['MD', 'HZ'] });   // deux petits partis au coude-à-coude
+  ok(!sans.crash && sans.pid === null, 'fuite : sans favori, l\'événement ne vise personne et ne plante pas');
+  var avec = fuite({ seed: 9000 });
+  ok(!avec.crash && avec.pid, 'fuite : avec un favori, c\'est lui qui est visé');
+})();
+
 console.log('\n' + passes + ' vérifications réussies, ' + fails + ' en échec.');
 process.exit(fails ? 1 : 0);
