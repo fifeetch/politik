@@ -7,13 +7,11 @@
   var D = node ? require('./data.js') : root.PolitikData;
   var E = node ? require('./engine.js') : root.PolitikEngine;
   var LG = node ? require('./legis.js') : root.PolitikLegis;
+  var ECO = node ? require('./economy.js') : root.PolitikEconomy;
 
   var C = {
     years: 5, seats: 577, majority: 289,
     deficit0: 5.0, debt0: 118, mdPerPoint: 30,
-    debtDrift: 2.2,            // la croissance nominale du PIB « allège » le ratio de dette d'environ 2,2 points par an
-    debtCharge: 0.2,           // la charge de la dette s'alourdit d'environ 0,2 point de PIB par an (les taux remontent)
-    interest: 0,               // (déjà compris dans debtCharge : on ne compte pas les intérêts deux fois)
     marketPenalty: 4,          // déficit bien au-dessus de la trajectoire : les taux grimpent, la popularité baisse
     target: function (year) { return Math.max(3, 5.0 - 0.45 * year); },   // trajectoire vers 3 %
     taxFatigue: 1.5,           // v3.4 : ras-le-bol fiscal, −1,5 de popularité au 1er nouvel impôt, −3 au 2e, −4,5 au 3e…
@@ -104,15 +102,18 @@
       oneOff: 0, financingDone: false, dissolvedYear: 0,
       cardsDeck: shuffle(BUDGET_CARDS.map(function (c) { return c.id; }), g.rng),
       eventsDeck: shuffle(EVENTS.map(function (e) { return e.id; }), g.rng),
-      achievements: {}
+      achievements: {}, seed: g.seed
     };
     gv.popBonus = Math.round((pct * 100 - popularity(gv)) * 0.6) + C.honeymoon;
+    gv.eco = ECO.create(g.seed || 1, gv.debt, gv.deficit, popularity(gv));   // b1 : la conjoncture (js/economy.js)
     if (!opts.manual) legislatives(gv, g, null, { margin: gv.margin, loser: loser });   // v2.4 : sinon, le joueur fait campagne (setLegis à la fin)
     return gv;
   }
   function clamp(x, a, b) { return Math.max(a, Math.min(b, x)); }
   function shuffle(a, rng) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(rng() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
   function addSat(gv, fans, k) { Object.keys(fans || {}).forEach(function (s) { gv.sat[s] = clamp(gv.sat[s] + fans[s] * (k == null ? C.satPerFan : k), 0, 100); }); }
+  /* b1 : un mandat qui n'est pas passé par create retrouve sa conjoncture */
+  function ecoOf(gv) { if (!gv.eco) gv.eco = ECO.create(gv.seed || 1, gv.debt, gv.deficit, null); return gv.eco; }
   function natShare(sid) { return E.NATPOP[sid] / 100; }
   /* Popularité = satisfaction de chaque groupe, pondérée par son poids dans la population (Insee) */
   function popularity(gv) {
@@ -286,6 +287,7 @@
     var m = E.measure(mid), k = amended ? C.amendFactor : 1;
     var it = itemOf(gv, mid);
     it.status = 'adopted'; it.amended = !!amended;
+    ECO.note(ecoOf(gv), 'deficit', m.name, k * m.cost / C.mdPerPoint); ECO.register(gv.eco, m, k, gv.year);   // b1 : montée en charge et effet retour agissent en fin d'année
     gv.deficit += k * m.cost / C.mdPerPoint;
     var q = gv.cabinet ? 1 + MIN.compSat * (compOf(minister(gv, postFor(mid))) - 2) : 1;   // v2.6 : un ministre compétent fait mieux passer la mesure
     addSat(gv, m.fans, C.satPerFan * k * q);
@@ -317,7 +319,7 @@
   function applyFinancing(gv) {
     if (gv.financingDone) return [];
     gv.financingDone = true;
-    return gv.financing.map(function (id) { var m = E.measure(id); gv.deficit += m.cost / C.mdPerPoint; addSat(gv, m.fans, 1); return m; });
+    return gv.financing.map(function (id) { var m = E.measure(id); ECO.note(ecoOf(gv), 'deficit', m.name, m.cost / C.mdPerPoint); ECO.register(gv.eco, m, 1, gv.year); gv.deficit += m.cost / C.mdPerPoint; addSat(gv, m.fans, 1); return m; });
   }
 
   /* ---------- L'automne budgétaire ---------- */
@@ -328,32 +330,40 @@
   }
   function card(id) { if (id === 'norme') return NORM_CARD; return BUDGET_CARDS.filter(function (c) { return c.id === id; })[0]; }
   function applyOpt(gv, o) {
-    if (o.def) gv.deficit += o.def;
+    if (o.def) { ECO.note(ecoOf(gv), 'deficit', o.label || '', o.def); gv.deficit += o.def; }
     if (o.def && o.once) gv.oneOff += o.def;        // une dépense (ou recette) ponctuelle : elle disparaît l'année suivante
     if (o.sat) addSat(gv, o.sat, 1);
     if (o.pop) gv.popBonus += o.pop;
-    if (o.debt) gv.debt += o.debt;
+    if (o.debt) { ECO.note(ecoOf(gv), 'debt', o.label || '', o.debt); gv.debt += o.debt; }
   }
   function drawEvent(gv) { var id = gv.eventsDeck[(gv.year - 1) % gv.eventsDeck.length]; return EVENTS.filter(function (e) { return e.id === id; })[0]; }
 
-  /* ---------- Fin d'année : intérêts, dette, Bruxelles ---------- */
+  /* ---------- Fin d'année : la conjoncture (js/economy.js), la dette, Bruxelles ---------- */
   function endYear(gv) {
-    var out = { year: gv.year };
-    if (gv.cabinet) { gv.deficit -= MIN.ecoDeficit * (compOf(minister(gv, 'eco')) - 2); gv.cabinet.fronde = 0; }   // v2.6 : la gestion de Bercy
+    var out = { year: gv.year }, eco = ecoOf(gv), bercy = 0, shares = {};
+    if (gv.cabinet) { bercy = -MIN.ecoDeficit * (compOf(minister(gv, 'eco')) - 2); gv.deficit += bercy; gv.cabinet.fronde = 0; }   // v2.6 : la gestion de Bercy
     gv.fronde = 0;
-    gv.deficit += C.debtCharge + Math.max(0, gv.debt - C.debt0) * C.interest;   // la charge de la dette
-    gv.deficit = Math.round(gv.deficit * 100) / 100;
-    gv.debt = Math.round((gv.debt + gv.deficit - C.debtDrift) * 10) / 10;
     out.target = C.target(gv.year);
+    D.SEGMENTS.forEach(function (sg) { shares[sg.id] = natShare(sg.id); });
+    var debtBefore = gv.debt, pop0 = popularity(gv), fx = ECO.step(eco, { year: gv.year, deficit: gv.deficit, debt: gv.debt, target: out.target, bercy: bercy });
+    gv.deficit = Math.round((gv.deficit + fx.deficitChange) * 100) / 100;
+    gv.debt = Math.round((gv.debt + gv.deficit - fx.debtRelief) * 10) / 10;
+    var satReal = {};
+    Object.keys(fx.sat).forEach(function (s) { var a = gv.sat[s]; gv.sat[s] = clamp(a + fx.sat[s].job + fx.sat[s].price + fx.sat[s].credit, 0, 100); satReal[s] = gv.sat[s] - a; });
     out.bruxelles = gv.deficit > out.target + 0.3;
     if (out.bruxelles) { gv.debt += 0.5; out.text = 'Bruxelles rappelle la France à l\'ordre : le déficit dépasse la trajectoire promise.'; }
     out.markets = gv.deficit > out.target + 1;
     if (out.markets) { gv.popBonus -= C.marketPenalty; gv.deficit += 0.1; out.text = 'Les marchés s\'inquiètent : les taux d\'intérêt grimpent, les crédits immobiliers aussi. Ta popularité en pâtit.'; }
-    if (gv.year === 1) gv.popBonus -= C.honeymoon;                     // fin de l'état de grâce
+    var grace = gv.year === 1 ? C.honeymoon : 0;
+    gv.popBonus -= grace;                                              // fin de l'état de grâce
     gv.popBonus -= 2;                                                  // l'usure du pouvoir
     out.deficit = gv.deficit; out.debt = gv.debt; out.pop = popularity(gv);
+    out.eco = ECO.close(eco, { year: gv.year, deficit: gv.deficit, debtBefore: debtBefore, debt: gv.debt, debtRelief: fx.debtRelief, bruxelles: out.bruxelles ? 0.5 : 0, markets: out.markets,
+      marketsDeficit: 0.1, marketsPop: C.marketPenalty, honeymoon: grace, wear: 2, pop: out.pop, sat: satReal, shares: shares });
     gv.history.push({ year: gv.year, deficit: gv.deficit, debt: gv.debt, pop: out.pop });
+    var oneOff = gv.oneOff;
     gv.deficit = Math.round((gv.deficit - gv.oneOff) * 100) / 100; gv.oneOff = 0;   // les mesures ponctuelles s'arrêtent
+    ECO.open(eco, gv.deficit, gv.debt, out.pop, oneOff);
     gv.year += 1;
     if (gv.year > C.years) gv.over = true;
     return out;

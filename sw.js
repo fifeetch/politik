@@ -3,7 +3,7 @@
 var VERSION = 'politik-v5.0.1';
 var FILES = [
   './', 'index.html', 'manifest.webmanifest', 'css/style.css', 'css/debate-clarity.css', 'css/desktop.css',
-  'js/data.js', 'js/people.js', 'js/map.js', 'js/art.js', 'js/press.js', 'js/fx.js', 'js/engine.js', 'js/perso.js', 'js/ai.js', 'js/legis.js', 'js/govern.js', 'js/cabinet.js', 'js/oppo.js', 'js/cards.js', 'js/tuto.js', 'js/tips.js', 'js/ui.js', 'js/govui.js',
+  'js/data.js', 'js/people.js', 'js/map.js', 'js/art.js', 'js/press.js', 'js/fx.js', 'js/engine.js', 'js/perso.js', 'js/ai.js', 'js/legis.js', 'js/economy.js', 'js/govern.js', 'js/cabinet.js', 'js/oppo.js', 'js/cards.js', 'js/tuto.js', 'js/tips.js', 'js/ui.js', 'js/govui.js',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-192.png', 'icons/icon-maskable-512.png',
   'icons/apple-touch-icon.png', 'icons/favicon.png',
   'fonts/anybody.woff2', 'fonts/atkinson-400.woff2', 'fonts/atkinson-400-italic.woff2', 'fonts/atkinson-700.woff2', 'fonts/archivo.woff2'
