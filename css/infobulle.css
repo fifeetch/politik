@@ -1,0 +1,36 @@
+/* Politik — l'infobulle imbriquée (socle P1). Voir js/infobulle.js.
+   Style volontairement neutre, entièrement fait de jetons (style.css :root) : le style BD viendra plus tard. */
+
+/* Le mot marqué : du texte souligné en pointillés, avec une zone de toucher plus grande que le mot */
+.ib-mot { --ib-zone: 14px; position: relative; display: inline; margin: 0; padding: 0; background: none; border: 0; font: inherit; letter-spacing: inherit; color: inherit; text-align: inherit; text-decoration: underline dotted; text-decoration-thickness: 1px; text-underline-offset: 3px; cursor: help; touch-action: manipulation; }
+.ib-mot::after { content: ''; position: absolute; inset: calc(-1 * var(--ib-zone)) -4px; }
+.ib-mot[aria-expanded="true"] { color: var(--violet); }
+
+/* Le calque couvre le cadre du jeu ; il ne prend les touchers que par le voile et les bulles */
+.ib-calque { position: absolute; inset: 0; z-index: var(--z-infobulle); pointer-events: none; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+.ib-voile { position: absolute; inset: 0; pointer-events: auto; background: rgba(var(--ink-rgb), .18); }
+
+.ib-bulle { position: absolute; left: 0; top: 0; display: flex; flex-direction: column; gap: var(--sp-2); width: 320px; padding: var(--sp-3); overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; pointer-events: auto; background: var(--sheet); color: var(--ink); border: 1.5px solid var(--ink); border-radius: var(--radius-md); box-shadow: 0 6px 18px rgba(var(--ink-rgb), .3); font-family: var(--body); font-size: var(--fs-md); line-height: var(--lh-text); font-weight: var(--fw-regular); text-align: left; }
+.ib-bulle:focus { outline: none; }
+.ib-bulle .ib-mot { --ib-zone: 8px; color: var(--violet); font-weight: var(--fw-bold); }
+
+.ib-x { position: absolute; top: 2px; right: 2px; width: 44px; height: 44px; padding: 0; background: none; border: 0; border-radius: var(--radius-md); font-size: var(--fs-base); line-height: 1; color: var(--ink-2); cursor: pointer; touch-action: manipulation; }
+
+.ib-tete { display: flex; align-items: baseline; flex-wrap: wrap; column-gap: var(--sp-2); padding-right: 32px; }
+.ib-titre { margin: 0; font-size: var(--fs-base); line-height: var(--lh-tight); font-weight: var(--fw-bold); }
+.ib-tete .ib-valeur { font-size: var(--fs-base); }
+.ib-valeur { flex: none; font-weight: var(--fw-bold); white-space: nowrap; }
+.ib-bon { color: var(--good); }
+.ib-mauvais { color: var(--red); }
+.ib-neutre { color: var(--ink-2); }
+
+.ib-texte, .ib-renvois { margin: 0; }
+.ib-renvois { font-size: var(--fs-sm); color: var(--ink-2); }
+.ib-lignes { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--rule); }
+.ib-ligne { display: flex; justify-content: space-between; align-items: baseline; gap: var(--sp-3); padding: var(--sp-1) 0; border-bottom: 1px solid var(--rule); }
+.ib-l-texte { min-width: 0; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .ib-bulle { animation: ib-entree .12s ease-out; }
+  @keyframes ib-entree { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+}
