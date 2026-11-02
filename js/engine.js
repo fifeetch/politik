@@ -1258,7 +1258,11 @@
           var n = p.id === 'UG' ? 2 : 1; var rid = strongestRegion(g, p.id);
           if (rid) { addCubes(g, rid, p.id, -n); say(p.id, PARTY[p.id].short + ' perd ' + n + ' soutien' + (n > 1 ? 's' : '') + ' en ' + REG[rid].name + '.'); }
         }); break;
-      case 'fuite': { var ld = leader(g), dF = pollShift(g, ld, -0.002); say(ld, PARTY[ld].short + ' : ' + ptLabel(dF) + ' au sondage.'); break; }
+      case 'fuite': {
+        var ld = leader(g);
+        if (ld) { var dF = pollShift(g, ld, -0.002); say(ld, PARTY[ld].short + ' : ' + ptLabel(dF) + ' au sondage.'); }
+        else say(null, 'Personne n’est en tête : la fuite ne vise personne.');
+        break; }
       case 'salon': case 'patrimoine': {
         var prof = id === 'salon' ? 'rurale' : 'historique';
         g.players.forEach(function (p) {

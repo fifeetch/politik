@@ -72,3 +72,4 @@ all.forEach(function (id) {
 });
 console.log('\nActions jouées :', JSON.stringify(actionCount));
 console.log('Duels de second tour les plus fréquents :', Object.keys(finals).sort(function (a, b) { return finals[b] - finals[a]; }).slice(0, 6).map(function (k) { return k + ' ' + finals[k]; }).join(' · '));
+process.exitCode = errors ? 1 : 0;   // une erreur doit faire échouer la CI

@@ -24,7 +24,7 @@ var out = {}, byPres = {}, sum = { camp: 0, part: 0, elu1: 0, duel: 0, tri: 0, d
 var diss = { n: 0, out: {} }, minCamp = 999, maxCamp = 0, errors = 0;
 for (var i = 0; i < N; i++) {
   var g;
-  try { g = play(7000 + i); } catch (e) { errors++; continue; }
+  try { g = play(7000 + i); } catch (e) { errors++; if (errors < 3) console.error(e.stack); continue; }
   var gv = G.create(g, g.winner), res = gv.legis, o = res.outcome;
   out[o.type] = (out[o.type] || 0) + 1;
   var bp = byPres[g.winner] || (byPres[g.winner] = { n: 0, abs: 0, seats: 0 });
@@ -105,3 +105,4 @@ for (var i2 = 0; i2 < P2; i2++) {
 ['actif', 'alliances', 'passif'].forEach(function (k) {
   console.log('Joueur ' + k + ' (' + P2 + ' parties) : ' + Object.keys(paths[k]).map(function (t) { return t + ' ' + Math.round(100 * paths[k][t] / P2) + ' %'; }).join(' · ') + ' · camp ' + Math.round(pSeats[k] / P2) + ' sièges');
 });
+process.exitCode = errors ? 1 : 0;   // une erreur doit faire échouer la CI

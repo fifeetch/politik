@@ -22,6 +22,19 @@ jobs:
         run: node test/check-rules.js
       - name: Lois de recettes du quinquennat (catalogue, vote, 49.3, déficit)
         run: node test/check-laws.js
+      - name: Simulation courte de la présidentielle
+        run: node test/simulate.js 20
+      - name: Simulation courte du quinquennat (3 stratégies)
+        run: |
+          node test/govern-sim.js 5 a
+          node test/govern-sim.js 5 b
+          node test/govern-sim.js 5 c
+      - name: Simulation courte des législatives
+        run: node test/legis-sim.js 10
+      - name: Simulation courte de l'opposition
+        run: node test/oppo-sim.js 5
+      - name: Simulation courte avec un parti fondé
+        run: node test/perso-sim.js 10
       - name: Contrôle des fiches (hors ligne)
         run: node test/check-sources.js
       - name: Ouverture de chaque lien officiel

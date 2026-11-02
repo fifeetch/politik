@@ -38,3 +38,4 @@ POS.forEach(function (pos) {
   var o = out[pos]; if (!o.n) return;
   console.log('Position ' + pos + ' : départ ' + (100 * o.start / o.n).toFixed(1) + ' % · tour 4 ' + (100 * o.t4 / o.n).toFixed(1) + ' % · 1er tour ' + (100 * o.final / o.n).toFixed(1) + ' % · finaliste ' + Math.round(100 * o.finals / o.n) + ' % · victoire ' + Math.round(100 * o.wins / o.n) + ' %');
 });
+process.exitCode = errs ? 1 : 0;   // une erreur doit faire échouer la CI
