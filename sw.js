@@ -22,7 +22,7 @@ var FILES = [
   /* scripts : dessin et animations */
   'js/art.js', 'js/press.js', 'js/fx.js', 'js/tuto.js', 'js/tips.js',
   /* scripts : moteurs du quinquennat */
-  'js/legis.js', 'js/govern.js', 'js/cabinet.js', 'js/oppo.js', 'js/cards.js',
+  'js/legis.js', 'js/economy.js', 'js/govern.js', 'js/cabinet.js', 'js/oppo.js', 'js/cards.js',
   /* scripts : son */
   /* scripts : écrans */
   'js/ui.js', 'js/govui.js',

@@ -22,6 +22,8 @@ jobs:
         run: node test/check-rules.js
       - name: Lois de recettes du quinquennat (catalogue, vote, 49.3, déficit)
         run: node test/check-laws.js
+      - name: Économie du mandat (conjoncture, détail des causes, popularité, sanctions, budget)
+        run: node test/check-economy.js
       - name: Socle (bus, infobulle, cache hors ligne, balises)
         run: |
           node test/check-bus.js
