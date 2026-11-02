@@ -3,7 +3,7 @@
    Campagne : sondage à gauche, carte et actions au centre, actualité ou ton parti à droite.
    Les autres écrans restent une colonne lisible, centrée. Le téléphone n'est pas concerné. */
 @media (min-width: 1024px) and (min-height: 560px) {
-  #app { max-width: 1440px; box-shadow: 0 0 60px rgba(0,0,0,.35); }
+  #app { max-width: 1440px; box-shadow: 0 0 60px rgba(var(--black-rgb),.35); }
 
   /* Écrans « en colonne » (accueil, programme, quinquennat, soirée…) : contenu centré sur 760 px */
   .screen:not(.screen-game) { padding-left: max(24px, calc((100% - 760px) / 2)); padding-right: max(24px, calc((100% - 760px) / 2)); }
@@ -33,7 +33,7 @@
 
   /* ---------- Fenêtres : des boîtes centrées, plus des panneaux qui montent du bas ---------- */
   .modal { align-items: center; }
-  .modal-card { max-width: 600px; max-height: 86%; border-radius: 20px; padding: 24px 24px 20px; box-shadow: 0 20px 60px rgba(0,0,0,.35); }
+  .modal-card { max-width: 600px; max-height: 86%; border-radius: 20px; padding: 24px 24px 20px; box-shadow: 0 20px 60px rgba(var(--black-rgb),.35); }
   .modal-card::before { display: none; }
   .modal-buttons { flex-direction: row; flex-wrap: wrap; justify-content: flex-end; }
   .modal-buttons .btn { flex: 1 1 200px; }

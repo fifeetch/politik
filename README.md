@@ -63,6 +63,8 @@ Jeu de stratégie électorale parodique sur la carte de France, pensé pour le t
 | `js/press.js` | Le journal du matin : villes, mots de la une, scènes dessinées et rédaction des articles |
 | `js/art.js` | Les illustrations (candidats, conseillère, vignettes), dessinées en SVG |
 | `js/fx.js` | Les animations (encre, pion du candidat, bandeau alerte info, bulle de Lulu…), qui attendent que l'écran soit visible pour se jouer |
+| `js/bus.js` | Le bus d'événements (`on`, `off`, `emit`) : le son et les animations s'y abonnent. Sans lien avec l'affichage |
+| `js/infobulle.js`, `css/infobulle.css` | L'infobulle imbriquée : un mot marqué ouvre une infobulle, décrite par une simple donnée |
 | `js/perso.js` | Ton personnage (visage, trait de débat) et ton parti (le 13e parti, fondé par le joueur) |
 | `js/legis.js` | Les élections législatives : 577 circonscriptions, deux tours, désistements, issues |
 | `js/cabinet.js` | Le gouvernement : profils de ministres, nomination, parité, alliés, remaniement, événements de ministres |

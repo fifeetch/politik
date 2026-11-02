@@ -1,6 +1,6 @@
 /* Politik — interface (écrans, carte, déroulement d'un tour). */
 (function () {
-  var D = window.PolitikData, M = window.PolitikMap, E = window.PolitikEngine, AI = window.PolitikAI, A = window.PolitikArt, FX = window.PolitikFX;
+  var D = window.PolitikData, M = window.PolitikMap, E = window.PolitikEngine, AI = window.PolitikAI, A = window.PolitikArt, FX = window.PolitikFX, Bus = window.PolitikBus;
   var R = D.RULES;
   var dataErrors = D.validate ? D.validate() : [];
   if (dataErrors.length && window.console) console.error('Politik : données incohérentes —', dataErrors);
@@ -186,7 +186,13 @@
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
 
   /* ---------- Écrans ---------- */
+  /* CONTRAT FIGÉ (socle P1) : les écrans de campagne et du mandat s'appuient dessus. Toute modification se décide d'abord avec eux.
+     go(name) : affiche l'écran #screen-<name>, un seul à la fois, et émet nav:go { name, from } sur le bus. Ne renvoie rien.
+       name : title, setup, choose, programme, game, between, night, end, lcamp, lbtw, legis, oppo, gform, gov.
+       Effets de bord : choose, title et setup oublient la partie en cours ; quitter game efface le bandeau d'alerte.
+       Un écran ajouté : un élément #screen-<name> dans index.html suffit. Exposé en PolitikUI.go. */
   function go(name) {
+    var prev = document.querySelector('.screen.active');
     if (name === 'choose' || name === 'title' || name === 'setup') g = null;
     if (name === 'setup') quick = false;
     if (name !== 'game') FX.clearBreaking();
@@ -195,6 +201,7 @@
     if (name === 'choose') renderChoose();
     if (name === 'setup') renderSetup();
     if (name === 'title') renderResume();
+    Bus.emit('nav:go', { name: name, from: prev ? prev.id.replace('screen-', '') : null });
   }
   document.addEventListener('click', function (e) {
     var h = e.target.closest('[data-action="tuto"]'); if (h) { forceTuto = true; quick = true; go('choose'); return; }
@@ -205,6 +212,14 @@
   });
 
   /* ---------- Modale & toast ---------- */
+  /* CONTRAT FIGÉ (socle P1) : plus de 100 appels en dépendent. Toute modification se décide d'abord avec les écrans de campagne et du mandat.
+     modal(opts) : ouvre LA fenêtre unique, en remplaçant celle qui serait déjà ouverte (pas de pile). Ne renvoie rien.
+       opts.kicker  texte, surtitre          opts.title  texte, titre
+       opts.html    HTML du corps, NON échappé : à l'appelant d'échapper (esc)
+       opts.cls     classe ajoutée à .modal-card
+       opts.onOpen  fonction appelée une fois la fenêtre en place
+       opts.buttons [{ label (texte), primary, disabled, keep (ne ferme pas au clic), onClick }] ; par défaut, un bouton « Continuer »
+     Émet ui:modal-open { kicker, title, cls } sur le bus ; closeModal() émet ui:modal-close. Exposé en PolitikUI.modal. */
   function modal(opts) {
     var card = document.querySelector('#modal .modal-card');
     card.className = 'modal-card' + (opts.cls ? ' ' + opts.cls : '');
@@ -222,9 +237,10 @@
     $('modal').hidden = false;
     FX.setModal(true);
     FX.replay(card, 'enter');
+    Bus.emit('ui:modal-open', { kicker: opts.kicker || '', title: opts.title || '', cls: opts.cls || '' });
     if (opts.onOpen) opts.onOpen();
   }
-  function closeModal() { restoreModal(); $('modal').hidden = true; FX.setModal(false); }
+  function closeModal() { var was = !$('modal').hidden; restoreModal(); $('modal').hidden = true; FX.setModal(false); if (was) Bus.emit('ui:modal-close', {}); }
   /* v4.5.1 : réduire une fenêtre pour regarder le jeu derrière (scores, carte…), puis la rouvrir.
      Pendant ce temps, le jeu se regarde mais ne se joue pas : on rouvre d'abord la fenêtre. */
   function minimizeModal() {
@@ -238,12 +254,13 @@
   document.addEventListener('click', function (ev) {
     if (!$('modal').classList.contains('min') || $('modal').hidden) return;
     if ($('modal-pill').contains(ev.target)) return;
+    if (ev.target.closest('[data-ib]')) return;   // une infobulle se consulte, elle ne joue rien
     if (!ev.target.closest('button, a, [role="button"], input, select, label')) return;
     ev.preventDefault(); ev.stopPropagation();
     toast('Rouvre la fenêtre en bas pour continuer.');
   }, true);
   var toastTimer;
-  function toast(msg) { var t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.hidden = true; }, Math.max(2200, String(msg).length * 45)); }
+  function toast(msg) { var t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.hidden = true; }, Math.max(2200, String(msg).length * 45)); Bus.emit('ui:toast', { msg: msg }); }
 
   function mio(x) { return x.toFixed(1).replace('.', ','); }
   function pctFr(x, d) { return (100 * x).toFixed(d == null ? 0 : d).replace('.', ','); }
