@@ -1,6 +1,6 @@
 /* Politik — v1.0 : l'écran « Gouverner » (le quinquennat). S'appuie sur js/govern.js pour les règles. */
 (function () {
-  var D = window.PolitikData, E = window.PolitikEngine, G = window.PolitikGov, LG = window.PolitikLegis, FX = window.PolitikFX, CB = window.PolitikCabinet, OP = window.PolitikOppo, CD = window.PolitikCards, A = window.PolitikArt, U = window.PolitikUI, IB = window.PolitikInfobulle;
+  var D = window.PolitikData, E = window.PolitikEngine, G = window.PolitikGov, LG = window.PolitikLegis, FX = window.PolitikFX, CB = window.PolitikCabinet, OP = window.PolitikOppo, CD = window.PolitikCards, A = window.PolitikArt, U = window.PolitikUI, IB = window.PolitikInfobulle, ECO = window.PolitikEconomy;
   var modal = U.modal, closeModal = U.closeModal, toast = U.toast, esc = U.esc, line = U.line, srcHtml = U.srcHtml;
   var gv = null, g = null, me = null, learned = {}, step = 0, lawsThisYear = 0;
   function $(id) { return document.getElementById(id); }
@@ -63,8 +63,9 @@
     $('gov-gauges').innerHTML =
       gauge('💶', IB.mot('gov-deficit', 'Déficit'), fr(gv.deficit, 1) + ' %', 'objectif ' + fr(tgt, 1) + ' %', gv.deficit > tgt + 0.3 ? 'bad' : 'ok') +
       gauge('📈', IB.mot('gov-dette', 'Dette'), fr(gv.debt, 0) + ' %', 'du PIB', gv.debt > G.C.debt0 + 4 ? 'bad' : '') +
-      gauge('😊', 'Popularité', pop + ' %', pop >= 45 ? 'soutenu' : pop >= 30 ? 'contesté' : 'impopulaire', pop < 30 ? 'bad' : pop >= 45 ? 'ok' : '') +
+      gauge('😊', IB.mot('eco-popularity', 'Popularité'), pop + ' %', pop >= 45 ? 'soutenu' : pop >= 30 ? 'contesté' : 'impopulaire', pop < 30 ? 'bad' : pop >= 45 ? 'ok' : '') +
       gauge('🏛️', 'Assemblée', bloc + ' / 577', MAJ_LABEL[G.majorityType(gv)], bloc >= 289 ? 'ok' : 'bad');
+    $('gov-eco').innerHTML = ecoStrip();
     $('gov-hemi').innerHTML = hemicycle(gv.seats) + legend(gv.seats);
     renderTeam();
     $('gov-sat').innerHTML = D.SEGMENTS.map(function (s) {
@@ -86,24 +87,36 @@
     $('gov-dissolve').hidden = !!gv.cohab || !(G.canDissolve(gv) && current() === 'loi');   // en cohabitation, la dissolution appartient au président
     $('gov-next').textContent = gv.over ? 'Voir le bilan du mandat' : STEP_LABEL[current()];
   }
+  /* b2 : la conjoncture, en une ligne. Chaque valeur ouvre le détail de ses causes (js/economy.js), toute la case est touchable */
+  function ecoStrip() {
+    var e = gv.eco; if (!e) return '';
+    return [['growth', 'Croissance', fr(e.growth, 1) + ' %'], ['inflation', 'Inflation', fr(e.inflation, 1) + ' %'], ['unemployment', 'Chômage', fr(e.unemployment, 1) + ' %'],
+      ['rate', 'Taux', fr(e.rate, 1) + ' %'], ['debtCharge', 'Intérêts', fr(e.charge, 1) + ' pts']].map(function (x) {
+      return '<div class="eco-c">' + IB.mot(ECO.INFO_PREFIX + x[0], x[1]) + '<b>' + x[2] + '</b></div>';
+    }).join('');
+  }
+  ECO.infoIds().forEach(function (id) { IB.definir(ECO.INFO_PREFIX + id, function () { return ECO.infobulle(gv && gv.eco ? gv.eco.report : null, id); }); });
   /* Les infobulles des jauges : les chiffres sont lus à l'ouverture */
   IB.definir({
     'gov-deficit': function () {
       var tgt = G.C.target(gv.year), ecart = gv.deficit - tgt, ton = ecart > 0.3 ? 'mauvais' : 'bon';
       return { titre: 'Déficit public', valeur: fr(gv.deficit, 1) + ' %', ton: ton,
-        texte: 'Ce que l\u2019État dépense en plus de ce qu\u2019il encaisse dans l\u2019année, rapporté au [[gov-pib|PIB]]. Il s\u2019ajoute chaque année à la [[gov-dette|dette]].',
-        lignes: [{ texte: 'Au début du mandat', valeur: fr(G.C.deficit0, 1) + ' %' }, { texte: 'Objectif de l\u2019année ' + gv.year, valeur: fr(tgt, 1) + ' %' }, { texte: 'Écart à l\u2019objectif', valeur: ecart, ton: ton }] };
+        texte: 'Ce que l\u2019État dépense en plus de ce qu\u2019il encaisse dans l\u2019année, rapporté au [[gov-pib|PIB]]. Il s\u2019ajoute chaque année à la [[gov-dette|dette]]. Le chiffre affiché est une prévision : la [[gov-montee|montée en charge]] des mesures et la conjoncture le font bouger en fin d\u2019année.',
+        lignes: [{ texte: 'Au début du mandat', valeur: fr(G.C.deficit0, 1) + ' %' }, { texte: 'Objectif de l\u2019année ' + gv.year, valeur: fr(tgt, 1) + ' %' }, { texte: 'Écart à l\u2019objectif', valeur: ecart, ton: ton }],
+        renvois: gv.eco && gv.eco.report ? [{ id: 'eco-deficit', texte: 'le détail de l\u2019an dernier' }, { id: 'eco-ecart', texte: 'l\u2019écart entre annonce et réalité' }] : [] };
     },
     'gov-dette': function () {
       var ecart = gv.debt - G.C.debt0;
       return { titre: 'Dette publique', valeur: fr(gv.debt, 0) + ' %', ton: gv.debt > G.C.debt0 + 4 ? 'mauvais' : 'neutre',
-        texte: 'Tout ce que l\u2019État doit, rapporté au [[gov-pib|PIB]]. Chaque année, le [[gov-deficit|déficit]] la gonfle, et la croissance l\u2019allège d\u2019environ ' + fr(G.C.debtDrift, 1) + ' points.',
-        lignes: [{ texte: 'Au début du mandat', valeur: fr(G.C.debt0, 0) + ' %' }, { texte: 'Depuis le début du mandat', valeur: ecart, ton: ecart > 0 ? 'mauvais' : ecart < 0 ? 'bon' : 'neutre' }] };
+        texte: 'Tout ce que l\u2019État doit, rapporté au [[gov-pib|PIB]]. Chaque année, le [[gov-deficit|déficit]] la gonfle, et la hausse du PIB en allège le poids.',
+        lignes: [{ texte: 'Au début du mandat', valeur: fr(G.C.debt0, 0) + ' %' }, { texte: 'Depuis le début du mandat', valeur: ecart, ton: ecart > 0 ? 'mauvais' : ecart < 0 ? 'bon' : 'neutre' }],
+        renvois: gv.eco && gv.eco.report ? [{ id: 'eco-debt', texte: 'le détail de l\u2019an dernier' }, { id: 'eco-debtCharge', texte: 'les intérêts' }] : [] };
     },
     'gov-pib': function () {
       return { titre: 'PIB', texte: 'Le produit intérieur brut : la richesse produite en France en un an.',
         lignes: [{ texte: '1 point de PIB', valeur: '≈ ' + G.C.mdPerPoint + ' Md€' }] };
-    }
+    },
+    'gov-montee': { titre: 'Montée en charge', texte: 'Une loi annonce son effet à plein régime. Il arrive souvent peu à peu : une réforme des retraites ne rapporte que 20 % de ses économies la première année. En fin d\u2019année, le [[gov-deficit|déficit]] ne compte que ce qui est vraiment acquis ; le reste vient les années suivantes.' }
   });
   function advice() {
     var pop = G.popularity(gv), tgt = G.C.target(gv.year), pend = gv.measures.filter(function (m) { return m.status === 'pending'; }).length;
@@ -773,6 +786,16 @@
     var md = Math.abs(M.cost), mdTxt = md % 1 ? fr(md, 1) : String(md);
     return M.cost > 0 ? 'coûte ' + mdTxt + ' Md€ · déficit +' + pts + ' pt' : 'rapporte ' + mdTxt + ' Md€ · déficit −' + pts + ' pt';
   }
+  /* b2 : ce que l'annonce ne dit pas : l'effet progressif et l'effet retour d'une mesure. k : la part gardée (amendée : la moitié) */
+  function rampTxt(M, k) {
+    var p = [], pts = (k == null ? 1 : k) * M.cost / G.C.mdPerPoint;
+    if (M.ramp) p.push('effet progressif : ' + Math.round(100 * M.ramp[0]) + ' % la 1re année (déficit ' + IB.signe(pts * M.ramp[0], 2) + ' pt), à plein après ' + M.ramp.length + ' ans');
+    if (M.retour) {
+      var part = Math.round(100 * Math.abs(M.retour)), lag = (M.lag == null ? D.ECONOMY.defaultLag : M.lag), quand = ' après ' + lag + ' an' + (lag > 1 ? 's' : '');
+      p.push(M.retour < 0 ? part + ' % de recette en plus' + quand : M.cost > 0 ? part + ' % du coût revient' + quand : part + ' % de la recette se perd' + quand);
+    }
+    return p.join(' · ');
+  }
   function fansTxt(M) {
     var up = [], down = [];
     D.SEGMENTS.forEach(function (sg) { var v = (M.fans || {})[sg.id] || 0; if (v > 0) up.push(sg.icon); if (v < 0) down.push(sg.icon); });
@@ -781,7 +804,7 @@
   function lawRow(mid, attr) {
     var M = E.measure(mid), v = G.vote(gv, mid);
     return '<button type="button" class="pick-row" ' + attr + '="' + mid + '"><span class="pick-txt"><b>' + esc(M.name) + '</b><small>' + moneyTxt(M) + fansTxt(M) +
-      '</small><small>pronostic : ' + (v.passed ? '<b>adoptée</b>' : '<b>rejetée</b>') + ' (' + v.pour + ' pour, ' + v.contre + ' contre)</small></span></button>';
+      '</small>' + (rampTxt(M) ? '<small>⏳ ' + rampTxt(M) + '</small>' : '') + '<small>pronostic : ' + (v.passed ? '<b>adoptée</b>' : '<b>rejetée</b>') + ' (' + v.pour + ' pour, ' + v.contre + ' contre)</small></span></button>';
   }
   function chooseLaw() {
     var pend = gv.measures.filter(function (m) { return m.status === 'pending'; }), cat = G.lawCatalog(gv);
@@ -809,7 +832,7 @@
   function lawScreen(mid, negotiated) {
     var M = E.measure(mid), v = G.vote(gv, mid, negotiated);
     var isNew = !gv.measures.some(function (x) { return x.id === mid; });
-    var html = '<div class="law-head"><b>' + esc(M.name) + '</b><small>' + (isNew ? 'nouvelle loi · ' : '') + moneyTxt(M) + ' par an' + fansTxt(M) + '</small></div>' +
+    var html = '<div class="law-head"><b>' + esc(M.name) + '</b><small>' + (isNew ? 'nouvelle loi · ' : '') + moneyTxt(M) + ' par an' + fansTxt(M) + '</small>' + (rampTxt(M) ? '<small>⏳ ' + IB.mot('gov-montee', 'Montée en charge') + ' · ' + rampTxt(M) + '</small>' : '') + '</div>' +
       (isNew && M.edu ? '<p class="hint">' + esc(M.edu.what) + '</p>' +
         '<details class="law-more"><summary>👍 👎 Pour, contre et sources</summary><div class="brief">' + line('👍', esc(M.edu.pro)) + line('👎', esc(M.edu.con)) +
         (M.vrai ? line('🇫🇷', '<b>En vrai :</b> ' + esc(M.vrai)) : '') + '</div>' + (M.src ? srcHtml(M) : '') + '</details>' : '') +
@@ -845,7 +868,8 @@
   function effectsHtml(M, k) {
     if (!k) return '';
     var parts = [];
-    if (M.cost) parts.push(line('💶', 'Déficit ' + (M.cost > 0 ? '+' : '−') + fr(Math.abs(M.cost) * k / G.C.mdPerPoint, 2) + ' point de PIB'));
+    if (M.cost) parts.push(line('💶', 'Déficit ' + (M.cost > 0 ? '+' : '−') + fr(Math.abs(M.cost) * k / G.C.mdPerPoint, 2) + ' point de PIB, à plein régime'));
+    if (rampTxt(M, k)) parts.push(line('⏳', rampTxt(M, k)));
     Object.keys(M.fans || {}).forEach(function (s) { var x = M.fans[s]; parts.push(line(seg(s).icon, esc(seg(s).name) + (x > 0 ? ' 👍 satisfaits' : ' 👎 mécontents'))); });
     return '<div class="brief">' + parts.join('') + '</div>';
   }
@@ -935,7 +959,7 @@
         var tot = fin.reduce(function (a, m) { return a + m.cost; }, 0);
         modal({ kicker: 'Automne · Ton premier budget', title: 'Les recettes de ton programme', html:
           '<p>Les financements promis pendant la campagne entrent dans ce premier budget.</p><div class="brief">' +
-          fin.map(function (m) { return line('💶', esc(m.name) + ' : <b>' + (m.cost < 0 ? 'rapporte ' + fr(-m.cost, 0) : 'coûte ' + fr(m.cost, 0)) + ' Md€</b>'); }).join('') +
+          fin.map(function (m) { return line('💶', esc(m.name) + ' : <b>' + (m.cost < 0 ? 'rapporte ' + fr(-m.cost, 0) : 'coûte ' + fr(m.cost, 0)) + ' Md€</b>' + (rampTxt(m) ? '<br><small>⏳ ' + rampTxt(m) + '</small>' : '')); }).join('') +
           line('📉', 'Déficit ' + (tot < 0 ? '−' : '+') + fr(Math.abs(tot) / G.C.mdPerPoint, 2) + ' point de PIB') + '</div>',
           buttons: [{ label: 'Passer aux arbitrages', primary: true, onClick: function () { oneCard(); } }] });
         return;
@@ -957,8 +981,9 @@
   }
   var budgetSnap = null, budgetPicks = [];
   function budgetVote(def0) {
-    var tgt = G.C.target(gv.year), v = G.vote(gv, null), favorable = gv.deficit <= tgt + 0.2;
+    var tgt = G.C.target(gv.year), v = G.vote(gv, null), favorable = gv.deficit <= tgt + 0.2, pending = gv.eco ? ECO.pendingRamp(gv.eco, gv.year) : 0;
     var html = '<div class="brief">' + line('💶', 'Déficit prévu : <b>' + fr(gv.deficit, 1) + ' %</b> du PIB (objectif de l\'année : ' + fr(tgt, 1) + ' %).') +
+      (Math.abs(pending) >= 0.05 ? line('⏳', IB.mot('gov-montee', 'Montée en charge') + ' : ' + (pending > 0 ? 'ce déficit compte des effets qui n’arriveront pas tous cette année.' : 'tes mesures continuent de produire leurs effets.') + ' Compte environ <b>' + IB.signe(pending, 1) + ' pt</b> en fin d’année.') : '') +
       line('🔎', '<b>Avis du Haut Conseil des finances publiques</b> : ' + (favorable ? 'prévisions jugées réalistes.' : 'il émet des <b>réserves</b> sur la trajectoire.')) + '</div>' +
       hemicycle(gv.seats, stancesOf(v), true) + '<div class="tally"><span class="t-pour">✅ Pour <b>' + v.pour + '</b></span><span class="t-contre">❌ Contre <b>' + v.contre + '</b></span></div>' + learn('hcfp');
     if (!favorable) gv.popBonus -= 1;
@@ -983,6 +1008,7 @@
       } else { gv.survived = true; done('😅 Le 49.3 passe : la censure ne recueille que ' + c.pour + ' voix. Budget adopté sans vote.'); }
     }
     function done(txt, bad) {
+      gv.announced = gv.deficit;   // b2 : le déficit annoncé, que le bilan de fin d'année comparera au déficit réel
       jot({ kind: 'budget', fell: !!bad, title: bad ? 'Budget : le gouvernement tombe' : 'Le budget ' + (gv.year + 1) + ' est adopté', text: txt.replace(/^[^A-Za-zÀ-ÿ«]+/, '') + (budgetPicks.length ? ' Les arbitrages : ' + budgetPicks.join(' ; ') + '.' : '') }, budgetSnap);
       modal({ kicker: 'Le budget', title: bad ? 'Crise politique' : 'Budget adopté', html: '<p' + (bad ? ' class="verdict-bad"' : '') + '>' + txt + '</p>',
         buttons: [{ label: 'Continuer', primary: true, onClick: next }] });
@@ -994,7 +1020,7 @@
     var y = gv.year, r = G.endYear(gv);
     gv.used493y = false;
     var html = '<div class="brief">' + line('💶', 'Déficit public : <b>' + fr(r.deficit, 1) + ' %</b> du PIB (objectif ' + fr(r.target, 1) + ' %).') +
-      line('📈', 'Dette publique : <b>' + fr(r.debt, 0) + ' %</b> du PIB.') + line('😊', 'Popularité : <b>' + r.pop + ' %</b>.') + '</div>' +
+      line('📈', 'Dette publique : <b>' + fr(r.debt, 0) + ' %</b> du PIB.') + line('😊', 'Popularité : <b>' + r.pop + ' %</b>.') + gapLine(r) + '</div>' +
       (r.text ? '<p class="verdict-bad">' + esc(r.text) + '</p>' : '<p>Les comptes tiennent la route. Bruxelles ne dit rien… pour l\'instant.</p>') +
       (y === 1 ? learn('trois_pourcent') : y === 2 ? learn('dette') : '');
     step = 0;
@@ -1005,6 +1031,13 @@
       buttons: [{ label: gv.over ? 'Voir le bilan du mandat' : 'Année ' + gv.year, primary: true, onClick: function () { render(); if (gv.over) finalBilan(); else if (gv.cohab && presidentDissolves()) cohabDissolve(); } }] });
     }
     render();
+  }
+  /* b2 : la ligne qui explique pourquoi le déficit réel n'est pas le déficit annoncé au budget, lisible sans ouvrir l'infobulle */
+  function gapLine(r) {
+    var e = r.eco.entries.ecart, m = ECO.mainCause(e), oneOff = gv.eco.oneOff, txt;
+    if (Math.abs(e.value) < 0.05) txt = 'Annoncé au budget : <b>' + fr(r.announced, 1) + ' %</b>. Le ' + IB.mot('eco-ecart', 'déficit réel') + ' colle à l\u2019annonce.';
+    else txt = 'Annoncé au budget : <b>' + fr(r.announced, 1) + ' %</b>. ' + IB.mot('eco-ecart', 'Écart de ' + IB.signe(e.value, 1) + ' pt') + (m ? ', surtout : ' + esc(m.label) + ' (' + IB.signe(m.value, 1) + ')' : '') + '.';
+    return line('🔎', txt) + (Math.abs(oneOff) >= 0.05 ? line('📆', 'Les mesures ponctuelles s\u2019arrêtent (' + IB.signe(-oneOff, 1) + ' pt) : ' + (gv.over ? 'le déficit laissé en fin de mandat est de' : 'l’an prochain démarre à') + ' <b>' + fr(gv.deficit, 1) + ' %</b>.') : '');
   }
   /* v2.7 : en cohabitation, le président peut dissoudre (pas dans l'année qui suit des législatives) quand tu faiblis */
   function presidentDissolves() { return gv.year - (gv.cohab.legisYear || 1) >= 1 && !gv.cohab.dissolved && G.popularity(gv) < D.OPPO.dissolveIfPop && gv.rng() < 0.4; }
@@ -1028,6 +1061,7 @@
       '<div class="brief">' + line('📜', 'Promesses tenues : <b>' + v.adopted + ' / ' + gv.measures.length + '</b>') +
       line('💶', 'Déficit final : <b>' + fr(gv.deficit, 1) + ' %</b> (départ ' + fr(G.C.deficit0, 1) + ' %, objectif 3 %)') +
       line('📈', 'Dette : <b>' + fr(gv.debt, 0) + ' %</b> du PIB (départ ' + G.C.debt0 + ' %)') + line('😊', 'Popularité : <b>' + v.pop + ' %</b>') +
+      (v.balance ? line('🗳️', v.balance > 0 ? 'Le retour du déficit à 3 % : un argument de campagne (<b>' + IB.signe(v.balance, 0) + '</b> dans les urnes)' : 'La dette domine la campagne (<b>' + IB.signe(v.balance, 0) + '</b> dans les urnes)') : '') +
       line('🏛️', 'Gouvernements renversés : <b>' + gv.fell + '</b>' + (gv.dissolved ? ' · dissolution' : '')) + '</div>' +
       (v.achievements.length ? '<div class="brief"><div class="kicker">Tes trophées</div>' + v.achievements.map(function (a) { return line('🏅', esc(a)); }).join('') + '</div>' : '') +
       '<p>' + (v.verdict === 'reelu' ? 'Les Français te font confiance pour cinq ans de plus.' : v.verdict === 'serre' ? 'Tu peux te représenter, mais rien n\'est joué : la campagne sera rude.' : 'Les Français veulent tourner la page.') + '</p>';

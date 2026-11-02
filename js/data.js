@@ -390,7 +390,9 @@
       lastYear: 'L\'an dernier', uRecall: 'Retour vers le chômage d\'équilibre', activity: 'Activité économique', unemployment: 'Chômage', debtCharge: 'Charge de la dette', refinance: 'Dette refinancée aux taux du moment',
       moreDebt: 'Dette plus lourde', nominal: 'Croissance du PIB en euros courants', rampSuffix: ' : montée en charge', retourSuffix: ' : effet retour', slowdown: 'Ralentissement de la croissance', recovery: 'Reprise de la croissance',
       markets: 'Inquiétude des marchés', deficit: 'Déficit public', deficitYear: 'Déficit de l\'année', relief: 'Le PIB grandit, le poids de la dette baisse', bruxelles: 'Rappel à l\'ordre de Bruxelles', debt: 'Dette publique',
-      prices: 'Hausse des prix', satLimit: 'Déjà au plafond ou au plancher', satOf: 'Satisfaction : ', satisfaction: 'Moral du pays', decisions: 'Décisions de l\'année', honeymoon: 'Fin de l\'état de grâce', wear: 'Usure du pouvoir', popularity: 'Popularité'
+      prices: 'Hausse des prix', satLimit: 'Déjà au plafond ou au plancher', satOf: 'Satisfaction : ', satisfaction: 'Moral du pays', decisions: 'Décisions de l\'année', honeymoon: 'Fin de l\'état de grâce', wear: 'Usure du pouvoir', popularity: 'Popularité',
+      ecart: 'Déficit annoncé et déficit réel', ecartFrom: 'Annoncé au vote du budget', afterVote: 'Décisions prises après le vote du budget', overYear: 'Sur l\'année', nothingThisYear: 'Rien à signaler cette année.',
+      noReport: 'Conjoncture', noReportText: 'Le premier bilan tombe à la fin de l\'année 1. Ces chiffres sont ceux de ton arrivée au pouvoir.'
     },
     texts: {
       growth: 'La richesse produite en plus cette année. Elle fait rentrer des impôts et crée des emplois.',
@@ -403,8 +405,14 @@
       retour: 'Une partie du coût d\'une mesure revient plus tard : une dépense utile rapporte des impôts, un impôt réduit ce qu\'il taxe.',
       nominal: 'Si le PIB grandit, la même dette pèse moins lourd. C\'est pourquoi la dette peut baisser même avec un déficit.',
       deficit: 'Ce que l\'État dépense de plus que ses recettes, en points de PIB (1 point vaut environ 30 milliards d\'euros).',
-      debt: 'Tout ce que l\'État doit, en points de PIB.'
+      debt: 'Tout ce que l\'État doit, en points de PIB.',
+      ecart: 'Le budget annonce un déficit ; la fin d\'année donne le vrai. Les mesures ne rapportent pas tout de suite, les intérêts montent et la conjoncture joue sur les recettes.',
+      popularity: 'Ce que l\'année a changé dans l\'opinion.',
+      satisfaction: 'L\'effet de la conjoncture sur le moral, groupe par groupe, selon leur poids dans la population.'
     },
+    /* b2 : sens des chiffres (la couleur d'une hausse) et « Voir aussi » des infobulles */
+    infoSens: { growth: 'hausse-bonne', nominal: 'hausse-bonne', popularity: 'hausse-bonne', satisfaction: 'hausse-bonne', inflation: 'hausse-mauvaise', unemployment: 'hausse-mauvaise', rate: 'hausse-mauvaise', debtCharge: 'hausse-mauvaise', deficit: 'hausse-mauvaise', debt: 'hausse-mauvaise', ecart: 'hausse-mauvaise', montee: 'hausse-mauvaise', retour: 'hausse-mauvaise' },
+    seeAlso: { growth: ['unemployment', 'impulsion', 'nominal'], inflation: ['rate'], unemployment: ['growth'], rate: ['debtCharge', 'deficit'], debtCharge: ['rate', 'deficit'], deficit: ['ecart', 'debt'], debt: ['deficit', 'nominal', 'debtCharge'], ecart: ['deficit'], impulsion: ['growth'], nominal: ['debt'], popularity: ['unemployment', 'inflation'] },
     /* Les effets de quelques mesures. ramp : part de l'effet atteinte chaque année après l'adoption. retour : part du coût qui revient
        en sens inverse (négatif : la mesure rapporte plus qu'annoncé). lag : années d'attente. emploi : points de chômage. prix : points d'inflation l'année de l'adoption.
        Les parts sont des estimations de jeu, appuyées sur les fiches « edu » de chaque mesure et sur :

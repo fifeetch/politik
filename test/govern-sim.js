@@ -1,18 +1,23 @@
 /* Simule des quinquennats complets (après une campagne IA contre IA) pour vérifier les ordres de grandeur.
-   Usage : node test/govern-sim.js [nombre] [stratégie : a = dépensière, b = économe, c = équilibrée] */
+   Usage : node test/govern-sim.js [nombre] [stratégie : a = dépensière, b = économe, c = équilibrée, r = rigueur à l'aveugle] */
 var D = require('../js/data.js'), E = require('../js/engine.js'), AI = require('../js/ai.js'), G = require('../js/govern.js'), CB = require('../js/cabinet.js'), CD = require('../js/cards.js');
 var useCards = process.argv[5] !== 'sanscartes';   // v3.0 : une carte à glisser par saison (choix au hasard)
 var useCab = process.argv[4] !== 'sans';
 var useLaws = process.argv.indexOf('sanslois') < 0;   // v3.4 : chaque année, une nouvelle loi de recettes (stratégies b et c)   // v2.6 : avec un gouvernement (proposition de Lulu), sauf « sans »
-var N = parseInt(process.argv[2] || '300', 10), strat = process.argv[3] || 'a';
+var N = parseInt(process.argv[2] || '300', 10), strat = process.argv[3] || 'a', seed0 = parseInt(process.env.GRAINE || '900', 10), traj = [];
 function val(o) { var v = -(o.def || 0) * 25 + (o.pop || 0); Object.keys(o.sat || {}).forEach(function (k) { v += o.sat[k] * E.NATPOP[k] / 100 * 3; }); return v; }
-/* c : équilibrée · a : choisit toujours l'option la plus dépensière ; b : la plus économe */
-function pick(opts) {
-  if (strat === 'c') return opts.slice().sort(function (x, y) { return val(y) - val(x); })[0];   // c : équilibrée (1 pt de déficit ≈ 25 de satisfaction)
+/* c : équilibrée · a : choisit toujours l'option la plus dépensière · r : toujours la plus économe, sans regarder où en sont les comptes
+   b : économe, elle serre tant que le déficit dépasse la trajectoire, puis arbitre comme c */
+function onTrack(gv) { return gv.deficit <= G.C.target(gv.year) - 0.1; }
+function pick(opts, gv) {
+  if (strat === 'c' || (strat === 'b' && onTrack(gv))) return opts.slice().sort(function (x, y) { return val(y) - val(x); })[0];   // c : équilibrée (1 pt de déficit ≈ 25 de satisfaction)
+  if (strat === 'b') return opts.slice().sort(function (x, y) { return (x.def || 0) - (y.def || 0) || val(y) - val(x); })[0];
   return opts.slice().sort(function (x, y) { return strat === 'a' ? (y.def || 0) - (x.def || 0) : (x.def || 0) - (y.def || 0); })[0]; }
+/* Les 4 rivaux : tirés de la graine, pour que la même graine rejoue les mêmes mandats */
+function rivals(seed) { var a = ['FI', 'SM', 'VP', 'EM', 'UG', 'MN'], x = seed * 2654435761 >>> 0; for (var i = a.length - 1; i > 0; i--) { x = (x * 1664525 + 1013904223) >>> 0; var j = x % (i + 1), t = a[i]; a[i] = a[j]; a[j] = t; } return a.slice(0, 4); }
 var maj = {}, ver = {}, sum = { def: 0, debt: 0, pop: 0, adopted: 0, fell: 0, diss: 0, d493: 0 };
 for (var i = 0; i < N; i++) {
-  var g = E.createGame(null, { seed: 900 + i, aiParties: ['FI', 'SM', 'VP', 'EM', 'UG', 'MN'].sort(function () { return Math.random() - 0.5; }).slice(0, 4), base: 'e2024' });
+  var g = E.createGame(null, { seed: seed0 + i, aiParties: rivals(seed0 + i), base: 'e2024' });
   while (!g.over) {
     var info = E.startTurn(g);
     info.affairs.forEach(function (a) { E.resolveAffair(g, a.pid, AI.chooseReaction(g, a.pid)); });
@@ -40,9 +45,9 @@ for (var i = 0; i < N; i++) {
         else { gv.used493 = true; sum.d493++; var c = G.censure(gv); if (c.passed) { G.reject(gv, mid); G.governmentFalls(gv); } else { G.adopt(gv, mid, false); gv.survived = true; } }
       }
     }
-    if (useLaws && strat !== 'a') {   // v3.4 : b vise le plus gros rendement, c le meilleur compromis rendement / popularité
-      var cat = G.lawCatalog(gv).recettes;
-      function lawVal(id) { var m = E.measure(id), v = -m.cost * (strat === 'b' ? 1 : 0.5); Object.keys(m.fans || {}).forEach(function (k) { v += strat === 'c' ? m.fans[k] * E.NATPOP[k] / 100 * 6 : 0; }); return v; }
+    if (useLaws && strat !== 'a' && !(strat === 'b' && onTrack(gv))) {   // v3.4 : r vise le plus gros rendement, c le meilleur compromis rendement / popularité ; b2 : b aussi, économies comprises, et seulement si les comptes l'exigent
+      var fam = G.lawCatalog(gv), cat = strat === 'b' ? fam.recettes.concat(fam.economies) : fam.recettes;
+      function lawVal(id) { var m = E.measure(id), v = -m.cost * (strat === 'c' ? 0.5 : 1); Object.keys(m.fans || {}).forEach(function (k) { v += strat !== 'r' ? m.fans[k] * E.NATPOP[k] / 100 * 6 : 0; }); if (strat === 'b' && G.NEW_LAWS.recettes.indexOf(id) >= 0) v -= G.C.taxFatigue * ((gv.newTaxes || 0) + 1); return v; }
       var lid = cat.slice().sort(function (x, y) { return lawVal(y) - lawVal(x); })[0];
       if (lid) {
         G.addExtra(gv, lid); sum.laws = (sum.laws || 0) + 1; sum.lawsBy = sum.lawsBy || {};
@@ -58,19 +63,21 @@ for (var i = 0; i < N; i++) {
     }
     if (G.canDissolve(gv) && G.popularity(gv) >= 50 && G.majorityType(gv) !== 'absolue') { G.dissolve(gv, g); sum.diss++; }
     if (gv.year === 1) G.applyFinancing(gv);
-    G.drawCards(gv).forEach(function (c) { G.applyOpt(gv, pick(c.opts)); });
-    var ev = G.drawEvent(gv); G.applyOpt(gv, pick(ev.opts));
+    G.drawCards(gv).forEach(function (c) { G.applyOpt(gv, pick(c.opts, gv)); });
+    var ev = G.drawEvent(gv); G.applyOpt(gv, pick(ev.opts, gv));
     if (useCab) { var me2 = CB.event(gv); if (me2) { sum.minEv = (sum.minEv || 0) + 1; CB.applyEvent(gv, me2, me2.opts[0]); } }
-    G.endYear(gv);
+    var yr = G.endYear(gv), ty = traj[yr.year - 1] = traj[yr.year - 1] || { def: 0, debt: 0, pop: 0, rate: 0, charge: 0, growth: 0, chom: 0, marches: 0 };
+    ty.def += yr.deficit; ty.debt += yr.debt; ty.pop += yr.pop; ty.rate += gv.eco.rate; ty.charge += gv.eco.charge; ty.growth += gv.eco.growth; ty.chom += gv.eco.unemployment; ty.marches += yr.markets ? 1 : 0;
   }
   var vd = G.verdict(gv); ver[vd.verdict] = (ver[vd.verdict] || 0) + 1;
   sum.def += gv.deficit; sum.debt += gv.debt; sum.pop += vd.pop; sum.adopted += vd.adopted; sum.fell += gv.fell;
 }
-console.log('Quinquennats :', N, '· stratégie', strat === 'a' ? 'dépensière' : strat === 'b' ? 'économe' : 'équilibrée');
+console.log('Quinquennats :', N, '· stratégie', { a: 'dépensière', b: 'économe', c: 'équilibrée', r: 'rigueur à l\'aveugle' }[strat]);
 console.log('Majorité après les législatives :', JSON.stringify(maj));
 console.log('Fin de mandat (moyennes) : déficit ' + (sum.def / N).toFixed(2) + ' % · dette ' + (sum.debt / N).toFixed(1) + ' % · popularité ' + (sum.pop / N).toFixed(0) + ' % · mesures adoptées ' + (sum.adopted / N).toFixed(1) + ' / 5');
 console.log('49.3 par mandat : ' + (sum.d493 / N).toFixed(2) + ' · gouvernements renversés : ' + (sum.fell / N).toFixed(2) + ' · dissolutions : ' + (sum.diss / N).toFixed(2));
 console.log('Verdicts :', JSON.stringify(ver));
+if (process.env.DETAIL) traj.forEach(function (t, y) { console.log('  an ' + (y + 1) + ' : déficit ' + (t.def / N).toFixed(2) + ' · dette ' + (t.debt / N).toFixed(1) + ' · popularité ' + (t.pop / N).toFixed(0) + ' · taux ' + (t.rate / N).toFixed(2) + ' · charge ' + (t.charge / N).toFixed(2) + ' · croissance ' + (t.growth / N).toFixed(2) + ' · chômage ' + (t.chom / N).toFixed(1) + ' · marchés ' + (100 * t.marches / N).toFixed(0) + ' %'); });
 if (useCards) console.log('Cartes jouées : ' + ((sum.cards || 0) / N).toFixed(1) + ' par mandat');
 if (useLaws && strat !== 'a') console.log('Nouvelles lois de recettes : ' + ((sum.laws || 0) / N).toFixed(1) + ' présentées par mandat · ' + (100 * (sum.lawsOk || 0) / Math.max(1, sum.laws || 0)).toFixed(0) + ' % adoptées (dont ' + (100 * (sum.lawsAm || 0) / Math.max(1, sum.laws || 0)).toFixed(0) + ' % amendées) · les plus choisies : ' + Object.keys(sum.lawsBy || {}).sort(function (a, b) { return sum.lawsBy[b] - sum.lawsBy[a]; }).slice(0, 5).join(', '));
 if (useCab) console.log('Gouvernement : ' + ((sum.minEv || 0) / N).toFixed(1) + ' événements de ministres par mandat');

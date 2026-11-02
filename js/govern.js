@@ -12,7 +12,10 @@
   var C = {
     years: 5, seats: 577, majority: 289,
     deficit0: 5.0, debt0: 118, mdPerPoint: 30,
-    marketPenalty: 4,          // déficit bien au-dessus de la trajectoire : les taux grimpent, la popularité baisse
+    marketPenalty: 3,          // déficit bien au-dessus de la trajectoire : les taux grimpent, la popularité baisse
+    marketSlide: 2,            // b2 : réglage de jeu, sans source chiffrée : −2 de plus par point de dérapage au-delà du premier
+    verdictSound: 3,           // b2 : réglage de jeu, sans source chiffrée : à la présidentielle, +3 si le déficit est revenu à 3 %
+    verdictDrift: 3,           // b2 : réglage de jeu, sans source chiffrée : −3 par point de déficit au-delà de 5 %
     target: function (year) { return Math.max(3, 5.0 - 0.45 * year); },   // trajectoire vers 3 %
     taxFatigue: 1.5,           // v3.4 : ras-le-bol fiscal, −1,5 de popularité au 1er nouvel impôt, −3 au 2e, −4,5 au 3e…
     amendFactor: 0.5,          // une mesure amendée garde la moitié de ses effets
@@ -341,11 +344,13 @@
   /* ---------- Fin d'année : la conjoncture (js/economy.js), la dette, Bruxelles ---------- */
   function endYear(gv) {
     var out = { year: gv.year }, eco = ecoOf(gv), bercy = 0, shares = {};
+    out.announced = gv.announced != null ? gv.announced : gv.deficit;   // b2 : le « déficit prévu » montré au vote du budget
+    var after = gv.deficit - out.announced; gv.announced = null;
     if (gv.cabinet) { bercy = -MIN.ecoDeficit * (compOf(minister(gv, 'eco')) - 2); gv.deficit += bercy; gv.cabinet.fronde = 0; }   // v2.6 : la gestion de Bercy
     gv.fronde = 0;
     out.target = C.target(gv.year);
     D.SEGMENTS.forEach(function (sg) { shares[sg.id] = natShare(sg.id); });
-    var debtBefore = gv.debt, pop0 = popularity(gv), fx = ECO.step(eco, { year: gv.year, deficit: gv.deficit, debt: gv.debt, target: out.target, bercy: bercy });
+    var debtBefore = gv.debt, pop0 = popularity(gv), fx = ECO.step(eco, { year: gv.year, deficit: gv.deficit, debt: gv.debt, target: out.target, bercy: bercy, after: after });
     gv.deficit = Math.round((gv.deficit + fx.deficitChange) * 100) / 100;
     gv.debt = Math.round((gv.debt + gv.deficit - fx.debtRelief) * 10) / 10;
     var satReal = {};
@@ -353,13 +358,14 @@
     out.bruxelles = gv.deficit > out.target + 0.3;
     if (out.bruxelles) { gv.debt += 0.5; out.text = 'Bruxelles rappelle la France à l\'ordre : le déficit dépasse la trajectoire promise.'; }
     out.markets = gv.deficit > out.target + 1;
-    if (out.markets) { gv.popBonus -= C.marketPenalty; gv.deficit += 0.1; out.text = 'Les marchés s\'inquiètent : les taux d\'intérêt grimpent, les crédits immobiliers aussi. Ta popularité en pâtit.'; }
+    out.marketsPop = out.markets ? C.marketPenalty + C.marketSlide * (gv.deficit - out.target - 1) : 0;   // b2 : plus le dérapage est grand, plus il coûte
+    if (out.markets) { gv.popBonus -= out.marketsPop; gv.deficit += 0.1; out.text = 'Les marchés s\'inquiètent : les taux d\'intérêt grimpent, les crédits immobiliers aussi. Ta popularité en pâtit.'; }
     var grace = gv.year === 1 ? C.honeymoon : 0;
     gv.popBonus -= grace;                                              // fin de l'état de grâce
     gv.popBonus -= 2;                                                  // l'usure du pouvoir
     out.deficit = gv.deficit; out.debt = gv.debt; out.pop = popularity(gv);
     out.eco = ECO.close(eco, { year: gv.year, deficit: gv.deficit, debtBefore: debtBefore, debt: gv.debt, debtRelief: fx.debtRelief, bruxelles: out.bruxelles ? 0.5 : 0, markets: out.markets,
-      marketsDeficit: 0.1, marketsPop: C.marketPenalty, honeymoon: grace, wear: 2, pop: out.pop, sat: satReal, shares: shares });
+      marketsDeficit: 0.1, marketsPop: out.marketsPop, announced: out.announced, honeymoon: grace, wear: 2, pop: out.pop, sat: satReal, shares: shares });
     gv.history.push({ year: gv.year, deficit: gv.deficit, debt: gv.debt, pop: out.pop });
     var oneOff = gv.oneOff;
     gv.deficit = Math.round((gv.deficit - gv.oneOff) * 100) / 100; gv.oneOff = 0;   // les mesures ponctuelles s'arrêtent
@@ -370,6 +376,8 @@
   }
 
   /* ---------- Le bilan du quinquennat ---------- */
+  /* b2 : à la présidentielle, le bilan budgétaire pèse en plus de la popularité : une dette hors de contrôle domine la campagne, un retour à 3 % se défend */
+  function campaignBalance(gv) { return gv.deficit <= 3 ? C.verdictSound : gv.deficit > 5 ? -Math.round(C.verdictDrift * (gv.deficit - 5)) : 0; }
   function verdict(gv) {
     var adopted = gv.measures.filter(function (m) { return m.status === 'adopted'; }).length, pop = popularity(gv);
     var score = adopted * 8 + (gv.deficit <= 3 ? 20 : gv.deficit <= 4 ? 10 : gv.deficit > 5.5 ? -15 : 0) + (gv.debt < C.debt0 ? 10 : 0) + pop * 0.6;
@@ -382,13 +390,14 @@
     if (nx >= 2) ach.push('🛠️ Réformateur : ' + nx + ' lois nouvelles adoptées');
     if (gv.survived) ach.push('😅 Rescapé de la censure');
     if (pop >= 50) ach.push('⭐ Toujours populaire en fin de mandat');
-    var v = pop >= 45 && score >= 60 ? 'reelu' : pop >= 32 ? 'serre' : 'battu';
+    var bal = campaignBalance(gv), voters = pop + bal;
+    var v = voters >= 45 && score >= 60 ? 'reelu' : voters >= 32 ? 'serre' : 'battu';
     if (v === 'reelu' && gv.deficit > 5) v = 'serre';     // une dette hors de contrôle te rattrape dans la campagne
-    return { adopted: adopted, pop: pop, score: Math.round(score), verdict: v, achievements: ach };
+    return { adopted: adopted, pop: pop, balance: bal, score: Math.round(score), verdict: v, achievements: ach };
   }
 
   var API = { C: C, BUDGET_CARDS: BUDGET_CARDS, EVENTS: EVENTS, create: create, popularity: popularity, legislatives: legislatives, blocSeats: blocSeats,
     majorityType: majorityType, isAlly: isAlly, setLegis: setLegis, NEW_LAWS: NEW_LAWS, CAMPS: CAMPS, lawCatalog: lawCatalog, addExtra: addExtra, itemOf: itemOf, setLegisCohab: setLegisCohab, postFor: postFor, minister: minister, compOf: compOf, stance: stance, vote: vote, frondeurs: frondeurs, censure: censure, referendum: referendum, adopt: adopt, reject: reject,
-    governmentFalls: governmentFalls, canDissolve: canDissolve, dissolveMult: dissolveMult, dissolve: dissolve, applyFinancing: applyFinancing, canReferendum: canReferendum, drawCards: drawCards, applyOpt: applyOpt, drawEvent: drawEvent, endYear: endYear, verdict: verdict, addSat: addSat };
+    governmentFalls: governmentFalls, canDissolve: canDissolve, dissolveMult: dissolveMult, dissolve: dissolve, applyFinancing: applyFinancing, canReferendum: canReferendum, drawCards: drawCards, applyOpt: applyOpt, drawEvent: drawEvent, endYear: endYear, verdict: verdict, campaignBalance: campaignBalance, addSat: addSat };
   if (node) module.exports = API; else root.PolitikGov = API;
 })(this);
