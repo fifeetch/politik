@@ -395,7 +395,7 @@
       noReport: 'Conjoncture', noReportText: 'Le premier bilan tombe à la fin de l\'année 1. Ces chiffres sont ceux de ton arrivée au pouvoir.'
     },
     texts: {
-      growth: 'La richesse produite en plus cette année. Elle fait rentrer des impôts et crée des emplois.',
+      growth: 'La richesse produite en plus cette année. Elle fait rentrer des impôts et crée des emplois. Négative, c\'est une récession : la richesse recule.',
       inflation: 'La hausse des prix. Au-delà de 2,5 %, elle pèse sur le moral, surtout celui des retraités et des bas salaires.',
       unemployment: 'La part d\'actifs sans emploi. Elle suit l\'activité avec retard.',
       rate: 'Ce que la France paie pour ses nouveaux emprunts. Les marchés demandent plus si le déficit dérape.',
@@ -404,7 +404,7 @@
       montee: 'Une loi ne produit pas tout son effet la première année : il faut former, construire, ou attendre les départs à la retraite.',
       retour: 'Une partie du coût d\'une mesure revient plus tard : une dépense utile rapporte des impôts, un impôt réduit ce qu\'il taxe.',
       nominal: 'Si le PIB grandit, la même dette pèse moins lourd. C\'est pourquoi la dette peut baisser même avec un déficit.',
-      deficit: 'Ce que l\'État dépense de plus que ses recettes, en points de PIB (1 point vaut environ 30 milliards d\'euros).',
+      deficit: 'Ce que l\'État dépense de plus que ses recettes, en points de PIB (1 point vaut environ 30 milliards d\'euros). Négatif, c\'est un excédent : les recettes dépassent les dépenses.',
       debt: 'Tout ce que l\'État doit, en points de PIB.',
       ecart: 'Le budget annonce un déficit ; la fin d\'année donne le vrai. Les mesures ne rapportent pas tout de suite, les intérêts montent et la conjoncture joue sur les recettes.',
       popularity: 'Ce que l\'année a changé dans l\'opinion.',

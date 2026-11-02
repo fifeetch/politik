@@ -252,6 +252,38 @@ check(src.indexOf("ecoStrip()") > 0 && /id="gov-eco"/.test(fs.readFileSync(__dir
 // Une mesure progressive l'annonce au moment du choix
 check(/rampTxt\(M\)/.test(src) && /gapLine\(r\)/.test(src), 'écran : montée en charge au choix de la mesure, écart au bilan');
 
+/* 10 bis. Un niveau négatif garde son signe : récession, excédent budgétaire */
+var MOINS = '−';
+function entree(id, v, kind, level) { return { id: id, label: id, unit: '%', kind: kind || 'niveau', value: v, level: level, causes: [] }; }
+function niveau(id, v) { var en = {}; en[id] = entree(id, v); return ECO.infobulle({ entries: en }, id).valeur; }
+check(niveau('growth', -0.34) === MOINS + '0,3 %', 'signe : croissance négative ' + niveau('growth', -0.34));
+check(niveau('growth', 0.34) === '0,3 %', 'signe : croissance positive ' + niveau('growth', 0.34));
+check(niveau('growth', -0.04) === '0,0 %', 'signe : pas de « moins zéro » ' + niveau('growth', -0.04));
+var surplus = lab(7, { deficit: -2 }), rSurplus = G.endYear(surplus), deci = function (x) { return MOINS + Math.abs(x).toFixed(1).replace('.', ',') + ' %'; };
+check(rSurplus.deficit < 0, 'signe : le mandat de laboratoire finit en excédent ' + rSurplus.deficit);
+check(ECO.infobulle(rSurplus.eco, 'deficit').valeur === deci(rSurplus.deficit), "signe : excédent dans l'infobulle du déficit " + ECO.infobulle(rSurplus.eco, 'deficit').valeur);
+var ibEcart = ECO.infobulle(rSurplus.eco, 'ecart');
+check(ibEcart.lignes[0].texte === D.ECONOMY.labels.ecartFrom && ibEcart.lignes[0].valeur === deci(rSurplus.announced), 'signe : excédent annoncé au vote du budget ' + JSON.stringify(ibEcart.lignes[0]));
+check(['+', MOINS].indexOf(ibEcart.valeur.charAt(0)) >= 0 || ibEcart.valeur.indexOf('0,00') === 0, "signe : l'écart garde le sien " + ibEcart.valeur);
+// Une vraie récession, tirée par le modèle : une austérité brutale, 3 points de déficit en moins par an
+var recession = null; for (var sd = 1; sd < 100 && !recession; sd++) { var qr = lab(sd); for (y = 0; y < 5 && !recession; y++) { qr.deficit -= 3; var rr = G.endYear(qr); if (qr.eco.report.entries.growth.value <= -0.05) recession = rr; } }
+check(!!recession, 'signe : aucune récession trouvée en 400 graines');
+if (recession) check(ECO.infobulle(recession.eco, 'growth').valeur.charAt(0) === MOINS, 'signe : récession du modèle ' + ECO.infobulle(recession.eco, 'growth').valeur);
+// Les textes de l'écran, lus dans govui.js : ligne de conjoncture, bilan de fin d'année, écart
+function piece(nom) {   // une fonction de govui.js : sur une ligne, ou jusqu'à son accolade fermante
+  var i = src.indexOf('\n  function ' + nom + '('), fin = src.indexOf('\n', i + 1), l = src.slice(i, fin).trim();
+  check(i >= 0, 'écran : fonction introuvable ' + nom);
+  return /\}$/.test(l) ? l + '\n' : src.slice(i, src.indexOf('\n  }', i) + 4) + '\n';
+}
+var ecran = new Function('gv', 'ECO', 'IB', 'line', 'esc', piece('fr') + piece('ecoStrip') + piece('gapLine') + 'return { fr: fr, ecoStrip: ecoStrip, gapLine: gapLine };');
+var txtEcran = function (e) { return String(e).replace(/<[^>]*>/g, ''); };
+var vu = ecran({ eco: { growth: -0.34, inflation: -0.2, unemployment: 8, rate: 3, charge: 2, oneOff: 0 }, over: false, deficit: -2 }, ECO, IB, function (i, t) { return t; }, function (x) { return x; });
+check(vu.fr(-0.34, 1) === MOINS + '0,3' && vu.fr(0.34, 1) === '0,3' && vu.fr(-0.04, 1) === '0,0', 'écran : fr garde le signe ' + vu.fr(-0.34, 1) + ' ' + vu.fr(-0.04, 1));
+var bande = txtEcran(vu.ecoStrip());
+check(bande.indexOf('Croissance' + MOINS + '0,3 %') >= 0 && bande.indexOf('Inflation' + MOINS + '0,2 %') >= 0, 'écran : ligne de conjoncture ' + bande);
+var ligneEcart = txtEcran(vu.gapLine({ announced: -2, eco: { entries: { ecart: { value: -0.5, causes: [{ label: 'Cause', value: -0.5 }] } } } }));
+check(ligneEcart.indexOf('Annoncé au budget : ' + MOINS + '2,0 %') >= 0 && ligneEcart.indexOf('Écart de ' + MOINS + '0,5 pt') >= 0 && ligneEcart.indexOf('Cause (' + MOINS + '0,5)') >= 0, "écran : ligne de l'écart " + ligneEcart);
+
 /* 11. La rapidité : la conjoncture ne doit pas ralentir govern-sim */
 var t0 = Date.now(); for (var n = 0; n < 2000; n++) { var q = lab(n); for (y = 0; y < 5; y++) G.endYear(q); }
 var ms = Date.now() - t0;

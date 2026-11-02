@@ -6,7 +6,7 @@
   function $(id) { return document.getElementById(id); }
   function party(id) { return E.PARTY[id]; }
   function chip(pid) { var p = party(pid); return '<span class="who" style="background:' + p.color + ';color:' + p.ink + '">' + esc(E.sigle(pid)) + '</span>'; }
-  function fr(x, d) { return (Math.round(x * Math.pow(10, d)) / Math.pow(10, d)).toFixed(d).replace('.', ','); }
+  function fr(x, d) { return (Math.round(x * Math.pow(10, d)) / Math.pow(10, d)).toFixed(d).replace('.', ',').replace('-', '−'); }
   function seg(id) { return D.SEGMENTS.filter(function (s) { return s.id === id; })[0]; }
   /* « Le saviez-vous ? » une fois par quinquennat */
   function learn(key) {
@@ -101,7 +101,7 @@
     'gov-deficit': function () {
       var tgt = G.C.target(gv.year), ecart = gv.deficit - tgt, ton = ecart > 0.3 ? 'mauvais' : 'bon';
       return { titre: 'Déficit public', valeur: fr(gv.deficit, 1) + ' %', ton: ton,
-        texte: 'Ce que l\u2019État dépense en plus de ce qu\u2019il encaisse dans l\u2019année, rapporté au [[gov-pib|PIB]]. Il s\u2019ajoute chaque année à la [[gov-dette|dette]]. Le chiffre affiché est une prévision : la [[gov-montee|montée en charge]] des mesures et la conjoncture le font bouger en fin d\u2019année.',
+        texte: 'Ce que l\u2019État dépense en plus de ce qu\u2019il encaisse dans l\u2019année, rapporté au [[gov-pib|PIB]]. Il s\u2019ajoute chaque année à la [[gov-dette|dette]]. Négatif, c’est un excédent. Le chiffre affiché est une prévision : la [[gov-montee|montée en charge]] des mesures et la conjoncture le font bouger en fin d\u2019année.',
         lignes: [{ texte: 'Au début du mandat', valeur: fr(G.C.deficit0, 1) + ' %' }, { texte: 'Objectif de l\u2019année ' + gv.year, valeur: fr(tgt, 1) + ' %' }, { texte: 'Écart à l\u2019objectif', valeur: ecart, ton: ton }],
         renvois: gv.eco && gv.eco.report ? [{ id: 'eco-deficit', texte: 'le détail de l\u2019an dernier' }, { id: 'eco-ecart', texte: 'l\u2019écart entre annonce et réalité' }] : [] };
     },

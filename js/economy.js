@@ -229,7 +229,9 @@
   function fmt(x, d) { return Math.abs(x).toFixed(d).replace('.', ','); }
   function signed(x) { return (round(x) === 0 ? '' : x > 0 ? '+' : '\u2212') + fmt(x, 2); }
   function toneOf(x, sens) { return !sens || round(x) === 0 ? 'neutre' : (x > 0) === (sens === 'hausse-bonne') ? 'bon' : 'mauvais'; }
-  function levelText(e, x) { return e.unit === '%' ? fmt(x, 1) + ' %' : e.unit === 'points' ? Math.round(x) + ' %' : fmt(x, e.id === 'debt' ? 0 : 1) + (e.id === 'debtCharge' ? ' pts de PIB' : ' %'); }
+  /* Un niveau garde son signe : une récession, un excédent. Jamais de « moins zéro ». */
+  function lvl(x, d) { return (x < 0 && Number(Math.abs(x).toFixed(d)) !== 0 ? '−' : '') + fmt(x, d); }
+  function levelText(e, x) { return e.unit === '%' ? lvl(x, 1) + ' %' : e.unit === 'points' ? Math.round(x) + ' %' : lvl(x, e.id === 'debt' ? 0 : 1) + (e.id === 'debtCharge' ? ' pts de PIB' : ' %'); }
   function infobulle(report, id) {
     var e = report && report.entries[id], sens = P.infoSens[id] || (id.indexOf('sat') === 0 ? 'hausse-bonne' : null);
     if (!e) return { titre: P.labels[id] || P.labels.noReport, texte: P.labels.noReportText };
