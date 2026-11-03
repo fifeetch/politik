@@ -350,6 +350,14 @@
     'Nicolas Dentelle': { m: 1, age: 1, sc: '#513623', se: 5, oe: 1, nez: 'busque', nl: 2, ga: 20, dr: 19, bf: 'sourit', barbe: barbe('#6b4a33', { h: 188, stries: '#a08468' }), cravate: '#27508c', habit: '#1f2a55', habitO: '#151d3d', coiffure: C('raie', CHATAIN) },
     /* Hubert Fromageau : dégarni, poivre et sel, barbe, teint hâlé, gaillard du terroir, personnage inventé */
     'Hubert Fromageau': { teint: 1, r: 4, m: 5, w: 3, age: 2, sc: '#3f3c38', se: 6.4, broussaille: 1, oe: .94, nez: 'rond', nl: 2, nw: 4, ga: 22, dr: 21, bf: 'sourit', barbe: barbe('#5e5a55', { h: 182, ep: 3, stries: '#a09b94' }), habit: '#2e6b45', habitO: '#214f33', coiffure: K(POIVRE) }
+    ,
+    /* --- Rétroconquête --- */
+    /* Sarah Krampon : la trentaine, longs cheveux noirs, veste noire */
+    'Sarah Krampon': { femme: 1, m: -2, c: 1, sc: '#191513', se: 3.8, sb: 5, si: -1, oe: 1.1, nez: 'pointu', nl: 0, ga: 19, dr: 18, bf: 'pleine', levres: '#a4503f', habit: '#1f1f2a', habitO: '#14141c', chemise: PAL.blanc, sansOreille: true, coiffure: L(248, NOIR, true) },
+    /* Stanislas Rigolo : la vingtaine, châtain, visage jeune et mince */
+    'Stanislas Rigolo': { m: -3, c: -2, sc: '#513623', se: 4.2, sb: 3, oe: 1.08, nez: 'pointu', nl: -2, ga: 20, dr: 19, bf: 'sourit', cravate: '#1f2a55', l: .9, coiffure: C('arriere', CHATAIN) },
+    /* Guillaume Pelletée : la quarantaine ou la cinquantaine, brun, lunettes carrées */
+    'Guillaume Pelletée': { m: 1, age: 1, sc: '#26201c', se: 5.4, si: -2, oe: .98, nl: 1, ga: 20, dr: 19, cravate: '#23232b', habit: '#2a2c36', habitO: '#1c1e26', lunettes: lunettes('carrees'), coiffure: C('dense', BRUN) }
     /*SUITE*/
   };
   Object.keys(FICHES).forEach(function (nom) { NOMS[nom] = nom; ajoute(nom, FICHES[nom]); });
