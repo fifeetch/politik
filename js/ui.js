@@ -2494,6 +2494,7 @@
   function who(pid) { return pid === me ? 'Toi' : party(pid).short; }
   var lastVictim = [];
   /* Les gros titres de la soirée, du plus important au moins important */
+  function aParti(pid) { var n = party(pid).name; return /^Les /.test(n) ? 'aux ' + n.slice(4) : /^Le /.test(n) ? 'au ' + n.slice(3) : 'à ' + n; }
   function flashData(log, before, ctrl0, allies0) {
     var heads = [], changed = [];
     pressChanges = [];
@@ -2502,7 +2503,7 @@
       if (c0 === c1) return;
       changed.push(r.id); pressChanges.push({ rid: r.id, from: c0, to: c1 });
       var nm = r.id === 'cor' ? 'l\'outre-mer' : r.name;
-      if (c1) heads.push({ reg: true, w: r.pts + (c1 === me || c0 === me ? 20 : 0), me: c1 === me || c0 === me, t: (c1 === me ? 'Tu prends ' : party(c1).short + ' prend ') + nm + (c0 ? (c0 === me ? ' : tu la perds' : ' à ' + party(c0).short) : '') });
+      if (c1) heads.push({ reg: true, w: r.pts + (c1 === me || c0 === me ? 20 : 0), me: c1 === me || c0 === me, t: (c1 === me ? 'Tu prends ' : party(c1).short + ' prend ') + nm + (c0 ? (c0 === me ? ' : tu la perds' : ' ' + aParti(c0)) : '') });
       else heads.push({ reg: true, w: r.pts / 2 + (c0 === me ? 20 : 0), me: c0 === me, t: nm + ' : ' + (c0 === me ? 'tu perds' : party(c0).short + ' perd') + ' le contrôle' });
     });
     var fails = log.filter(function (l) { return l.pid === me && !l.ok && !l.gaffe && !l.clan; });
@@ -2537,9 +2538,9 @@
     var regName = function (rid) { return rid === 'cor' ? 'L\u2019outre-mer' : E.REG[rid].name; };
     var rows = moves.map(function (m) {
       var mine = m.to === me || m.from === me, nm = esc(regName(m.rid)), txt;
-      if (m.to === me) txt = '<b>Tu prends</b> ' + nm + (m.from ? ' à ' + esc(party(m.from).short) : '');
+      if (m.to === me) txt = '<b>Tu prends</b> ' + nm + (m.from ? ' ' + esc(aParti(m.from)) : '');
       else if (m.from === me) txt = '<b>Tu perds</b> ' + nm + (m.to ? ', prise par ' + esc(party(m.to).short) : '');
-      else if (m.to) txt = esc(party(m.to).short) + ' prend ' + nm + (m.from ? ' à ' + esc(party(m.from).short) : '');
+      else if (m.to) txt = esc(party(m.to).short) + ' prend ' + nm + (m.from ? ' ' + esc(aParti(m.from)) : '');
       else txt = esc(party(m.from).short) + ' perd ' + nm;
       return '<li class="' + (mine ? 'mine' : '') + '"><i style="background:' + (m.to ? party(m.to).color : '#8b7a5e') + '"></i><span>' + txt + '</span></li>';
     }).join('');
@@ -2615,6 +2616,43 @@
   /* Les duels d'une soirée (débat du 1er tour ou face-à-face). cfg : { kicker, host, duels, prep (pid → niveaux de préparation payés en €), fiche, done(picks) } */
   function runDuels(cfg) {
     var picks = [], n = cfg.duels.length;
+    var scoreMoi = 0, scoreLui = 0;
+    function ligne(l) { return '« ' + l[Math.floor(Math.random() * l.length)] + ' »'; }
+    /* v5.6 : la joute. L'adversaire relance, tu ripostes, la jauge des indécis suit tout l'échange */
+    function relance(k, o, mineA, ms, os) {
+      scoreMoi += ms; scoreLui += os;
+      var jab = ligne(D.RELANCES), keys = Object.keys(D.PIQUES);
+      var regle = keys.map(function (x) { return D.PIQUES[x].name + ' bat ' + D.PIQUES[D.PIQUES[x].bat].name.toLowerCase(); }).join(' · ');
+      var html = (BD ? BD.grosPlan(bdId(o), { cote: 'd', expr: 'colere', texte: jab, nom: party(o).candidate }) : '<q class="ans-q">' + esc(jab) + '</q>') +
+        '<div class="rps">' + esc(regle) + '</div><div class="ans-k">Ta riposte</div><div class="ans-list">' + keys.map(function (x) {
+          return '<button type="button" class="ans" data-p="' + x + '"><span class="ans-h"><span class="ans-i">' + D.PIQUES[x].icon + '</span><b>' + esc(D.PIQUES[x].name) + '</b></span></button>';
+        }).join('') + '</div>' + undecided(scoreMoi, scoreLui, o);
+      modal({ kicker: cfg.kicker + ' · échange ' + (k + 1) + ' / ' + n, title: 'Il te relance !', cls: 'tv-modal', html: html, buttons: [],
+        onOpen: function () {
+          var u0 = document.querySelector('#modal .u-me'); if (u0) u0.style.width = u0.getAttribute('data-w') + '%';
+          Array.prototype.forEach.call(document.querySelectorAll('#modal [data-p]'), function (b) {
+            b.addEventListener('click', function () { riposte(k, o, mineA, ms, os, b.getAttribute('data-p')); });
+          });
+        } });
+    }
+    function riposte(k, o, mineA, ms, os, mien) {
+      var sien = E.faceRiposte(g), pa = mineA ? mien : sien, pb = mineA ? sien : mien, w = E.piqueOutcome(pa, pb), gain = E.piqueBonus(ms, os);
+      picks[k].pa = pa; picks[k].pb = pb;
+      var gagne = w && (w === 'a') === mineA, perd = w && !gagne;
+      if (gagne) scoreMoi += gain; else if (perd) scoreLui += gain;
+      var carte = function (pid, cle, cote, g1, p1) {
+        var pq = D.PIQUES[cle];
+        return '<div class="duel-card' + (g1 ? ' won' : p1 ? ' lost' : '') + '"><div class="dc-h"><span class="dc-who">' + (pid === me ? 'Toi' : esc(party(pid).short)) + '</span><span>' + pq.icon + ' ' + esc(pq.name) + '</span></div>' +
+          (BD ? BD.grosPlan(bdId(pid), { cote: cote, expr: g1 ? 'assure' : p1 ? 'inquiet' : cle === 'couper' ? 'colere' : 'parle', texte: ligne(pq.lignes), nom: party(pid).candidate, taille: window.innerWidth >= 761 ? 31 : 25 }) : '<q class="ans-q">' + esc(ligne(pq.lignes)) + '</q>') + '</div>';
+      };
+      var rh = (BD ? '<div class="bd-duel">' : '') + carte(me, mien, 'g', gagne, perd) + carte(o, sien, 'd', perd, gagne) + (BD ? '</div>' : '') +
+        (w ? '<div class="dc-line">💥 ' + esc(D.PIQUES[gagne ? mien : sien].name) + ' bat ' + esc(D.PIQUES[gagne ? sien : mien].name.toLowerCase()) + ' : les indécis basculent.</div>' : '<div class="dc-line">Vous parlez en même temps : les journalistes reprennent la main.</div>') +
+        undecided(scoreMoi, scoreLui, o);
+      closeModal();
+      modal({ kicker: cfg.kicker + ' · échange ' + (k + 1) + ' / ' + n, title: gagne ? 'Tu marques le point !' : perd ? 'Il marque le point…' : 'Cacophonie', cls: 'tv-modal', html: rh,
+        onOpen: function () { setTimeout(function () { var u = document.querySelector('#modal .u-me'); if (u) u.style.width = u.getAttribute('data-w') + '%'; }, 60); },
+        buttons: [{ label: k < n - 1 ? 'Question suivante' : 'Le verdict', primary: true, onClick: function () { step(k + 1); } }] });
+    }
     function step(k) {
       if (k >= n) return cfg.done(picks);
       var d = cfg.duels[k], mineA = d.a === me, o = mineA ? d.b : d.a;
@@ -2650,7 +2688,7 @@
               closeModal();
               modal({ kicker: cfg.kicker + ' · question ' + (k + 1) + ' / ' + n, title: verdict, cls: 'tv-modal', html: rh,
                 onOpen: function () { setTimeout(function () { var u = document.querySelector('#modal .u-me'); if (u) u.style.width = u.getAttribute('data-w') + '%'; }, 60); },
-                buttons: [{ label: k < n - 1 ? 'Question suivante' : 'Le verdict', primary: true, onClick: function () { step(k + 1); } }] });
+                buttons: [{ label: cfg.joute ? esc(party(o).short) + ' te relance…' : k < n - 1 ? 'Question suivante' : 'Le verdict', primary: true, onClick: function () { if (cfg.joute) relance(k, o, mineA, ms, os); else step(k + 1); } }] });
             });
           });
         } });
@@ -2707,12 +2745,12 @@
   /* v4.0 : le grand face-à-face d'entre-deux-tours (si tu es finaliste) */
   function faceAFace(then) {
     var b = g.between, fc = b.face || E.setupFace(g), o = b.a === me ? b.b : b.a;
-    var html = '<p>Le grand débat d’entre-deux-tours, la tradition depuis 1974. Trois questions face à <b>' + esc(party(o).candidate) + '</b>.</p>' +
+    var html = '<p>Le grand débat d’entre-deux-tours, la tradition depuis 1974. Trois questions face à <b>' + esc(party(o).candidate) + '</b>, et après chacune, il te relance : à toi de riposter.</p>' +
       '<div class="rps">L\u2019émotion bat les chiffres · les chiffres battent l\u2019attaque · l\u2019attaque bat l\u2019émotion · attaque et chiffres démontent une promesse</div>' +
       '<div class="brief">' + fc.duels.map(function (d) { return line(th(d.theme).icon, esc(th(d.theme).name)); }).join('') + '</div>' +
       '<p class="hint">Le gagnant fait basculer jusqu’à ' + Math.round(D.DEBATE.faceMax * 100) + ' % des électeurs du perdant. Quelques points qui peuvent tout changer.</p>' + learnBox('debat');
     modal({ kicker: 'Entre-deux-tours', title: 'Le grand face-à-face', html: bdPlateau(o, 'ENTRE-DEUX-TOURS') + html, buttons: [{ label: 'Entrer sur le plateau', primary: true, onClick: function () {
-      runDuels({ kicker: 'Le face-à-face', host: 'Les deux journalistes du grand débat', duels: fc.duels, prep: {}, fiche: true, done: function (picks) {
+      runDuels({ kicker: 'Le face-à-face', host: 'Les deux journalistes du grand débat', joute: true, duels: fc.duels, prep: {}, fiche: true, done: function (picks) {
         var r = E.resolveFace(g, picks), mine = b.a === me ? r.sa : r.sb, his = b.a === me ? r.sb : r.sa;
         var won = r.winner === me;
         modal({ kicker: 'Le face-à-face', title: !r.winner ? 'Match nul' : won ? 'Tu remportes le grand débat !' : party(o).short + ' remporte le grand débat',
