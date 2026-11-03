@@ -7,7 +7,7 @@ function near(a, b, t) { return Math.abs(a - b) <= (t == null ? 1e-6 : t); }
 function rng(v) { return function () { return v; }; }
 function lab(over) {
   var sat = {}; D.SEGMENTS.forEach(function (s) { sat[s.id] = 50; });
-  var gv = { pid: 'EM', year: 1, deficit: 5, debt: 118, sat: sat, popBonus: 0, measures: [], extra: [], financing: [], seats: {}, history: [], oneOff: 0, seed: 7, fronde: 0, rng: rng(0.99), eventsDeck: ['bleus', 'marches', 'cour', 'canicule', 'gilets'] };
+  var gv = { pid: 'EM', year: 1, deficit: 5, debt: 118, sat: sat, popBonus: 0, measures: [], extra: [], financing: [], seats: {}, history: [], oneOff: 0, seed: 7, fronde: 0, rng: rng(0.99), eventsDeck: ['bleus', 'bleus', 'marches', 'marches', 'cour', 'cour', 'canicule', 'canicule', 'gilets', 'gilets'] };
   Object.keys(over || {}).forEach(function (k) { gv[k] = over[k]; });
   gv.eco = ECO.create(7, gv.debt, gv.deficit, G.popularity(gv));
   return gv;

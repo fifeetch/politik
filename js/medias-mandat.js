@@ -62,6 +62,8 @@
       r: { expliquer: 'Je veux dire aux grévistes et aux usagers où nous en sommes, et ce qui reste à négocier.', annoncer: 'Je mets sur la table une proposition nouvelle, dès ce soir.', attaquer: 'Une partie de l’opposition veut le blocage plus que la solution.' } }
   };
 
+  var HEUREUX = { bleus: true, innovation: true, evenement: true };
+  var CRISE_GENERALE = { expliquer: 'Je veux vous dire ce que nous savons, ce que nous faisons, et ce que nous ne savons pas encore.', annoncer: 'Ce soir, j’annonce des mesures concrètes pour répondre à cette situation.', attaquer: 'Ceux qui critiquent aujourd’hui n’ont rien fait quand ils en avaient le pouvoir.' };
   function etat(gv) { if (!gv.medias) gv.medias = { passes: [] }; return gv.medias; }
   function nbPasses(gv) { return gv.medias ? gv.medias.passes.length : 0; }
   function deLAnnee(gv, y) { return gv.medias ? gv.medias.passes.filter(function (p) { return p.y === y; }) : []; }
@@ -76,8 +78,9 @@
   function crise(gv, connu) {
     if (gv.greve && gv.greve.active !== false) return Object.assign({ id: 'greve' }, CRISES.greve);
     if (!connu) return null;
-    var ev = G.drawEvent(gv);
-    return ev && CRISES[ev.id] ? Object.assign({ id: ev.id }, CRISES[ev.id]) : null;
+    var fait = G.eventsDone ? G.eventsDone(gv) : 0, ev = G.drawEvent(gv, Math.max(0, fait - 1));   // le dernier événement montré au joueur
+    if (!ev || HEUREUX[ev.id]) return null;
+    return Object.assign({ id: ev.id }, CRISES[ev.id] || { nom: ev.title, q: ev.text + ' Que répondez-vous aux Français ?', bon: 'expliquer', mauvais: 'attaquer', r: CRISE_GENERALE });
   }
   /* Peut-on passer maintenant ? La raison est toujours écrite */
   function dispo(gv, connu) {

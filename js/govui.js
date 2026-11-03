@@ -886,7 +886,7 @@
   function lawRow(mid, attr) {
     var M = E.measure(mid), v = G.vote(gv, mid);
     return '<button type="button" class="pick-row" ' + attr + '="' + mid + '"><span class="pick-txt"><b>' + esc(M.name) + '</b><small>' + moneyTxt(M) + fansTxt(M) +
-      '</small>' + (rampTxt(M) ? '<small>⏳ ' + rampTxt(M) + '</small>' : '') + '<small>pronostic : ' + (v.passed ? '<b>adoptée</b>' : '<b>rejetée</b>') + ' (' + v.pour + ' pour, ' + v.contre + ' contre)</small></span></button>';
+      '</small>' + (M.loiSeule ? '<small>😟 popularité −' + Math.round(Math.abs(M.cost) / 15) + '</small>' : '') + (rampTxt(M) ? '<small>⏳ ' + rampTxt(M) + '</small>' : '') + '<small>pronostic : ' + (v.passed ? '<b>adoptée</b>' : '<b>rejetée</b>') + ' (' + v.pour + ' pour, ' + v.contre + ' contre)</small></span></button>';
   }
   function chooseLaw() {
     var pend = gv.measures.filter(function (m) { return m.status === 'pending'; }), cat = G.lawCatalog(gv);

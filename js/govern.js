@@ -335,6 +335,7 @@
     gv.deficit += k * m.cost / C.mdPerPoint;
     var q = gv.cabinet ? 1 + MIN.compSat * (compOf(minister(gv, postFor(mid))) - 2) : 1;   // v2.6 : un ministre compétent fait mieux passer la mesure
     addSat(gv, m.fans, C.satPerFan * k * q);
+    if (m.loiSeule) gv.popBonus -= Math.abs(m.cost) / 15 * k;   // v5.9 : une grande loi coûte aussi en popularité
     // v3.4 : le « ras-le-bol fiscal ». Chaque nouvel impôt hors programme coûte de la popularité, de plus en plus.
     if (m.cost < 0 && NEW_LAWS.recettes.indexOf(mid) >= 0 && !gv.measures.some(function (x) { return x.id === mid; })) {
       gv.newTaxes = (gv.newTaxes || 0) + 1;
