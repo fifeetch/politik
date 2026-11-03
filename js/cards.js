@@ -157,6 +157,10 @@
       mouth: ['sourire', 'serieux', 'grand'][(h >> 9) % 3], outfit: ['#26305A', '#4A4A55', '#7A1E24', '#2E6B45', '#5B3E8C'][(h >> 11) % 5], beard: (h >> 13) % 4 === 0, bg: KIND[c.kind] || '#E3E0D6' };
   }
 
-  var API = { CARDS: CARDS, FOLLOW: FOLLOW, BY: BY, KIND: KIND, draw: draw, judged: judged, touches: touches, apply: apply, faceOf: faceOf };
+  /* v5.7 : l'image de chaque carte : d'abord son sujet, sinon celui qui parle */
+  var SCENE_CARTE = { raffineries: 'usine', infirmieres: 'hopital', medecins: 'hopital', pesticide: 'nature', abeilles: 'nature', bassines: 'nature', autoroute: 'nature', manif: 'police', policiers: 'police', interieur: 'police', notation: 'bourse', bruxelles: 'bourse', bruxelles_bilan: 'bourse', prix: 'caddie', tempete: 'pluie', loyers: 'ville', cantine: 'ville', profs: 'ville', boulangerie: 'ville', rip: 'meeting', rip_suite: 'meeting', datacenter: 'relance', datacenter_conso: 'relance', paparazzi: 'scandale', rancon: 'scandale', karting: 'scandale', rugby: 'fete', tour: 'fete', chat: 'fete', munitions: 'frontiere', cheminots: 'greve' };
+  var SCENE_QUI = { syndicat: 'greve', patronat: 'relance', elus: 'ville', europe: 'bourse', medias: 'tele', gouvernement: 'conseil', etat: 'police', sport: 'fete', citoyens: 'ville', parti: 'meeting', lulu: 'conseil' };
+  function sceneOf(c) { return SCENE_CARTE[c.id] || SCENE_QUI[c.kind] || 'ville'; }
+  var API = { sceneOf: sceneOf, CARDS: CARDS, FOLLOW: FOLLOW, BY: BY, KIND: KIND, draw: draw, judged: judged, touches: touches, apply: apply, faceOf: faceOf };
   if (node) module.exports = API; else root.PolitikCards = API;
 })(this);
