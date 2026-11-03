@@ -42,3 +42,5 @@
 .bd-duel .dc-line { order: 3; grid-column: 1 / -1; }
 .bd-duel .duel-card.lost { opacity: 1; }
 #paper-front .une-word { line-height: 1.22; }
+/* les jambages (g, j, p, q, y) ne doivent jamais être coupés : le mot garde sa marge basse */
+#paper-front .une-word { overflow: visible; line-height: 1.12; padding-bottom: .16em; }

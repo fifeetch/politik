@@ -1073,7 +1073,7 @@
   function fitWord() {
     var w = document.querySelector('#paper-front .une-word'); if (!w) return;
     var size = 110; w.style.fontSize = size + 'px';
-    while (w.scrollWidth > w.clientWidth + 1 && size > 34) { size -= 2; w.style.fontSize = size + 'px'; }
+    while (w.scrollWidth > w.clientWidth + 1 && size > 18) { size -= 2; w.style.fontSize = size + 'px'; }
   }
   function showPaper(paper, contLabel, cont) {
     closeModal(); $('toast').hidden = true;
