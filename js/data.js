@@ -1185,11 +1185,18 @@
     'chiffres>promesse': '« Votre promesse ne tient pas : les chiffres sont têtus. »'
   };
   var DEB_REG_NAME = { emotion: '❤️ émotion', chiffres: '📊 chiffres (mesure, bilan)', attaque: '🥊 attaque', promesse: '🎲 promesse', esquive: '🙃 recentrer' };
+  /* v5.6 : la joute d'entre-deux-tours. Après chaque question, l'adversaire relance et chacun riposte. Le gagnant de l'échange marque DEBATE.piqueGain des points de la question. */
+  var PIQUES = {
+    couper: { icon: '✋', name: 'Couper la parole', bat: 'calme', lignes: ['Laissez-moi finir ! Les Français ne vous ont rien demandé.', 'Non, non, non : vous ne finirez pas cette phrase.', 'Stop ! Ce que vous dites est tout simplement faux.'] },
+    bilan: { icon: '📂', name: 'Rappeler son bilan', bat: 'couper', lignes: ['Où étiez-vous quand tout ça se décidait ?', 'Votre bilan, parlons-en : il tient sur un ticket de métro.', 'Vous avez voté le contraire il y a deux ans.'] },
+    calme: { icon: '😌', name: 'Garder son calme', bat: 'bilan', lignes: ['Je vois que le sujet vous agace. Les Français, eux, attendent des réponses.', 'Je vous laisse vous énerver. Moi, je parle aux gens.', 'Respirez. On a toute la soirée.'] }
+  };
+  var RELANCES = ['Tout ça, c\'est du vent. Vous n\'y croyez pas vous-même !', 'Vous récitez votre fiche. Regardez les Français dans les yeux !', 'Et qui paie ? Personne ne vous croit là-dessus.', 'C\'est vous qui me parlez de ça ? Sérieusement ?', 'Encore une promesse. Vous en avez combien en stock ?', 'Vous n\'avez répondu à aucune question depuis le début.'];
   var DEBATE = {
     win: 1.3, lose: 0.5,     // la réponse qui contre l'autre gagne 30 % ; celle qui est contrée perd la moitié
     prep: 0.15,              // chaque niveau de préparation (1 €) : +15 % sur tes réponses (et tu lis la fiche de l'adversaire)
     winBonus: 0.8,           // le vainqueur de la soirée : +0,8 d'audience dans toutes les classes (×2 au grand débat final)
-    faceSwing: 0.1, faceMax: 0.03   // face-à-face : l'écart de points déplace jusqu'à 3 % des voix du perdant vers le gagnant
+    piqueGain: 0.15, faceSwing: 0.1, faceMax: 0.03   // face-à-face : l'écart de points déplace jusqu'à 3 % des voix du perdant vers le gagnant
   };
   /* Les questions des journalistes. meas = les mesures du programme qui y répondent vraiment. segs = qui se sent concerné (1 = normal). emo / atk / def : la réponse type.
      emoD : variante de l'émotion pour la droite (thèmes où gauche et droite ne parlent pas aux mêmes peurs). */
@@ -1415,7 +1422,7 @@
   }
 
   var DATA = { REFERENCE_2027: REFERENCE_2027, POLLS: POLLS, BASES: BASES, REGIONS: REGIONS, PROFILES: PROFILES, THEMES: THEMES, HEADLINES: HEADLINES, PARTIES: PARTIES, ACTIONS: ACTIONS,
-               CARDS: CARDS, CARD_RULES: CARD_RULES, FICHES: FICHES, EVENTS: EVENTS, DILEMMAS: DILEMMAS, CRISES: CRISES, REPLIES: REPLIES, TEMPERS: TEMPERS, TRAITS: TRAITS, NOSTALGIA: NOSTALGIA, PETALS: PETALS, MICRO: MICRO, BINGO: BINGO, BINGO_LINES: BINGO_LINES,
+               PIQUES: PIQUES, RELANCES: RELANCES, CARDS: CARDS, CARD_RULES: CARD_RULES, FICHES: FICHES, EVENTS: EVENTS, DILEMMAS: DILEMMAS, CRISES: CRISES, REPLIES: REPLIES, TEMPERS: TEMPERS, TRAITS: TRAITS, NOSTALGIA: NOSTALGIA, PETALS: PETALS, MICRO: MICRO, BINGO: BINGO, BINGO_LINES: BINGO_LINES,
                MEASURES: MEASURES, FUNDING: FUNDING, SEGMENTS: SEGMENTS, VOTE_PROP: VOTE_PROP, CLASS_PROF: CLASS_PROF, CLASS_SRC: CLASS_SRC, HEART: HEART, MAJORITY: MAJORITY, BETA: BETA, MEDIA: MEDIA, ANSWERS: ANSWERS, STATIONS: STATIONS, DEB_REG: DEB_REG, DEB_BEATS: DEB_BEATS, DEB_REG_NAME: DEB_REG_NAME, DEBATE: DEBATE, STATION_FIT: STATION_FIT, VINGT: VINGT, QUESTIONS: QUESTIONS, SEGMENTS_SRC: SEGMENTS_SRC, AFFAIRS: AFFAIRS, LEARN: LEARN, BUDGET_AFFAIR: BUDGET_AFFAIR, REACTIONS: REACTIONS, ADVISOR: ADVISOR, OBJECTIVES: OBJECTIVES, RULES: RULES, FORMATS: FORMATS, LEGIS: LEGIS, MINISTRY: MINISTRY, OPPO: OPPO, ECONOMY: ECONOMY, validate: validate };
   if (typeof module !== 'undefined' && module.exports) module.exports = DATA;
   else root.PolitikData = DATA;
