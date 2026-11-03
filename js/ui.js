@@ -831,6 +831,7 @@
     (info.clan || []).forEach(function (x) { alerts.unshift('SCANDALE · ' + (x.pid === me ? 'Toi' : party(x.pid).short) + ' : « ' + x.name + ' » révélé'); });
     if (info.bomb) alerts.unshift('BOMBE · ' + (info.bomb.pid === me ? 'Toi' : party(info.bomb.pid).short) + ' : ' + info.bomb.title.replace('💣 ', ''));
     FX.breaking('Alerte info', alerts);
+    if (alerts.length) Bus.emit('ui:alert', { n: alerts.length });
     var jp = journalParts(info, aiDil, aiAff);
     var paper = window.PolitikPress.build({ g: g, E: E, me: me, info: info, aiAff: aiAff, aiDil: aiDil, log: g.turn > 1 ? pressLog : [], changes: g.turn > 1 ? pressChanges : [], before: pressBefore });
     paper.mine = jp.mine; paper.learn = jp.learn;
@@ -1091,6 +1092,7 @@
     $('paper-go').textContent = contLabel;
     $('paper').hidden = false;
     FX.replay($('paper-front'), 'une-in');
+    Bus.emit('ui:paper', {});
     requestAnimationFrame(fitWord);
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitWord);
   }
@@ -1306,6 +1308,7 @@
     queue.push(act); justAdded = queue.length - 1;
     luluSay(luluLine(act, wasTiring));
     render(); T.notify(queue.length >= E.actionsFor(g, me) ? 'full' : 'queue');
+    Bus.emit('ui:action', { type: act.type });
   }
 
   /* ---------- v1.8 : les onglets ---------- */
@@ -2766,6 +2769,7 @@
   function bilanModal(then) {
     var b = g.bilan;
     if (!b || !b.rows[me]) return then();
+    Bus.emit('ui:poll', { delta: b.rows[me].total });
     modal({ kicker: 'Fin du tour ' + b.turn, title: 'Ton bilan au sondage', html: bilanHtml(b), buttons: [{ label: g.over || g.phase === 'between' ? 'Continuer' : 'Tour suivant', primary: true, onClick: then }] });
   }
   function finishTurn(spot) {
@@ -3077,6 +3081,7 @@
       clock.classList.remove('hot', 'tick', 'long');
       clock.textContent = '20:00';
       screen.classList.add('flash20');
+      Bus.emit('ui:night-result', { win: win === me });
       $('night-stage').innerHTML = '<div class="night-est">Estimation · ' + (res.direct ? 'élu dès le 1er tour' : 'second tour') + '</div>' +
         '<div class="portrait" style="background:' + P.color + ';color:' + P.ink + '"><span class="portrait-art">' + A.portrait(win) + '</span><span class="portrait-name">' + esc(P.candidate) + ' · ' + esc(P.short) + '</span></div>' +
         '<div class="night-pct">' + (pct * 100).toFixed(1).replace('.', ',') + ' %</div>' +
