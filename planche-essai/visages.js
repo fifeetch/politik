@@ -23,7 +23,7 @@
   }
   function unNez(f) {
     var nl = f.nl || 0, nb = f.nb || 0, nw = f.nw || 0, tx = 139 + nb, ty = 148 + nl, w = f.femme ? 1.8 : 2, d;
-    if (f.nez === 'busque') d = 'M122,104 C126,110 ' + (136 + nb) + ',116 ' + (137 + nb) + ',126 C' + (138 + nb) + ',134 ' + (tx - 1) + ',' + (ty - 8) + ' ' + tx + ',' + ty + ' C' + (tx + 2) + ',' + (ty + 8) + ' ' + (tx - 3) + ',' + (ty + 12) + ' ' + (tx - 10) + ',' + (ty + 11) + ' C' + (tx - 14) + ',' + (ty + 15) + ' ' + (tx - 21 - nw) + ',' + (ty + 14) + ' ' + (tx - 24 - nw) + ',' + (ty + 9);
+    if (f.nez === 'busque') d = 'M122,104 C123,112 ' + (127 + nb) + ',120 ' + (134 + nb) + ',130 C' + (137 + nb) + ',136 ' + (tx - 1) + ',' + (ty - 8) + ' ' + tx + ',' + ty + ' C' + (tx + 2) + ',' + (ty + 8) + ' ' + (tx - 3) + ',' + (ty + 12) + ' ' + (tx - 10) + ',' + (ty + 11) + ' C' + (tx - 14) + ',' + (ty + 15) + ' ' + (tx - 21 - nw) + ',' + (ty + 14) + ' ' + (tx - 24 - nw) + ',' + (ty + 9);
     else if (f.nez === 'rond') d = 'M122,104 C124,120 ' + (132 + nb) + ',' + (132 + nl * .7) + ' ' + (tx - 2) + ',' + (ty - 4) + ' C' + (tx + 7) + ',' + (ty + 1) + ' ' + (tx + 5) + ',' + (ty + 15) + ' ' + (tx - 7) + ',' + (ty + 14) + ' C' + (tx - 12) + ',' + (ty + 19) + ' ' + (tx - 23 - nw) + ',' + (ty + 18) + ' ' + (tx - 26 - nw) + ',' + (ty + 10);
     else if (f.nez === 'pointu') d = 'M122,104 C124,122 ' + (136 + nb) + ',' + (138 + nl * .7) + ' ' + (tx + 2) + ',' + (ty + 2) + ' C' + (tx + 3) + ',' + (ty + 7) + ' ' + (tx - 2) + ',' + (ty + 9) + ' ' + (tx - 8) + ',' + (ty + 9) + ' C' + (tx - 11) + ',' + (ty + 12) + ' ' + (tx - 16 - nw) + ',' + (ty + 11) + ' ' + (tx - 19 - nw) + ',' + (ty + 7);
     else d = 'M122,104 C124,120 ' + (134 + nb) + ',' + (136 + nl * .7) + ' ' + tx + ',' + ty + ' C' + (tx + 2) + ',' + (ty + 8) + ' ' + (tx - 3) + ',' + (ty + 12) + ' ' + (tx - 10) + ',' + (ty + 11) + ' C' + (tx - 14) + ',' + (ty + 15) + ' ' + (tx - 21 - nw) + ',' + (ty + 14) + ' ' + (tx - 24 - nw) + ',' + (ty + 9);
@@ -210,7 +210,7 @@
     P.FICHE[id] = {
       tete: function (e) { return tete(f, e); }, peau: teinte && teinte[0], peauO: teinte && teinte[1],
       corps: fem ? tailleur(f) : costume(f), col: fem ? colTailleur(f) : colCostume(f), geste: function () { return ''; },
-      cou: f.cou || (fem ? [76, 148, 150, 136 + (f.m || 0), 50] : [70, 156, 150, 140 + (f.m || 0), 50]), at: f.at || (fem ? [114, 38] : [114, 42]), k: f.k || (fem ? 1.12 : 1.14)
+      cou: f.cou || (fem ? [76, 144, 150, 136 + (f.m || 0), 50] : [70, 150, 150, 140 + (f.m || 0), 50]), at: f.at || (fem ? [114, 38] : [114, 42]), k: f.k || (fem ? 1.12 : 1.14)
     };
   }
 
@@ -218,6 +218,8 @@
   var BRUN = ['#3a2a20', '#281c15', '#7a6250'], CHATAIN = ['#6b4a33', '#513623', '#a08468'], NOIR = ['#2a2522', '#191513', '#6b5e54'], GRIS = ['#a8a79c', '#85847a', '#5d5c54'], BLANC = ['#e4e1d4', '#bdbaad', '#8d8c82'], POIVRE = ['#5e5a55', '#3f3c38', '#a09b94'], BLOND = ['#e0bd68', '#b8923f', '#8a6a2a'], CENDRE = ['#bcb298', '#958b72', '#6b634e'];
   function C(forme, t3) { return coupe(forme, t3[0], t3[1], t3[2]); }
   function L(bas, t3, centre) { return longs(bas, t3[0], t3[1], t3[2], centre); }
+  function K(t3) { return calvitie(t3[0], t3[1], t3[2]); }
+  var BLOND2 = ['#c9a35a', '#a38240', '#7a6030'], SEL = ['#7d7a74', '#5d5b56', '#b5b2ab'];
   var NOMS = { 'Jean-Lutte Mégaphone': 'megaphone', 'Jordan Brushing': 'brushing', 'Élisabeth Bornée': 'bornee', 'Marine Tournesol': 'tournesol', 'Fabien Rillettes': 'rillettes' };
 
   var FICHES = {
@@ -252,6 +254,18 @@
     'Éric Coquelicot': { r: 1, m: 1, age: 2, sc: '#8d8c82', se: 5.6, broussaille: 1, oe: .96, nez: 'rond', nl: 2, ga: 19, dr: 18, bf: 'sourit', barbe: barbe('#e4e1d4', { h: 180, stries: '#8d8c82' }), habit: '#3a3f4a', habitO: '#2a2e36', echarpe: PAL.rouge, coiffure: C('degarni', BLANC) },
     /* Louis Boucan : vingt-cinq ans, cheveux foncés bouclés, visage jeune et rond, sans cravate */
     'Louis Boucan': { r: 1, c: -4, sc: '#26201c', se: 4.6, sb: 3, oe: 1.1, ouv: 1.1, nl: -4, nb: -1, ga: 21, dr: 20, bf: 'sourit', habit: '#26305a', habitO: '#1a2244', l: .9, coiffure: C('boucle', NOIR) }
+    ,
+    /* --- Le Parti Survivant --- */
+    /* Olivier Fauteuil : la cinquantaine passée, gris, lunettes carrées, visage plein */
+    'Olivier Fauteuil': { r: 1, m: 2, age: 2, sc: '#5d5c54', se: 4.6, oe: .96, nl: 1, ga: 20, dr: 19, bf: 'sourit', cravate: '#7a1e24', lunettes: lunettes('carrees'), coiffure: C('arriere', GRIS) },
+    /* Boris Vaudeville : la cinquantaine, brun, barbe courte, sans cravate */
+    'Boris Vaudeville': { m: 1, c: 1, age: 1, sc: '#26201c', se: 5.8, sb: 3, ouv: .92, nez: 'busque', nl: 2, ga: 20, dr: 19, bf: 'sourit', barbe: barbe('#4a3a2e', { h: 186, stries: '#7a6250' }), habit: '#26305a', habitO: '#1a2244', coiffure: C('dense', BRUN) },
+    /* Anne Hipster : plus de soixante ans, blond cendré au carré, visage fin */
+    'Anne Hipster': { femme: 1, r: 1, m: -2, age: 2, sc: '#7a6030', se: 3.6, sb: 4, oe: .98, nez: 'pointu', nl: 0, ga: 19, dr: 18, bf: 'sourit', levres: '#c07a68', habit: '#7a1e24', habitO: '#5a1419', sansOreille: true, coiffure: L(186, BLOND2) },
+    /* Carole Dégainée : la cinquantaine, brune au carré, sourcils arqués */
+    'Carole Dégainée': { femme: 1, q: 2, age: 1, sc: '#26201c', se: 4.4, sb: 6, si: -1, oe: 1.04, nl: 1, ga: 21, dr: 20, bf: 'pleine', levres: '#b8604e', habit: '#4a4a55', habitO: '#36363f', chemise: PAL.blanc, sansOreille: true, coiffure: L(194, BRUN) },
+    /* François Hésitant : la soixantaine passée, dégarni, lunettes rondes, visage rond */
+    'François Hésitant': { r: 5, m: 7, w: 6, c: -3, age: 2, sc: '#5d5c54', se: 4.8, si: 3, oe: .92, nez: 'rond', nl: -3, nw: 2, ga: 21, dr: 20, bf: 'sourit', cravate: '#26305a', lunettes: lunettes('rondes'), coiffure: K(GRIS) }
     /*SUITE*/
   };
   Object.keys(FICHES).forEach(function (nom) { NOMS[nom] = nom; ajoute(nom, FICHES[nom]); });
