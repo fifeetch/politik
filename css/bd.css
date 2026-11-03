@@ -48,3 +48,33 @@
 /* les lieux du mandat : un bandeau sobre sous le titre */
 .bd-bandeau { flex: none; width: 100%; margin: 6px 0 10px; }
 .bd-bandeau .bd-lieu { display: block; width: 100%; height: auto; border-radius: 4px; }
+
+/* le menu Médias : chaque rendez-vous a son image */
+.media-pick { display: grid; gap: 10px; }
+.media-pick .pick-row { display: grid; grid-template-columns: minmax(120px, 42%) 1fr auto; gap: 12px; padding: 6px 10px 6px 6px; align-items: center; }
+.media-pick .media-pic { display: block; font-size: 0; }
+.media-pick .media-pic .bd-case { border: 1.5px solid var(--ink); }
+.media-pick .pick-row.off .media-pic { filter: grayscale(.7); opacity: .65; }
+
+/* l'intérieur du journal, en fenêtre comme dans la colonne de droite : le même papier que la une */
+#paper-inside, .actu-pages { background: #f1e6cd; color: #1d1713; }
+.pages-head { background: #1d1713; font-family: Georgia, 'Times New Roman', 'Noto Serif', serif; }
+.actu-mast { padding: 10px 14px 6px; border-bottom: 3px double #1d1713; font: 700 24px/1.05 Georgia, 'Times New Roman', 'Noto Serif', serif; letter-spacing: -.4px; text-align: center; }
+.art-item, .art-lulu, .art-learn { border-bottom: 1px solid #1d1713; }
+.art-item.mine { background: #f7e3a6; }
+.art-rub { color: #c6402d; font: 700 12px Georgia, 'Times New Roman', 'Noto Serif', serif; letter-spacing: .4px; text-transform: uppercase; border-top: 3px solid #c6402d; padding-top: 6px; }
+.art-rub em { background: #1d1713; color: #f1e6cd; }
+.art-rub i { color: #6a5f50; text-transform: none; letter-spacing: 0; }
+.art-item h3 { font: 700 22px/1.12 Georgia, 'Times New Roman', 'Noto Serif', serif; letter-spacing: -.3px; }
+.art-body p, .art-learn, .art-lulu .brief { font-family: Georgia, 'Times New Roman', 'Noto Serif', serif; }
+.art-pic, .actu-pages .art-pic { height: auto; margin: 0 0 10px; border: 2px solid #1d1713; background: #fff; }
+.art-pic svg { height: auto; }
+.art-pic .case > rect:last-child { display: none; }
+.art-face { box-shadow: 0 0 0 2px #1d1713; }
+.art-more { border-color: #1d1713; color: #1d1713; background: transparent; }
+.art-rule { background: #1d1713; color: #f1e6cd; }
+@media (min-width: 1024px) {
+  #paper-inside .pages-in { max-width: 720px; margin: 0 auto; }
+}
+.media-pick .pick-i.media-pic { width: 100%; height: auto; min-width: 0; flex: none; background: none; border: 0; border-radius: 0; }
+.media-pick .pick-i.media-pic .bd-case { width: 100%; height: auto; }
