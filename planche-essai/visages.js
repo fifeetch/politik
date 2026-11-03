@@ -308,6 +308,12 @@
     'Louis Alibi': { q: 4, m: 2, age: 2, sc: '#5d5c54', se: 5.6, si: 1, ouv: .92, nl: 2, nb: 1, ga: 22, dr: 20, bf: 'sourit', cravate: '#1f2a55', coiffure: C('dense', GRIS) },
     /* Laure Lavande : la quarantaine, longs cheveux blonds */
     'Laure Lavande': { femme: 1, c: -1, age: 0, sc: '#8a6a2a', se: 3.6, sb: 3, oe: 1.06, nez: 'pointu', nl: -1, ga: 19, dr: 18, bf: 'pleine', levres: '#c9806e', habit: '#1f2a55', habitO: '#151d3d', chemise: PAL.blanc, sansOreille: true, coiffure: L(232, BLOND2, true) }
+    ,
+    /* --- Lutte Obstinée --- */
+    /* Jean-Pierre Merguez : plus de cinquante ans, cheveux blancs ras, barbe blanche, sans cravate */
+    'Jean-Pierre Merguez': { m: 1, age: 2, sc: '#8d8c82', se: 5.4, broussaille: 1, oe: .96, nez: 'rond', nl: 1, ga: 20, dr: 19, barbe: barbe('#d8d5c8', { h: 182, stries: '#8d8c82' }), habit: '#5a4a3a', habitO: '#42362a', chemise: '#c9c5b4', coiffure: C('ras', BLANC) },
+    /* Arlette Lagrève : plus de quatre-vingts ans, cheveux blancs au carré court, visage marqué */
+    'Arlette Lagrève': { femme: 1, m: -3, c: 2, age: 3, sc: '#8d8c82', se: 3.6, sb: 3, oe: .96, nez: 'pointu', nl: 3, ga: 18, dr: 17, bf: 'mince', levres: '#b98a7c', habit: '#7a1e24', habitO: '#5a1419', sansOreille: true, coiffure: L(176, BLANC) }
     /*SUITE*/
   };
   Object.keys(FICHES).forEach(function (nom) { NOMS[nom] = nom; ajoute(nom, FICHES[nom]); });
