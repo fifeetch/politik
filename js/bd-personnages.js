@@ -1,4 +1,4 @@
-/* Planche d'essai — les personnages, en ligne claire. Dessinés à la main en tracés SVG, trois quarts face.
+/* Politik — les personnages en ligne claire, repris par js/art.js et par planche-essai/. Dessinés à la main en tracés SVG, trois quarts face.
    Tête : repère local d'environ 200 × 260, regard vers la droite. Trait : 2,6 pour les contours, 1,5 pour les détails.
    Expressions : assure, colere, inquiet, parle, neutre. Personnalités inventées, d'après js/people.js. */
 (function (root) {

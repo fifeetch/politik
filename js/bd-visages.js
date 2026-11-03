@@ -1,4 +1,4 @@
-/* Planche d'essai — les autres personnalités, sur la même construction que personnages.js : même trait, même buste.
+/* Politik — les autres personnalités, sur la même construction que bd-personnages.js : même trait, même buste.
    Chaque fiche ne donne que ce qui la distingue. Noms parodiques de js/people.js.
    Visage : r pommettes, m mâchoire, q mâchoire carrée, c longueur du menton, w largeur du menton, fossette, creux, age 0 à 3.
    Yeux : ec écart, oe taille, ouv ouverture, incl pente (positive : tombants), paup paupière lourde, poches.
@@ -297,7 +297,7 @@
     /* David Lissé : la cinquantaine, cheveux foncés bien peignés, sourire */
     'David Lissé': { m: 1, age: 1, sc: '#26201c', se: 5, oe: 1.02, nl: 1, ga: 21, dr: 20, bf: 'sourit', cravate: '#3f5f8a', coiffure: C('raie', NOIR) },
     /* Rachida Dorures : la cinquantaine passée, longs cheveux noirs, teint mat, veste noire */
-    'Rachida Dorures': { femme: 1, teint: 2, r: 2, age: 1, sc: '#191513', se: 4.6, sb: 5, oe: 1.1, nl: 0, ga: 21, dr: 20, bf: 'pleine', levres: '#a4503f', habit: '#1f1f2a', habitO: '#14141c', chemise: PAL.blanc, collier: PAL.ocre, boucle: PAL.ocre, sansOreille: true, coiffure: L(226, NOIR) }
+    'Rachida Dorures': { femme: 1, teint: 1, r: 2, age: 1, sc: '#191513', se: 4.6, sb: 5, oe: 1.1, nl: 0, ga: 21, dr: 20, bf: 'pleine', levres: '#a4503f', habit: '#1f1f2a', habitO: '#14141c', chemise: PAL.blanc, collier: PAL.ocre, boucle: PAL.ocre, sansOreille: true, coiffure: L(226, NOIR) }
     ,
     /* --- Rassemblement Nostalgique --- */
     /* Sébastien Chenille : la cinquantaine, dégarni, lunettes carrées */
@@ -313,7 +313,7 @@
     /* Jean-Pierre Merguez : plus de cinquante ans, cheveux blancs ras, barbe blanche, sans cravate */
     'Jean-Pierre Merguez': { m: 1, age: 2, sc: '#8d8c82', se: 5.4, broussaille: 1, oe: .96, nez: 'rond', nl: 1, ga: 20, dr: 19, barbe: barbe('#d8d5c8', { h: 182, stries: '#8d8c82' }), habit: '#5a4a3a', habitO: '#42362a', chemise: '#c9c5b4', coiffure: C('ras', BLANC) },
     /* Arlette Lagrève : plus de quatre-vingts ans, cheveux blancs au carré court, visage marqué */
-    'Arlette Lagrève': { femme: 1, m: -3, c: 2, age: 3, sc: '#8d8c82', se: 3.6, sb: 3, oe: .96, nez: 'pointu', nl: 3, ga: 18, dr: 17, bf: 'mince', levres: '#b98a7c', habit: '#7a1e24', habitO: '#5a1419', sansOreille: true, coiffure: L(176, BLANC) }
+    'Arlette Lagrève': { femme: 1, m: -3, c: 2, age: 3, sc: '#8d8c82', se: 3.6, sb: 3, oe: .96, nez: 'pointu', nl: 3, ga: 18, dr: 17, bf: 'mince', levres: '#b98a7c', habit: '#7a1e24', habitO: '#5a1419', coiffure: C('courtF', BLANC) }
     ,
     /* --- Le Parti Camarade Français --- */
     /* André Chasse-neige : plus de soixante-dix ans, dégarni, barbe blanche, visage large */
