@@ -127,6 +127,29 @@
     inner += q.s;
     return svg(W, h + 54, nomStation + ', la matinale. Question : ' + question, inner);
   }
+  /* Le plateau d'interview : le 13 h (la journaliste) ou le 20 h (le présentateur), la question, l'invité */
+  function tele(id, nomChaine, question, vingt) {
+    var sg = 76, b = bulle(question, 16, sg + 18, W - 32, 25, [0, 0]), hautT = b.bas + 26, s0 = .74, h = hautT + 236;
+    var q = bulle(question, 16, sg + 18, W - 32, 25, [190, hautT + 40]);
+    var inner = fondPlateau(h + 54);
+    inner += R.rect(14, 12, 360, sg - 14, PAL.blanc, 2.6) + plaque(nomChaine, 194, 26, 330, 28, PAL.rouge);
+    inner += R.rect(390, 12, 236, sg - 14, '#3b1712', 3) + R.af(398, 20, 220, sg - 30, PAL.rouge) + L.ligne('EN DIRECT', 508, 30, 24, { ancre: 'm', encre: '#fff3cf', gras: true, graine: 6 });
+    inner += buste(vingt ? 'matinalier' : 'journaliste', 'parle', 150, hautT, s0, false) + buste(id, 'neutre', W - 160, hautT, s0, true);
+    inner += p('M-4,' + (h - 2) + ' H' + (W + 4) + ' V' + (h + 60) + ' H-4 Z', '#8d2a20', 3);
+    inner += q.s;
+    return svg(W, h + 54, nomChaine + '. Question : ' + question, inner);
+  }
+  /* La vignette du menu Médias : le lieu, le journaliste et l'invité, sans bulle */
+  function mediaCase(kind, id) {
+    var radio = kind === 'matinale', hautT = 66, s0 = .66, h = hautT + 214;
+    var titre = radio ? 'LA MATINALE' : kind === 'vingt' ? 'LE 20 H' : 'LE 13 H';
+    var inner = fond(radio ? 'studio' : '', h + 30);
+    inner += R.rect(14, 10, 300, 46, PAL.blanc, 2.6) + plaque(titre, 164, 18, 280, 26, PAL.rouge);
+    inner += R.rect(410, 10, 216, 46, '#3b1712', 3) + R.af(417, 17, 202, 32, PAL.rouge) + L.ligne(radio ? 'À L’ANTENNE' : 'EN DIRECT', 518, 22, 21, { ancre: 'm', encre: '#fff3cf', gras: true, graine: 6 });
+    inner += buste(radio || kind === 'vingt' ? 'matinalier' : 'journaliste', 'parle', 150, hautT, s0, false, { casque: radio }) + buste(id, 'assure', W - 160, hautT, s0, true, { casque: radio });
+    inner += p('M-4,' + (h - 2) + ' H' + (W + 4) + ' V' + (h + 36) + ' H-4 Z', radio ? R.VERT_TABLE : '#8d2a20', 3);
+    return svg(W, h + 30, titre, inner);
+  }
 
   /* ---------- Les images de la une ---------- */
   var UNE = {
@@ -457,5 +480,5 @@
   function aUne(nom) { return !!UNE[nom]; }
   function une(nom) { return UNE[nom] ? UNE[nom]() : ''; }
 
-  root.PolitikBD = { grosPlan: grosPlan, faceAFace: faceAFace, plateau: plateau, studio: studio, aUne: aUne, une: une, LIEUX: LIEUX, depuisVisage: V.depuisVisage, NOMS: V.NOMS };
+  root.PolitikBD = { grosPlan: grosPlan, faceAFace: faceAFace, plateau: plateau, studio: studio, tele: tele, mediaCase: mediaCase, aUne: aUne, une: une, LIEUX: LIEUX, depuisVisage: V.depuisVisage, NOMS: V.NOMS };
 })(this);
