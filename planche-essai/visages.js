@@ -324,6 +324,16 @@
     'Stéphane Peuple': { m: 2, age: 2, sc: '#5d5c54', se: 5, oe: .96, nl: 1, ga: 20, dr: 19, bf: 'tombe', barbe: barbe('#a8a79c', { h: 184, stries: '#5d5c54' }), habit: '#5a3a3a', habitO: '#42292a', coiffure: C('ras', GRIS) },
     /* Léon Défilé : la vingtaine ou la trentaine, châtain, visage jeune */
     'Léon Défilé': { c: -3, sc: '#513623', se: 4.6, sb: 2, oe: 1.1, ouv: 1.06, nl: -4, ga: 20, dr: 19, bf: 'sourit', cravate: '#7a1e24', l: .92, coiffure: C('raie', CHATAIN) }
+    ,
+    /* --- Mollesse Démocrate --- */
+    /* Marc Fermier : la cinquantaine, poivre et sel, lunettes carrées */
+    'Marc Fermier': { m: 2, age: 2, sc: '#3f3c38', se: 5, oe: .96, nl: 1, nw: 2, ga: 20, dr: 19, bf: 'sourit', cravate: '#e1663a', lunettes: lunettes('carrees'), coiffure: C('arriere', SEL) },
+    /* Jean-Noël Barrage : la quarantaine, brun, mince, visage long */
+    'Jean-Noël Barrage': { m: -4, c: 5, sc: '#26201c', se: 4.6, sb: 2, oe: 1, nez: 'pointu', nl: 4, ga: 18, dr: 17, bf: 'sourit', cravate: '#26305a', l: .92, coiffure: C('raie', BRUN) },
+    /* Geneviève Discrète : plus de soixante ans, blonde, coupe courte */
+    'Geneviève Discrète': { femme: 1, r: 1, age: 2, sc: '#8a6a2a', se: 3.4, sb: 3, oe: 1, nl: 0, ga: 19, dr: 18, bf: 'sourit', levres: '#c48a78', habit: '#26305a', habitO: '#1a2244', chemise: PAL.blanc, coiffure: C('courtF', BLOND2) },
+    /* Jean-Louis Bourdonnant : plus de soixante-dix ans, dégarni, cheveux blancs, lunettes rondes */
+    'Jean-Louis Bourdonnant': { c: 4, m: -1, age: 3, sc: '#8d8c82', se: 4.6, sb: -2, paup: 1, oe: .94, nez: 'busque', nl: 6, ga: 19, dr: 17, by: 3, bf: 'tombe', cravate: '#26305a', lunettes: lunettes('rondes'), coiffure: K(BLANC) }
     /*SUITE*/
   };
   Object.keys(FICHES).forEach(function (nom) { NOMS[nom] = nom; ajoute(nom, FICHES[nom]); });
