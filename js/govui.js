@@ -34,7 +34,7 @@
       var st = stances ? stances[id] : null, n = seats[id], f = st && st.frondeurs ? st.frondeurs : 0;
       for (var k = 0; k < n; k++) {
         var c = party(id).color, op = 1;
-        if (st) { var s2 = k < f ? 'abst' : st.stance; op = s2 === 'pour' ? 1 : s2 === 'abst' ? 0.22 : 1; if (s2 === 'contre') c = '#23203A'; }
+        if (st) { var s2 = k < f ? 'abst' : st.stance; op = s2 === 'pour' ? 1 : s2 === 'abst' ? 0.22 : 1; if (s2 === 'contre') c = '#1d1713'; }
         colors.push({ c: c, op: op });
       }
     });
@@ -441,7 +441,7 @@
     var shown = {};
     $('lg-hemi').innerHTML = '<svg viewBox="0 0 200 110" aria-label="Hémicycle de l\'Assemblée nationale">' + layout.map(function (pt) {
       var on = pt.pid && (shown[pt.pid] = (shown[pt.pid] || 0)) < (e1[pt.pid] || 0); if (on) shown[pt.pid]++;
-      return '<circle cx="' + pt.x.toFixed(1) + '" cy="' + pt.y.toFixed(1) + '" r="2.3" fill="' + (on ? party(pt.pid).color : '#3A3560') + '"/>';
+      return '<circle cx="' + pt.x.toFixed(1) + '" cy="' + pt.y.toFixed(1) + '" r="2.3" fill="' + (on ? party(pt.pid).color : '#4a3f33') + '"/>';
     }).join('') + '<text x="100" y="100" text-anchor="middle" class="hemi-n">' + n1 + '</text><text x="100" y="108" text-anchor="middle" class="hemi-l">élus dès ce soir</text></svg>';
     var F = s.focus || 'pres', camp1 = 0; s.circs.forEach(function (c) { if (c.status === 'elu1' && c.c1[0].u === F) camp1++; });
     $('lg-camp').innerHTML = campBar(camp1);
@@ -478,7 +478,7 @@
     $('lg-kicker').textContent = (o.dissolution ? 'Législatives anticipées' : 'Juin · Élections législatives') + ' · 2nd tour';
     $('lg-title').textContent = 'L\'Assemblée se remplit';
     $('lg-hemi').innerHTML = '<svg viewBox="0 0 200 110" aria-label="Hémicycle de l\'Assemblée nationale">' + layout.map(function (pt, i) {
-      return '<circle id="lgd' + i + '" cx="' + pt.x.toFixed(1) + '" cy="' + pt.y.toFixed(1) + '" r="2.3" fill="#3A3560"/>';
+      return '<circle id="lgd' + i + '" cx="' + pt.x.toFixed(1) + '" cy="' + pt.y.toFixed(1) + '" r="2.3" fill="#4a3f33"/>';
     }).join('') + '<text x="100" y="100" text-anchor="middle" class="hemi-n" id="lg-n">0</text><text x="100" y="108" text-anchor="middle" class="hemi-l">députés élus</text></svg>';
     $('lg-camp').innerHTML = campBar(0);
     function seat(pid, n) {

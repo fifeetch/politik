@@ -89,7 +89,7 @@
     var g = mk('g', { class: 'pawn', transform: 'translate(' + x + ',' + y + ')' });
     g.appendChild(mk('ellipse', { cx: 0, cy: 1, rx: 7, ry: 2.6, class: 'pawn-shadow' }));
     var body = mk('g', { class: 'pawn-body' });
-    body.appendChild(mk('path', { d: 'M-5,-6 L0,0 L5,-6 Z', fill: color || '#23203A', class: 'pawn-tip' }));
+    body.appendChild(mk('path', { d: 'M-5,-6 L0,0 L5,-6 Z', fill: color || '#1d1713', class: 'pawn-tip' }));
     var img = mk('svg', { x: -PAWN / 2, y: -PAWN - 4, width: PAWN, height: PAWN, viewBox: '0 0 120 120' });
     // le portrait dessiné dans art.js : on garde seulement l'intérieur de son <svg>
     img.innerHTML = String(portraitSvg || '').replace(/^<svg[^>]*>/, '').replace(/<\/svg>\s*$/, '');
