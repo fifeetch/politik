@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Planche d'essai — Politik</title>
+<link rel="icon" href="data:,">
+<style>
+  @font-face { font-family: 'Anybody'; src: url(../fonts/anybody.woff2) format('woff2-variations'); font-weight: 100 900; font-stretch: 50% 150%; font-display: swap; }
+  @font-face { font-family: 'Atkinson'; src: url(../fonts/atkinson-400.woff2) format('woff2'); font-weight: 400; font-display: swap; }
+  @font-face { font-family: 'Atkinson'; src: url(../fonts/atkinson-700.woff2) format('woff2'); font-weight: 700; font-display: swap; }
+  :root { --papier: #f4e8cf; --encre: #1d1713; --rouge: #c6402d; --gris: #6a5f50; --filet: #1d1713; --gazette: #f1e6cd; --serif: Georgia, 'Times New Roman', 'Noto Serif', serif; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--papier); color: var(--encre); font-family: 'Atkinson', system-ui, sans-serif; font-size: 17px; line-height: 1.45; }
+  .page { max-width: 1180px; margin: 0 auto; padding: 28px 24px 60px; }
+  header h1 { font-family: 'Anybody', sans-serif; font-weight: 900; font-stretch: 120%; font-size: clamp(34px, 7vw, 64px); line-height: .95; margin: 0 0 10px; letter-spacing: -1px; }
+  header p { margin: 0; max-width: 62ch; }
+  section { margin-top: 44px; }
+  h2 { font-family: 'Anybody', sans-serif; font-weight: 800; font-stretch: 100%; font-size: clamp(22px, 4vw, 30px); margin: 0 0 14px; padding-top: 10px; border-top: 4px solid var(--encre); line-height: 1.05; }
+  h2 small { font-family: 'Atkinson', sans-serif; font-weight: 400; font-size: 16px; display: block; margin-top: 4px; color: var(--gris); }
+  svg.case { display: block; width: 100%; height: auto; background: #fff; }
+  .planche { display: grid; gap: 10px; }
+  .planche .large { grid-column: 1 / -1; }
+  .deux { grid-template-columns: 1fr 1fr; }
+  .trois { grid-template-columns: repeat(3, 1fr); }
+  .quatre { grid-template-columns: repeat(4, 1fr); }
+  figure { margin: 0; }
+  figcaption { font-size: 15px; padding-top: 6px; line-height: 1.3; }
+  figcaption b { display: block; font-size: 17px; }
+  figcaption span { color: var(--gris); }
+  .cart-tel { display: none; }
+  h3 { font-family: 'Anybody', sans-serif; font-weight: 800; font-size: 19px; margin: 22px 0 8px; }
+
+  .avant { display: grid; grid-template-columns: 120px 1fr; gap: 14px; align-items: center; margin-top: 22px; padding: 12px; border: 2px dashed var(--gris); }
+  .avant svg { width: 120px; height: 120px; display: block; }
+  .avant p { margin: 0; font-size: 15px; }
+  .etiquette { font-family: 'Anybody', sans-serif; font-weight: 800; font-size: 13px; letter-spacing: .5px; text-transform: uppercase; }
+
+  /* la une */
+  .comparaison { display: grid; grid-template-columns: 300px 1fr; gap: 26px; align-items: start; }
+  .comparaison img { display: block; width: 100%; height: auto; border: 2px solid var(--encre); }
+  .gazette { background: var(--gazette); padding: 22px 26px 26px; border: 1px solid #b9a988; box-shadow: 0 2px 0 #b9a988; font-family: var(--serif); }
+  .g-tete { display: flex; justify-content: space-between; align-items: end; gap: 12px; font-size: 13px; border-bottom: 1px solid var(--filet); padding-bottom: 6px; }
+  .g-nom { text-align: center; font-family: var(--serif); font-weight: 700; font-size: clamp(30px, 5.5vw, 62px); line-height: 1; letter-spacing: -1px; padding: 10px 0 8px; border-bottom: 4px double var(--filet); }
+  .g-ligne { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 13px; padding: 5px 0; border-bottom: 1px solid var(--filet); }
+  .g-titre { font-family: var(--serif); font-weight: 700; font-size: clamp(38px, 8.4vw, 86px); line-height: .98; letter-spacing: -1.5px; margin: 14px 0 6px; text-align: center; }
+  .g-chapeau { font-size: clamp(18px, 2.4vw, 24px); font-style: italic; text-align: center; margin: 0 0 14px; line-height: 1.2; }
+  .g-legende { font-size: 13px; font-style: italic; margin: 6px 0 12px; }
+  .g-cols { display: grid; grid-template-columns: 1.15fr 1fr 1fr; gap: 0; border-top: 1px solid var(--filet); padding-top: 10px; }
+  .g-cols article { padding: 0 14px; border-left: 1px solid var(--filet); font-size: 15px; line-height: 1.34; text-align: justify; hyphens: auto; }
+  .g-cols article:first-child { padding-left: 0; border-left: 0; }
+  .g-cols article:last-child { padding-right: 0; }
+  .g-rub { font-family: 'Anybody', sans-serif; font-weight: 800; font-size: 12px; letter-spacing: .6px; text-transform: uppercase; color: var(--rouge); }
+  .g-cols h4 { font-family: var(--serif); font-weight: 700; font-size: 21px; line-height: 1.08; margin: 2px 0 6px; text-align: left; hyphens: none; }
+  .g-cols p { margin: 0 0 8px; }
+  .g-encadre { border: 2px solid var(--encre); padding: 8px 10px; margin-top: 10px; }
+  .g-encadre h4 { font-size: 18px; }
+  .g-barre { display: grid; grid-template-columns: 76px 1fr 34px; gap: 6px; align-items: center; font-size: 13px; margin: 4px 0; }
+  .g-barre i { display: block; height: 11px; border: 1.5px solid var(--encre); }
+  footer { margin-top: 40px; padding-top: 10px; border-top: 4px solid var(--encre); font-size: 14px; color: var(--gris); }
+
+  @media (max-width: 760px) {
+    .page { padding: 18px 12px 40px; }
+    .cart-large { display: none; }
+    .cart-tel { display: block; width: 100%; height: auto; margin-bottom: 6px; }
+    .deux, .trois, .quatre { grid-template-columns: 1fr; }
+    .expressions { grid-template-columns: 1fr 1fr; }
+    .expressions figure:first-child { grid-column: 1 / -1; }
+    .comparaison { grid-template-columns: 1fr; }
+    .comparaison figure.avant-jeu { max-width: 240px; }
+    .gazette { padding: 14px 14px 18px; }
+    .g-cols { grid-template-columns: 1fr; }
+    .g-cols article { padding: 10px 0 8px; border-left: 0; border-top: 1px solid var(--filet); }
+    .g-cols article:first-child { padding-top: 0; border-top: 0; }
+    .g-tete span:last-child { text-align: right; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <h1>Planche d'essai</h1>
+    <p>Quatre exemples de ce que <b>Politik</b> pourrait devenir en bande dessinée ligne claire : la France politique d'aujourd'hui, dessinée comme un album des années 50. Tout est tracé à la main, en SVG, dans le dépôt. Rien de tout ça n'est encore dans le jeu.</p>
+  </header>
+
+  <section>
+    <h2>1. Les personnages <small>Personnalités inventées du jeu, chacune avec sa silhouette</small></h2>
+    <h3>Jean-Lutte Mégaphone, trois expressions</h3>
+    <div class="planche trois expressions" id="expressions"></div>
+    <h3>Quatre autres partis</h3>
+    <div class="planche quatre" id="galerie"></div>
+    <div class="avant" id="avant-portrait"></div>
+  </section>
+
+  <section>
+    <h2>2. Le débat télévisé <small>L'entre-deux-tours, plateau complet puis gros plans</small></h2>
+    <div class="planche deux" id="debat"></div>
+  </section>
+
+  <section>
+    <h2>3. La radio <small>La matinale, l'invitée en difficulté</small></h2>
+    <div class="planche deux" id="radio"></div>
+  </section>
+
+  <section>
+    <h2>4. Le journal <small>Mêmes titres et même journal que le jeu : à gauche ce qu'il affiche aujourd'hui, à droite ce que ça pourrait donner</small></h2>
+    <div class="comparaison">
+      <figure class="avant-jeu">
+        <img src="captures/jeu-actuel-journal-390.png" width="390" height="844" alt="Capture du jeu aujourd'hui : une écran rouge et noir avec le mot Grève en très grand et trois titres.">
+        <figcaption><span class="etiquette">Aujourd'hui dans le jeu</span><br><span>Capture de l'écran actuel, même événement.</span></figcaption>
+      </figure>
+      <div class="gazette" id="gazette">
+        <div class="g-tete"><span>Édition du matin</span><span>Campagne présidentielle, tour 3</span></div>
+        <div class="g-nom">Le Quotidien National</div>
+        <div class="g-ligne"><span>Mercredi</span><span>N° 2027</span><span>1,90 €</span></div>
+        <div class="g-titre">Grève.</div>
+        <p class="g-chapeau">Plus un train en Île-de-France : les usagers sont à bout.</p>
+        <div id="g-image"></div>
+        <p class="g-legende">Ce matin, à l'heure de pointe. Jean-Lutte Mégaphone n'avait pas prévenu la gare de sa venue. Les usagers, eux, n'avaient pas de train.</p>
+        <div class="g-cols">
+          <article>
+            <div class="g-rub">Campagne</div>
+            <h4>Jean-Lutte Mégaphone fait salle comble à Annecy</h4>
+            <p>Jean-Lutte Mégaphone était à Annecy (Auvergne-Rhône-Alpes) au milieu de militants survoltés. Il a surtout été question du prix de l'essence. « Smic à 1 600 € net, ce sera pour tout de suite ! », a promis Jean-Lutte Mégaphone.</p>
+          </article>
+          <article>
+            <div class="g-rub">Meeting</div>
+            <h4>Bingo ! Jean-Lutte Mégaphone place « 6e République », « les riches », « insoumission »</h4>
+            <p>Les militants l'attendaient, ils ont été servis : en un seul discours, Jean-Lutte Mégaphone a coché 3 cases de son bingo préféré. La salle exulte. Chez les indécis, en revanche, on a changé de chaîne.</p>
+          </article>
+          <article>
+            <div class="g-rub">Avis de recherche</div>
+            <h4>Avez-vous vu Bruno Raboteur ?</h4>
+            <p>Signalement : costume bleu, rabot à la main, dernière apparition télévisée il y a plusieurs semaines. Toute information est à transmettre au siège du parti, qui promet une récompense.</p>
+            <div class="g-encadre">
+              <div class="g-rub">Sondage</div>
+              <h4>Rass. Nostalgique en tête</h4>
+              <div class="g-barre"><span>La Pénible</span><i style="width:100%;background:#27395c"></i><b>29 %</b></div>
+              <div class="g-barre"><span>Réf. Encore</span><i style="width:48%;background:#dfa93c"></i><b>14 %</b></div>
+            </div>
+          </article>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>Planche à part, pas encore le jeu. Personnalités parodiques et inventées, tirées de <code>js/people.js</code> ; textes du journal produits par <code>js/press.js</code> (photo-légende mise à part). Noms de médias inventés.</footer>
+</div>
+
+<script src="lettrage.js"></script>
+<script src="personnages.js"></script>
+<script src="scenes.js"></script>
+<script src="../js/art.js"></script>
+<script>
+(function () {
+  var S = window.Scenes;
+  function fig(svg, titre, sous) { return '<figure>' + svg + '<figcaption><b>' + titre + '</b><span>' + sous + '</span></figcaption></figure>'; }
+  function $(id) { return document.getElementById(id); }
+
+  $('expressions').innerHTML =
+    fig(S.fiche('megaphone', 'assure', 'rue', 'Jean-Lutte Mégaphone, sûr de lui, porte-voix à la main', { geste: 'megaphone' }), 'Assuré', 'Le porte-voix prêt') +
+    fig(S.fiche('megaphone', 'colere', 'rue', 'Jean-Lutte Mégaphone en colère, poing levé', { geste: 'poing', rot: 3 }), 'En colère', 'Bouche ouverte, sourcils bas') +
+    fig(S.fiche('megaphone', 'inquiet', 'rue', 'Jean-Lutte Mégaphone inquiet, en sueur', { rot: -2 }), 'Inquiet', 'Il vient de lire le sondage');
+
+  $('galerie').innerHTML =
+    fig(S.fiche('brushing', 'assure', 'bleu', 'Jordan Brushing, selfie en main', { geste: 'selfie', rot: -2 }), 'Jordan Brushing', 'Rass. Nostalgique · le président lisse comme un selfie') +
+    fig(S.fiche('bornee', 'neutre', 'assemblee', 'Élisabeth Bornée devant l’Assemblée nationale, dossier en main', { geste: 'dossier' }), 'Élisabeth Bornée', 'Réforme Encore · l’ancienne Première ministre au 49.3') +
+    fig(S.fiche('tournesol', 'parle', 'champ', 'Marine Tournesol, tasse à la main, tournesol à la boutonnière', { geste: 'mug', rot: 2 }), 'Marine Tournesol', 'Les Enracinés · l’écolo qui suit le soleil') +
+    fig(S.fiche('rillettes', 'assure', 'usine', 'Fabien Rillettes, un verre de rouge à la main', { geste: 'verre', rot: -2 }), 'Fabien Rillettes', 'Parti Camarade · le camarade bon vivant');
+
+  $('avant-portrait').innerHTML = (window.PolitikArt ? window.PolitikArt.basePortrait('FI') : '') +
+    '<p><span class="etiquette">Aujourd’hui dans le jeu</span><br>Le portrait actuel de Jean-Lutte Mégaphone, tel que l’affiche <code>js/art.js</code>, à sa taille réelle.</p>';
+
+  $('debat').innerHTML = '<div class="large">' + S.cartDebat() + S.debatLarge() + '</div><div>' + S.debatMegaphone() + '</div><div>' + S.debatBrushing() + '</div>';
+  $('radio').innerHTML = '<div class="large">' + S.cartRadio() + S.radioLarge() + '</div><div>' + S.radioJournaliste() + '</div><div>' + S.radioInvitee() + '</div>';
+  $('g-image').innerHTML = S.imageGare();
+})();
+</script>
+</body>
+</html>
