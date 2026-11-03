@@ -14,7 +14,7 @@
   /* who : le personnage · kind : sa famille (couleur de fond) · face : une graine pour son visage */
   var CARDS = [
     { id: 'cheminots', who: 'Le syndicat des cheminots', kind: 'syndicat', text: 'Grève reconductible : plus un train ne roule. « Retirez votre réforme ou on bloque le pays. »',
-      left: { label: 'Négocier', def: 0.05, pop: 1, sat: { pi: 3 } }, right: { label: 'Tenir bon', pop: -2, sat: { pop: -3, ind: 2 }, later: { id: 'raffineries', in: 1, chance: 0.7 } } },
+      left: { label: 'Négocier', def: 0.05, pop: 1, sat: { pi: 3 } }, right: { label: 'Tenir bon', pop: -2, sat: { pop: -3, ind: 2 }, tient: 'cheminots', later: { id: 'raffineries', in: 1, chance: 0.7 } } },
     { id: 'patronat', who: 'Le patron des patrons', kind: 'patronat', text: '« Baissez nos impôts de production, sinon nos usines partiront à l\'étranger. »',
       left: { label: 'Refuser', sat: { ind: -3, cad: -1 } }, right: { label: 'Accepter', def: 0.1, pop: -1, sat: { ind: 4, cad: 2 } } },
     { id: 'boulangerie', who: 'La maire d\'un village', kind: 'elus', text: '« Notre dernière boulangerie ferme, la poste aussi. Les campagnes se sentent abandonnées. »',
@@ -24,7 +24,7 @@
     { id: 'influenceur', who: 'Un influenceur à 5 millions d\'abonnés', kind: 'medias', text: '« Une interview en faisant du karting ? Les jeunes vont adorer. »',
       left: { label: 'Refuser', sat: { sae: -1 } }, right: { label: 'Monter dans le kart', pop: 2, sat: { sae: 4 }, later: { id: 'karting', in: 1, chance: 0.5 } } },
     { id: 'infirmieres', who: 'Le collectif des infirmières', kind: 'syndicat', text: '« Une prime de nuit, ou des démissions en masse dans les hôpitaux. »',
-      left: { label: 'Accorder la prime', def: 0.06, sat: { pi: 5 } }, right: { label: 'Réorganiser sans argent', sat: { pi: -5, ret: -2 } } },
+      left: { label: 'Accorder la prime', def: 0.06, sat: { pi: 5 } }, right: { label: 'Réorganiser sans argent', sat: { pi: -5, ret: -2 }, tient: 'infirmieres' } },
     { id: 'pesticide', who: 'Le lobby agrochimique', kind: 'patronat', text: '« Repoussez l\'interdiction de notre pesticide, sinon les rendements s\'effondrent. »',
       left: { label: 'Interdire quand même', pop: 1, sat: { ind: -4, cad: 2 } }, right: { label: 'Repousser', pop: -1, sat: { ind: 4 }, later: { id: 'abeilles', in: 2, chance: 0.8 } } },
     { id: 'interieur', who: 'Ton ministre de l\'Intérieur', kind: 'gouvernement', text: '« Je veux une loi immigration bien plus dure. Sinon, je démissionne. »',
@@ -54,7 +54,7 @@
     { id: 'medecins', who: 'Un collectif de médecins', kind: 'syndicat', text: '« Ne nous obligez pas à nous installer à la campagne ! »',
       left: { label: 'Les obliger', fronde: 0.03, sat: { ind: 3, ret: 3, cad: -3 } }, right: { label: 'Les inciter par des primes', def: 0.03, sat: { ind: 1, ret: 1 } } },
     { id: 'profs', who: 'Les syndicats enseignants', kind: 'syndicat', text: '« Grève générale dans les écoles contre les classes surchargées. »',
-      left: { label: 'Recruter 5 000 profs', def: 0.05, sat: { pi: 4, pop: 1 } }, right: { label: 'Service minimum', sat: { pi: -4, ret: 1 } } },
+      left: { label: 'Recruter 5 000 profs', def: 0.05, sat: { pi: 4, pop: 1 } }, right: { label: 'Service minimum', sat: { pi: -4, ret: 1 }, tient: 'profs' } },
     { id: 'tempete', who: 'Le service de prévision météo', kind: 'etat', text: 'Une tempête historique a ravagé le littoral breton. Des milliers de toits envolés.',
       left: { label: 'Fonds d\'urgence', def: 0.04, pop: 2 }, right: { label: 'Les assurances paieront', pop: -3 } },
     { id: 'datacenter', who: 'Une géante de la tech', kind: 'patronat', text: '« Un centre d\'IA géant en France, contre une électricité à prix bradé. »',
@@ -68,7 +68,7 @@
     { id: 'allie', who: 'Le chef de ton allié', kind: 'parti', text: '« Mon parti mérite un ministère de plus. Sinon, nous quittons la majorité. »', cond: function (gv) { return (gv.allies || []).some(function (a) { return gv.seats[a] > 0; }); },
       left: { label: 'Refuser', allyLeave: true }, right: { label: 'Accepter', pop: -1, fronde: 0.05 } },
     { id: 'policiers', who: 'Les syndicats de policiers', kind: 'syndicat', text: '« Une prime, ou nous manifesterons en uniforme devant ton palais. »',
-      left: { label: 'Accorder la prime', def: 0.03, sat: { ret: 2 } }, right: { label: 'Refuser', pop: -1, sat: { ret: -2 } } },
+      left: { label: 'Accorder la prime', def: 0.03, sat: { ret: 2 } }, right: { label: 'Refuser', pop: -1, sat: { ret: -2 }, tient: 'policiers' } },
     { id: 'bassines', who: 'Les agriculteurs du Sud', kind: 'citoyens', text: '« Des réserves d\'eau géantes pour irriguer nos champs, vite ! »',
       left: { label: 'Les autoriser', sat: { ind: 4, sae: -3 } }, right: { label: 'Les refuser', sat: { ind: -4, sae: 2 } } },
     { id: 'notation', who: 'Une agence de notation', kind: 'europe', text: '« Nous nous apprêtons à dégrader la note de la France. »', cond: function (gv) { return gv.deficit > G.C.target(gv.year) + 0.5; },
@@ -81,7 +81,7 @@
   /* Les suites : elles reviennent quand la trace a été laissée */
   var FOLLOW = [
     { id: 'raffineries', who: 'Les raffineurs en grève', kind: 'syndicat', text: 'La grève s\'étend aux raffineries. Les stations-service sont à sec.', follow: true,
-      left: { label: 'Céder', def: 0.05, pop: -1, sat: { pi: 2 } }, right: { label: 'Réquisitionner', pop: -2, sat: { pop: -4 } } },
+      left: { label: 'Céder', def: 0.05, pop: -1, sat: { pi: 2 } }, right: { label: 'Réquisitionner', pop: -2, sat: { pop: -4 }, tient: 'raffineries' } },
     { id: 'bruxelles_bilan', who: 'La Commission européenne', kind: 'europe', text: '« Vous nous aviez promis des économies. Voyons voir… »', follow: true, judge: true },
     { id: 'karting', who: 'Ta conseillère numérique', kind: 'gouvernement', text: 'La vidéo du karting tourne mal : on te voit percuter un pneu en hurlant.', follow: true,
       left: { label: 'En rire', pop: 1, sat: { sae: 2 } }, right: { label: 'Faire retirer la vidéo', pop: -2 } },
@@ -128,14 +128,15 @@
     if (o.def || o.debt) t.budget = Math.abs(o.def || 0) * 20 + Math.abs(o.debt || 0) * 2;
     var p = Math.abs(o.pop || 0); Object.keys(o.sat || {}).forEach(function (k) { p += Math.abs(o.sat[k]) * 0.3; }); if (p) t.pop = p;
     if (o.fronde || o.allyLeave || o.fusible) t.assemblee = o.allyLeave ? 3 : 1.5;
-    if (o.later) t.suite = 1;
+    if (o.later || o.tient) t.suite = 1;
     Object.keys(t).forEach(function (k) { t[k] = t[k] >= 2.5 ? 'big' : 'small'; });
     return t;
   }
   /* Appliquer un choix */
   function apply(gv, c, side) {
     var o = side === 'left' ? c.left : c.right, out = { notes: [] };
-    G.applyOpt(gv, o);
+    var greve = G.applyOpt(gv, o);
+    if (greve) out.notes.push(greve);
     if (o.fronde) gv.fronde = (gv.fronde || 0) + o.fronde;
     if (o.later && gv.rng() < (o.later.chance == null ? 1 : o.later.chance)) { gv.pendingCards = gv.pendingCards || []; gv.pendingCards.push({ id: o.later.id, at: slot(gv) + o.later.in }); }
     if (o.allyLeave) {
@@ -158,7 +159,7 @@
   }
 
   /* v5.7 : l'image de chaque carte : d'abord son sujet, sinon celui qui parle */
-  var SCENE_CARTE = { raffineries: 'usine', infirmieres: 'hopital', medecins: 'hopital', pesticide: 'nature', abeilles: 'nature', bassines: 'nature', autoroute: 'nature', manif: 'police', policiers: 'police', interieur: 'police', notation: 'bourse', bruxelles: 'bourse', bruxelles_bilan: 'bourse', prix: 'caddie', tempete: 'pluie', loyers: 'ville', cantine: 'ville', profs: 'ville', boulangerie: 'ville', rip: 'meeting', rip_suite: 'meeting', datacenter: 'relance', datacenter_conso: 'relance', paparazzi: 'scandale', rancon: 'scandale', karting: 'scandale', rugby: 'fete', tour: 'fete', chat: 'fete', munitions: 'frontiere', cheminots: 'greve' };
+  var SCENE_CARTE = { cheminots: 'piquet', profs: 'manif', raffineries: 'piquet', infirmieres: 'hopital', medecins: 'hopital', pesticide: 'nature', abeilles: 'nature', bassines: 'nature', autoroute: 'nature', manif: 'manif', policiers: 'police', interieur: 'police', notation: 'bourse', bruxelles: 'bourse', bruxelles_bilan: 'bourse', prix: 'caddie', tempete: 'pluie', loyers: 'ville', cantine: 'ville', profs: 'ville', boulangerie: 'ville', rip: 'meeting', rip_suite: 'meeting', datacenter: 'relance', datacenter_conso: 'relance', paparazzi: 'scandale', rancon: 'scandale', karting: 'scandale', rugby: 'fete', tour: 'fete', chat: 'fete', munitions: 'frontiere', cheminots: 'greve' };
   var SCENE_QUI = { syndicat: 'greve', patronat: 'relance', elus: 'ville', europe: 'bourse', medias: 'tele', gouvernement: 'conseil', etat: 'police', sport: 'fete', citoyens: 'ville', parti: 'meeting', lulu: 'conseil' };
   function sceneOf(c) { return SCENE_CARTE[c.id] || SCENE_QUI[c.kind] || 'ville'; }
   var API = { sceneOf: sceneOf, CARDS: CARDS, FOLLOW: FOLLOW, BY: BY, KIND: KIND, draw: draw, judged: judged, touches: touches, apply: apply, faceOf: faceOf };

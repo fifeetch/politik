@@ -85,7 +85,8 @@ function year(S, save) {
   if (CB.canReshuffle(gv) && gv.year === 2) { var pool = CB.reshufflePool(gv); if (pool.length) CB.reshuffle(gv, 'eco', pool[0]); }
 
   S.step = 1; save('gov'); gv = S.gv; card(gv, S);
-  var ev = G.drawEvent(gv); G.applyOpt(gv, ev.opts[0]);
+  var sg = G.strikeEvent(gv); if (sg) G.applyOpt(gv, sg.opts[0]);
+  [0, 1].forEach(function (n) { var ev = G.drawEvent(gv, n); G.applyOpt(gv, ev.opts[0]); });
   var mev = gv.cabinet ? CB.event(gv) : null; if (mev) CB.applyEvent(gv, mev, mev.opts[0]);
 
   S.step = 2; save('gov'); gv = S.gv; card(gv, S);

@@ -64,7 +64,8 @@ for (var i = 0; i < N; i++) {
     if (G.canDissolve(gv) && G.popularity(gv) >= 50 && G.majorityType(gv) !== 'absolue') { G.dissolve(gv, g); sum.diss++; }
     if (gv.year === 1) G.applyFinancing(gv);
     G.drawCards(gv).forEach(function (c) { G.applyOpt(gv, pick(c.opts, gv)); });
-    var ev = G.drawEvent(gv); G.applyOpt(gv, pick(ev.opts, gv));
+    var sg = G.strikeEvent(gv); if (sg) { G.applyOpt(gv, pick(sg.opts, gv)); sum.gr = (sum.gr || 0) + 1; }
+    for (var en = 0; en < G.GREVE.parAn; en++) { var ev = G.drawEvent(gv, en); G.applyOpt(gv, pick(ev.opts, gv)); }
     if (useCab) { var me2 = CB.event(gv); if (me2) { sum.minEv = (sum.minEv || 0) + 1; CB.applyEvent(gv, me2, me2.opts[0]); } }
     var yr = G.endYear(gv), ty = traj[yr.year - 1] = traj[yr.year - 1] || { def: 0, debt: 0, pop: 0, rate: 0, charge: 0, growth: 0, chom: 0, marches: 0 };
     ty.def += yr.deficit; ty.debt += yr.debt; ty.pop += yr.pop; ty.rate += gv.eco.rate; ty.charge += gv.eco.charge; ty.growth += gv.eco.growth; ty.chom += gv.eco.unemployment; ty.marches += yr.markets ? 1 : 0;
@@ -78,6 +79,7 @@ console.log('Fin de mandat (moyennes) : déficit ' + (sum.def / N).toFixed(2) + 
 console.log('49.3 par mandat : ' + (sum.d493 / N).toFixed(2) + ' · gouvernements renversés : ' + (sum.fell / N).toFixed(2) + ' · dissolutions : ' + (sum.diss / N).toFixed(2));
 console.log('Verdicts :', JSON.stringify(ver));
 if (process.env.DETAIL) traj.forEach(function (t, y) { console.log('  an ' + (y + 1) + ' : déficit ' + (t.def / N).toFixed(2) + ' · dette ' + (t.debt / N).toFixed(1) + ' · popularité ' + (t.pop / N).toFixed(0) + ' · taux ' + (t.rate / N).toFixed(2) + ' · charge ' + (t.charge / N).toFixed(2) + ' · croissance ' + (t.growth / N).toFixed(2) + ' · chômage ' + (t.chom / N).toFixed(1) + ' · marchés ' + (100 * t.marches / N).toFixed(0) + ' %'); });
+console.log('Grèves reconduites : ' + ((sum.gr || 0) / N).toFixed(2) + ' par mandat');
 if (useCards) console.log('Cartes jouées : ' + ((sum.cards || 0) / N).toFixed(1) + ' par mandat');
 if (useLaws && strat !== 'a') console.log('Nouvelles lois de recettes : ' + ((sum.laws || 0) / N).toFixed(1) + ' présentées par mandat · ' + (100 * (sum.lawsOk || 0) / Math.max(1, sum.laws || 0)).toFixed(0) + ' % adoptées (dont ' + (100 * (sum.lawsAm || 0) / Math.max(1, sum.laws || 0)).toFixed(0) + ' % amendées) · les plus choisies : ' + Object.keys(sum.lawsBy || {}).sort(function (a, b) { return sum.lawsBy[b] - sum.lawsBy[a]; }).slice(0, 5).join(', '));
 if (useCab) console.log('Gouvernement : ' + ((sum.minEv || 0) / N).toFixed(1) + ' événements de ministres par mandat');
