@@ -2502,8 +2502,8 @@
       if (c0 === c1) return;
       changed.push(r.id); pressChanges.push({ rid: r.id, from: c0, to: c1 });
       var nm = r.id === 'cor' ? 'l\'outre-mer' : r.name;
-      if (c1) heads.push({ w: r.pts + (c1 === me || c0 === me ? 20 : 0), me: c1 === me || c0 === me, t: (c1 === me ? 'Tu prends ' : party(c1).short + ' prend ') + nm + (c0 ? (c0 === me ? ' : tu la perds' : ' à ' + party(c0).short) : '') });
-      else heads.push({ w: r.pts / 2 + (c0 === me ? 20 : 0), me: c0 === me, t: nm + ' : ' + (c0 === me ? 'tu perds' : party(c0).short + ' perd') + ' le contrôle' });
+      if (c1) heads.push({ reg: true, w: r.pts + (c1 === me || c0 === me ? 20 : 0), me: c1 === me || c0 === me, t: (c1 === me ? 'Tu prends ' : party(c1).short + ' prend ') + nm + (c0 ? (c0 === me ? ' : tu la perds' : ' à ' + party(c0).short) : '') });
+      else heads.push({ reg: true, w: r.pts / 2 + (c0 === me ? 20 : 0), me: c0 === me, t: nm + ' : ' + (c0 === me ? 'tu perds' : party(c0).short + ' perd') + ' le contrôle' });
     });
     var fails = log.filter(function (l) { return l.pid === me && !l.ok && !l.gaffe && !l.clan; });
     if (fails.length) heads.push({ w: 16, me: true, t: '❌ ' + (fails.length > 1 ? fails.length + ' de tes actions échouent' : 'Ton action « ' + fails[0].action + ' » échoue') });
@@ -2524,23 +2524,40 @@
     heads.sort(function (a, b) { return b.w - a.w; });
     var poll = E.poll(g).map(function (x) { return { pid: x.pid, pct: x.pct, d: (x.pct - (before[x.pid] || 0)) * 100 }; });
     var rank = 1 + poll.findIndex(function (x) { return x.pid === me; });
-    return { heads: heads, changed: changed, poll: poll, rank: rank, mine: poll[rank - 1] };
+    return { heads: heads, changed: changed, moves: pressChanges.slice(), poll: poll, rank: rank, mine: poll[rank - 1] };
   }
   function arrow(d) { return d >= 0.5 ? '<i class="up">▲ ' + d.toFixed(1).replace('.', ',') + '</i>' : d <= -0.5 ? '<i class="down">▼ ' + (-d).toFixed(1).replace('.', ',') + '</i>' : '<i>=</i>'; }
+  /* v5.5 : le flash, en page de journal : le titre, la carte, ce qui a changé de main, puis où tu en es */
   function tvHtml(f) {
-    var map = '<svg class="tv-map" viewBox="0 0 370 357" aria-hidden="true">' + D.REGIONS.map(function (r) {
-      var on = f.changed.indexOf(r.id) >= 0, c = g.regions[r.id].controller;
-      return '<path d="' + M.regions[r.id].d + '" class="' + (on ? 'tv-hit' : '') + '" fill="' + (on ? (c ? party(c).color : '#8E8AA8') : '#4a3f33') + '"/>';
+    var moves = f.moves || [], byReg = {}; moves.forEach(function (m) { byReg[m.rid] = m; });
+    var map = '<svg class="fl-map" viewBox="0 0 370 357" role="img" aria-label="Carte des régions qui changent de main">' + D.REGIONS.map(function (r) {
+      var m = byReg[r.id];
+      return '<path d="' + M.regions[r.id].d + '" class="' + (m ? 'on' : '') + '" fill="' + (m ? (m.to ? party(m.to).color : '#8b7a5e') : '#ddd0b0') + '"/>';
     }).join('') + '</svg>';
-    var top = f.heads[0], rest = f.heads.slice(1, 3);
-    var ticker = f.poll.map(function (x) { return '<span class="' + (x.pid === me ? 'me' : '') + '">' + (x.pid === me ? 'TOI' : esc(party(x.pid).short.toUpperCase())) + ' ' + pctFr(x.pct) + ' % ' + arrow(x.d) + '</span>'; }).join('<b>•</b>');
-    return '<div class="tv"><div class="tv-top"><span class="tv-live">● DIRECT</span><span class="tv-ch">INFO-CONTINU</span><span class="tv-clock">20:00</span></div>' +
-      '<div class="tv-studio">' + map + (f.changed.length ? '<span class="tv-count">' + f.changed.length + ' région' + (f.changed.length > 1 ? 's' : '') + '<br>bascule' + (f.changed.length > 1 ? 'nt' : '') + '</span>' : '') + '</div>' +
-      '<div class="tv-lower"><span class="tv-tag">FLASH INFO</span><span class="tv-head">' + esc(top ? top.t : 'Calme plat : aucune région ne bascule') + '</span></div>' +
-      (rest.length ? '<div class="tv-sub">' + rest.map(function (h) { return '<span>' + esc(h.t) + '</span>'; }).join('') + '</div>' : '') +
-      '<div class="tv-ticker"><div class="tv-track"><div>' + ticker + '</div><div aria-hidden="true">' + ticker + '</div></div></div></div>' +
-      '<div class="tv-me"><span>Ta position</span><b>' + ordinal(f.rank) + '</b><span>' + pctFr(f.mine.pct, 1) + ' %</span>' + arrow(f.mine.d) + '</div>' +
-      (g.led ? '<p class="bilan-mini">Tes actions <b>' + ptStr(g.led.acts[me] || 0) + '</b> · les rivaux <b>' + ptStr(g.led.riv[me] || 0) + '</b> · bilan complet en fin de tour</p>' : '');
+    var regName = function (rid) { return rid === 'cor' ? 'L\u2019outre-mer' : E.REG[rid].name; };
+    var rows = moves.map(function (m) {
+      var mine = m.to === me || m.from === me, nm = esc(regName(m.rid)), txt;
+      if (m.to === me) txt = '<b>Tu prends</b> ' + nm + (m.from ? ' à ' + esc(party(m.from).short) : '');
+      else if (m.from === me) txt = '<b>Tu perds</b> ' + nm + (m.to ? ', prise par ' + esc(party(m.to).short) : '');
+      else if (m.to) txt = esc(party(m.to).short) + ' prend ' + nm + (m.from ? ' à ' + esc(party(m.from).short) : '');
+      else txt = esc(party(m.from).short) + ' perd ' + nm;
+      return '<li class="' + (mine ? 'mine' : '') + '"><i style="background:' + (m.to ? party(m.to).color : '#8b7a5e') + '"></i><span>' + txt + '</span></li>';
+    }).join('');
+    var autres = f.heads.filter(function (h) { return !h.reg; }), top = f.heads[0];
+    var titre = top ? top.t : 'Soirée calme : aucune région ne change de main';
+    var breves = autres.filter(function (h) { return h !== top; }).slice(0, 2);
+    var liste = f.poll.slice(0, 5), moi = f.poll[f.rank - 1];
+    if (f.rank > 5) liste = liste.concat([moi]);
+    var classe = liste.map(function (x) {
+      return '<li class="' + (x.pid === me ? 'me' : '') + '"><span class="fl-r">' + (1 + f.poll.indexOf(x)) + '</span><i style="background:' + party(x.pid).color + '"></i><span class="fl-n">' + (x.pid === me ? 'Toi' : esc(party(x.pid).short)) + '</span><b>' + pctFr(x.pct, 1) + ' %</b>' + arrow(x.d) + '</li>';
+    }).join('');
+    var quali = f.rank <= 2 ? 'Tu es qualifié pour le second tour.' : 'Il faut finir dans les 2 premiers pour aller au second tour.';
+    return '<div class="fl"><div class="fl-mast"><span>Le Journal de 20 h</span></div>' +
+      '<h3 class="fl-head">' + esc(titre) + '</h3>' +
+      (breves.length ? '<ul class="fl-breves">' + breves.map(function (h) { return '<li>' + esc(h.t) + '</li>'; }).join('') + '</ul>' : '') +
+      '<div class="fl-cols"><div class="fl-carte">' + map + '</div><div class="fl-moves"><div class="fl-k">Les régions ce soir</div>' + (rows ? '<ul>' + rows + '</ul>' : '<p>Aucune région ne change de main.</p>') + '</div></div>' +
+      '<div class="fl-moi"><span class="fl-k">Ta position</span><b>' + ordinal(f.rank) + '</b><b>' + pctFr(f.mine.pct, 1) + ' %</b>' + arrow(f.mine.d) + '<p>' + quali + (g.led ? ' Ce tour : tes actions <b>' + ptStr(g.led.acts[me] || 0) + '</b>, les rivaux <b>' + ptStr(g.led.riv[me] || 0) + '</b>.' : '') + '</p></div>' +
+      '<div class="fl-k fl-k2">Le sondage</div><ol class="fl-top">' + classe + '</ol></div>';
   }
   function flashDetail(f, log) {
     var h = '';
