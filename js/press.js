@@ -225,9 +225,13 @@
   };
   /* La scène complète : ciel en dégradé, dessin, trame de points, ombre en bas pour lire le titre */
   var sceneN = 0;
+  /* le cadrage des affiches d'origine dans l'image de la une */
+  var CADRE = { caddie: '0 262 360 204', scandale: '0 290 360 204', fete: '0 100 360 204', nature: '0 300 360 204', hopital: '0 170 360 204', police: '0 290 360 204', frontiere: '0 240 360 204', chaleur: '0 90 360 204', feu: '0 220 360 204', pluie: '0 190 360 204', relance: '0 300 360 204' };
   function scene(name) {
+    var BD = window.PolitikBD;
+    if (BD && BD.aUne(name)) return BD.une(name);   // les scènes dessinées en ligne claire ; sinon, l'affiche d'origine
     var p = PAL[name] || PAL.ville, draw = SCENES[name] || SCENES.ville, n = 'u' + (++sceneN);
-    return '<svg viewBox="0 0 360 560" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><defs>' +
+    return '<svg viewBox="' + (CADRE[name] || '0 130 360 204') + '" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><defs>' +
       '<linearGradient id="' + n + 'une-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' + p[0] + '"/><stop offset=".6" stop-color="' + p[1] + '"/><stop offset="1" stop-color="' + p[2] + '"/></linearGradient>' +
       '<radialGradient id="' + n + 'smk"><stop offset="0" stop-color="' + p[2] + '" stop-opacity=".85"/><stop offset="1" stop-color="' + p[2] + '" stop-opacity="0"/></radialGradient>' +
       '<pattern id="' + n + 'une-ht" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><circle cx="3" cy="3" r="1.5" fill="' + p[2] + '" opacity=".55"/></pattern>' +
