@@ -207,6 +207,29 @@
       edu: { what: 'Limiter la déduction fiscale des intérêts quand une filiale française est très endettée auprès de son propre groupe, une technique pour déplacer les bénéfices.', pro: 'S\'attaque à l\'optimisation fiscale des multinationales.', con: 'Les multinationales s\'y opposent et peuvent réduire leurs investissements en France.' } },
     { id: 'carried_interest', name: 'Taxer davantage le « carried interest »', cost: -1, fans: { pop: 1, sae: 1, cad: -1 }, camp: 'gauche',
       edu: { what: 'Imposer comme un salaire les gains des gestionnaires de fonds quand ils ne correspondent pas à un vrai investissement à risque.', pro: 'Supprime un avantage fiscal réservé à quelques professionnels de la finance.', con: 'Risque de voir des sociétés de gestion partir à Londres, au Luxembourg ou ailleurs.' } },
+    /* v5.8 : les grandes lois, proposables pendant le mandat seulement (loiSeule). Montants : ordres de grandeur pour le jeu, pas des chiffrages. */
+    { id: 'tva3', loiSeule: true, name: 'Hausse de 3 points de TVA', cost: -30, fans: {pop:-3,ret:-2,sae:-2,pi:-1},
+      edu: { what: 'Le taux normal passe de 20 à 23 %, et les autres taux suivent.', pro: 'Rapporte vite et beaucoup, et tout le monde paie.', con: 'Fait monter les prix. Pèse d\'abord sur les ménages modestes, qui consomment tout ce qu\'ils gagnent.' } },
+    { id: 'aides_entreprises', loiSeule: true, name: 'Réduire de 15 % les aides aux entreprises', cost: -30, fans: {ind:-3,cad:-2,pop:-1},
+      edu: { what: 'Baisse générale des subventions, des exonérations et des niches accordées aux entreprises.', pro: 'L\'enveloppe est immense, et leur efficacité est souvent contestée.', con: 'Les petites entreprises peuvent en souffrir, et des emplois sont en jeu.' } },
+    { id: 'rabot_niches', loiSeule: true, name: 'Raboter toutes les niches fiscales', cost: -20, fans: {cad:-2,ind:-2,pi:-1},
+      edu: { what: 'Chaque réduction d\'impôt perd une part de sa valeur, sans choisir lesquelles.', pro: 'Élargit l\'impôt sans augmenter les taux.', con: 'Touche aussi les niches utiles : emploi à domicile, dons, rénovation.' } },
+    { id: 'allegements', loiSeule: true, name: 'Réduire les allègements de cotisations', cost: -20, fans: {ind:-3,cad:-1,pop:-1},
+      edu: { what: 'Les entreprises paient davantage de cotisations sur les salaires, surtout au-dessus du Smic.', pro: 'Ces allègements coûtent très cher à la Sécurité sociale.', con: 'Le coût du travail monte, et le chômage peut suivre.' } },
+    { id: 'impot_patrimoine', loiSeule: true, name: 'Impôt minimum sur les très grands patrimoines', cost: -20, fans: {cad:-3,ind:-1,pop:2,sae:1},
+      edu: { what: 'Un impôt plancher, chaque année, sur les patrimoines les plus élevés de France.', pro: 'Fait contribuer ceux dont l\'impôt est faible par rapport à leur fortune.', con: 'Difficile à évaluer, et l\'exil fiscal peut réduire le rendement.' } },
+    { id: 'csg1', loiSeule: true, name: 'Hausse d\'un point de la CSG pour tous', cost: -15, fans: {ret:-2,pop:-1,pi:-1},
+      edu: { what: 'Un point de plus sur les salaires, les pensions et les revenus du capital.', pro: 'Une base très large : un petit taux rapporte gros.', con: 'Baisse directement le revenu de tout le monde, retraités compris.' } },
+    { id: 'plan_ministeres', loiSeule: true, name: 'Plan d\'économies dans tous les ministères', cost: -30, fans: {pi:-3,sae:-2,pop:-2,ret:-1},
+      edu: { what: 'Tous les budgets de l\'État baissent, sauf les intérêts de la dette.', pro: 'Le signal le plus fort envoyé aux marchés et à Bruxelles.', con: 'Services publics dégradés, et une activité qui ralentit.' } },
+    { id: 'postes', loiSeule: true, name: 'Supprimer 120 000 postes de fonctionnaires', cost: -15, fans: {pi:-3,sae:-1},
+      edu: { what: 'Les départs à la retraite ne sont plus remplacés, puis les services sont réorganisés.', pro: 'Une économie durable, qui grandit chaque année.', con: 'Moins d\'agents à l\'école, à l\'hôpital et dans les services de proximité.' } },
+    { id: 'sante', loiSeule: true, name: 'Serrer les dépenses de santé', cost: -15, fans: {ret:-3,pi:-1,pop:-1},
+      edu: { what: 'Moins de remboursements, plus de franchises, et des tarifs encadrés.', pro: 'L\'assurance maladie est l\'un des premiers postes de dépenses.', con: 'Reste à charge plus élevé, et des soins parfois repoussés.' } },
+    { id: 'desindex', loiSeule: true, name: 'Geler toutes les prestations sociales un an', cost: -15, fans: {ret:-2,pop:-2,sae:-2},
+      edu: { what: 'Pensions, allocations et minima sociaux n\'augmentent pas malgré les prix.', pro: 'Effet immédiat et simple à appliquer.', con: 'Les plus modestes perdent du pouvoir d\'achat.' } },
+    { id: 'collectivites', loiSeule: true, name: 'Réduire les dotations aux collectivités', cost: -15, fans: {pi:-2,pop:-1,ind:-1},
+      edu: { what: 'L\'État verse moins aux communes, départements et régions.', pro: 'Oblige à mutualiser des dépenses locales.', con: 'Moins d\'investissements locaux, et des élus vent debout.' } },
     { id: 'cir_cut', name: 'Réduire le crédit d\'impôt recherche des grandes entreprises', cost: -2, fans: { pop: 1, cad: -1, pi: -1 }, camp: 'gauche',
       edu: { what: 'Le crédit d\'impôt recherche rembourse aux entreprises 30 % de leurs dépenses de recherche. Il coûte environ 7 milliards d\'euros par an, dont une large part va aux grands groupes. La loi réduit le taux pour les grandes entreprises, en épargnant les PME.', pro: 'Plusieurs évaluations publiques doutent de son effet sur la recherche des grands groupes : une partie serait un effet d\'aubaine.', con: 'Risque de voir des laboratoires privés partir à l\'étranger, et des emplois de chercheurs menacés.' } },
     { id: 'pay_gap_tax', name: 'Contribution sur les écarts de rémunération', cost: -1, fans: { pop: 1, sae: 1, cad: -1 }, camp: 'gauche',
@@ -342,6 +365,7 @@
     pay_gap_tax:     { src: [{ label: 'Les sociétés cotées doivent-elles communiquer le salaire de leurs dirigeants ? (ministère de l\'Économie)', url: 'https://www.economie.gouv.fr/cedef/salaire-dirigeants-entreprises-cotees', expect: 'dirigeants' }],
                        vrai: 'Depuis la loi Pacte (2019), les sociétés cotées publient le « ratio d\'équité » entre la rémunération du dirigeant et celle des salariés. Le taxer est une proposition de jeu.' }
   };
+  [['tva3', 'tvaplus'], ['aides_entreprises', 'pme'], ['rabot_niches', 'niches'], ['allegements', 'pme'], ['impot_patrimoine', 'isf'], ['csg1', 'csg'], ['plan_ministeres', 'trainvie'], ['postes', 'gelpoint'], ['sante', 'gelpensions'], ['desindex', 'gelpensions'], ['collectivites', 'trainvie']].forEach(function (x) { OFFICIAL[x[0]] = { src: OFFICIAL[x[1]].src, vrai: 'Sujet réel, mais le montant est un ordre de grandeur choisi pour le jeu, pas un chiffrage officiel.' }; });
   MEASURES.concat(FUNDING).forEach(function (m) {
     var o = OFFICIAL[m.id]; if (!o) return;
     m.src = o.src; m.vrai = o.vrai;
@@ -441,6 +465,17 @@
       trainvie:        { ramp: [0.6, 1] },
       chomage:         { ramp: [0.5, 1], lag: 1, emploi: -0.15 },
       isf:             { retour: 0.2, lag: 1 },
+      tva3: { retour: 0.2, lag: 1, prix: 1 },
+      aides_entreprises: { ramp: [0.5, 1], retour: 0.2, lag: 2, emploi: 0.1 },
+      rabot_niches: { ramp: [0.5, 1] },
+      allegements: { retour: 0.25, lag: 2, emploi: 0.15 },
+      impot_patrimoine: { ramp: [0.5, 1], retour: 0.2, lag: 2 },
+      csg1: { retour: 0.2, lag: 1 },
+      plan_ministeres: { ramp: [0.5, 1], retour: 0.25, lag: 1, emploi: 0.1 },
+      postes: { ramp: [0.3, 0.6, 1], retour: 0.15, lag: 2, emploi: 0.1 },
+      sante: { retour: 0.1, lag: 2 },
+      desindex: { retour: 0.15, lag: 1 },
+      collectivites: { ramp: [0.5, 1], retour: 0.2, lag: 1 },
       cir_cut:         { retour: 0.15, lag: 3 }
     }
   };
