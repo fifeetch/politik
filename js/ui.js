@@ -2530,7 +2530,7 @@
   function tvHtml(f) {
     var map = '<svg class="tv-map" viewBox="0 0 370 357" aria-hidden="true">' + D.REGIONS.map(function (r) {
       var on = f.changed.indexOf(r.id) >= 0, c = g.regions[r.id].controller;
-      return '<path d="' + M.regions[r.id].d + '" class="' + (on ? 'tv-hit' : '') + '" fill="' + (on ? (c ? party(c).color : '#8E8AA8') : '#3A3656') + '"/>';
+      return '<path d="' + M.regions[r.id].d + '" class="' + (on ? 'tv-hit' : '') + '" fill="' + (on ? (c ? party(c).color : '#8E8AA8') : '#4a3f33') + '"/>';
     }).join('') + '</svg>';
     var top = f.heads[0], rest = f.heads.slice(1, 3);
     var ticker = f.poll.map(function (x) { return '<span class="' + (x.pid === me ? 'me' : '') + '">' + (x.pid === me ? 'TOI' : esc(party(x.pid).short.toUpperCase())) + ' ' + pctFr(x.pct) + ' % ' + arrow(x.d) + '</span>'; }).join('<b>•</b>');
@@ -3012,7 +3012,7 @@
     var mapEl = $('night-map'); mapEl.innerHTML = '';
     var paths = {};
     D.REGIONS.forEach(function (r) {
-      var p = svg('path', { d: M.regions[r.id].d, fill: '#3A3560', stroke: '#1D1A33', 'stroke-width': 1.2, 'stroke-linejoin': 'round', class: 'night-reg' });
+      var p = svg('path', { d: M.regions[r.id].d, fill: '#4a3f33', stroke: '#1D1A33', 'stroke-width': 1.2, 'stroke-linejoin': 'round', class: 'night-reg' });
       mapEl.appendChild(p); paths[r.id] = p;
     });
     // le vainqueur d'une région, parmi les candidats encore en lice
