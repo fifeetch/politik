@@ -34,11 +34,12 @@ jobs:
         run: node test/check-audio.js
       - name: Simulation courte de la présidentielle
         run: node test/simulate.js 20
-      - name: Simulation courte du quinquennat (3 stratégies)
+      - name: Simulation courte du quinquennat (4 stratégies)
         run: |
           node test/govern-sim.js 5 a
           node test/govern-sim.js 5 b
           node test/govern-sim.js 5 c
+          node test/govern-sim.js 5 r
       - name: Simulation courte des législatives
         run: node test/legis-sim.js 10
       - name: Simulation courte de l'opposition
