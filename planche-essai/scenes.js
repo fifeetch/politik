@@ -194,7 +194,7 @@
     s += pose('brushing', 'assure', 642, 136, 1.02, { gauche: true, geste: 'paume', rot: -3 });
     s += p('M-5,566 L645,590 L645,625 L-5,625 Z', '#8d2a20', 2.6);
     s += chrono(70, 530, 156, 58, '29:47', false);
-    s += pensee(278, 112, ['SOURIRE.', 'NE RIEN RÉPONDRE.', '*ET NE PAS TOUCHER LA MÈCHE.'], 21, { vers: [352, 178], graine: 5, n: 16 });
+    s += pensee(278, 112, ['SOURIRE.', 'NE RIEN RÉPONDRE.', '*ET NE PAS TOUCHER LA MÈCHE.'], 21, { vers: [372, 240], graine: 5, n: 16 });
     return kase(640, 620, 'Jordan Brushing, souriant, ne répond pas. Il pense : « Sourire. Ne rien répondre. Et ne pas toucher la mèche. »', s);
   }
 
