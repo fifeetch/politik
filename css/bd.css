@@ -1,0 +1,46 @@
+/* Les cases dessinées dans le jeu : débat, radio, une du journal (js/bd-jeu.js) */
+.bd-case { display: block; width: 100%; height: auto; background: var(--white); border-radius: 4px; }
+.bd-info { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin: 6px 0 2px; font-size: 12px; color: var(--muted); }
+.bd-info .tvset-chip { margin-left: 0; }
+.bd-duel { display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 10px; }
+.bd-duel .duel-card { padding: 0; overflow: hidden; }
+.bd-duel .dc-h { padding: 6px 8px; }
+.bd-large { margin-bottom: 10px; }
+.bd-tel { margin-bottom: 10px; }
+@media (min-width: 761px) {
+  .bd-duel { grid-template-columns: 1fr 1fr; align-items: start; }
+  .bd-tel { display: none; }
+}
+@media (max-width: 760px) { .bd-large { display: none; } }
+
+/* la une : une vraie page de journal, sur papier */
+#paper-front.une { overflow-y: auto; -webkit-overflow-scrolling: touch; background: #f1e6cd; color: #1d1713; padding: max(10px, env(safe-area-inset-top)) 14px 10px; display: flex; flex-direction: column; gap: 6px; }
+#paper-front.une[hidden] { display: none; }
+#paper-front .une-top { position: static; display: flex; justify-content: space-between; align-items: flex-end; gap: 8px; border-bottom: 1px solid #1d1713; padding-bottom: 4px; font: 400 12px/1.2 Georgia, 'Times New Roman', 'Noto Serif', serif; }
+#paper-front .une-nom { font: 700 clamp(25px, 7.4vw, 40px)/1 Georgia, 'Times New Roman', 'Noto Serif', serif; letter-spacing: -.5px; white-space: normal; }
+#paper-front .une-date { font: 400 11.5px/1.2 Georgia, 'Times New Roman', 'Noto Serif', serif; text-align: right; text-shadow: none; flex: none; }
+#paper-front .une-word { position: static; color: #1d1713; font: 700 72px/1 Georgia, 'Times New Roman', 'Noto Serif', serif; letter-spacing: -1.5px; text-align: center; text-shadow: none; border-top: 3px double #1d1713; padding-top: 4px; flex: none; }
+#paper-front .une-sub { position: static; order: 0; margin: 0; color: #1d1713; font: italic 400 16px/1.2 Georgia, 'Times New Roman', 'Noto Serif', serif; text-align: center; text-shadow: none; flex: none; }
+#paper-front .une-pic { position: static; height: auto; aspect-ratio: 1200 / 680; flex: none; border: 2px solid #1d1713; overflow: hidden; background: #fff; }
+#paper-front .une-pic svg { display: block; width: 100%; height: 100%; }
+#paper-front .une-pic .bd-case, #paper-front .une-pic .case { background: #fff; }
+#paper-front .une-teasers { position: static; height: auto; min-height: 0; background: none; padding: 6px 0 0; border-top: 1px solid #1d1713; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; flex: none; }
+#paper-front .une-t { color: #1d1713; border-top: 3px solid #c6402d; }
+#paper-front .une-t b { font: 700 13px/1.15 Georgia, 'Times New Roman', 'Noto Serif', serif; -webkit-line-clamp: 5; }
+#paper-front .une-t small { color: #6a5f50; }
+.une-in .une-word, .une-in .une-teasers { animation: none; }
+.art-pic .case { display: block; width: 100%; height: auto; }
+#paper-front .une-pic svg { animation: none; }
+#paper-front .une-top { flex-wrap: wrap; flex: none; }
+#paper-front .une-nom { font-size: clamp(22px, 6.6vw, 38px); flex: 1 1 auto; min-width: 0; }
+#paper-front.une { justify-content: space-between; }
+#paper-front .une-pic { flex: none; }
+#paper-front .une-pic .case > rect:last-child { display: none; }
+#paper-front .une-sub { font-size: 18px; }
+#paper-front .une-t b { font-size: 15px; -webkit-line-clamp: 6; }
+#paper-front .une-t small { font-size: 12px; }
+.bd-duel .dc-line { order: 3; grid-column: 1 / -1; }
+.bd-duel .duel-card.lost { opacity: 1; }
+#paper-front .une-word { line-height: 1.22; }
+/* les jambages (g, j, p, q, y) ne doivent jamais être coupés : le mot garde sa marge basse */
+#paper-front .une-word { overflow: visible; line-height: 1.12; padding-bottom: .16em; }
