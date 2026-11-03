@@ -580,6 +580,12 @@ button { font-family: inherit; color: inherit; }
 .gauge small { font-size: 12px; color: var(--ink-2); }
 .gauge.bad { border-left-color: var(--red); background: var(--red-2); }
 .gauge.ok { border-left-color: var(--good); }
+/* b2 : la conjoncture, une ligne sous les jauges ; toute la case ouvre l'infobulle */
+.eco-strip { display: flex; flex-wrap: wrap; column-gap: var(--sp-3); row-gap: var(--sp-1); justify-content: space-between; padding-bottom: var(--sp-2); border-bottom: 1px solid var(--rule); }
+.eco-c { position: relative; display: flex; flex-direction: column; min-width: 0; font-size: var(--fs-sm); color: var(--muted); }
+.eco-c .ib-mot { position: static; white-space: nowrap; }
+.eco-c .ib-mot::after { inset: -2px; }
+.eco-c b { color: var(--ink); font-size: var(--fs-base); font-weight: var(--fw-bold); white-space: nowrap; }
 .hemi { background: var(--sheet); padding: 6px; border-radius: 14px; }
 .hemi-svg { display: block; width: 100%; max-height: 150px; }
 .hemi-svg.big { max-height: 190px; }
@@ -594,7 +600,8 @@ button { font-family: inherit; color: inherit; }
 .gov-prog { display: flex; flex-direction: column; gap: 4px; }
 .gov-prog .kicker { border-bottom: 1.5px solid var(--ink); padding-bottom: 3px; }
 .gp-row { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; padding: 2px 0; border-bottom: 1px solid var(--rule); }
-.gp-row small { white-space: nowrap; font-size: 12px; color: var(--muted); }
+.gp-row small { flex: none; max-width: 55%; text-align: right; font-size: 12px; color: var(--muted); }
+.gp-row span { min-width: 0; }
 .gp-row.adopted small { color: var(--good); font-weight: 700; }
 .gp-row.rejected { opacity: .55; }
 .gov .advisor { margin: 0; }
@@ -1583,3 +1590,11 @@ button { font-family: inherit; color: inherit; }
 .ac-more .fiche-l { display: block; }
 .mt-intro .mt-face { width: 44px; height: 44px; flex: none; display: block; border-radius: 50%; overflow: hidden; }
 .mt-face svg { width: 100%; height: 100%; display: block; }
+/* b2 : très petit téléphone (320 px) : les jauges et le gouvernement tiennent dans la largeur */
+@media (max-width: 340px) {
+  .gauges { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .gauge { padding-left: 6px; column-gap: 4px; }
+  .gauge .g-i { font-size: 16px; }
+  .gauge b { font-size: 19px; }
+  .gov-team { flex-wrap: wrap; }
+}

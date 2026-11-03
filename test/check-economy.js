@@ -83,11 +83,12 @@ gv = lab(7, { year: 2, deficit: 4.05 }); r = G.endYear(gv);   // cible 4,1 : ten
 check(!r.bruxelles && !r.markets, 'sanctions : sur la trajectoire, rien (déficit ' + r.deficit + ')');
 gv = lab(7, { year: 2, deficit: 7 }); bonus = gv.popBonus; r = G.endYear(gv);
 check(r.bruxelles && r.markets && !!r.text, 'sanctions : déficit très au-dessus, Bruxelles et les marchés');
-check(near(gv.popBonus, bonus - G.C.marketPenalty - 2), 'marketPenalty : −4 de popularité (plus l\'usure)');
+check(near(r.marketsPop, G.C.marketPenalty + G.C.marketSlide * (r.deficit - 0.1 - r.target - 1), 1e-6), 'marketPenalty : le prix grandit avec le dérapage');
+check(near(gv.popBonus, bonus - r.marketsPop - 2), 'marketPenalty : le prix du dérapage (plus l\'usure)');
 var d = r.eco.entries.deficit, dd = r.eco.entries.debt;
 check(d.causes.some(function (c) { return c.label === D.ECONOMY.labels.markets && c.value === 0.1; }), 'marketPenalty : +0,1 de déficit expliqué');
 check(dd.causes.some(function (c) { return c.label === D.ECONOMY.labels.bruxelles && c.value === 0.5; }), 'Bruxelles : +0,5 de dette expliqué');
-check(r.eco.entries.popularity.causes.some(function (c) { return c.label === D.ECONOMY.labels.markets && c.value === -G.C.marketPenalty; }), 'marketPenalty : expliqué dans la popularité');
+check(r.eco.entries.popularity.causes.some(function (c) { return c.label === D.ECONOMY.labels.markets && near(c.value, -r.marketsPop, 0.011); }), 'marketPenalty : expliqué dans la popularité');
 reportsOk(r, 'endYear sanctions');
 
 // Les mesures ponctuelles s'arrêtent après le bilan
@@ -200,6 +201,88 @@ var done = 0; while (!real.over) {
 check(done === G.C.years, 'mandat réel : 5 bilans');
 check(['reelu', 'serre', 'battu'].indexOf(G.verdict(real).verdict) >= 0, 'verdict : valeur connue');
 if (mark != null) check(game.rng.getState() === mark, 'hasard : endYear ne consomme pas le hasard du jeu');
+
+/* b2 : l'écart entre le déficit annoncé au budget et le déficit réel */
+gv = lab(7, { measures: [{ id: 'retraites', status: 'pending', amended: false }] }); G.adopt(gv, 'retraites');
+var prevu = gv.deficit, attendu = ECO.pendingRamp(gv.eco, gv.year); check(near(attendu, -m.cost / G.C.mdPerPoint * (1 - m.ramp[0]), 1e-6), 'pendingRamp : la part pas encore acquise');
+gv.announced = prevu; G.applyOpt(gv, { label: 'Carte de l\'hiver', def: 0.04 }); r = G.endYear(gv);
+var ec = r.eco.entries.ecart; check(near(r.announced, prevu) && near(ec.value, r.deficit - prevu, 0.011) && ec.level === Math.round(prevu * 100) / 100, 'écart : déficit réel moins déficit annoncé');
+check(cause(ec, D.ECONOMY.labels.montee) && near(cause(ec, D.ECONOMY.labels.montee).value, attendu, 0.011) && cause(ec, D.ECONOMY.labels.montee).ref === 'montee', 'écart : la montée en charge a sa ligne');
+check(cause(ec, D.ECONOMY.labels.afterVote) && near(cause(ec, D.ECONOMY.labels.afterVote).value, 0.04, 0.011), 'écart : une décision après le vote a sa ligne');
+check(gv.announced === null, 'écart : l\'annonce ne survit pas à l\'année');
+gv = lab(); r = G.endYear(gv); check(near(r.eco.entries.ecart.value, r.deficit - r.announced, 0.011), 'écart : sans annonce, on part du déficit de fin d\'année');
+
+/* b2 : le verdict pèse le bilan budgétaire ; ce n'est qu'un réglage de jeu, borné */
+gv = lab(); D.SEGMENTS.forEach(function (sg) { gv.sat[sg.id] = 46; }); gv.measures = [1, 2, 3, 4, 5].map(function (i) { return { id: 'x' + i, status: 'adopted' }; });
+gv.deficit = 4; check(G.verdict(gv).verdict === 'reelu' && G.verdict(gv).balance === 0, 'verdict : entre 3 et 5 %, la popularité décide');
+gv.deficit = 8; var vv = G.verdict(gv); check(vv.balance === -9 && vv.verdict === 'serre', 'verdict : un déficit de 8 % pèse dans les urnes');
+D.SEGMENTS.forEach(function (sg) { gv.sat[sg.id] = 40; }); check(G.verdict(gv).verdict === 'battu', 'verdict : une dette hors de contrôle peut coûter l\'élection');
+gv.deficit = 3; D.SEGMENTS.forEach(function (sg) { gv.sat[sg.id] = 42; }); check(G.verdict(gv).balance === G.C.verdictSound && G.verdict(gv).verdict === 'reelu', 'verdict : revenir à 3 % finit par payer');
+
+/* b2 : l'affichage. Chaque infobulle du rapport est valide, chaque renvoi mène à une infobulle qui existe, aucun chiffre cassé */
+var IB = require('../js/infobulle.js'), fs = require('fs'), ids = ECO.infoIds(), known = {};
+ids.forEach(function (id) { known[ECO.INFO_PREFIX + id] = true; });
+function bulles(rep, where) {
+  ids.forEach(function (id) {
+    check(!!rep.entries[id], where + ' : le rapport n\'a pas ' + id);
+    var b = ECO.infobulle(rep, id), err = IB.verifier(b, function (x) { return !!known[x]; });
+    check(!err.length, where + ' ' + id + ' : ' + err.join(', '));
+    check(!/NaN|undefined|null/.test(JSON.stringify(b).replace(/"[a-z]+":null/g, '')), where + ' ' + id + ' : chiffre cassé ' + JSON.stringify(b));
+    check(rep.entries[id].causes.length === 0 ? /Rien/.test(b.texte) : b.lignes.length >= rep.entries[id].causes.length, where + ' ' + id + ' : toutes les causes sont là');
+    check(IB.contenuHtml(b).indexOf('<') === 0, where + ' ' + id + ' : se dessine');
+  });
+  Object.keys(rep.entries).forEach(function (id) { rep.entries[id].causes.forEach(function (c) { if (c.ref) check(!!known[ECO.INFO_PREFIX + c.ref], where + ' ' + id + ' : renvoi sans infobulle vers ' + c.ref); }); });
+}
+gv = lab(7, { measures: [{ id: 'retraites', status: 'pending', amended: false }, { id: 'reindus', status: 'pending', amended: false }] }); G.adopt(gv, 'retraites'); G.adopt(gv, 'reindus');
+for (y = 0; y < 5; y++) { r = G.endYear(gv); bulles(r.eco, 'mandat ' + y); }
+gv = lab(5); gv.deficit = 9; r = G.endYear(gv); bulles(r.eco, 'crise');
+var nul = ECO.infobulle(null, 'growth'); check(nul.titre === D.ECONOMY.labels.growth && !!nul.texte, 'infobulle : avant le premier bilan, un texte d\'attente');
+check(!IB.verifier(ECO.infobulle(null, 'sat.ind')).length, 'infobulle : avant le premier bilan, jamais de titre vide');
+// Les renvois d'infobulle permettent de remonter : de la charge au taux, du taux à l'inflation
+var bc = ECO.infobulle(r.eco, 'debtCharge'), br = ECO.infobulle(r.eco, 'rate');
+check(bc.lignes.some(function (l) { return l.renvoi === 'eco-rate'; }) && br.lignes.some(function (l) { return l.renvoi === 'eco-inflation'; }), 'infobulle : on remonte d\'une cause à l\'autre');
+// Dans l'écran : chaque mot marqué existe, chaque constante lue existe (le chiffre « debtDrift » disparu affichait NaN)
+var src = fs.readFileSync(__dirname + '/../js/govui.js', 'utf8'), defs = {};
+new Function(src);   // une faute de syntaxe ici laisserait l'écran du mandat vide
+(src.match(/'(gov-[a-z]+)':/g) || []).forEach(function (x) { defs[x.slice(1, -2)] = true; });
+(src.match(/IB\.mot\('(gov-[a-z]+)'/g) || []).concat(src.match(/\[\[(gov-[a-z]+)/g) || []).forEach(function (x) { var id = x.match(/gov-[a-z]+/)[0]; check(defs[id], 'écran : infobulle inconnue ' + id); });
+(src.match(/(?:IB\.mot\('|id: '|\[\[)eco-[A-Za-z.]+/g) || []).forEach(function (x) { var id = x.match(/eco-[A-Za-z.]+/)[0]; check(known[id], 'écran : infobulle inconnue ' + id); });
+(src.match(/\bG\.C\.[A-Za-z0-9]+/g) || []).forEach(function (x) { check(G.C[x.slice(4)] != null, 'écran : constante inconnue ' + x); });
+check(src.indexOf("ecoStrip()") > 0 && /id="gov-eco"/.test(fs.readFileSync(__dirname + '/../index.html', 'utf8')), 'écran : la ligne de conjoncture est branchée');
+// Une mesure progressive l'annonce au moment du choix
+check(/rampTxt\(M\)/.test(src) && /gapLine\(r\)/.test(src), 'écran : montée en charge au choix de la mesure, écart au bilan');
+
+/* 10 bis. Un niveau négatif garde son signe : récession, excédent budgétaire */
+var MOINS = '−';
+function entree(id, v, kind, level) { return { id: id, label: id, unit: '%', kind: kind || 'niveau', value: v, level: level, causes: [] }; }
+function niveau(id, v) { var en = {}; en[id] = entree(id, v); return ECO.infobulle({ entries: en }, id).valeur; }
+check(niveau('growth', -0.34) === MOINS + '0,3 %', 'signe : croissance négative ' + niveau('growth', -0.34));
+check(niveau('growth', 0.34) === '0,3 %', 'signe : croissance positive ' + niveau('growth', 0.34));
+check(niveau('growth', -0.04) === '0,0 %', 'signe : pas de « moins zéro » ' + niveau('growth', -0.04));
+var surplus = lab(7, { deficit: -2 }), rSurplus = G.endYear(surplus), deci = function (x) { return MOINS + Math.abs(x).toFixed(1).replace('.', ',') + ' %'; };
+check(rSurplus.deficit < 0, 'signe : le mandat de laboratoire finit en excédent ' + rSurplus.deficit);
+check(ECO.infobulle(rSurplus.eco, 'deficit').valeur === deci(rSurplus.deficit), "signe : excédent dans l'infobulle du déficit " + ECO.infobulle(rSurplus.eco, 'deficit').valeur);
+var ibEcart = ECO.infobulle(rSurplus.eco, 'ecart');
+check(ibEcart.lignes[0].texte === D.ECONOMY.labels.ecartFrom && ibEcart.lignes[0].valeur === deci(rSurplus.announced), 'signe : excédent annoncé au vote du budget ' + JSON.stringify(ibEcart.lignes[0]));
+check(['+', MOINS].indexOf(ibEcart.valeur.charAt(0)) >= 0 || ibEcart.valeur.indexOf('0,00') === 0, "signe : l'écart garde le sien " + ibEcart.valeur);
+// Une vraie récession, tirée par le modèle : une austérité brutale, 3 points de déficit en moins par an
+var recession = null; for (var sd = 1; sd < 100 && !recession; sd++) { var qr = lab(sd); for (y = 0; y < 5 && !recession; y++) { qr.deficit -= 3; var rr = G.endYear(qr); if (qr.eco.report.entries.growth.value <= -0.05) recession = rr; } }
+check(!!recession, 'signe : aucune récession trouvée en 400 graines');
+if (recession) check(ECO.infobulle(recession.eco, 'growth').valeur.charAt(0) === MOINS, 'signe : récession du modèle ' + ECO.infobulle(recession.eco, 'growth').valeur);
+// Les textes de l'écran, lus dans govui.js : ligne de conjoncture, bilan de fin d'année, écart
+function piece(nom) {   // une fonction de govui.js : sur une ligne, ou jusqu'à son accolade fermante
+  var i = src.indexOf('\n  function ' + nom + '('), fin = src.indexOf('\n', i + 1), l = src.slice(i, fin).trim();
+  check(i >= 0, 'écran : fonction introuvable ' + nom);
+  return /\}$/.test(l) ? l + '\n' : src.slice(i, src.indexOf('\n  }', i) + 4) + '\n';
+}
+var ecran = new Function('gv', 'ECO', 'IB', 'line', 'esc', piece('fr') + piece('ecoStrip') + piece('gapLine') + 'return { fr: fr, ecoStrip: ecoStrip, gapLine: gapLine };');
+var txtEcran = function (e) { return String(e).replace(/<[^>]*>/g, ''); };
+var vu = ecran({ eco: { growth: -0.34, inflation: -0.2, unemployment: 8, rate: 3, charge: 2, oneOff: 0 }, over: false, deficit: -2 }, ECO, IB, function (i, t) { return t; }, function (x) { return x; });
+check(vu.fr(-0.34, 1) === MOINS + '0,3' && vu.fr(0.34, 1) === '0,3' && vu.fr(-0.04, 1) === '0,0', 'écran : fr garde le signe ' + vu.fr(-0.34, 1) + ' ' + vu.fr(-0.04, 1));
+var bande = txtEcran(vu.ecoStrip());
+check(bande.indexOf('Croissance' + MOINS + '0,3 %') >= 0 && bande.indexOf('Inflation' + MOINS + '0,2 %') >= 0, 'écran : ligne de conjoncture ' + bande);
+var ligneEcart = txtEcran(vu.gapLine({ announced: -2, eco: { entries: { ecart: { value: -0.5, causes: [{ label: 'Cause', value: -0.5 }] } } } }));
+check(ligneEcart.indexOf('Annoncé au budget : ' + MOINS + '2,0 %') >= 0 && ligneEcart.indexOf('Écart de ' + MOINS + '0,5 pt') >= 0 && ligneEcart.indexOf('Cause (' + MOINS + '0,5)') >= 0, "écran : ligne de l'écart " + ligneEcart);
 
 /* 11. La rapidité : la conjoncture ne doit pas ralentir govern-sim */
 var t0 = Date.now(); for (var n = 0; n < 2000; n++) { var q = lab(n); for (y = 0; y < 5; y++) G.endYear(q); }
