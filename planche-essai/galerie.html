@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Galerie des visages — Politik</title>
+<link rel="icon" href="data:,">
+<style>
+  @font-face { font-family: 'Anybody'; src: url(../fonts/anybody.woff2) format('woff2-variations'); font-weight: 100 900; font-stretch: 50% 150%; font-display: swap; }
+  @font-face { font-family: 'Atkinson'; src: url(../fonts/atkinson-400.woff2) format('woff2'); font-weight: 400; font-display: swap; }
+  @font-face { font-family: 'Atkinson'; src: url(../fonts/atkinson-700.woff2) format('woff2'); font-weight: 700; font-display: swap; }
+  :root { --papier: #f4e8cf; --encre: #1d1713; --gris: #6a5f50; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--papier); color: var(--encre); font-family: 'Atkinson', system-ui, sans-serif; font-size: 17px; line-height: 1.4; }
+  .page { max-width: 1180px; margin: 0 auto; padding: 28px 24px 60px; }
+  h1 { font-family: 'Anybody', sans-serif; font-weight: 900; font-stretch: 120%; font-size: clamp(30px, 6vw, 54px); line-height: 1; margin: 0 0 10px; }
+  p { margin: 0 0 22px; max-width: 62ch; }
+  .grille { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px 18px; }
+  .perso b { display: block; font-size: 18px; margin-top: 6px; line-height: 1.15; }
+  .perso span { color: var(--gris); font-size: 15px; }
+  .vues { display: grid; grid-template-columns: 2fr 1fr; gap: 4px; }
+  .vues .petites { display: grid; grid-template-rows: 1fr 1fr; gap: 4px; }
+  svg { display: block; width: 100%; height: auto; border: 2px solid var(--encre); }
+  @media (max-width: 760px) { .page { padding: 18px 12px 40px; } .grille { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Galerie des visages</h1>
+  <p>Les 12 chefs de file : à gauche le portrait de base, à droite inquiet puis en colère. Caricatures aux noms parodiques du jeu, pas encore branchées.</p>
+  <div class="grille" id="grille"></div>
+</div>
+<script src="lettrage.js"></script>
+<script src="personnages.js"></script>
+<script src="visages.js"></script>
+<script>
+(function () {
+  var CHEFS = [
+    ['megaphone', 'Jean-Lutte Mégaphone', 'La France Indignée', '#e9c9c0'],
+    ['grandsmots', 'Raphaël Grandsmots', 'Le Parti Survivant', '#e7c3cb'],
+    ['tournesol', 'Marine Tournesol', 'Les Enracinés', '#cfe0c0'],
+    ['agite', 'Gabriel Agité', 'Réforme Encore', '#f0ddb0'],
+    ['raboteur', 'Bruno Raboteur', 'Les Rescapés', '#c6d6e4'],
+    ['lapenible', 'Marine La Pénible', 'Rassemblement Nostalgique', '#c3cbe0'],
+    ['arret', 'Nathalie Arrêtdetravail', 'Lutte Obstinée', '#e8bdb4'],
+    ['rillettes', 'Fabien Rillettes', 'Le Parti Camarade Français', '#e9c4b0'],
+    ['bientot', 'François Bientôtprésident', 'Mollesse Démocrate', '#f0e0b8'],
+    ['patience', 'Édouard Patience', 'Hors-Sol', '#c9dfe0'],
+    ['dupont', 'Nigaud Dupont-Arriéré', 'Debout La Flemme', '#d5d0e6'],
+    ['zero', 'Éric Zéronuance', 'Rétroconquête', '#d8cfc0']
+  ];
+  function vue(id, expr, fond, large) {
+    var box = large ? '30 -12 380 460' : '96 14 240 290';
+    return '<svg viewBox="' + box + '" role="img" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><rect x="30" y="-12" width="380" height="460" fill="' + fond + '"/>' + window.Perso.buste(id, expr, { s: large ? 1 : .5 }) + '</svg>';
+  }
+  document.getElementById('grille').innerHTML = CHEFS.map(function (c) {
+    return '<div class="perso"><div class="vues">' + vue(c[0], 'neutre', c[3], true) + '<div class="petites">' + vue(c[0], 'inquiet', c[3]) + vue(c[0], 'colere', c[3]) + '</div></div><b>' + c[1] + '</b><span>' + c[2] + '</span></div>';
+  }).join('');
+})();
+</script>
+</body>
+</html>

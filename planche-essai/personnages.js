@@ -153,53 +153,47 @@
     return s;
   }
 
-  /* Marine Tournesol : visage rond, taches de rousseur, grande crinière rousse bouclée */
+  /* Marine Tournesol : visage rond, cheveux auburn aux épaules */
   function teteTournesol(e) {
     var j = e.j, s = '';
-    // crinière, derrière : grosses boucles, silhouette en soleil
-    var boucles = 'M60,40 C46,6 92,-16 116,6 C140,-14 182,4 176,36 C204,44 204,84 186,96 C204,118 192,152 170,152 L160,120 L60,120 L40,190 C14,198 -12,172 2,146 C-18,128 -12,92 10,86 C0,58 28,30 60,40 Z';
-    s += p(boucles, '#b5552a', 2.6);
-    s += a('M2,146 C-18,128 -12,92 10,86 C14,104 16,130 26,146 C30,162 34,176 40,190 C14,198 -12,172 2,146 Z', '#8d3e1c');
-    s += t('M20,110 C14,120 18,132 28,132 M12,160 C18,152 30,156 28,166 M26,60 C20,70 28,82 38,76 M186,62 C192,70 186,82 176,80 M84,14 C76,20 78,32 88,32 M138,10 C148,14 148,26 138,28', 1.5);
+    // les cheveux aux épaules, d'un seul tenant
+    s += p('M60,40 C32,50 16,84 16,122 C14,160 10,196 22,232 C38,246 64,240 80,222 L90,130 L140,130 L152,190 C160,214 178,212 184,190 C188,160 186,120 176,90 C168,62 146,34 110,30 C92,28 74,32 60,40 Z', '#b5552a', 2.6);
+    s += a('M60,40 C32,50 16,84 16,122 C14,160 10,196 22,232 C30,238 40,240 50,236 C36,200 34,160 36,120 C38,88 46,62 60,40 Z', '#8d3e1c');
+    s += t('M34,100 C30,140 32,190 40,226 M48,90 C46,130 50,180 62,226 M170,100 C176,130 176,170 170,200', 1.3);
     s += p('M62,116 C52,108 46,118 49,132 C52,146 58,154 66,150 Z', PAL.peau);
     s += p('M64,64 C90,38 142,38 158,76 C164,90 164,104 162,120 C162,150 154,178 136,200 C' + 124 + ',' + (214 + j) + ' ' + 104 + ',' + (216 + j) + ' ' + 90 + ',' + (204 + j) + ' C72,188 62,156 62,120 C60,96 58,78 64,64 Z', PAL.peau);
     s += a('M62,120 C62,156 72,188 90,' + (204 + j) + ' C86,184 80,166 80,148 C74,140 68,130 62,120 Z', PAL.peauO);
-    // boucles sur le front
-    s += p('M60,118 C50,104 52,84 62,76 C54,60 72,44 88,50 C94,34 122,32 132,48 C146,40 164,56 158,74 C150,62 136,58 124,62 C112,66 98,62 88,68 C78,74 72,88 74,98 C70,104 66,110 62,120 Z', '#b5552a', 2.6);
-    s += t('M72,62 C78,56 88,58 88,66 M104,44 C112,40 122,44 122,54 M136,50 C146,50 152,58 150,66 M60,92 C64,86 72,86 74,92', 1.4);
+    // le dessus, raie sur le côté
+    s += p('M60,120 C52,98 54,76 66,60 C80,42 110,34 132,44 C150,50 160,62 160,80 C150,66 136,60 124,62 C108,68 90,68 80,80 C72,90 68,104 60,120 Z', '#b5552a', 2.6);
+    s += t('M68,74 C76,60 92,52 112,50 M78,76 C92,66 110,62 124,56 M136,54 C146,58 152,66 154,72', 1.3);
     s += sourcil(100, 96, 28, e.bi, e.be, 4.2, '#8d3e1c', 1) + sourcil(144, 95, 18, e.bi, e.be, 3.6, '#8d3e1c', -1);
     s += oeil(102, 114, 25, e.ouv, e.reg, e.regY, 1) + oeil(146, 112, 17, e.ouv, e.reg, e.regY, -1);
     s += p('M90,110 L86,106 M93,107 L90,102', 'none', 1.5);
     s += t('M127,106 C128,122 136,136 140,146 C142,153 136,157 130,155 C126,159 120,158 118,153', 2);
-    // taches de rousseur
-    [[92, 136], [100, 142], [108, 136], [86, 146], [146, 134], [152, 140], [140, 142]].forEach(function (q) { s += '<circle cx="' + q[0] + '" cy="' + q[1] + '" r="' + (1.2 * K) + '" fill="#a9613a"/>'; });
     s += bouche(e.bouche, 124, 176 + j * 0.3, 22, 20);
     if (e.goutte) s += goutte(168, 76, 5.5) + goutte(172, 102, 4) + goutte(58, 96, 4.5);
     return s;
   }
 
-  /* Fabien Rillettes : tout rond, joues rouges, casquette, double menton */
+  /* Fabien Rillettes : visage plein, cheveux courts foncés, tête nue */
   function teteRillettes(e) {
     var j = e.j, s = '';
-    s += p('M40,120 C26,108 18,124 22,142 C26,158 34,166 44,160 Z', PAL.peau);
-    s += t('M30,128 C27,136 32,150 38,152', 1.3);
     s += p('M44,84 C52,52 148,48 172,88 C180,104 182,130 180,154 C178,186 162,' + (216 + j) + ' 118,' + (224 + j) + ' C76,' + (226 + j) + ' 44,202 38,160 C34,132 36,104 44,84 Z', PAL.peau);
     s += a('M38,160 C44,202 76,' + (226 + j) + ' 110,' + (224 + j) + ' C76,212 60,182 58,150 C50,140 44,130 40,118 Z', PAL.peauO);
     // double menton
-    s += t('M72,' + (214 + j) + ' C92,' + (242 + j) + ' 140,' + (242 + j) + ' 162,' + (204 + j), 2.2);
+    s += t('M84,' + (226 + j) + ' C104,' + (238 + j) + ' 134,' + (238 + j) + ' 152,' + (218 + j), 1.4);
     s += t('M94,' + (208 + j) + ' Q116,' + (216 + j) + ' 138,' + (206 + j), 1.3);
-    // joues rouges, aplats
-    s += a('M80,146 C90,140 102,146 100,156 C94,164 80,160 80,146 Z', '#e8ab86') + a('M156,146 C164,140 172,146 170,154 C166,162 156,158 156,146 Z', '#e8ab86');
-    s += t('M84,150 l6,4 M90,148 l6,4 M160,150 l5,3', 1);
-    // casquette de velours
-    s += p('M34,92 C22,50 66,8 120,10 C164,12 190,48 182,80 C172,70 150,62 112,62 C86,62 54,72 34,92 Z', PAL.brun, 2.6);
-    s += a('M34,92 C22,50 66,8 120,10 C96,20 66,42 56,76 Z', PAL.brunO);
-    s += p('M110,60 C146,56 186,62 206,84 C210,92 202,96 192,94 C170,84 138,76 106,76 C102,70 104,64 110,60 Z', PAL.brunO, 2.6);
-    s += t('M72,44 C84,34 100,26 120,22 M90,50 C104,40 124,34 148,34 M112,56 C126,48 146,46 168,52', 1.1);
+    s += a('M80,146 C90,140 102,146 100,156 C94,164 80,160 80,146 Z', '#eab390') + a('M156,146 C164,140 172,146 170,154 C166,162 156,158 156,146 Z', '#eab390');
+    // les cheveux courts, d'un seul tenant
+    s += p('M40,132 C28,124 22,104 28,82 C36,44 78,26 116,28 C150,30 172,52 176,90 C166,74 146,64 118,66 C96,68 78,76 66,92 C58,104 50,118 40,132 Z', '#3a3027', 2.6);
+    s += a('M40,132 C28,124 22,104 28,82 C30,74 34,66 40,60 C38,84 46,100 58,104 C52,114 46,124 40,132 Z', '#2a221c');
+    s += t('M70,84 C70,62 88,46 116,40 M90,72 C96,58 116,50 142,52 M118,64 C130,60 148,64 162,76', 1.1).replace('stroke="' + INK + '"', 'stroke="#7b6d60"');
+    s += p('M40,120 C26,108 18,124 22,142 C26,158 34,166 44,160 Z', PAL.peau);
+    s += t('M30,128 C27,136 32,150 38,152', 1.3);
     s += sourcil(100, 106, 28, e.bi, e.be, 6.2, PAL.brunO, 1) + sourcil(150, 106, 20, e.bi, e.be, 5.4, PAL.brunO, -1);
     s += oeil(102, 122, 22, e.ouv * 0.9, e.reg, e.regY, 1) + oeil(152, 120, 15, e.ouv * 0.9, e.reg, e.regY, -1);
     // nez rond et rouge
-    s += t('M130,126 C132,136 144,146 148,156 C150,166 140,170 132,167 C128,172 118,170 116,163 C114,158 118,153 122,152', 2.3) + a('M133,150 C140,150 146,156 145,162 C142,166 134,166 131,160 Z', '#e8ab86');
+    s += t('M130,126 C132,136 144,146 148,156 C150,166 140,170 132,167 C128,172 118,170 116,163 C114,158 118,153 122,152', 2.3);
     s += bouche(e.bouche, 128, 184 + j * 0.3, 26, 26);
     if (e.goutte) s += goutte(184, 88, 5) + goutte(30, 100, 4);
     return s;
@@ -472,7 +466,8 @@
   /* un buste : nom, expression, { rot, geste, s : échelle prévue, pour garder le trait constant } */
   function buste(nom, expr, o) {
     o = o || {};
-    var F = FICHE[nom], e = EXPR[expr || 'neutre'], s = o.s || 1, avant = K;
+    var F = FICHE[nom], e = EXPR[expr || 'neutre'], s = o.s || 1, avant = K, pe0 = PAL.peau, po0 = PAL.peauO;
+    if (F.peau) { PAL.peau = F.peau; PAL.peauO = F.peauO; }
     K = 1 / Math.pow(s, 0.72);
     var at = F.at, rot = o.rot || 0;
     var tr = '<g transform="translate(' + at[0] + ',' + at[1] + ') scale(' + F.k + ') rotate(' + rot + ' 100 200)">';
@@ -480,7 +475,7 @@
     var couS = tr + cou(F.cou) + '</g>', teteS = tr + F.tete(e) + (o.casque ? casque() : '') + '</g>';
     K = dz;
     var out = F.corps(e) + couS + F.col(e) + teteS + (o.geste ? F.geste(o.geste) : '');
-    K = avant;
+    K = avant; PAL.peau = pe0; PAL.peauO = po0;
     return '<g stroke-linecap="round" stroke-linejoin="round">' + out + '</g>';
   }
   /* le casque de radio, posé sur la tête */
@@ -489,5 +484,5 @@
       p('M28,108 C44,100 62,108 64,128 C66,150 52,166 36,160 C22,154 18,120 28,108 Z', PAL.noir, 2.4) + t('M34,118 C44,114 54,120 54,132', 1.2).replace('stroke="' + INK + '"', 'stroke="#6b5e54"');
   }
 
-  root.Perso = { PAL: PAL, INK: INK, buste: buste, p: p, a: a, t: t, cercle: cercle, poing: poing, mainIndex: mainIndex, telephone: telephone, setK: function (k) { K = k; }, getK: function () { return K; } };
+  root.Perso = { PAL: PAL, INK: INK, buste: buste, FICHE: FICHE, oeil: oeil, sourcil: sourcil, bouche: bouche, goutte: goutte, p: p, a: a, t: t, cercle: cercle, poing: poing, mainIndex: mainIndex, telephone: telephone, setK: function (k) { K = k; }, getK: function () { return K; } };
 })(this);
