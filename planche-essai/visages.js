@@ -314,6 +314,16 @@
     'Jean-Pierre Merguez': { m: 1, age: 2, sc: '#8d8c82', se: 5.4, broussaille: 1, oe: .96, nez: 'rond', nl: 1, ga: 20, dr: 19, barbe: barbe('#d8d5c8', { h: 182, stries: '#8d8c82' }), habit: '#5a4a3a', habitO: '#42362a', chemise: '#c9c5b4', coiffure: C('ras', BLANC) },
     /* Arlette Lagrève : plus de quatre-vingts ans, cheveux blancs au carré court, visage marqué */
     'Arlette Lagrève': { femme: 1, m: -3, c: 2, age: 3, sc: '#8d8c82', se: 3.6, sb: 3, oe: .96, nez: 'pointu', nl: 3, ga: 18, dr: 17, bf: 'mince', levres: '#b98a7c', habit: '#7a1e24', habitO: '#5a1419', sansOreille: true, coiffure: L(176, BLANC) }
+    ,
+    /* --- Le Parti Camarade Français --- */
+    /* André Chasse-neige : plus de soixante-dix ans, dégarni, barbe blanche, visage large */
+    'André Chasse-neige': { r: 3, m: 4, age: 3, sc: '#8d8c82', se: 5.8, broussaille: 1, oe: .92, nez: 'rond', nl: 1, nw: 3, ga: 21, dr: 20, bf: 'sourit', barbe: barbe('#e4e1d4', { h: 180, ep: 3, stries: '#8d8c82' }), habit: '#4a4a55', habitO: '#36363f', cravate: '#7a1e24', coiffure: K(BLANC) },
+    /* Ian Brasero : la quarantaine, brun, cheveux courts bouclés, sans cravate */
+    'Ian Brasero': { m: -1, age: 1, sc: '#26201c', se: 5.2, sb: 3, oe: 1.04, nez: 'busque', nl: 1, ga: 20, dr: 18, bf: 'sourit', habit: '#3a3d46', habitO: '#2a2c33', l: .96, coiffure: C('boucle', BRUN) },
+    /* Stéphane Peuple : la soixantaine, gris ras, barbe grise */
+    'Stéphane Peuple': { m: 2, age: 2, sc: '#5d5c54', se: 5, oe: .96, nl: 1, ga: 20, dr: 19, bf: 'tombe', barbe: barbe('#a8a79c', { h: 184, stries: '#5d5c54' }), habit: '#5a3a3a', habitO: '#42292a', coiffure: C('ras', GRIS) },
+    /* Léon Défilé : la vingtaine ou la trentaine, châtain, visage jeune */
+    'Léon Défilé': { c: -3, sc: '#513623', se: 4.6, sb: 2, oe: 1.1, ouv: 1.06, nl: -4, ga: 20, dr: 19, bf: 'sourit', cravate: '#7a1e24', l: .92, coiffure: C('raie', CHATAIN) }
     /*SUITE*/
   };
   Object.keys(FICHES).forEach(function (nom) { NOMS[nom] = nom; ajoute(nom, FICHES[nom]); });
