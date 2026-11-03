@@ -78,3 +78,20 @@
 }
 .media-pick .pick-i.media-pic { width: 100%; height: auto; min-width: 0; flex: none; background: none; border: 0; border-radius: 0; }
 .media-pick .pick-i.media-pic .bd-case { width: 100%; height: auto; }
+
+/* l'harmonie : un seul journal imprimé, du titre aux soirées */
+.h1 { font-size: clamp(26px, 7vw, 34px); line-height: 1.1; letter-spacing: -.4px; }
+.gov .h1 { font-size: clamp(25px, 6.6vw, 32px); }
+.h2 { line-height: 1.15; letter-spacing: -.2px; }
+.btn-big { font-size: 18px; }
+.btn, .ans, .pick-row, .modal-card, .party-card { box-shadow: 0 3px 0 var(--ink); }
+.btn-ink, .btn-yellow { box-shadow: 0 3px 0 #000000; }
+.modal-card { background: var(--sheet); border: 1.5px solid var(--ink); }
+.party-card, .pick-row { border-color: var(--ink); }
+#paper .btn-ink { background: #1d1713; color: #f1e6cd; }
+/* l'écran titre et le tour de la une passent sur papier, eux aussi */
+#screen-title { background: var(--paper); color: var(--ink); }
+#screen-title .btn-ghost-light { background: var(--sheet); color: var(--ink); border-color: var(--ink); box-shadow: 0 3px 0 var(--ink); }
+#screen-title .btn-yellow { background: var(--ink); color: var(--paper); border-color: #000000; box-shadow: 0 3px 0 #000000; }
+#screen-title .fineprint, #screen-title .title-tuto { color: var(--ink-2); }
+.paper-ov { background: #cfbf9c; color: var(--ink); }
