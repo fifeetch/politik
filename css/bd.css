@@ -147,3 +147,10 @@
 .sw-text { font-family: var(--display); }
 .sw-btns .btn { background: var(--sheet); color: var(--ink); border-color: var(--ink); box-shadow: 0 3px 0 var(--ink); }
 @media (max-height: 700px) { .sw-card .ev-pic { max-height: 150px; overflow: hidden; } }
+
+/* lot 5 : les passages médias du mandat */
+.gov-media { width: 100%; margin: 8px 0 4px; }
+.gov-media:disabled { opacity: .55; cursor: not-allowed; }
+.gov-media-why { margin: 0 0 8px; font-size: 12.5px; line-height: 1.35; color: var(--ink); opacity: .75; text-align: center; }
+.media-chiffres { font-weight: 700; }
+.media-res { margin-top: 10px; }

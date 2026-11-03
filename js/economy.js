@@ -205,6 +205,7 @@
     if (o.markets) popCauses.push({ label: L.markets, value: -o.marketsPop });
     if (o.honeymoon) popCauses.push({ label: L.honeymoon, value: -o.honeymoon });
     popCauses.push({ label: L.wear, value: -o.wear });
+    grouped(eco.ledger, 'pop').forEach(function (c) { popCauses.push(c); });   // lot 5 : les passages à la télé et à la radio
     popCauses.unshift({ label: L.decisions, value: o.pop - open - sum(popCauses) });
     E.popularity = entry('popularity', L.popularity, 'points', 'variation', popCauses, { value: o.pop - open, level: o.pop });
 
