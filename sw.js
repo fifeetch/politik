@@ -23,7 +23,7 @@ var FILES = [
   /* scripts : dessin et animations */
   'js/art.js', 'js/bd-lettrage.js', 'js/bd-personnages.js', 'js/bd-visages.js', 'js/bd-scenes.js', 'js/bd-jeu.js', 'js/press.js', 'js/fx.js', 'js/tuto.js', 'js/tips.js',
   /* scripts : moteurs du quinquennat */
-  'js/legis.js', 'js/economy.js', 'js/govern.js', 'js/cabinet.js', 'js/oppo.js', 'js/cards.js', 'js/mandat-save.js',
+  'js/legis.js', 'js/economy.js', 'js/govern.js', 'js/cabinet.js', 'js/oppo.js', 'js/cards.js', 'js/medias-mandat.js', 'js/mandat-save.js',
   /* scripts : son */
   'js/audio.js',
   /* scripts : écrans */

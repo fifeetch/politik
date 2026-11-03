@@ -15,6 +15,19 @@ function pick(opts, gv) {
   return opts.slice().sort(function (x, y) { return strat === 'a' ? (y.def || 0) - (x.def || 0) : (x.def || 0) - (y.def || 0); })[0]; }
 /* Les 4 rivaux : tirés de la graine, pour que la même graine rejoue les mêmes mandats */
 function rivals(seed) { var a = ['FI', 'SM', 'VP', 'EM', 'UG', 'MN'], x = seed * 2654435761 >>> 0; for (var i = a.length - 1; i > 0; i--) { x = (x * 1664525 + 1013904223) >>> 0; var j = x % (i + 1), t = a[i]; a[i] = a[j]; a[j] = t; } return a.slice(0, 4); }
+/* Lot 5 : MEDIAS=e (20 h, expliquer, chaque année), a (20 h, annoncer), t (20 h, attaquer), m (matinale, annoncer, meilleure radio), s (deux passages bien choisis et le bon ton en crise), x (tous les passages possibles) */
+var MM = require('../js/medias-mandat.js'), MED = process.env.MEDIAS || '';
+function bestStation(gv) { return D.STATIONS.map(function (s) { return s.id; }).sort(function (a, b) { return MM.apercu(gv, { canal: 'matinale', station: b, ton: 'annoncer' }, true).gain - MM.apercu(gv, { canal: 'matinale', station: a, ton: 'annoncer' }, true).gain; })[0]; }
+function mediaPass(gv) {
+  var fois = MED === 'x' ? 2 : 1;
+  for (var k = 0; k < fois; k++) {
+    var d = MM.dispo(gv, true); if (!d.ok) return;
+    if (MED === 's' && MM.nbPasses(gv) >= (d.crise ? 3 : 2)) return;
+    var ton = MED === 'e' ? 'expliquer' : MED === 't' ? 'attaquer' : 'annoncer', canal = MED === 'm' ? 'matinale' : 'vingt';
+    if ((MED === 's' || MED === 'x') && d.crise) ton = d.crise.bon;
+    MM.passer(gv, { canal: canal, ton: ton, station: canal === 'matinale' ? bestStation(gv) : null }, true);
+  }
+}
 var maj = {}, ver = {}, sum = { def: 0, debt: 0, pop: 0, adopted: 0, fell: 0, diss: 0, d493: 0 };
 for (var i = 0; i < N; i++) {
   var g = E.createGame(null, { seed: seed0 + i, aiParties: rivals(seed0 + i), base: 'e2024' });
@@ -67,6 +80,7 @@ for (var i = 0; i < N; i++) {
     var sg = G.strikeEvent(gv); if (sg) { G.applyOpt(gv, pick(sg.opts, gv)); sum.gr = (sum.gr || 0) + 1; }
     for (var en = 0; en < G.GREVE.parAn; en++) { var ev = G.drawEvent(gv, en); G.applyOpt(gv, pick(ev.opts, gv)); }
     if (useCab) { var me2 = CB.event(gv); if (me2) { sum.minEv = (sum.minEv || 0) + 1; CB.applyEvent(gv, me2, me2.opts[0]); } }
+    if (MED) mediaPass(gv);
     var yr = G.endYear(gv), ty = traj[yr.year - 1] = traj[yr.year - 1] || { def: 0, debt: 0, pop: 0, rate: 0, charge: 0, growth: 0, chom: 0, marches: 0 };
     ty.def += yr.deficit; ty.debt += yr.debt; ty.pop += yr.pop; ty.rate += gv.eco.rate; ty.charge += gv.eco.charge; ty.growth += gv.eco.growth; ty.chom += gv.eco.unemployment; ty.marches += yr.markets ? 1 : 0;
   }
