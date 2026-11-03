@@ -276,6 +276,16 @@
     'Cyrielle Châtaigne': { femme: 1, m: -1, c: -2, sc: '#513623', se: 4, sb: 3, oe: 1.1, nl: -2, ga: 19, dr: 18, bf: 'sourit', levres: '#c07a68', habit: '#4f7a4a', habitO: '#3a5c36', sansOreille: true, coiffure: L(246, CHATAIN) },
     /* Éric Pédalo : la cinquantaine, mince, bruns ras, sans cravate */
     'Éric Pédalo': { m: -6, r: -2, c: 4, age: 1, creux: 1, sc: '#26201c', se: 4.6, si: -1, ouv: .88, nez: 'pointu', nl: 3, ga: 18, dr: 17, bf: 'mince', habit: '#3d4a3a', habitO: '#2c362a', l: .9, coiffure: C('ras', BRUN) }
+    ,
+    /* --- Réforme Encore --- */
+    /* Gérald Dans-le-Vent : la quarantaine, teint mat, cheveux noirs courts, costume sombre */
+    'Gérald Dans-le-Vent': { teint: 1, q: 3, m: 1, age: 1, sc: '#191513', se: 6.6, si: -3, sb: 1, ouv: .84, nez: 'busque', nl: 2, ga: 19, dr: 18, bf: 'mince', cravate: '#23232b', habit: '#2a2c36', habitO: '#1c1e26', coiffure: C('raie', NOIR) },
+    /* Aurore Bergerie : la trentaine, longs cheveux blonds raie au milieu */
+    'Aurore Bergerie': { femme: 1, c: -2, m: -1, sc: '#8a6a2a', se: 3.6, sb: 4, oe: 1.12, ouv: 1.06, nez: 'pointu', nl: -3, ga: 20, dr: 19, bf: 'sourit', levres: '#c9806e', habit: '#3f5f8a', habitO: '#2e4668', chemise: PAL.blanc, sansOreille: true, coiffure: L(236, BLOND, true) },
+    /* Yaël Brouhaha-Pivot : la cinquantaine, cheveux foncés mi-longs */
+    'Yaël Brouhaha-Pivot': { femme: 1, r: 1, age: 1, sc: '#26201c', se: 4.4, sb: 3, oe: 1.02, nez: 'busque', nl: 1, ga: 20, dr: 19, bf: 'pleine', levres: '#a4503f', habit: '#27395c', habitO: '#1a2743', sansOreille: true, coiffure: L(212, BRUN) },
+    /* Stéphane Séjour : la quarantaine, brun, mince, costume ajusté */
+    'Stéphane Séjour': { m: -3, c: 2, sc: '#26201c', se: 4.8, oe: 1.02, nl: 3, nb: 1, ga: 19, dr: 18, cravate: '#2f3a4f', l: .92, coiffure: C('arriere', BRUN) }
     /*SUITE*/
   };
   Object.keys(FICHES).forEach(function (nom) { NOMS[nom] = nom; ajoute(nom, FICHES[nom]); });
