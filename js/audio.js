@@ -413,7 +413,7 @@
     function surClic(e) {
       surGeste();
       var cible = e.target;
-      if (!cible || !cible.closest || cible.closest('.son-zone')) return;
+      if (!cible || !cible.closest || cible.closest('.son-zone, .son-panneau')) return;
       if (cible.closest('#paper-open, #paper-back')) { jouer('page'); return; }
       if (cible.closest('#sw-bl, #sw-br')) { jouer('carte'); return; }
       var z = cible.closest(ZONE_CLIC);
@@ -444,7 +444,7 @@
       '.son-btn svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}' +
       '.son-btn[aria-expanded="true"]{background:var(--violet,#4A33A3)}' +
       '.son-btn:focus-visible,.son-panneau :focus-visible{outline:2px solid var(--violet-light,#8C79E6);outline-offset:2px}' +
-      '.son-panneau{pointer-events:auto;width:min(248px,calc(100vw - 32px));max-height:min(420px,70vh);overflow-y:auto;margin-top:6px;padding:12px;border-radius:var(--radius-md,10px);background:var(--night,#1D1A33);color:var(--white,#fff);box-shadow:0 8px 24px rgba(var(--black-rgb,0,0,0),.4)}' +
+      '.son-panneau{position:absolute;z-index:20;width:min(248px,calc(100vw - 32px));max-height:min(420px,70vh);overflow-y:auto;padding:12px;font:var(--fw-regular,400) var(--fs-sm,13px) var(--body,sans-serif);border-radius:var(--radius-md,10px);background:var(--night,#1D1A33);color:var(--white,#fff);box-shadow:0 8px 24px rgba(var(--black-rgb,0,0,0),.4)}' +
       '.son-panneau label{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:32px}' +
       '.son-panneau input[type=checkbox]{width:20px;height:20px;accent-color:var(--violet-light,#8C79E6)}' +
       '.son-panneau input[type=range]{flex:1;min-width:0;accent-color:var(--violet-light,#8C79E6)}' +
@@ -478,8 +478,17 @@
       panneau.hidden = true;
       bouton.setAttribute('aria-expanded', 'false');
     }
+    /* Le panneau vit dans #app : la carte coupe ce qui dépasse. On le pose sous le bouton, dans la place disponible. */
+    function poserPanneau() {
+      if (panneau.hidden) return;
+      var app = panneau.parentNode.getBoundingClientRect(), b = bouton.getBoundingClientRect(), marge = 8, haut = b.bottom - app.top + 6;
+      panneau.style.top = haut + 'px';
+      panneau.style.right = Math.max(marge, Math.min(app.right - b.right, app.width - panneau.offsetWidth - marge)) + 'px';
+      panneau.style.maxHeight = Math.max(120, Math.min(420, app.height - haut - marge)) + 'px';
+    }
     function basculerPanneau() {
       panneau.hidden = !panneau.hidden;
+      poserPanneau();
       bouton.setAttribute('aria-expanded', panneau.hidden ? 'false' : 'true');
     }
     function installer() {
@@ -503,8 +512,9 @@
       hote.appendChild(zone);
       bouton = zone.querySelector('.son-btn');
       panneau = zone.querySelector('.son-panneau');
-      caseSon = zone.querySelector('.son-case');
-      curseur = zone.querySelector('.son-volume');
+      hote.appendChild(panneau);
+      caseSon = panneau.querySelector('.son-case');
+      curseur = panneau.querySelector('.son-volume');
       bouton.addEventListener('click', basculerPanneau);
       caseSon.addEventListener('change', function () {
         couper(!caseSon.checked);
@@ -512,7 +522,7 @@
       });
       curseur.addEventListener('input', function () { volume(curseur.value / 100); });
       curseur.addEventListener('change', function () { dernier.gain = null; jouer('gain'); });
-      zone.addEventListener('click', function (e) {
+      panneau.addEventListener('click', function (e) {
         var b = e.target.closest && e.target.closest('[data-son]');
         if (!b) return;
         var id = b.getAttribute('data-son');
@@ -520,8 +530,9 @@
         else if (id === 'silence') ambiance(null);
         else { dernier[id] = null; jouer(id); }
       });
-      doc.addEventListener('click', function (e) { if (e.target && e.target.closest && !e.target.closest('.son-zone')) fermerPanneau(); });
+      doc.addEventListener('click', function (e) { if (e.target && e.target.closest && !e.target.closest('.son-zone, .son-panneau')) fermerPanneau(); });
       doc.addEventListener('keydown', function (e) { if (e.key === 'Escape') fermerPanneau(); });
+      if (doc.defaultView) doc.defaultView.addEventListener('resize', poserPanneau);
       dessiner();
     }
     try { installer(); } catch (e) { /* le jeu continue sans bouton */ }
