@@ -342,6 +342,14 @@
     'Frédéric Valsetout': { r: 1, age: 2, sc: '#5d5c54', se: 4.4, sb: 3, oe: .96, nez: 'pointu', nl: 2, ga: 20, dr: 19, bf: 'sourit', cravate: '#7a5a2e', lunettes: lunettes('fines'), coiffure: C('degarni', GRIS) },
     /* Laurent Marchepied : la quarantaine, cheveux noirs ras, barbe noire courte */
     'Laurent Marchepied': { teint: 1, m: 1, age: 0, sc: '#191513', se: 6, si: -2, ouv: .9, nl: 1, ga: 19, dr: 18, bf: 'sourit', barbe: barbe('#2a2522', { h: 188, stries: '#6b5e54' }), cravate: '#26305a', coiffure: C('ras', NOIR) }
+    ,
+    /* --- Debout La Flemme (personnages inventés) --- */
+    /* Dominique Jarretière : âgée, chignon gris, lunettes rondes, personnage inventé */
+    'Dominique Jarretière': { femme: 1, m: -2, age: 3, sc: '#5d5c54', se: 3.6, sb: 4, oe: .94, nez: 'pointu', nl: 2, ga: 17, dr: 16, bf: 'mince', levres: '#b98a7c', habit: '#1f2a55', habitO: '#151d3d', chemise: PAL.blanc, collier: PAL.blanc, lunettes: lunettes('rondes'), coiffure: chignon(GRIS[0], GRIS[1], GRIS[2]) },
+    /* Nicolas Dentelle : châtain, barbe courte, personnage inventé */
+    'Nicolas Dentelle': { m: 1, age: 1, sc: '#513623', se: 5, oe: 1, nez: 'busque', nl: 2, ga: 20, dr: 19, bf: 'sourit', barbe: barbe('#6b4a33', { h: 188, stries: '#a08468' }), cravate: '#27508c', habit: '#1f2a55', habitO: '#151d3d', coiffure: C('raie', CHATAIN) },
+    /* Hubert Fromageau : dégarni, poivre et sel, barbe, teint hâlé, gaillard du terroir, personnage inventé */
+    'Hubert Fromageau': { teint: 1, r: 4, m: 5, w: 3, age: 2, sc: '#3f3c38', se: 6.4, broussaille: 1, oe: .94, nez: 'rond', nl: 2, nw: 4, ga: 22, dr: 21, bf: 'sourit', barbe: barbe('#5e5a55', { h: 182, ep: 3, stries: '#a09b94' }), habit: '#2e6b45', habitO: '#214f33', coiffure: K(POIVRE) }
     /*SUITE*/
   };
   Object.keys(FICHES).forEach(function (nom) { NOMS[nom] = nom; ajoute(nom, FICHES[nom]); });
