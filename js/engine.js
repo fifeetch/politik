@@ -2041,14 +2041,21 @@
     b.face = { duels: ths.slice(0, 3).map(function (t, i) { return { a: b.a, b: b.b, theme: t, qid: pickQuestion(g, t, 50 + i).id }; }) };
     return b.face;
   }
-  /* picks : [{ ra, rb }] · le perdant cède une part de ses voix au gagnant au second tour */
+  /* v5.6 : la riposte de la joute. 'a' ou 'b' gagne l'échange, null si les deux parlent en même temps */
+  function piqueOutcome(pa, pb) { if (!D.PIQUES[pa] || !D.PIQUES[pb] || pa === pb) return null; return D.PIQUES[pa].bat === pb ? 'a' : 'b'; }
+  function piqueBonus(sa, sb) { return Math.round((sa + sb) * D.DEBATE.piqueGain * 10) / 10; }
+  function faceRiposte(g) { var k = Object.keys(D.PIQUES); return k[Math.floor(g.rng() * k.length)]; }
+  /* picks : [{ ra, rb, pa, pb }] · le perdant cède une part de ses voix au gagnant au second tour */
   function resolveFace(g, picks) {
     var b = g.between; if (!b.face) setupFace(g);
     var SA = 0, SB = 0, duels = b.face.duels.map(function (d, i) {
       var o = duelOutcome(g, d, picks[i].ra, picks[i].rb, 0, 0);
       if (o.ca.risk && g.rng() < o.ca.risk) { player(g, d.a).cas += 1; o.casA = true; }
       if (o.cb.risk && g.rng() < o.cb.risk) { player(g, d.b).cas += 1; o.casB = true; }
-      SA += o.sa; SB += o.sb; return o;
+      SA += o.sa; SB += o.sb;
+      var pw = piqueOutcome(picks[i].pa, picks[i].pb);
+      if (pw) { o.pique = pw; o.piqueGain = piqueBonus(o.sa, o.sb); if (pw === 'a') SA += o.piqueGain; else SB += o.piqueGain; }
+      return o;
     });
     var margin = (SA + SB) > 0 ? (SA - SB) / (SA + SB) : 0;
     var swing = Math.max(-D.DEBATE.faceMax, Math.min(D.DEBATE.faceMax, margin * D.DEBATE.faceSwing));
@@ -2420,7 +2427,7 @@
 
   var API = {
     estimate: estimate, ledStart: ledStart, regScore: regScore, candQ: candQ, candD: candD, candFor: candFor, candMedia: candMedia, gaffeLimit: gaffeLimit, regionSnapshot: regionSnapshot,
-    createGame: createGame, startTurn: startTurn, resolveActions: resolveActions, resolveDebate: resolveDebate, setupDebate: setupDebate, debateCards: debateCards, duelOutcome: duelOutcome, debateCounter: debateCounter, aiDebatePick: aiDebatePick, debateWeights: debateWeights, setupFace: setupFace, resolveFace: resolveFace, audScore: audScore, duelResult: duelResult, replyPoints: replyPoints,
+    piqueOutcome: piqueOutcome, piqueBonus: piqueBonus, faceRiposte: faceRiposte, createGame: createGame, startTurn: startTurn, resolveActions: resolveActions, resolveDebate: resolveDebate, setupDebate: setupDebate, debateCards: debateCards, duelOutcome: duelOutcome, debateCounter: debateCounter, aiDebatePick: aiDebatePick, debateWeights: debateWeights, setupFace: setupFace, resolveFace: resolveFace, audScore: audScore, duelResult: duelResult, replyPoints: replyPoints,
     isDebateTurn: isDebateTurn, spotlightTarget: spotlightTarget, applySpotlight: applySpotlight, endTurn: endTurn,
     finalScores: finalScores, firstRound: firstRound, openBetween: openBetween, betweenAct: betweenAct, betweenError: betweenError, answerCounter: answerCounter, answerBetweenOffer: answerBetweenOffer, setConsigne: setConsigne, concessionsFor: concessionsFor, dealChance: dealChance, aiBetweenStep: aiBetweenStep, aiConsigne: aiConsigne, rivalTargets: rivalTargets, threatCost: threatCost, transfersFor: transfersFor, projectSecond: projectSecond, closeBetween: closeBetween, autoBetween: autoBetween, objectiveMet: objectiveMet, objectiveProgress: objectiveProgress, objectiveShare: objectiveShare, terrainBreakdown: terrainBreakdown, crowdBonus: crowdBonus, crowdInfo: crowdInfo, turnOrder: turnOrder, election: election, poll: poll, votes: votes,
     dist: dist, fundsGain: fundsGain, allyOf: allyOf, allianceError: allianceError, answerOffer: answerOffer, acceptChance: acceptChance,

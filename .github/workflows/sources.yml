@@ -34,6 +34,8 @@ jobs:
           node test/check-socle.js
       - name: Son (effets, réglages, premier geste, sans AudioContext)
         run: node test/check-audio.js
+      - name: Joute d'entre-deux-tours
+        run: node test/check-joute.js
       - name: Simulation courte de la présidentielle
         run: node test/simulate.js 20
       - name: Simulation courte du quinquennat (4 stratégies)
