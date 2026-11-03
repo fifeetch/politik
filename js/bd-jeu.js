@@ -184,6 +184,7 @@
       var s = S.fondPlateauLarge() + R.af(0, 640, 1200, 40, '#2b3f6c');
       s += R.ecran(330, 58, 540, 222) + L.ligne('EN DIRECT', 600, 130, 62, { ancre: 'm', encre: PAL.blanc, gras: true, graine: 4 });
       s += S.pose('journaliste', 'parle', 300, 150, 0.78, { rot: 2 }) + S.pose('matinalier', 'neutre', 900, 150, 0.78, { gauche: true, rot: 2 });
+      s += p('M330,400 H870 V610 H330 Z', '#27508c', 2.6);   // le pied du bureau cache les jambes
       s += '<g transform="translate(600,330) scale(1.55) translate(-600,-396)">' + S.tableJournalistes() + '</g>';
       s += S.camera(120, 560, 1) + S.camera(1090, 560, 1, true);
       return S.kase(1200, 680, 'Le plateau de télévision, deux journalistes à l’antenne.', s);
@@ -336,6 +337,44 @@
       return S.kase(1200, 680, 'Une rue inondée sous la pluie, une barque et une voiture noyée.', s);
     },
     /* la police : le commissariat, le fourgon, les agents */
+    /* les marchés : le grand écran, la courbe des taux qui grimpe, la salle qui regarde */
+    bourse: function () {
+      var s = R.af(0, 0, 1200, 680, '#e8dcc0'), i;
+      s += R.rect(60, 40, 1080, 400, '#1f2d4d', 3);
+      for (i = 1; i < 6; i++) s += p('M60,' + (40 + i * 66) + ' H1140', 'none', 1, 'stroke-opacity=".35"');
+      s += p('M90,420 V360 L260,350 L420,310 L560,322 L720,240 L880,190 L1110,110 V420 Z', '#c6402d', 2.8);
+      s += L.ligne('TAUX DE LA DETTE', 330, 62, 40, { ancre: 'm', encre: PAL.blanc, gras: true, graine: 4 });
+      s += R.rect(860, 58, 250, 76, PAL.blanc, 2.6) + L.ligne('EN HAUSSE', 985, 80, 32, { ancre: 'm', encre: PAL.rouge, gras: true, graine: 5 });
+      s += R.af(0, 440, 1200, 240, '#8d7f68') + t('M0,440 H1200', 2.8);
+      [[470, .6, 12, 92], [540, .86, 9, 136]].forEach(function (r, ir) { for (var q = 0; q < r[2]; q++) s += S.usager(30 + q * r[3] + ir * 30, r[0], r[1], q + ir * 5, true); });
+      return S.kase(1200, 680, 'Une salle de marché regarde grimper la courbe des taux de la dette française.', s);
+    },
+    /* le rond-point occupé : les gilets, le brasero, la banderole, la file de voitures */
+    rondpoint: function () {
+      var s = R.af(0, 0, 1200, 680, '#dbe8e6') + nuage(180, 70, .9) + nuage(960, 60, .8), i;
+      s += a('M0,300 C200,270 420,290 600,276 C820,260 1000,290 1200,270 V680 H0 Z', '#a9b87a') + t('M0,300 C200,270 420,290 600,276 C820,260 1000,290 1200,270', 2.6);
+      s += arbre(120, 300, .9) + arbre(1080, 290, .8);
+      s += p('M0,470 C240,380 960,380 1200,470 V680 H0 Z', '#b8b2a2', 2.8);
+      s += p('M280,560 C280,440 920,440 920,560 C920,650 280,650 280,560 Z', '#8ea05f', 3);
+      s += t('M600,470 V300', 5) + R.rect(330, 230, 540, 84, PAL.blanc, 2.8) + L.ligne('NON AUX TAXES !', 600, 250, 44, { ancre: 'm', encre: PAL.rouge, gras: true, graine: 7 });
+      s += p('M566,560 L580,500 H620 L634,560 Z', '#5a4a3c', 2.6) + p('M582,500 C570,462 594,458 590,430 C616,448 632,470 618,500 Z', '#e8682c', 2.2) + p('M594,500 C588,482 600,476 600,462 C612,474 616,488 608,500 Z', '#f6c64b', 1.6);
+      [70, 200, 330, 790, 920, 1050].forEach(function (x, j) { s += agent(x, 410 + (j % 2) * 26, 1.02, '#e8c72e', j % 3 === 0 ? '#3b3a46' : '#7d4d31'); });
+      return S.kase(1200, 680, 'Un rond-point occupé par des manifestants en gilet jaune, autour d\u2019un brasero.', s);
+    },
+    /* la Cour des comptes : la façade, le rapport, le tampon */
+    cour: function () {
+      var s = R.af(0, 0, 1200, 680, '#dbe8e6') + nuage(1040, 70, .8), i;
+      s += p('M120,180 L600,70 L1080,180 Z', '#efe3c6', 2.8) + R.rect(120, 180, 960, 44, '#e2d4b3', 2.6);
+      s += L.ligne('COUR DES COMPTES', 600, 188, 28, { ancre: 'm', encre: PAL.noir, gras: true, graine: 3 });
+      s += R.rect(140, 224, 920, 216, '#efe3c6', 2.6);
+      for (i = 0; i < 7; i++) s += R.rect(170 + i * 128, 224, 44, 216, '#f6eedb', 2.2);
+      s += R.af(0, 440, 1200, 240, '#b8b2a2') + t('M0,440 H1200', 2.8);
+      for (i = 0; i < 9; i++) s += S.usager(40 + i * 128, 470, .6, i, true);
+      s += '<g transform="rotate(-4 600 540)">' + R.rect(380, 420, 440, 240, PAL.blanc, 3) + L.ligne('RAPPORT ANNUEL', 600, 440, 34, { ancre: 'm', encre: PAL.noir, gras: true, graine: 2 });
+      for (i = 0; i < 2; i++) s += t('M420,' + (500 + i * 24) + ' H780', 1.6);
+      s += R.rect(430, 556, 340, 74, '#fff3cf', 3) + L.ligne('PEU CRÉDIBLE', 600, 572, 40, { ancre: 'm', encre: PAL.rouge, gras: true, graine: 9 }) + '</g>';
+      return S.kase(1200, 680, 'La façade de la Cour des comptes et un rapport tamponné « peu crédible ».', s);
+    },
     police: function () {
       var s = R.af(0, 0, 1200, 680, '#dbe8e6') + nuage(1000, 60, .8) + nuage(160, 80, .9), i;
       s += p('M60,450 V110 H840 V450 Z', '#efe3c6', 2.8) + R.rect(180, 130, 540, 76, '#27508c', 2.8) + L.ligne('POLICE', 450, 142, 56, { ancre: 'm', encre: PAL.blanc, gras: true, graine: 4 });
@@ -478,7 +517,8 @@
   poseLieu('screen-gov', '.gov-top', 'elysee'); poseLieu('screen-oppo', '.gov-top', 'assemblee'); poseLieu('screen-gform', '.btw-head', 'conseil');
   function LUM() { return R.LUM; }
   function aUne(nom) { return !!UNE[nom]; }
+  function scene(nom) { return UNE[nom] ? UNE[nom]() : LIEUX[nom] ? LIEUX[nom]() : ''; }
   function une(nom) { return UNE[nom] ? UNE[nom]() : ''; }
 
-  root.PolitikBD = { grosPlan: grosPlan, faceAFace: faceAFace, plateau: plateau, studio: studio, tele: tele, mediaCase: mediaCase, aUne: aUne, une: une, LIEUX: LIEUX, depuisVisage: V.depuisVisage, NOMS: V.NOMS };
+  root.PolitikBD = { grosPlan: grosPlan, faceAFace: faceAFace, plateau: plateau, studio: studio, tele: tele, mediaCase: mediaCase, aUne: aUne, une: une, scene: scene, LIEUX: LIEUX, depuisVisage: V.depuisVisage, NOMS: V.NOMS };
 })(this);
