@@ -266,6 +266,16 @@
     'Carole Dégainée': { femme: 1, q: 2, age: 1, sc: '#26201c', se: 4.4, sb: 6, si: -1, oe: 1.04, nl: 1, ga: 21, dr: 20, bf: 'pleine', levres: '#b8604e', habit: '#4a4a55', habitO: '#36363f', chemise: PAL.blanc, sansOreille: true, coiffure: L(194, BRUN) },
     /* François Hésitant : la soixantaine passée, dégarni, lunettes rondes, visage rond */
     'François Hésitant': { r: 5, m: 7, w: 6, c: -3, age: 2, sc: '#5d5c54', se: 4.8, si: 3, oe: .92, nez: 'rond', nl: -3, nw: 2, ga: 21, dr: 20, bf: 'sourit', cravate: '#26305a', lunettes: lunettes('rondes'), coiffure: K(GRIS) }
+    ,
+    /* --- Les Enracinés --- */
+    /* Sandrine Rouspète : la cinquantaine, cheveux blancs courts, lunettes rondes, veste verte */
+    'Sandrine Rouspète': { femme: 1, r: 1, age: 2, sc: '#8d8c82', se: 4, sb: 5, oe: .98, nez: 'pointu', nl: 1, ga: 20, dr: 19, bf: 'pleine', levres: '#b8604e', habit: '#2e6b45', habitO: '#214f33', lunettes: lunettes('rondes', '#7a1e24'), coiffure: C('courtF', BLANC) },
+    /* Yannick Jardinet : la cinquantaine, poivre et sel, traits ouverts, sans cravate */
+    'Yannick Jardinet': { m: 2, age: 2, sc: '#3f3c38', se: 5.4, sb: 2, ouv: .9, nl: 2, ga: 21, dr: 20, bf: 'sourit', fossette: 1, habit: '#3a5a48', habitO: '#2a4335', coiffure: C('dense', SEL) },
+    /* Cyrielle Châtaigne : moins de quarante ans, longs cheveux châtains */
+    'Cyrielle Châtaigne': { femme: 1, m: -1, c: -2, sc: '#513623', se: 4, sb: 3, oe: 1.1, nl: -2, ga: 19, dr: 18, bf: 'sourit', levres: '#c07a68', habit: '#4f7a4a', habitO: '#3a5c36', sansOreille: true, coiffure: L(246, CHATAIN) },
+    /* Éric Pédalo : la cinquantaine, mince, bruns ras, sans cravate */
+    'Éric Pédalo': { m: -6, r: -2, c: 4, age: 1, creux: 1, sc: '#26201c', se: 4.6, si: -1, ouv: .88, nez: 'pointu', nl: 3, ga: 18, dr: 17, bf: 'mince', habit: '#3d4a3a', habitO: '#2c362a', l: .9, coiffure: C('ras', BRUN) }
     /*SUITE*/
   };
   Object.keys(FICHES).forEach(function (nom) { NOMS[nom] = nom; ajoute(nom, FICHES[nom]); });
