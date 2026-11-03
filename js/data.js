@@ -347,6 +347,108 @@
     m.src = o.src; m.vrai = o.vrai;
   });
 
+  /* ---------- b1 : l'économie du mandat (règles cachées, utilisées par js/economy.js) ----------
+     Ordres de grandeur réels, arrondis. Sources consultées en novembre 2026 :
+     - Cour des comptes, La situation et les perspectives des finances publiques (25 juin 2026) :
+       charge de la dette 65,7 Md€ en 2025 (2,2 points de PIB), 77 Md€ attendus en 2026, environ 100 Md€ (3 points) en 2029.
+       https://www.ccomptes.fr/fr/publications/la-situation-et-les-perspectives-des-finances-publiques-17
+     - Cour des comptes, La situation des finances publiques début 2026 (février 2026) : 55 points de base de plus sur le taux
+       à 10 ans coûtent 1,6 Md€ la 1re année, 4 Md€ la 2e et 8 Md€ la 4e : d'où un renouvellement de 10 % de la dette par an.
+       https://www.ccomptes.fr/fr/publications/la-situation-des-finances-publiques-debut-2026
+     - Sénat, rapport n° 385 (2019-2020) : 1 point de croissance en moins, c'est environ 0,63 point de déficit en plus.
+       https://www.senat.fr/rap/l19-385/l19-3853.html
+     - Insee, document de travail G2016/06 (modèle Mélèze) : multiplicateurs de court terme de 0,2 à 1 autour de la moyenne selon l'instrument.
+       https://www.insee.fr/fr/statistiques/2022147
+     - Haut Conseil des finances publiques, avis sur la programmation 2023-2027 : 1,35 % de croissance potentielle jugé optimiste, d'où 1,1 ici.
+     - Insee, relayé par la presse (2e trimestre et septembre 2026) : chômage à 8,3 %, inflation de 2,5 à 2,9 %, croissance faible. À relire à la source.
+     Sans source vérifiée : le coefficient d'Okun (0,5, valeur classique) et les poids de satisfaction, qui sont des choix de jeu. */
+  var ECONOMY = {
+    mdPerPoint: 30,
+    start: { growth: 0.7, inflation: 2.5, unemployment: 8.3, gap: -0.5, rate: 4.0, apparent: 2.12 },
+    potential: 1.1,            // croissance sans à-coup
+    gapPersistence: 0.6,       // chaque année, 40 % de l'écart à la normale se résorbe
+    multiplier: 0.6,           // 1 point de PIB de dépense en plus : +0,6 point d'activité
+    impulseNow: 0.6,           // 60 % de l'effet l'année même, le reste l'année suivante (effet différé)
+    semiElasticity: 0.6,       // 1 point d'activité en moins : +0,6 point de déficit
+    inflationTarget: 2, inflationInertia: 0.5, inflationGap: 0.25, inflationPain: 2.5, deflatorShare: 0.8,
+    priceShock: 0.5, demandShock: 0.4,   // amplitude des chocs venus de l'étranger
+    nairu: 7.5, okun: 0.5, unemploymentSpeed: 0.6,
+    rate0: 4.0,                // taux à 10 ans de référence : assez haut pour que la charge monte comme le prévoit la Cour (77 → 100 Md€ en 3 ans)
+    rateInflation: 0.5, riskLinear: 0.15, riskConvex: 0.06, trustMax: 0.4, riskDebt: 0.02, debtComfort: 125,
+    rateDrag: 0.15,            // un taux plus haut d'un point freine l'activité de 0,15 point (crédit)
+    rollover: 0.1,             // 10 % de la dette se renouvelle chaque année aux taux du moment
+    satPerUnemployment: 5, satPerInflation: 3, satPerRate: 2,
+    satWeights: { ind: { u: 0.5, p: 0.5, r: 1 }, cad: { u: 0.4, p: 0.3, r: 1 }, pi: { u: 0.7, p: 0.7, r: 1 }, pop: { u: 1, p: 1, r: 0.8 }, ret: { u: 0.2, p: 1, r: 0.2 }, sae: { u: 1.2, p: 1, r: 0.3 } },   // u : chômage, p : prix, r : taux (crédit immobilier)
+    groupNames: { ind: 'les indépendants', cad: 'les cadres', pi: 'les professions intermédiaires', pop: 'les employés et ouvriers', ret: 'les retraités', sae: 'les étudiants et sans-emploi' },
+    defaultLag: 1, retourYears: 2,
+    labels: {
+      rounding: 'Arrondi', montee: 'Montée en charge des mesures', retour: 'Effets retour des mesures', others: 'Autres décisions de l\'année', bercy: 'Gestion de Bercy',
+      oneOffEnd: 'Fin des mesures ponctuelles', impulsion: 'Coup de pouce (ou de frein) du budget', ecbTarget: 'Cible de la Banque centrale européenne', inertia: 'Hausse des prix de l\'an dernier',
+      heat: 'Chaleur de l\'économie', worldPrices: 'Prix mondiaux', inflation: 'Inflation', rateBase: 'Taux de référence', riskDeficit: 'Déficit au-dessus de la trajectoire',
+      trustDeficit: 'Déficit tenu : les marchés ont confiance', riskDebt: 'Dette élevée', rate: 'Taux d\'emprunt à 10 ans', potential: 'Croissance potentielle', gapRecall: 'Retour à la normale de l\'activité',
+      budgetNow: 'Budget de cette année', budgetLate: 'Budget de l\'an dernier (effet différé)', credit: 'Crédit plus ou moins cher', worldDemand: 'Conjoncture mondiale', growth: 'Croissance',
+      lastYear: 'L\'an dernier', uRecall: 'Retour vers le chômage d\'équilibre', activity: 'Activité économique', unemployment: 'Chômage', debtCharge: 'Charge de la dette', refinance: 'Dette refinancée aux taux du moment',
+      moreDebt: 'Dette plus lourde', nominal: 'Croissance du PIB en euros courants', rampSuffix: ' : montée en charge', retourSuffix: ' : effet retour', slowdown: 'Ralentissement de la croissance', recovery: 'Reprise de la croissance',
+      markets: 'Inquiétude des marchés', deficit: 'Déficit public', deficitYear: 'Déficit de l\'année', relief: 'Le PIB grandit, le poids de la dette baisse', bruxelles: 'Rappel à l\'ordre de Bruxelles', debt: 'Dette publique',
+      prices: 'Hausse des prix', satLimit: 'Déjà au plafond ou au plancher', satOf: 'Satisfaction : ', satisfaction: 'Moral du pays', decisions: 'Décisions de l\'année', honeymoon: 'Fin de l\'état de grâce', wear: 'Usure du pouvoir', popularity: 'Popularité',
+      ecart: 'Déficit annoncé et déficit réel', ecartFrom: 'Annoncé au vote du budget', afterVote: 'Décisions prises après le vote du budget', overYear: 'Sur l\'année', nothingThisYear: 'Rien à signaler cette année.',
+      noReport: 'Conjoncture', noReportText: 'Le premier bilan tombe à la fin de l\'année 1. Ces chiffres sont ceux de ton arrivée au pouvoir.'
+    },
+    texts: {
+      growth: 'La richesse produite en plus cette année. Elle fait rentrer des impôts et crée des emplois. Négative, c\'est une récession : la richesse recule.',
+      inflation: 'La hausse des prix. Au-delà de 2,5 %, elle pèse sur le moral, surtout celui des retraités et des bas salaires.',
+      unemployment: 'La part d\'actifs sans emploi. Elle suit l\'activité avec retard.',
+      rate: 'Ce que la France paie pour ses nouveaux emprunts. Les marchés demandent plus si le déficit dérape.',
+      debtCharge: 'Les intérêts de la dette. Seuls 10 % de la dette se renouvellent chaque année : une hausse des taux coûte peu au début, puis de plus en plus.',
+      impulsion: 'Ce que l\'État ajoute ou retire à l\'économie cette année. Une économie freine l\'activité, une dépense la soutient.',
+      montee: 'Une loi ne produit pas tout son effet la première année : il faut former, construire, ou attendre les départs à la retraite.',
+      retour: 'Une partie du coût d\'une mesure revient plus tard : une dépense utile rapporte des impôts, un impôt réduit ce qu\'il taxe.',
+      nominal: 'Si le PIB grandit, la même dette pèse moins lourd. C\'est pourquoi la dette peut baisser même avec un déficit.',
+      deficit: 'Ce que l\'État dépense de plus que ses recettes, en points de PIB (1 point vaut environ 30 milliards d\'euros). Négatif, c\'est un excédent : les recettes dépassent les dépenses.',
+      debt: 'Tout ce que l\'État doit, en points de PIB.',
+      ecart: 'Le budget annonce un déficit ; la fin d\'année donne le vrai. Les mesures ne rapportent pas tout de suite, les intérêts montent et la conjoncture joue sur les recettes.',
+      popularity: 'Ce que l\'année a changé dans l\'opinion.',
+      satisfaction: 'L\'effet de la conjoncture sur le moral, groupe par groupe, selon leur poids dans la population.'
+    },
+    /* b2 : sens des chiffres (la couleur d'une hausse) et « Voir aussi » des infobulles */
+    infoSens: { growth: 'hausse-bonne', nominal: 'hausse-bonne', popularity: 'hausse-bonne', satisfaction: 'hausse-bonne', inflation: 'hausse-mauvaise', unemployment: 'hausse-mauvaise', rate: 'hausse-mauvaise', debtCharge: 'hausse-mauvaise', deficit: 'hausse-mauvaise', debt: 'hausse-mauvaise', ecart: 'hausse-mauvaise', montee: 'hausse-mauvaise', retour: 'hausse-mauvaise' },
+    seeAlso: { growth: ['unemployment', 'impulsion', 'nominal'], inflation: ['rate'], unemployment: ['growth'], rate: ['debtCharge', 'deficit'], debtCharge: ['rate', 'deficit'], deficit: ['ecart', 'debt'], debt: ['deficit', 'nominal', 'debtCharge'], ecart: ['deficit'], impulsion: ['growth'], nominal: ['debt'], popularity: ['unemployment', 'inflation'] },
+    /* Les effets de quelques mesures. ramp : part de l'effet atteinte chaque année après l'adoption. retour : part du coût qui revient
+       en sens inverse (négatif : la mesure rapporte plus qu'annoncé). lag : années d'attente. emploi : points de chômage. prix : points d'inflation l'année de l'adoption.
+       Les parts sont des estimations de jeu, appuyées sur les fiches « edu » de chaque mesure et sur :
+       retraites : les effets de la réforme de 2023 culminent vers 2030 (Conseil d'orientation des retraites, rapport de juin 2023) ;
+       energie : le bouclier tarifaire, coûteux et désinflationniste (Cour des comptes,
+       https://www.ccomptes.fr/fr/publications/les-mesures-exceptionnelles-de-lutte-contre-la-hausse-des-prix-de-lenergie) ;
+       medecins : une dizaine d'années de formation ; reindus : France 2030 s'étale sur plusieurs années (https://www.economie.gouv.fr/france-2030). */
+    effects: {
+      retraites:       { ramp: [0.2, 0.4, 0.6, 0.8, 1], retour: -0.15, lag: 3, emploi: -0.1 },
+      nonremplacement: { ramp: [0.2, 0.4, 0.6, 0.8, 1] },
+      medecins:        { ramp: [0.2, 0.4, 0.6, 0.8, 1] },
+      classes:         { ramp: [0.4, 0.7, 1] },
+      lignes:          { ramp: [0.3, 0.6, 1] },
+      sp20:            { ramp: [0.5, 1] },
+      reindus:         { ramp: [0.3, 0.6, 1], retour: 0.25, lag: 3, emploi: -0.15 },
+      renovation:      { ramp: [0.5, 1], retour: 0.3, lag: 1, emploi: -0.1 },
+      apprentissage:   { retour: 0.3, lag: 2, emploi: -0.1 },
+      pme:             { retour: 0.25, lag: 2, emploi: -0.1 },
+      smic:            { retour: 0.2, lag: 1, emploi: 0.1, prix: 0.2 },
+      energie:         { prix: -0.6 },
+      tva:             { prix: -0.2 },
+      tvaplus:         { retour: 0.2, lag: 1, prix: 0.5 },
+      fraudefisc:      { ramp: [0.4, 0.7, 1] },
+      fraude:          { ramp: [0.4, 0.7, 1] },
+      niches:          { ramp: [0.5, 1] },
+      trainvie:        { ramp: [0.6, 1] },
+      chomage:         { ramp: [0.5, 1], lag: 1, emploi: -0.15 },
+      isf:             { retour: 0.2, lag: 1 },
+      cir_cut:         { retour: 0.15, lag: 3 }
+    }
+  };
+  MEASURES.concat(FUNDING).forEach(function (m) {
+    var fx = ECONOMY.effects[m.id]; if (!fx) return;
+    Object.keys(fx).forEach(function (k) { m[k] = fx[k]; });
+  });
+
   /* ---------- v0.7 : les affaires ----------
      Une affaire tombe quand les casseroles s'accumulent, quand Le Canard Déchaîné enquête, quand un rival sort un dossier,
      ou quand le programme n'est pas financé. On choisit comment réagir. */
@@ -1314,7 +1416,7 @@
 
   var DATA = { REFERENCE_2027: REFERENCE_2027, POLLS: POLLS, BASES: BASES, REGIONS: REGIONS, PROFILES: PROFILES, THEMES: THEMES, HEADLINES: HEADLINES, PARTIES: PARTIES, ACTIONS: ACTIONS,
                CARDS: CARDS, CARD_RULES: CARD_RULES, FICHES: FICHES, EVENTS: EVENTS, DILEMMAS: DILEMMAS, CRISES: CRISES, REPLIES: REPLIES, TEMPERS: TEMPERS, TRAITS: TRAITS, NOSTALGIA: NOSTALGIA, PETALS: PETALS, MICRO: MICRO, BINGO: BINGO, BINGO_LINES: BINGO_LINES,
-               MEASURES: MEASURES, FUNDING: FUNDING, SEGMENTS: SEGMENTS, VOTE_PROP: VOTE_PROP, CLASS_PROF: CLASS_PROF, CLASS_SRC: CLASS_SRC, HEART: HEART, MAJORITY: MAJORITY, BETA: BETA, MEDIA: MEDIA, ANSWERS: ANSWERS, STATIONS: STATIONS, DEB_REG: DEB_REG, DEB_BEATS: DEB_BEATS, DEB_REG_NAME: DEB_REG_NAME, DEBATE: DEBATE, STATION_FIT: STATION_FIT, VINGT: VINGT, QUESTIONS: QUESTIONS, SEGMENTS_SRC: SEGMENTS_SRC, AFFAIRS: AFFAIRS, LEARN: LEARN, BUDGET_AFFAIR: BUDGET_AFFAIR, REACTIONS: REACTIONS, ADVISOR: ADVISOR, OBJECTIVES: OBJECTIVES, RULES: RULES, FORMATS: FORMATS, LEGIS: LEGIS, MINISTRY: MINISTRY, OPPO: OPPO, validate: validate };
+               MEASURES: MEASURES, FUNDING: FUNDING, SEGMENTS: SEGMENTS, VOTE_PROP: VOTE_PROP, CLASS_PROF: CLASS_PROF, CLASS_SRC: CLASS_SRC, HEART: HEART, MAJORITY: MAJORITY, BETA: BETA, MEDIA: MEDIA, ANSWERS: ANSWERS, STATIONS: STATIONS, DEB_REG: DEB_REG, DEB_BEATS: DEB_BEATS, DEB_REG_NAME: DEB_REG_NAME, DEBATE: DEBATE, STATION_FIT: STATION_FIT, VINGT: VINGT, QUESTIONS: QUESTIONS, SEGMENTS_SRC: SEGMENTS_SRC, AFFAIRS: AFFAIRS, LEARN: LEARN, BUDGET_AFFAIR: BUDGET_AFFAIR, REACTIONS: REACTIONS, ADVISOR: ADVISOR, OBJECTIVES: OBJECTIVES, RULES: RULES, FORMATS: FORMATS, LEGIS: LEGIS, MINISTRY: MINISTRY, OPPO: OPPO, ECONOMY: ECONOMY, validate: validate };
   if (typeof module !== 'undefined' && module.exports) module.exports = DATA;
   else root.PolitikData = DATA;
 })(this);

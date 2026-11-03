@@ -1,6 +1,6 @@
 /* Politik — interface (écrans, carte, déroulement d'un tour). */
 (function () {
-  var D = window.PolitikData, M = window.PolitikMap, E = window.PolitikEngine, AI = window.PolitikAI, A = window.PolitikArt, FX = window.PolitikFX;
+  var D = window.PolitikData, M = window.PolitikMap, E = window.PolitikEngine, AI = window.PolitikAI, A = window.PolitikArt, FX = window.PolitikFX, Bus = window.PolitikBus;
   var R = D.RULES;
   var dataErrors = D.validate ? D.validate() : [];
   if (dataErrors.length && window.console) console.error('Politik : données incohérentes —', dataErrors);
@@ -186,7 +186,13 @@
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
 
   /* ---------- Écrans ---------- */
+  /* CONTRAT FIGÉ (socle P1) : les écrans de campagne et du mandat s'appuient dessus. Toute modification se décide d'abord avec eux.
+     go(name) : affiche l'écran #screen-<name>, un seul à la fois, et émet nav:go { name, from } sur le bus. Ne renvoie rien.
+       name : title, setup, choose, programme, game, between, night, end, lcamp, lbtw, legis, oppo, gform, gov.
+       Effets de bord : choose, title et setup oublient la partie en cours ; quitter game efface le bandeau d'alerte.
+       Un écran ajouté : un élément #screen-<name> dans index.html suffit. Exposé en PolitikUI.go. */
   function go(name) {
+    var prev = document.querySelector('.screen.active');
     if (name === 'choose' || name === 'title' || name === 'setup') g = null;
     if (name === 'setup') quick = false;
     if (name !== 'game') FX.clearBreaking();
@@ -195,6 +201,7 @@
     if (name === 'choose') renderChoose();
     if (name === 'setup') renderSetup();
     if (name === 'title') renderResume();
+    Bus.emit('nav:go', { name: name, from: prev ? prev.id.replace('screen-', '') : null });
   }
   document.addEventListener('click', function (e) {
     var h = e.target.closest('[data-action="tuto"]'); if (h) { forceTuto = true; quick = true; go('choose'); return; }
@@ -205,6 +212,14 @@
   });
 
   /* ---------- Modale & toast ---------- */
+  /* CONTRAT FIGÉ (socle P1) : plus de 100 appels en dépendent. Toute modification se décide d'abord avec les écrans de campagne et du mandat.
+     modal(opts) : ouvre LA fenêtre unique, en remplaçant celle qui serait déjà ouverte (pas de pile). Ne renvoie rien.
+       opts.kicker  texte, surtitre          opts.title  texte, titre
+       opts.html    HTML du corps, NON échappé : à l'appelant d'échapper (esc)
+       opts.cls     classe ajoutée à .modal-card
+       opts.onOpen  fonction appelée une fois la fenêtre en place
+       opts.buttons [{ label (texte), primary, disabled, keep (ne ferme pas au clic), onClick }] ; par défaut, un bouton « Continuer »
+     Émet ui:modal-open { kicker, title, cls } sur le bus ; closeModal() émet ui:modal-close. Exposé en PolitikUI.modal. */
   function modal(opts) {
     var card = document.querySelector('#modal .modal-card');
     card.className = 'modal-card' + (opts.cls ? ' ' + opts.cls : '');
@@ -222,9 +237,10 @@
     $('modal').hidden = false;
     FX.setModal(true);
     FX.replay(card, 'enter');
+    Bus.emit('ui:modal-open', { kicker: opts.kicker || '', title: opts.title || '', cls: opts.cls || '' });
     if (opts.onOpen) opts.onOpen();
   }
-  function closeModal() { restoreModal(); $('modal').hidden = true; FX.setModal(false); }
+  function closeModal() { var was = !$('modal').hidden; restoreModal(); $('modal').hidden = true; FX.setModal(false); if (was) Bus.emit('ui:modal-close', {}); }
   /* v4.5.1 : réduire une fenêtre pour regarder le jeu derrière (scores, carte…), puis la rouvrir.
      Pendant ce temps, le jeu se regarde mais ne se joue pas : on rouvre d'abord la fenêtre. */
   function minimizeModal() {
@@ -238,12 +254,13 @@
   document.addEventListener('click', function (ev) {
     if (!$('modal').classList.contains('min') || $('modal').hidden) return;
     if ($('modal-pill').contains(ev.target)) return;
+    if (ev.target.closest('[data-ib]')) return;   // une infobulle se consulte, elle ne joue rien
     if (!ev.target.closest('button, a, [role="button"], input, select, label')) return;
     ev.preventDefault(); ev.stopPropagation();
     toast('Rouvre la fenêtre en bas pour continuer.');
   }, true);
   var toastTimer;
-  function toast(msg) { var t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.hidden = true; }, Math.max(2200, String(msg).length * 45)); }
+  function toast(msg) { var t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.hidden = true; }, Math.max(2200, String(msg).length * 45)); Bus.emit('ui:toast', { msg: msg }); }
 
   function mio(x) { return x.toFixed(1).replace('.', ','); }
   function pctFr(x, d) { return (100 * x).toFixed(d == null ? 0 : d).replace('.', ','); }
@@ -1044,10 +1061,10 @@
   }
   function frontHtml(paper) {
     var m = paper.main;
-    return '<div class="une-pic">' + Press.scene(paper.scene) + '</div>' +
-      '<div class="une-top"><span class="une-logo"><b>QN</b><span>Le Quotidien<br>National</span></span><span class="une-date">' + paper.day.charAt(0).toUpperCase() + paper.day.slice(1) + '<br>' + esc(paper.when || 'tour ' + g.turn + ' sur ' + R.maxTurns) + '</span></div>' +
+    return '<div class="une-top"><span class="une-nom">Le Quotidien National</span><span class="une-date">' + paper.day.charAt(0).toUpperCase() + paper.day.slice(1) + '<br>' + esc(paper.when || 'tour ' + g.turn + ' sur ' + R.maxTurns) + '</span></div>' +
       '<div class="une-word">' + esc(paper.word) + '</div>' +
       '<p class="une-sub">' + esc(m.lead || m.title) + '</p>' +
+      '<div class="une-pic">' + Press.scene(paper.scene) + '</div>' +
       '<div class="une-teasers">' + paper.teasers.map(function (a) {
         return '<button type="button" class="une-t" data-art="' + a.id + '"><b>' + esc(a.title) + '</b><small>' + (a.mine ? 'Ton parti · ' : '') + 'page ' + a.page + '</small></button>';
       }).join('') + '</div>';
@@ -1055,8 +1072,8 @@
   /* le mot géant prend toute la largeur, sans déborder */
   function fitWord() {
     var w = document.querySelector('#paper-front .une-word'); if (!w) return;
-    var size = 132; w.style.fontSize = size + 'px';
-    while (w.scrollWidth > w.clientWidth + 1 && size > 48) { size -= 4; w.style.fontSize = size + 'px'; }
+    var size = 110; w.style.fontSize = size + 'px';
+    while (w.scrollWidth > w.clientWidth + 1 && size > 18) { size -= 2; w.style.fontSize = size + 'px'; }
   }
   function showPaper(paper, contLabel, cont) {
     closeModal(); $('toast').hidden = true;
@@ -2034,14 +2051,18 @@
   /* v3.9 : une interview (Télé, Matinale, 20 h) : la question, tes 4 réponses et ce qu'elles rapportent */
   function interviewModal(o) {
     var q = teleQuestion(o.theme), iv = E.interview(g, me, q.id, o.fmt, o.station ? E.stationBoost(me, o.station) : null);
-    var html = tvSet(o.kicker, iv, o.host, o.cls) + (o.intro || '') + '<div class="ans-k">Ta réponse</div><div class="ans-list">' + iv.cards.map(function (c, i) {
+    var stn = o.station && BD ? D.STATIONS.filter(function (x) { return x.id === o.station; })[0] : null;
+    var html = (stn ? BD.studio(bdId(me), stn.name, '« ' + iv.q.ask + ' »') + '<div class="bd-info"><span>' + esc(o.kicker) + ' · ' + esc(o.host) + '</span></div>' : tvSet(o.kicker, iv, o.host, o.cls)) + (o.intro || '') + '<div class="ans-k">Ta réponse</div><div class="ans-list">' + iv.cards.map(function (c, i) {
       return '<button type="button" class="ans" data-i="' + i + '">' + answerCard(c, '<b class="ans-pt">' + ptStr(E.previewGain(g, me, c.gains)) + '</b>') + '</button>';
     }).join('') + '</div><p class="hint">Le chiffre = ce que la réponse rapporte à ton score au sondage national. Elle agit dans <b>toute la France</b>, sur les classes sociales qu\u2019elle touche, et son effet s\u2019estompe de 15 % par tour.</p>';
     var act0 = { type: o.type, theme: q.theme, station: o.station };
     modal({ kicker: costLabel(act0) + ' · 1 action', title: o.title || 'Que réponds-tu ?', cls: 'tv-modal', html: html, buttons: [{ label: 'Annuler' }],
       onOpen: function () {
         Array.prototype.forEach.call(document.querySelectorAll('#modal .ans'), function (b) {
-          b.addEventListener('click', function () { var c = iv.cards[+b.getAttribute('data-i')]; closeModal(); addAction(Object.assign({}, act0, { qid: q.id, reply: c.key })); });
+          b.addEventListener('click', function () {
+            var c = iv.cards[+b.getAttribute('data-i')]; closeModal(); addAction(Object.assign({}, act0, { qid: q.id, reply: c.key }));
+            if (stn) modal({ kicker: o.kicker, title: 'À l’antenne', cls: 'tv-modal', html: BD.grosPlan(bdId(me), { cote: 'g', fond: 'studio', casque: true, expr: bdExpr(c.key), texte: '« ' + c.quote + ' »', nom: party(me).candidate }), buttons: [{ label: 'Rendre l’antenne', primary: true }] });
+          });
         });
       } });
   }
@@ -2537,6 +2558,14 @@
     var nm = function (x) { return D.DEB_REG_NAME[x].split(' (')[0]; };
     return (w.length ? '<span class="ch-w">bat ' + w.map(nm).join(', ') + '</span>' : '') + (l.length ? '<span class="ch-l">contrée par ' + l.map(nm).join(', ') + '</span>' : '') || '<span>ni contre, ni contrée</span>';
   }
+  /* v6 : les cases dessinées (js/bd-jeu.js). On retombe sur l'ancien écran si le dessin n'est pas chargé */
+  var BD = window.PolitikBD;
+  function bdId(pid) { return BD.NOMS[party(pid).candidate] || BD.depuisVisage(pid === me && perso ? perso.face : null); }
+  function bdExpr(key, gagne, perd) { return perd ? 'inquiet' : key === 'attaque' ? 'colere' : gagne ? 'assure' : 'parle'; }
+  function bdPlateau(o, titre) {
+    if (!BD) return '';
+    return (window.innerWidth >= 761 ? '<div class="bd-large">' + BD.plateau(bdId(me), bdId(o), party(me).candidate, party(o).candidate, titre) + '</div>' : '<div class="bd-tel">' + BD.faceAFace(bdId(me), bdId(o), party(me).candidate, party(o).candidate, null) + '</div>');
+  }
   function vsStrip(o) {
     return '<div class="vs-strip"><span class="vs-side"><span class="vs-face">' + A.portrait(me) + '</span><b>Toi</b></span><span class="vs-x">VS</span>' +
       '<span class="vs-side"><span class="vs-face">' + A.portrait(o) + '</span><b>' + esc(party(o).short) + '</b><small>' + esc(D.TEMPERS[o] ? D.TEMPERS[o].label : '') + '</small></span></div>';
@@ -2558,7 +2587,8 @@
         fiche = '<div class="fiche">📋 <b>Fiche de préparation</b> : ' + esc(party(o).candidate) + ' répond souvent par ' + ws.slice(0, 2).map(function (x) { return D.ANSWERS[x.key].icon + ' ' + esc(D.ANSWERS[x.key].name.toLowerCase()) + ' (' + Math.round(100 * x.p) + ' %)'; }).join(' ou ') + '.</div>';
       } else fiche = '<div class="fiche muted">📋 Sans préparation, tu ne sais pas ce qu’il va répondre.</div>';
       var mult = 1 + D.DEBATE.prep * ((cfg.prep || {})[me] || 0);
-      var html = tvSet(cfg.kicker + ' · question ' + (k + 1) + ' / ' + n, iv, cfg.host, 'debat') + vsStrip(o) + fiche +
+      var tq = th(iv.q.theme), html = (BD ? BD.faceAFace(bdId(me), bdId(o), party(me).candidate, party(o).candidate, '« ' + iv.q.ask + ' »') +
+          '<div class="bd-info"><span class="tvset-chip">' + tq.icon + ' ' + esc(tq.name) + '</span><span>' + esc(cfg.kicker) + ' · question ' + (k + 1) + ' / ' + n + ' · ' + esc(cfg.host) + '</span></div>' : tvSet(cfg.kicker + ' · question ' + (k + 1) + ' / ' + n, iv, cfg.host, 'debat') + vsStrip(o)) + fiche +
         '<div class="ans-k">Ta réponse</div><div class="ans-list">' + iv.cards.map(function (c, i) {
           return '<button type="button" class="ans" data-i="' + i + '">' + answerCard(c, '<b class="ans-pt">' + ptStr(E.previewGain(g, me, scaleG(c.gains, mult))) + '</b>') +
             '<small class="ans-c">' + counterHint(c) + '</small></button>';
@@ -2573,12 +2603,13 @@
               var mc = mineA ? r.ca : r.cb, oc = mineA ? r.cb : r.ca, ms = mineA ? r.sa : r.sb, os = mineA ? r.sb : r.sa;
               var iBeat = r.beat === (mineA ? 'a' : 'b'), oBeat = r.beat && !iBeat;
               var mg = mineA ? r.ga : r.gb, og = mineA ? r.gb : r.ga, mPt = E.previewGain(g, me, mg), oPt = E.previewGain(g, o, og);   // v4.5 : en points de sondage
-              var side = function (who, c, pt, beat, lost) {
-                return '<div class="duel-card' + (beat ? ' won' : lost ? ' lost' : '') + '"><div class="dc-h"><span class="dc-who">' + who + '</span><span>' + c.icon + ' ' + esc(c.name) + '</span><b>' + ptStr(pt) + '</b></div><q class="ans-q">' + esc(c.quote) + '</q></div>';
+              var side = function (who, c, pt, beat, lost, pid, cote, gagne, perd) {
+                return '<div class="duel-card' + (beat ? ' won' : lost ? ' lost' : '') + '"><div class="dc-h"><span class="dc-who">' + who + '</span><span>' + c.icon + ' ' + esc(c.name) + '</span><b>' + ptStr(pt) + '</b></div>' +
+                  (BD ? BD.grosPlan(bdId(pid), { cote: cote, expr: bdExpr(c.key, gagne, perd), texte: '« ' + c.quote + ' »', nom: party(pid).candidate, taille: window.innerWidth >= 761 ? 31 : 25 }) : '<q class="ans-q">' + esc(c.quote) + '</q>') + '</div>';
               };
               var verdict = ms > os ? 'Question gagnée !' : ms < os ? 'Question perdue…' : 'Match nul';
-              var rh = side('Toi', mc, mPt, iBeat, oBeat) + (r.line ? '<div class="dc-line">' + (iBeat ? '💥 Ta réponse contre la sienne (ton gain ×' + String(D.DEBATE.win).replace('.', ',') + ', le sien réduit)' : '💥 Sa réponse contre la tienne (son gain ×' + String(D.DEBATE.win).replace('.', ',') + ', le tien réduit)') + ' : ' + esc(r.line) + '</div>' : '') +
-                side(esc(party(o).short), oc, oPt, oBeat, iBeat) + undecided(ms, os, o, ptStr(mPt), ptStr(oPt));
+              var rh = (BD ? '<div class="bd-duel">' : '') + side('Toi', mc, mPt, iBeat, oBeat, me, 'g', ms > os, ms < os) + (r.line ? '<div class="dc-line">' + (iBeat ? '💥 Ta réponse contre la sienne (ton gain ×' + String(D.DEBATE.win).replace('.', ',') + ', le sien réduit)' : '💥 Sa réponse contre la tienne (son gain ×' + String(D.DEBATE.win).replace('.', ',') + ', le tien réduit)') + ' : ' + esc(r.line) + '</div>' : '') +
+                side(esc(party(o).short), oc, oPt, oBeat, iBeat, o, 'd', os > ms, os < ms) + (BD ? '</div>' : '') + undecided(ms, os, o, ptStr(mPt), ptStr(oPt));
               closeModal();
               modal({ kicker: cfg.kicker + ' · question ' + (k + 1) + ' / ' + n, title: verdict, cls: 'tv-modal', html: rh,
                 onOpen: function () { setTimeout(function () { var u = document.querySelector('#modal .u-me'); if (u) u.style.width = u.getAttribute('data-w') + '%'; }, 60); },
@@ -2606,7 +2637,8 @@
       '<p class="hint">Chaque réponse affiche ce qu\u2019elle rapporte à ton score au sondage national (partout en France). Si ta réponse contre celle d\u2019en face, ton gain grimpe. Le vainqueur de la soirée reçoit en plus un bonus au sondage.' + (grand ? ' <b>Grand débat final : bonus doublé !</b>' : '') + '</p>' + learnBox('debat');
     var prep = {};
     g.players.forEach(function (p) { if (!p.human) prep[p.id] = AI.prep(g, p.id); });
-    modal({ kicker: grand ? 'Grand débat final' : 'Débat télévisé', title: 'Ce soir, sur le plateau !', html: html,
+    var o0 = mine[0] ? (mine[0].a === me ? mine[0].b : mine[0].a) : null;
+    modal({ kicker: grand ? 'Grand débat final' : 'Débat télévisé', title: 'Ce soir, sur le plateau !', html: (o0 ? bdPlateau(o0, grand ? 'GRAND DÉBAT FINAL' : 'DÉBAT TÉLÉVISÉ') : '') + html,
       onOpen: function () { var r = $('bid'); r.addEventListener('input', function () { $('bid-out').textContent = r.value + ' €'; }); },
       buttons: [{ label: 'Entrer sur le plateau', primary: true, keep: true, onClick: function () {
         prep[me] = parseInt($('bid').value, 10) || 0; closeModal();
@@ -2642,7 +2674,7 @@
       '<div class="rps">L\u2019émotion bat les chiffres · les chiffres battent l\u2019attaque · l\u2019attaque bat l\u2019émotion · attaque et chiffres démontent une promesse</div>' +
       '<div class="brief">' + fc.duels.map(function (d) { return line(th(d.theme).icon, esc(th(d.theme).name)); }).join('') + '</div>' +
       '<p class="hint">Le gagnant fait basculer jusqu’à ' + Math.round(D.DEBATE.faceMax * 100) + ' % des électeurs du perdant. Quelques points qui peuvent tout changer.</p>' + learnBox('debat');
-    modal({ kicker: 'Entre-deux-tours', title: 'Le grand face-à-face', html: html, buttons: [{ label: 'Entrer sur le plateau', primary: true, onClick: function () {
+    modal({ kicker: 'Entre-deux-tours', title: 'Le grand face-à-face', html: bdPlateau(o, 'ENTRE-DEUX-TOURS') + html, buttons: [{ label: 'Entrer sur le plateau', primary: true, onClick: function () {
       runDuels({ kicker: 'Le face-à-face', host: 'Les deux journalistes du grand débat', duels: fc.duels, prep: {}, fiche: true, done: function (picks) {
         var r = E.resolveFace(g, picks), mine = b.a === me ? r.sa : r.sb, his = b.a === me ? r.sb : r.sa;
         var won = r.winner === me;

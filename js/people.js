@@ -166,10 +166,10 @@
   }
   /* Le visage d'une personnalité (toujours le même pour un nom donné) */
   function faceOf(name, sex) {
-    if (FACES[name]) return Object.assign({}, FACES[name]);   // v4.9.1 : le visage dessiné d'après le modèle
+    if (FACES[name]) return Object.assign({ name: name }, FACES[name]);   // v4.9.1 : le visage dessiné d'après le modèle
     var h = 7; for (var i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 100003;
     var hairs = sex === 'f' ? ['long', 'carre', 'boucles', 'chignon', 'court'] : ['court', 'chauve', 'boucles', 'court', 'long'];
-    return { skin: h % 6, hair: hairs[(h >> 3) % hairs.length], hairColor: ['#1E1A1A', '#3A2A20', '#8A5A3B', '#C9922E', '#C9C9D1', '#B23A2A'][(h >> 5) % 6],
+    return { name: name, skin: h % 6, hair: hairs[(h >> 3) % hairs.length], hairColor: ['#1E1A1A', '#3A2A20', '#8A5A3B', '#C9922E', '#C9C9D1', '#B23A2A'][(h >> 5) % 6],
       glasses: ['none', 'rondes', 'carrees', 'none'][(h >> 7) % 4], mouth: ['sourire', 'serieux', 'grand'][(h >> 9) % 3],
       outfit: ['#26305A', '#4A4A55', '#7A1E24', '#2E6B45', '#5B3E8C'][(h >> 11) % 5], beard: sex === 'm' && (h >> 13) % 4 === 0 };
   }
