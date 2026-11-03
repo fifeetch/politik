@@ -334,6 +334,14 @@
     'Geneviève Discrète': { femme: 1, r: 1, age: 2, sc: '#8a6a2a', se: 3.4, sb: 3, oe: 1, nl: 0, ga: 19, dr: 18, bf: 'sourit', levres: '#c48a78', habit: '#26305a', habitO: '#1a2244', chemise: PAL.blanc, coiffure: C('courtF', BLOND2) },
     /* Jean-Louis Bourdonnant : plus de soixante-dix ans, dégarni, cheveux blancs, lunettes rondes */
     'Jean-Louis Bourdonnant': { c: 4, m: -1, age: 3, sc: '#8d8c82', se: 4.6, sb: -2, paup: 1, oe: .94, nez: 'busque', nl: 6, ga: 19, dr: 17, by: 3, bf: 'tombe', cravate: '#26305a', lunettes: lunettes('rondes'), coiffure: K(BLANC) }
+    ,
+    /* --- Hors-Sol --- */
+    /* Christophe Béton : la cinquantaine, brun, visage carré */
+    'Christophe Béton': { q: 4, m: 3, age: 1, sc: '#26201c', se: 5.8, si: -1, ouv: .94, nl: 0, nw: 3, ga: 22, dr: 20, cravate: '#26305a', coiffure: C('dense', BRUN) },
+    /* Frédéric Valsetout : la cinquantaine passée, gris, lunettes carrées */
+    'Frédéric Valsetout': { r: 1, age: 2, sc: '#5d5c54', se: 4.4, sb: 3, oe: .96, nez: 'pointu', nl: 2, ga: 20, dr: 19, bf: 'sourit', cravate: '#7a5a2e', lunettes: lunettes('fines'), coiffure: C('degarni', GRIS) },
+    /* Laurent Marchepied : la quarantaine, cheveux noirs ras, barbe noire courte */
+    'Laurent Marchepied': { teint: 1, m: 1, age: 0, sc: '#191513', se: 6, si: -2, ouv: .9, nl: 1, ga: 19, dr: 18, bf: 'sourit', barbe: barbe('#2a2522', { h: 188, stries: '#6b5e54' }), cravate: '#26305a', coiffure: C('ras', NOIR) }
     /*SUITE*/
   };
   Object.keys(FICHES).forEach(function (nom) { NOMS[nom] = nom; ajoute(nom, FICHES[nom]); });
