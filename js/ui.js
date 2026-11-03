@@ -987,11 +987,19 @@
      « Ouvrir le journal » : tous les articles du jour, plus le mot de Lulu sur ta campagne. */
   var pressLog = [], pressBefore = {}, pressChanges = [], lastPaper = null, paperCont = null;
   var Press = window.PolitikPress;
+  var artVus = {};
+  function artScene(a) {
+    if (!BD) return '';
+    var key = a.why && a.why.key, nom = a.rub === 'Affaires' ? 'scandale' : a.rub === 'Régions' ? 'ville' : a.rub === 'Médias' ? 'tele' : a.rub === 'Meeting' || key === 'terrain' ? 'meeting' : key === 'medias' || key === 'matinale' || key === 'vingt' ? 'tele' : key === 'mobiliser' ? 'ville' : '';
+    if (!nom || artVus[nom] || !BD.aUne(nom)) return '';
+    artVus[nom] = true;
+    return '<div class="art-pic">' + BD.une(nom) + '</div>';
+  }
   function articleHtml(a) {
     var p = a.pid ? party(a.pid) : null;
     return '<article class="art-item' + (a.mine ? ' mine' : '') + '" id="art-' + a.id + '">' +
       '<div class="art-rub"><span>' + esc(a.rub) + '</span>' + (a.mine ? '<em>Ton parti</em>' : '') + '<i>p. ' + a.page + '</i></div>' +
-      (a.id === 'main' ? '<div class="art-pic">' + Press.scene(a.scene) + '</div>' : '') +
+      (a.id === 'main' ? '<div class="art-pic">' + Press.scene(a.scene) + '</div>' : artScene(a)) +
       '<h3>' + esc(a.title) + '</h3>' +
       (a.rule ? '<p class="art-rule"><b>' + esc(a.ruleLabel || 'Pour la campagne') + ' :</b> ' + esc(a.rule) + '</p>' : '') +
       '<div class="art-body">' + (p && a.id !== 'main' ? '<span class="art-face" style="--pc:' + p.color + '">' + A.portrait(a.pid) + '</span>' : '') + '<p>' + esc(a.text) + '</p></div>' +
@@ -1063,6 +1071,7 @@
     modal({ kicker: 'Les coulisses', title: a.title, html: '<div class="coulisses">' + h + '</div>', buttons: [{ label: 'Retour au journal', primary: true }] });
   }
   function articlesHtml(paper) {
+    artVus = {};
     return '<div class="pages-in">' + paper.articles.map(articleHtml).join('') +
       (paper.mine ? '<section class="art-lulu"><div class="art-rub"><span>Le mot de Lulu</span></div><div class="learn">' + A.advisor() + '<div class="brief">' + paper.mine + '</div></div></section>' : '') +
       (paper.learn ? '<section class="art-learn">' + paper.learn + '</section>' : '') + '</div>';
@@ -1474,7 +1483,7 @@
   }
   var lastJournal = '';
   function renderActu() {
-    $('actu-body').innerHTML = (lastPaper ? '<button type="button" class="btn" id="actu-une">📰 Revoir la une du jour</button>' : '') + (g.news ? newsHtml(g.news) : '') + (lastJournal ? '<div class="actu-pages">' + lastJournal + '</div>' : '');
+    $('actu-body').innerHTML = (lastPaper ? '<button type="button" class="btn" id="actu-une">📰 Revoir la une du jour</button>' : '') + (g.news ? newsHtml(g.news) : '') + (lastJournal ? '<div class="actu-pages"><div class="actu-mast">Le Quotidien National</div>' + lastJournal + '</div>' : '');
     var b = $('actu-une'); if (b) b.addEventListener('click', function () { showPaper(lastPaper, 'Retour à la carte', null); });
   }
 
@@ -2062,7 +2071,8 @@
   function interviewModal(o) {
     var q = teleQuestion(o.theme), iv = E.interview(g, me, q.id, o.fmt, o.station ? E.stationBoost(me, o.station) : null);
     var stn = o.station && BD ? D.STATIONS.filter(function (x) { return x.id === o.station; })[0] : null;
-    var html = (stn ? BD.studio(bdId(me), stn.name, '« ' + iv.q.ask + ' »') + '<div class="bd-info"><span>' + esc(o.kicker) + ' · ' + esc(o.host) + '</span></div>' : tvSet(o.kicker, iv, o.host, o.cls)) + (o.intro || '') + '<div class="ans-k">Ta réponse</div><div class="ans-list">' + iv.cards.map(function (c, i) {
+    var vingt = o.fmt === 'vingt', scene = !BD ? null : stn ? BD.studio(bdId(me), stn.name, '« ' + iv.q.ask + ' »') : BD.tele(bdId(me), vingt ? 'HEXA TV · LE 20 H' : 'HEXA TV · LE 13 H', '« ' + iv.q.ask + ' »', vingt);
+    var html = (scene ? scene + '<div class="bd-info"><span>' + esc(o.kicker) + ' · ' + esc(o.host) + '</span></div>' : tvSet(o.kicker, iv, o.host, o.cls)) + (o.intro || '') + '<div class="ans-k">Ta réponse</div><div class="ans-list">' + iv.cards.map(function (c, i) {
       return '<button type="button" class="ans" data-i="' + i + '">' + answerCard(c, '<b class="ans-pt">' + ptStr(E.previewGain(g, me, c.gains)) + '</b>') + '</button>';
     }).join('') + '</div><p class="hint">Le chiffre = ce que la réponse rapporte à ton score au sondage national. Elle agit dans <b>toute la France</b>, sur les classes sociales qu\u2019elle touche, et son effet s\u2019estompe de 15 % par tour.</p>';
     var act0 = { type: o.type, theme: q.theme, station: o.station };
@@ -2071,7 +2081,7 @@
         Array.prototype.forEach.call(document.querySelectorAll('#modal .ans'), function (b) {
           b.addEventListener('click', function () {
             var c = iv.cards[+b.getAttribute('data-i')]; closeModal(); addAction(Object.assign({}, act0, { qid: q.id, reply: c.key }));
-            if (stn) modal({ kicker: o.kicker, title: 'À l’antenne', cls: 'tv-modal', html: BD.grosPlan(bdId(me), { cote: 'g', fond: 'studio', casque: true, expr: bdExpr(c.key), texte: '« ' + c.quote + ' »', nom: party(me).candidate }), buttons: [{ label: 'Rendre l’antenne', primary: true }] });
+            if (BD && $('modal').hidden) modal({ kicker: o.kicker, title: stn ? 'À l’antenne' : 'En direct', cls: 'tv-modal', html: BD.grosPlan(bdId(me), { cote: 'g', fond: stn ? 'studio' : '', casque: !!stn, expr: bdExpr(c.key), texte: '« ' + c.quote + ' »', nom: party(me).candidate }), buttons: [{ label: 'Rendre l’antenne', primary: true }] });
           });
         });
       } });
@@ -2086,8 +2096,8 @@
       { k: 'matinale', icon: '📻', name: 'Matinale radio', cost: costLabel({ type: 'matinale' }), fx: 'Choisis ta radio et son public · une fois tous les deux tours', err: mErr },
       { k: 'vingt', icon: '🕗', name: 'Le journal de 20 h', cost: costLabel({ type: 'vingt' }), fx: vErr ? '' : '<b>Tu es invité !</b> Une seule fois : gain doublé, mais gare au trac', err: vErr }
     ];
-    var html = '<p>Les médias te font gagner des électeurs <b>partout en France</b>, dans les classes sociales que ta réponse touche. L\u2019effet s\u2019estompe de 15 % par tour : il faut l\u2019entretenir.</p><div class="pick">' + rows.map(function (r, i) {
-      return '<button type="button" class="pick-row' + (r.err ? ' off' : '') + (r.k === 'vingt' && !r.err ? ' mine' : '') + '" data-i="' + i + '"><span class="pick-i">' + r.icon + '</span><span class="pick-txt"><b>' + esc(r.name) + '</b><small>' + (r.err ? esc(r.err.replace(/\.$/, '')) : r.fx) + '</small></span><span class="pick-cost">' + esc(r.cost) + '</span></button>';
+    var html = '<p>Les médias te font gagner des électeurs <b>partout en France</b>, dans les classes sociales que ta réponse touche. L\u2019effet s\u2019estompe de 15 % par tour : il faut l\u2019entretenir.</p><div class="pick media-pick">' + rows.map(function (r, i) {
+      return '<button type="button" class="pick-row' + (r.err ? ' off' : '') + (r.k === 'vingt' && !r.err ? ' mine' : '') + '" data-i="' + i + '"><span class="pick-i' + (BD ? ' media-pic' : '') + '">' + (BD ? BD.mediaCase(r.k, bdId(me)) : r.icon) + '</span><span class="pick-txt"><b>' + esc(r.name) + '</b><small>' + (r.err ? esc(r.err.replace(/\.$/, '')) : r.fx) + '</small></span><span class="pick-cost">' + esc(r.cost) + '</span></button>';
     }).join('') + '</div>';
     modal({ kicker: 'Médias', title: 'Où veux-tu passer ?', html: html, buttons: [{ label: 'Fermer' }],
       onOpen: function () {
@@ -2105,7 +2115,7 @@
   /* v3.9 : la matinale radio. D'abord la station (son public et son accueil), puis l'interview */
   function matinaleMenu() {
     var thm = theme || E.bestTheme(g, me, selected || null);
-    var html = '<p>Une interview à 7 h 50. Chaque radio a son public : choisis qui tu veux toucher. Les auditeurs t\u2019écoutent mieux s\u2019ils sont de ton bord.</p><div class="pick">' + D.STATIONS.map(function (st) {
+    var html = (BD ? '<div class="bd-bandeau">' + BD.mediaCase('matinale', bdId(me)) + '</div>' : '') + '<p>Une interview à 7 h 50. Chaque radio a son public : choisis qui tu veux toucher. Les auditeurs t\u2019écoutent mieux s\u2019ils sont de ton bord.</p><div class="pick">' + D.STATIONS.map(function (st) {
       var fit = E.stationFit(me, st.id), top = E.SEG.slice().sort(function (a, b) { return st.segs[b] - st.segs[a]; }).slice(0, 2);
       return '<button type="button" class="pick-row st-' + fit.k + '" data-st="' + st.id + '"><span class="pick-i">' + st.icon + '</span><span class="pick-txt"><b>' + esc(st.name) + ' <span class="muted">(' + esc(st.parody) + ')</span></b><small>' + esc(st.desc) + '</small>' +
         '<small class="st-fit">Public : ' + top.map(function (s) { return SEGBY[s].icon + ' ' + esc(SEGBY[s].name.toLowerCase()); }).join(', ') + ' · <b>' + esc(fit.label) + '</b>' + (fit.f === 1 ? '' : ' (' + (fit.f > 1 ? '+' : '−') + Math.abs(Math.round((fit.f - 1) * 100)) + ' %)') + '</small></span></button>';
