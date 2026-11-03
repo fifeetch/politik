@@ -698,7 +698,7 @@
     var fsec = el('div', { class: 'pl-theme pl-fin' }, '<div class="pl-head">🏦 <b>Comment tu finances</b><span class="pl-cred">' + progFin.length + ' / ' + R.fundingMax + ' (facultatif)</span></div>');
     // v3.5.3 : les financements rangés comme les lois du quinquennat : recettes, puis économies (ce qui rapporte le plus d'abord)
     var finGroups = [{ icon: '💶', name: 'Faire rentrer de l\u2019argent', ids: [] }, { icon: '✂️', name: 'Réduire les dépenses', ids: [] }];
-    D.FUNDING.slice().sort(function (a, b) { return a.cost - b.cost; }).forEach(function (m) { finGroups[FIN_SAVE.indexOf(m.id) >= 0 ? 1 : 0].ids.push(m); });
+    D.FUNDING.filter(function (m) { return !m.loiSeule; }).sort(function (a, b) { return a.cost - b.cost; }).forEach(function (m) { finGroups[FIN_SAVE.indexOf(m.id) >= 0 ? 1 : 0].ids.push(m); });
     finGroups.forEach(function (gp) {
       fsec.appendChild(el('div', { class: 'pl-sub' }, gp.icon + ' ' + esc(gp.name)));
       gp.ids.forEach(finRow);

@@ -18,4 +18,8 @@ CD.CARDS.concat(Object.keys(CD.FOLLOW || {}).map(function (k) { return CD.FOLLOW
   var n = CD.sceneOf(c);
   assert.ok(new RegExp('\\b' + n + ': function').test(src), (c.id || c.who) + ' : la scène ' + n + ' existe');
 });
+var D2 = D.FUNDING.filter(function (m) { return m.loiSeule; });
+assert.ok(D2.length >= 11, 'les grandes lois existent');
+[15, 20, 30].forEach(function (n) { assert.ok(D2.some(function (m) { return m.cost === -n; }), 'une loi à ' + n + ' Md€'); });
+D2.forEach(function (m) { assert.ok(m.edu && m.src && m.src.length && m.vrai, m.id + ' est expliquée et sourcée'); assert.ok(G.NEW_LAWS.recettes.concat(G.NEW_LAWS.economies).indexOf(m.id) >= 0, m.id + ' est proposable'); });
 console.log('Scénarios (' + G.EVENTS.length + ' événements, ' + CD.CARDS.length + ' cartes) : OK');
