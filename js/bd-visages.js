@@ -204,12 +204,25 @@
       return s;
     };
   }
+  /* le pull à col rond : la tenue sans veste ni cravate, sur la carrure de la personne */
+  function pull(f) {
+    var c = f.habit || PAL.marine, o = f.habitO || PAL.marineO, fem = !!f.femme;
+    return function () {
+      return fem ? p('M186,272 C160,284 124,290 100,320 C84,350 76,430 74,490 L368,490 C366,430 360,364 350,336 C338,308 306,296 278,278 Z', c, 2.8) + a('M100,320 C84,350 76,430 74,490 L104,490 C106,440 112,392 124,360 Z', o) + t('M124,360 C134,400 136,440 134,490 M326,340 C318,400 316,440 318,490', 1.8)
+        : p('M188,278 C150,288 100,296 72,332 C54,362 48,430 44,490 L396,490 C394,430 390,374 378,344 C362,316 322,302 286,284 Z', c, 2.8) + a('M72,332 C54,362 48,430 44,490 L80,490 C82,440 90,392 104,362 Z', o) + t('M104,362 C116,400 118,440 116,490 M348,346 C340,400 338,440 340,490', 1.8);
+    };
+  }
+  function colPull(f) {
+    var o = f.habitO || PAL.marineO, fem = !!f.femme;
+    var c = f.habit || PAL.marine;
+    return function () { return fem ? a('M182,284 C200,326 268,330 290,288 L310,360 H170 Z', c) + p('M192,270 C204,306 262,310 282,274 L290,288 C268,330 200,326 182,284 Z', o, 2.2) : a('M176,288 C198,334 278,338 300,294 L322,370 H160 Z', c) + p('M186,272 C200,312 276,316 292,278 L300,294 C278,338 198,334 176,288 Z', o, 2.2); };
+  }
   function ajoute(id, f) {
     var fem = !!f.femme, teinte = f.teint ? PEAUX[f.teint] : null;
     if (f.coiffure) { if (typeof f.coiffure === 'function') f.cheveux = f.coiffure; else { f.dos = f.coiffure.dos; f.cheveux = f.coiffure.cheveux; } }
     P.FICHE[id] = {
       tete: function (e) { return tete(f, e); }, peau: teinte && teinte[0], peauO: teinte && teinte[1],
-      corps: fem ? tailleur(f) : costume(f), col: fem ? colTailleur(f) : colCostume(f), geste: function () { return ''; },
+      corps: f.pull ? pull(f) : fem && !f.cravate ? tailleur(f) : costume(f), col: f.pull ? colPull(f) : fem && !f.cravate ? colTailleur(f) : colCostume(f), geste: function () { return ''; },
       cou: f.cou || (fem ? [76, 144, 150, 136 + (f.m || 0), 50] : [70, 150, 150, 140 + (f.m || 0), 50]), at: f.at || (fem ? [114, 38] : [114, 42]), k: f.k || (fem ? 1.12 : 1.14)
     };
   }
@@ -363,29 +376,40 @@
   Object.keys(FICHES).forEach(function (nom) { NOMS[nom] = nom; ajoute(nom, FICHES[nom]); });
 
   /* Le personnage créé par le joueur (peau, coupe, couleur, lunettes, barbe, tenue de js/perso.js) : même dessin, même trait */
-  var TEINTS = [null, null, PEAUX[1], PEAUX[2], PEAUX[3], ['#6f4730', '#553523']];
+  /* les six pastilles de l'éditeur (ART.SKINS), chacune avec son ombre */
+  var TEINTS = [['#F6D4B6', '#dcae8a'], ['#F2CBA6', '#d6a67e'], ['#E9B58C', '#c8915f'], ['#C68B5E', '#a56d44'], ['#8D5A3B', '#6d4329'], ['#5C3A24', '#452a18']];
   function teintes(c) {
     function m(k) { var n = parseInt(String(c).slice(1), 16), o = function (v) { return Math.max(0, Math.min(255, Math.round(v * k))).toString(16).padStart(2, '0'); }; return '#' + o(n >> 16) + o((n >> 8) & 255) + o(n & 255); }
     return [c, m(.72), m(1.5)];
   }
+  /* c.tenue : veste (sans cravate, par défaut), pull ou cravate. c.traits : fins ou marques ; sinon, on suit la coiffure.
+     Sans tenue choisie (ministres, personnages des cartes), le nom ou le tirage donne un visage et une coupe à lui ; le personnage du joueur, lui, ne bouge pas quand il change un détail. */
   function depuisVisage(c) {
     c = c || {};
-    var cle = 'joueur:' + [c.skin, c.hair, c.hairColor, c.glasses, c.beard, c.mouth, c.outfit].join('|');
+    var cle = 'joueur:' + [c.skin, c.hair, c.hairColor, c.glasses, c.beard, c.mouth, c.outfit, c.tenue, c.traits, c.name].join('|');
     if (P.FICHE[cle]) return cle;
     var hc = c.hairColor || '#3A2A20', T3 = teintes(hc), long = c.hair === 'long' || c.hair === 'carre' || c.hair === 'chignon';
-    var teint = TEINTS[c.skin] || null;
-    var f = { sc: T3[1], se: long ? 4.2 : 5.2, ga: 20, dr: 19, bf: c.mouth === 'sourire' ? 'sourit' : c.mouth === 'grand' ? 'pleine' : 'droite', habit: c.outfit || PAL.marine, habitO: teintes(c.outfit || '#26305A')[1], cravate: long ? null : '#7a1e24' };
-    if (long) { f.femme = 1; f.levres = '#c07a68'; f.sb = 3; }
+    var fins = c.traits === 'fins' || (c.traits !== 'marques' && long), teint = TEINTS[c.skin || 0];
+    var f = { sc: T3[1], se: fins ? 4.2 : 5.2, ga: 20, dr: 19, bf: c.mouth === 'sourire' ? 'sourit' : c.mouth === 'grand' ? 'pleine' : 'droite', habit: c.outfit || PAL.marine, habitO: teintes(c.outfit || '#26305A')[1], pull: c.tenue === 'pull', cravate: c.tenue === 'cravate' ? '#7a1e24' : null };
+    if (fins) { f.femme = 1; f.levres = '#c07a68'; f.sb = 3; }
+    var courte = fins ? 'courtF' : 'raie';
+    if (!c.tenue) {
+      var h = 7, g = c.name || cle;
+      for (var i = 0; i < g.length; i++) h = (h * 31 + g.charCodeAt(i)) % 100003;
+      f.m = [-3, -1, 0, 1, 3][h % 5]; f.c = [-2, 0, 0, 2, 4][(h >> 2) % 5]; f.r = (h >> 4) % 3; f.nl = [-2, 0, 2, 4][(h >> 6) % 4]; f.age = (h >> 8) % 3;
+      f.nez = [null, 'busque', 'rond', 'pointu'][(h >> 10) % 4]; f.oe = [.96, 1, 1.06][(h >> 12) % 3];
+      if (!fins) courte = ['raie', 'arriere', 'dense', 'ras'][(h >> 13) % 4];
+    }
     if (c.hair === 'long') { f.sansOreille = true; f.coiffure = L(236, T3); }
     else if (c.hair === 'carre') { f.sansOreille = true; f.coiffure = L(190, T3); }
     else if (c.hair === 'chignon') f.coiffure = chignon(T3[0], T3[1], T3[2]);
     else if (c.hair === 'chauve') f.coiffure = K(T3);
     else if (c.hair === 'boucles') f.coiffure = C('boucle', T3);
-    else f.coiffure = C('raie', T3);
+    else f.coiffure = C(courte, T3);
     if (c.beard) f.barbe = barbe(T3[0], { h: 186, stries: T3[2] });
     if (c.glasses === 'rondes' || c.glasses === 'carrees') f.lunettes = lunettes(c.glasses);
     ajoute(cle, f);
-    if (teint) { P.FICHE[cle].peau = teint[0]; P.FICHE[cle].peauO = teint[1]; }
+    P.FICHE[cle].peau = teint[0]; P.FICHE[cle].peauO = teint[1];
     return cle;
   }
   root.Visages = { FICHES: FICHES, NOMS: NOMS, ajoute: ajoute, depuisVisage: depuisVisage };

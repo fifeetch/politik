@@ -124,13 +124,18 @@
         });
       } });
   }
-  function resumeGame(from) {
-    var sv = (from && from.game) ? from : readSave(); if (!sv) return;
+  /* Remet en place la partie et le parti du joueur : pour la campagne reprise, et pour le mandat repris (js/govui.js) */
+  function restoreGame(sv) {
     perso = sv.perso; founded = sv.founded; leadOn = sv.lead;
     PS.reset(A); applyEdits();
     if (sv.foundedOn && founded) PS.found(founded, perso, A);
     else if (leadOn && perso && perso.name) PS.lead(sv.me, perso, A);
     g = E.loadGame(sv.game); me = sv.me; quickGame = sv.quick; selected = null; queue = []; theme = null; themePicked = false; advisorHidden = false;
+    return g;
+  }
+  function resumeGame(from) {
+    var sv = (from && from.game) ? from : readSave(); if (!sv) return;
+    restoreGame(sv);
     go('game'); nextTurn();
     toast('Partie reprise au tour ' + g.turn + '.');
   }
@@ -517,6 +522,7 @@
   function editChar(onDone) {
     var c = JSON.parse(JSON.stringify(perso || PS.defaultChar())), F = PS.FACE;
     if (!c.name) c.name = PS.randomName();
+    c.face.tenue = c.face.tenue || 'veste'; c.face.traits = c.face.traits || 'auto';
     function chips(key, list) {
       return '<div class="pc-row">' + list.map(function (x) { var v = x[0], on = c.face[key] === v; return '<button type="button" class="pc-chip" data-k="' + key + '" data-v="' + v + '" aria-pressed="' + on + '">' + esc(x[1]) + '</button>'; }).join('') + '</div>';
     }
@@ -532,7 +538,8 @@
       '<div class="kicker">Cheveux</div>' + chips('hair', F.hair) + swatches('hairColor', F.hairColor) +
       '<div class="kicker">Lunettes</div>' + chips('glasses', F.glasses) +
       '<div class="kicker">Expression</div>' + chips('mouth', F.mouth) +
-      '<div class="kicker">Tenue</div>' + swatches('outfit', F.outfit) +
+      '<div class="kicker">Traits</div>' + chips('traits', [['auto', 'Selon la coiffure'], ['fins', 'Fins'], ['marques', 'Marqués']]) +
+      '<div class="kicker">Tenue</div>' + chips('tenue', [['veste', 'Veste'], ['pull', 'Pull'], ['cravate', 'Cravate']]) + swatches('outfit', F.outfit) +
       '<div class="pc-row"><button type="button" class="pc-chip" id="pc-beard" aria-pressed="' + !!c.face.beard + '">Barbe</button></div>' +
       '<div class="kicker">Ton style en débat</div><div class="pick">' + Object.keys(PS.TRAITS).map(function (k) {
         var t = PS.TRAITS[k]; return '<button type="button" class="pick-row pc-trait" data-trait="' + k + '" aria-pressed="' + (c.trait === k) + '"><span class="lc-ai">' + t.icon + '</span><span class="pick-txt"><b>' + esc(t.name) + '</b><small>' + esc(t.text) + '</small></span></button>';
@@ -826,6 +833,7 @@
     (info.clan || []).forEach(function (x) { alerts.unshift('SCANDALE · ' + (x.pid === me ? 'Toi' : party(x.pid).short) + ' : « ' + x.name + ' » révélé'); });
     if (info.bomb) alerts.unshift('BOMBE · ' + (info.bomb.pid === me ? 'Toi' : party(info.bomb.pid).short) + ' : ' + info.bomb.title.replace('💣 ', ''));
     FX.breaking('Alerte info', alerts);
+    if (alerts.length) Bus.emit('ui:alert', { n: alerts.length });
     var jp = journalParts(info, aiDil, aiAff);
     var paper = window.PolitikPress.build({ g: g, E: E, me: me, info: info, aiAff: aiAff, aiDil: aiDil, log: g.turn > 1 ? pressLog : [], changes: g.turn > 1 ? pressChanges : [], before: pressBefore });
     paper.mine = jp.mine; paper.learn = jp.learn;
@@ -1086,6 +1094,7 @@
     $('paper-go').textContent = contLabel;
     $('paper').hidden = false;
     FX.replay($('paper-front'), 'une-in');
+    Bus.emit('ui:paper', {});
     requestAnimationFrame(fitWord);
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitWord);
   }
@@ -1301,6 +1310,7 @@
     queue.push(act); justAdded = queue.length - 1;
     luluSay(luluLine(act, wasTiring));
     render(); T.notify(queue.length >= E.actionsFor(g, me) ? 'full' : 'queue');
+    Bus.emit('ui:action', { type: act.type });
   }
 
   /* ---------- v1.8 : les onglets ---------- */
@@ -2761,6 +2771,7 @@
   function bilanModal(then) {
     var b = g.bilan;
     if (!b || !b.rows[me]) return then();
+    Bus.emit('ui:poll', { delta: b.rows[me].total });
     modal({ kicker: 'Fin du tour ' + b.turn, title: 'Ton bilan au sondage', html: bilanHtml(b), buttons: [{ label: g.over || g.phase === 'between' ? 'Continuer' : 'Tour suivant', primary: true, onClick: then }] });
   }
   function finishTurn(spot) {
@@ -3072,6 +3083,7 @@
       clock.classList.remove('hot', 'tick', 'long');
       clock.textContent = '20:00';
       screen.classList.add('flash20');
+      Bus.emit('ui:night-result', { win: win === me });
       $('night-stage').innerHTML = '<div class="night-est">Estimation · ' + (res.direct ? 'élu dès le 1er tour' : 'second tour') + '</div>' +
         '<div class="portrait" style="background:' + P.color + ';color:' + P.ink + '"><span class="portrait-art">' + A.portrait(win) + '</span><span class="portrait-name">' + esc(P.candidate) + ' · ' + esc(P.short) + '</span></div>' +
         '<div class="night-pct">' + (pct * 100).toFixed(1).replace('.', ',') + ' %</div>' +
@@ -3267,7 +3279,8 @@
 
   /* Outils partagés avec la phase « Gouverner » (js/govui.js) */
   window.PolitikUI = { showPaper: showPaper, modal: modal, closeModal: closeModal, toast: toast, go: go, esc: esc, line: line, srcHtml: srcHtml, chip: chip,
-    game: function () { return g; }, me: function () { return me; } };
+    game: function () { return g; }, me: function () { return me; }, restoreGame: restoreGame,
+    saveContext: function () { return { quick: quickGame, perso: perso, founded: founded, lead: leadOn, foundedOn: !!(founded && me === founded.sigle) }; } };
   // v3.8.1 : un démarrage qui ne peut plus rester bloqué (une erreur ici n'empêche pas d'arriver à l'accueil)
   [renderTitleMap, renderChoose, renderResume].forEach(function (f) { try { f(); } catch (e) { if (window.console) console.error(e); } });
   if ($('btn-resume')) $('btn-resume').addEventListener('click', function () { resumeGame(); });

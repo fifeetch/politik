@@ -266,7 +266,8 @@
   var SKINS = ['#F6D4B6', '#F2CBA6', '#E9B58C', '#C68B5E', '#8D5A3B', '#5C3A24'];
   function face(cfg) {
     cfg = cfg || {};
-    if (cfg.name) { var bd = dessinBD(cfg.name, cfg.bg || '#D9D4F0'); if (bd) return bd; }
+    var bd = (cfg.name && dessinBD(cfg.name, cfg.bg || '#D9D4F0')) || composeBD(cfg);
+    if (bd) return bd;
     var sk = SKINS[cfg.skin || 0] || SKINS[0], hc = cfg.hairColor || '#3A2A20', hair = cfg.hair || 'court', bg = cfg.bg || '#D9D4F0';
     var back = '', top = '';
     if (hair === 'long') back = '<path d="M28,92 Q20,44 36,26 Q60,10 84,26 Q100,44 92,92 Q84,98 80,86 L40,86 Q36,98 28,92 Z" fill="' + hc + '"' + o() + '/>';
@@ -291,7 +292,16 @@
   /* le visage en ligne claire d'une personnalité du jeu (js/bd-*.js), à défaut du dessin ci-dessus */
   function dessinBD(nom, color) {
     var B = root.Perso, V = root.Visages, id = B && V && V.NOMS[nom];
-    if (!id || !B.FICHE[id]) return '';
+    return id ? busteBD(id, color) : '';
+  }
+  /* un visage composé (toi, un ministre tiré au sort, un personnage de carte), sur la même construction */
+  function composeBD(cfg) {
+    var V = root.Visages;
+    return V ? busteBD(V.depuisVisage(cfg), cfg.bg || '#D9D4F0') : '';
+  }
+  function busteBD(id, color) {
+    var B = root.Perso;
+    if (!B || !B.FICHE[id]) return '';
     var F = B.FICHE[id], s = 0.34, cx = F.at[0] + 100 * F.k, haut = F.at[1] + 10 * F.k;
     return frame(color, '<g transform="translate(' + (60 - cx * s).toFixed(1) + ',' + (8 - haut * s).toFixed(1) + ') scale(' + s + ')">' + B.buste(id, 'neutre', { s: 0.5 }) + '</g>');
   }
@@ -301,12 +311,14 @@
     return list && q ? dessinBD(list[0][0], q.color) : '';
   }
 
+  /* Lulu : le chignon et les grosses lunettes, sur fond jaune */
+  var LULU = { skin: 1, hair: 'chignon', hairColor: '#8A5A3B', glasses: 'rondes', mouth: 'sourire', outfit: '#C6402D', tenue: 'veste', traits: 'fins', bg: '#F5D547' };
   var ART = {
     portrait: function (pid) { return OVR[pid] ? OVR[pid]() : chefBD(pid) || (P[pid] ? P[pid]() : ''); },
     setPortrait: function (pid, fn) { if (fn) OVR[pid] = fn; else delete OVR[pid]; },
     basePortrait: function (pid) { return chefBD(pid) || (P[pid] ? P[pid]() : ''); },   // v4.9.1 : le portrait dessiné du chef de file, même si un autre candidat est choisi
     face: face, SKINS: SKINS,
-    advisor: advisor,
+    advisor: function () { return composeBD(LULU) || advisor(); },
     vignette: function (k) { return V[k] ? V[k]() : ''; },
     hasVignette: function (k) { return !!V[k]; }
   };
