@@ -85,8 +85,8 @@
   </header>
 
   <section>
-    <h2>1. Les personnages <small>Personnalités inventées du jeu, chacune avec sa silhouette</small></h2>
-    <h3>Jean-Lutte Mégaphone, trois expressions</h3>
+    <h2>1. Les personnages <small>Personnalités inventées du jeu : chacune évoque un type de responsable politique, sans portrait d'une personne réelle</small></h2>
+    <h3>Jean-Lutte Mégaphone, trois expressions, trois angles</h3>
     <div class="planche trois expressions" id="expressions"></div>
     <h3>Quatre autres partis</h3>
     <div class="planche quatre" id="galerie"></div>
@@ -159,9 +159,9 @@
   function $(id) { return document.getElementById(id); }
 
   $('expressions').innerHTML =
-    fig(S.fiche('megaphone', 'assure', 'rue', 'Jean-Lutte Mégaphone, sûr de lui, porte-voix à la main', { geste: 'megaphone' }), 'Assuré', 'Le porte-voix prêt') +
-    fig(S.fiche('megaphone', 'colere', 'rue', 'Jean-Lutte Mégaphone en colère, poing levé', { geste: 'poing', rot: 3 }), 'En colère', 'Bouche ouverte, sourcils bas') +
-    fig(S.fiche('megaphone', 'inquiet', 'rue', 'Jean-Lutte Mégaphone inquiet, en sueur', { rot: -2 }), 'Inquiet', 'Il vient de lire le sondage');
+    fig(S.fiche('megaphone', 'assure', 'rue', 'Jean-Lutte Mégaphone, sûr de lui, porte-voix à la main', { geste: 'megaphone', lacet: 12 }), 'Assuré, presque de face', 'Le porte-voix prêt') +
+    fig(S.fiche('megaphone', 'colere', 'rue', 'Jean-Lutte Mégaphone en colère, poing levé', { geste: 'poing', rot: 3, lacet: 40 }), 'En colère, de trois quarts', 'Bouche ouverte, sourcils bas') +
+    fig(S.fiche('megaphone', 'inquiet', 'rue', 'Jean-Lutte Mégaphone inquiet, en sueur', { rot: -3, lacet: 26, tangage: -6 }), 'Inquiet, tête baissée', 'Il vient de lire le sondage');
 
   $('galerie').innerHTML =
     fig(S.fiche('brushing', 'assure', 'bleu', 'Jordan Brushing, selfie en main', { geste: 'selfie', rot: -2 }), 'Jordan Brushing', 'Rass. Nostalgique · le président lisse comme un selfie') +
