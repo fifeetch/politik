@@ -522,6 +522,7 @@
   function editChar(onDone) {
     var c = JSON.parse(JSON.stringify(perso || PS.defaultChar())), F = PS.FACE;
     if (!c.name) c.name = PS.randomName();
+    c.face.tenue = c.face.tenue || 'veste'; c.face.traits = c.face.traits || 'auto';
     function chips(key, list) {
       return '<div class="pc-row">' + list.map(function (x) { var v = x[0], on = c.face[key] === v; return '<button type="button" class="pc-chip" data-k="' + key + '" data-v="' + v + '" aria-pressed="' + on + '">' + esc(x[1]) + '</button>'; }).join('') + '</div>';
     }
@@ -537,7 +538,8 @@
       '<div class="kicker">Cheveux</div>' + chips('hair', F.hair) + swatches('hairColor', F.hairColor) +
       '<div class="kicker">Lunettes</div>' + chips('glasses', F.glasses) +
       '<div class="kicker">Expression</div>' + chips('mouth', F.mouth) +
-      '<div class="kicker">Tenue</div>' + swatches('outfit', F.outfit) +
+      '<div class="kicker">Traits</div>' + chips('traits', [['auto', 'Selon la coiffure'], ['fins', 'Fins'], ['marques', 'Marqués']]) +
+      '<div class="kicker">Tenue</div>' + chips('tenue', [['veste', 'Veste'], ['pull', 'Pull'], ['cravate', 'Cravate']]) + swatches('outfit', F.outfit) +
       '<div class="pc-row"><button type="button" class="pc-chip" id="pc-beard" aria-pressed="' + !!c.face.beard + '">Barbe</button></div>' +
       '<div class="kicker">Ton style en débat</div><div class="pick">' + Object.keys(PS.TRAITS).map(function (k) {
         var t = PS.TRAITS[k]; return '<button type="button" class="pick-row pc-trait" data-trait="' + k + '" aria-pressed="' + (c.trait === k) + '"><span class="lc-ai">' + t.icon + '</span><span class="pick-txt"><b>' + esc(t.name) + '</b><small>' + esc(t.text) + '</small></span></button>';

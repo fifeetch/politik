@@ -44,3 +44,7 @@
 #paper-front .une-word { line-height: 1.22; }
 /* les jambages (g, j, p, q, y) ne doivent jamais être coupés : le mot garde sa marge basse */
 #paper-front .une-word { overflow: visible; line-height: 1.12; padding-bottom: .16em; }
+
+/* les lieux du mandat : un bandeau sobre sous le titre */
+.bd-bandeau { flex: none; width: 100%; margin: 6px 0 10px; }
+.bd-bandeau .bd-lieu { display: block; width: 100%; height: auto; border-radius: 4px; }

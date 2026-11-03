@@ -657,7 +657,7 @@
   /* ===== v2.6 : le gouvernement ===== */
   var POSTS = D.MINISTRY.posts, TRAITS = D.MINISTRY.traits, gform = {};
   function postDef(id) { return POSTS.filter(function (p) { return p.id === id; })[0]; }
-  function mface(x) { if (x.origin === 'toi') return A.portrait(me); return A.face(Object.assign({}, x.face, { bg: x.party ? PolitikPerso.lighten(party(x.party).color, 0.55) : '#E3E0D6' })); }
+  function mface(x) { if (x.origin === 'toi') return A.portrait(me); return A.face(Object.assign({}, x.face, { name: x.name, traits: x.sex === 'f' ? 'fins' : 'marques', bg: x.party ? PolitikPerso.lighten(party(x.party).color, 0.55) : '#E3E0D6' })); }
   function starsTxt(n) { return '★★★'.slice(0, n) + '<span class="st-off">' + '★★★'.slice(0, 3 - n) + '</span>'; }
   function originTxt(x) {
     return x.origin === 'toi' ? 'C\'est toi' : x.origin === 'parti' ? 'Ton parti' + (x.region ? ' · député' + (x.sex === 'f' ? 'e' : '') + ', ' + esc(E.REG[x.region].name) : '') :
