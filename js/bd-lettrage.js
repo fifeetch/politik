@@ -1,4 +1,4 @@
-/* Planche d'essai — le lettrage de bande dessinée, tracé à la main : chaque capitale est un petit dessin au trait
+/* Politik — le lettrage de bande dessinée, tracé à la main : chaque capitale est un petit dessin au trait
    (grille de 10 de large sur 14 de haut), posé avec un léger tremblement, comme un lettreur à la plume.
    Aucune police de caractères : tout sort en tracés SVG. */
 (function (root) {
@@ -48,6 +48,7 @@
     "'": [2.6, 'M1.5,0.4 Q1.6,2.4 0.9,4'],
     '-': [6, 'M0.8,7.4 L5.2,7.2'],
     '/': [7, 'M6,0.4 L1,14.2'],
+    '€': [9.2, 'M8.6,2.2 Q7.2,0.3 5.2,0.4 Q2,0.6 2,7 Q2,13.7 5.2,13.8 Q7.4,13.8 8.7,11.8 M0.4,5.6 L6.6,5.6 M0.4,8.4 L6,8.4'],
     '%': [10, 'M8.6,0.6 L1.4,14 M3,0.8 Q1,0.8 1,3 Q1,5 3,5 Q4.8,5 4.8,3 Q4.8,0.8 3,0.8 M7.2,9 Q5.4,9 5.4,11.2 Q5.4,13.4 7.2,13.4 Q9,13.4 9,11.2 Q9,9 7.2,9'],
     '«': [7, 'M3.6,4 L0.8,7.4 L3.6,10.8 M6.8,4 L4,7.4 L6.8,10.8'],
     '»': [7, 'M0.6,4 L3.4,7.4 L0.6,10.8 M3.8,4 L6.6,7.4 L3.8,10.8'],

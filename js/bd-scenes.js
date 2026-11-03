@@ -1,4 +1,4 @@
-/* Planche d'essai — les cases : bulles, cartouches, plateau du débat, studio de la matinale, image de la une.
+/* Politik — les cases de la planche d'essai, et les outils repris par js/bd-jeu.js : bulles, cartouches, plateau du débat, studio de la matinale, image de la une.
    Tout est tracé ici, en SVG. Chaque case renvoie un <svg> complet ; la page les range en planche. */
 (function (root) {
   var P = root.Perso, L = root.Lettrage, PAL = P.PAL, INK = P.INK, p = P.p, a = P.a, t = P.t, buste = P.buste, cercle = P.cercle;
@@ -114,8 +114,8 @@
     var s = p('M' + x + ',' + y + ' L' + (x + w) + ',' + (y - (gauche ? 0 : 10)) + ' L' + (x + w + (gauche ? 16 : -6)) + ',' + (y + 20) + ' L' + (x + (gauche ? -6 : -16)) + ',' + (y + 22 + (gauche ? 8 : 0)) + ' Z', LUM, 2.4);
     s += p('M' + (x + (gauche ? -6 : -16)) + ',' + (y + 22 + (gauche ? 8 : 0)) + ' L' + (x + w + (gauche ? 16 : -6)) + ',' + (y + 20) + ' L' + (x + w + (gauche ? 6 : -12)) + ',' + (y + h) + ' L' + (x + (gauche ? 2 : -8)) + ',' + (y + h + 6) + ' Z', '#8d2a20', 2.6);
     s += af(x + 10, y + h - 26, w - 14, 7, PAL.ocre);
-    s += L.ligne(nom, x + w / 2, y + 44, 21, { ancre: 'm', encre: PAL.blanc, gras: true, graine: 5 });
-    s += chrono(x + w / 2 - 78, y + 74, 156, 58, temps, actif);
+    if (nom) s += L.ligne(nom, x + w / 2, y + 44, 21, { ancre: 'm', encre: PAL.blanc, gras: true, graine: 5 });
+    if (temps) s += chrono(x + w / 2 - 78, y + 74, 156, 58, temps, actif);
     return s;
   }
   function tableJournalistes() {
@@ -357,7 +357,8 @@
     return s;
   }
   function fer(d, w) { return p(d, 'none', w + 2.6) + p(d, 'none', w).replace('stroke="' + INK + '"', 'stroke="#5d6e6a"'); }
-  function imageGare() {
+  function imageGare(o) {
+    o = o || {};
     var W = 1200, H = 680, VX = 600, VY = 330, s = af(0, 0, W, H, '#dfe5d2'), i;
     // la verrière en perspective : pans de verre en éventail
     for (i = 0; i < 18; i++) {
@@ -400,13 +401,13 @@
     rangs.forEach(function (r, ir) {
       for (var q = 0; q < r[2]; q++) {
         var x = 16 + q * r[3] + (alea(n) - 0.5) * 20 + (ir % 2 ? 24 : 0);
-        var cache = x > 440 && x < 760 && ir === 2;
+        var cache = x > 440 && x < 760 && ir === 2 && !o.sansCandidat;
         if (!cache) s += usager(x, r[0] + (alea(n + 40) - 0.5) * 10, r[1], n, ir < 2 && n % 5 === 0);
         n++;
       }
     });
     // Mégaphone dans la foule, porte-voix en main
-    s += pose('megaphone', 'colere', 400, 240, 0.8, { geste: 'megaphone', rot: 2 });
+    if (!o.sansCandidat) s += pose('megaphone', 'colere', 400, 240, 0.8, { geste: 'megaphone', rot: 2 });
     // premier plan : on lui tourne le dos, on le filme
     [[396, 3], [520, 6], [646, 1], [770, 12], [150, 4], [1040, 9]].forEach(function (q) { s += usager(q[0], 600, 1.22, q[1], true); });
     return kase(W, H, 'Une gare parisienne un matin de grève : verrière de fer, tableaux des départs qui affichent « supprimé » partout, usagers qui filment avec leur téléphone, et Jean-Lutte Mégaphone au milieu de la foule, porte-voix à la main.', s);
@@ -472,5 +473,7 @@
     return kase(420, 480, titre, (DECORS[decor] || DECORS.rue)() + buste(nom, expr, o || {}));
   }
 
-  root.Scenes = { debatLarge: debatLarge, debatMegaphone: debatMegaphone, debatBrushing: debatBrushing, radioLarge: radioLarge, radioJournaliste: radioJournaliste, radioInvitee: radioInvitee, imageGare: imageGare, fiche: fiche, cartDebat: function () { return cartoucheSeul(CART_DEBAT); }, cartRadio: function () { return cartoucheSeul(CART_RADIO); }, kase: kase, bulle: bulle, pensee: pensee, cartouche: cartouche };
+  root.Scenes = { pose: pose, micro: micro, camera: camera, usager: usager, pupitre: pupitre, tableJournalistes: tableJournalistes, fondPlateauLarge: fond_plateau,
+    outils: { rect: rect, af: af, mousse: mousse, panneaux: panneaux, ecran: ecran, projecteur: projecteur, NUIT: NUIT, NUIT2: NUIT2, NUIT3: NUIT3, LUM: LUM, OCRE_MUR: OCRE_MUR, OCRE_MUR2: OCRE_MUR2, VERT_TABLE: VERT_TABLE },
+    debatLarge: debatLarge, debatMegaphone: debatMegaphone, debatBrushing: debatBrushing, radioLarge: radioLarge, radioJournaliste: radioJournaliste, radioInvitee: radioInvitee, imageGare: imageGare, fiche: fiche, cartDebat: function () { return cartoucheSeul(CART_DEBAT); }, cartRadio: function () { return cartoucheSeul(CART_RADIO); }, kase: kase, bulle: bulle, pensee: pensee, cartouche: cartouche };
 })(this);
