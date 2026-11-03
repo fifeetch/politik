@@ -151,17 +151,17 @@
     s += af(330, 254, 94, 26, PAL.rouge) + L.ligne('DIRECT', 377, 259, 16, { ancre: 'm', encre: PAL.blanc, gras: true });
     s += af(424, 254, 446, 26, NUIT2) + L.ligne('SONDAGE : 51 / 49', 600, 259, 15, { ancre: 'm', encre: PAL.blanc, graine: 12 });
     // journalistes et leur table
-    s += pose('journaliste', 'parle', 372, 188, 0.48, { rot: 2, lacet: 14 });
-    s += pose('matinalier', 'neutre', 828, 186, 0.48, { gauche: true, rot: 2, lacet: 40 });
+    s += pose('journaliste', 'parle', 372, 196, 0.46, { rot: 2 });
+    s += pose('matinalier', 'neutre', 828, 194, 0.46, { gauche: true, rot: 2 });
     s += tableJournalistes();
     // les fiches, les verres
     s += p('M530,396 l26,-3 l4,12 l-28,3 Z', PAL.blanc, 1.4);
     // la caméra au centre
     s += camera(600, 522, 0.72);
     // les candidats
-    s += pose('megaphone', 'colere', -30, 96, 0.9, { geste: 'index', rot: 3, lacet: 40 });
+    s += pose('megaphone', 'colere', -26, 92, 0.86, { geste: 'index', rot: 3 });
     s += pupitre(-12, 420, 384, 200, true, 'J.-L. MÉGAPHONE', '31:12', true);
-    s += pose('brushing', 'assure', 1230, 104, 0.92, { gauche: true, rot: -2, lacet: 34 });
+    s += pose('brushing', 'assure', 1226, 110, 0.82, { gauche: true, rot: -2 });
     s += pupitre(838, 420, 384, 200, false, 'J. BRUSHING', '29:47', false);
     // bulle et cartouche
     s += '<g class="cart-large">' + cartouche(14, 56, CART_DEBAT, 19) + '</g>';
@@ -180,10 +180,10 @@
     s += p('M0,0 h640 v28 h-640 Z', NUIT2, 2);
     [[430, 20], [560, -10]].forEach(function (q) { s += projecteur(q[0], 50, q[1], 0.8); });
     s += af(380, 90, 260, 200, NUIT3); for (var i = 0; i < 6; i++) s += t('M' + (380 + i * 44) + ',90 V300', 1.2);
-    s += pose('megaphone', 'colere', -60, 166, 1.3, { geste: 'index', rot: 4, lacet: 34, tangage: 3 });
+    s += pose('megaphone', 'colere', 0, 130, 1.02, { geste: 'index', rot: 3 });
     s += p('M-5,590 L645,566 L645,625 L-5,625 Z', '#8d2a20', 2.6);
     s += chrono(388, 536, 156, 58, '31:12', true);
-    s += bulle(316, 92, ['VOUS PROMETTEZ TOUT,', 'MONSIEUR BRUSHING,', '*SAUF DE DIRE QUI PAIE !'], 27, { queue: [392, 318], graine: 31 });
+    s += bulle(316, 92, ['VOUS PROMETTEZ TOUT,', 'MONSIEUR BRUSHING,', '*SAUF DE DIRE QUI PAIE !'], 27, { queue: [224, 196], graine: 31 });
     return kase(640, 620, 'Jean-Lutte Mégaphone, furieux, le doigt pointé : « Vous promettez tout, Monsieur Brushing, sauf de dire qui paie ! »', s);
   }
   function debatBrushing() {
@@ -191,10 +191,10 @@
     s += panneaux(0, 300, 640, 280) + ecran(280, 30, 400, 250);
     s += p('M0,0 h640 v28 h-640 Z', NUIT2, 2);
     s += af(0, 90, 280, 200, NUIT3); for (var i = 0; i < 6; i++) s += t('M' + (i * 44) + ',90 V300', 1.2);
-    s += pose('brushing', 'assure', 690, 176, 1.3, { gauche: true, geste: 'paume', rot: -3, lacet: 16 });
+    s += pose('brushing', 'assure', 642, 136, 1.02, { gauche: true, geste: 'paume', rot: -3 });
     s += p('M-5,566 L645,590 L645,625 L-5,625 Z', '#8d2a20', 2.6);
     s += chrono(70, 530, 156, 58, '29:47', false);
-    s += pensee(278, 112, ['SOURIRE.', 'NE RIEN RÉPONDRE.', '*ET NE PAS TOUCHER LA MÈCHE.'], 21, { vers: [392, 226], graine: 5, n: 16 });
+    s += pensee(278, 112, ['SOURIRE.', 'NE RIEN RÉPONDRE.', '*ET NE PAS TOUCHER LA MÈCHE.'], 21, { vers: [352, 178], graine: 5, n: 16 });
     return kase(640, 620, 'Jordan Brushing, souriant, ne répond pas. Il pense : « Sourire. Ne rien répondre. Et ne pas toucher la mèche. »', s);
   }
 
@@ -266,11 +266,11 @@
   }
   function radioLarge() {
     var s = studioFond();
-    s += pose('matinalier', 'parle', 66, 150, 0.98, { rot: 4, casque: true, lacet: 36 });
-    s += pose('tournesol', 'inquiet', 1200, 150, 1.02, { gauche: true, rot: -5, casque: true, lacet: 20, tangage: -2 });
+    s += pose('matinalier', 'parle', 60, 176, 0.86, { rot: 4, casque: true });
+    s += pose('tournesol', 'inquiet', 1190, 158, 0.9, { gauche: true, rot: -5, casque: true });
     s += tableRadio();
-    s += micro(392, 372, -74, 1.05, [474, 476, 462, 410]);
-    s += micro(892, 366, 74, 1.05, [826, 476, 836, 410]);
+    s += micro(416, 416, -78, 1.05, [474, 476, 470, 440]);
+    s += micro(884, 404, 78, 1.05, [826, 476, 830, 436]);
     s += feuilles(230, 510, -5, 1.3) + feuilles(760, 520, 6, 1.1);
     s += tasse(150, 540, 1.1, PAL.blanc) + tasse(1090, 560, 1.1, PAL.bleu);
     // le téléphone qui vibre, la minute de la matinale
@@ -282,18 +282,18 @@
     var s = mousse(0, 0, 640, 620, OCRE_MUR, OCRE_MUR2);
     s += rect(-10, 30, 250, 180, '#3e5a68', 3) + rect(14, 52, 92, 56, '#1a2a33', 1.8) + a('M20,98 l16,-16 l12,8 l18,-24 l12,10 l22,-14 v36 Z', '#5fae8a') + a('M150,30 L190,30 L120,210 L80,210 Z', '#ffffff24');
     for (var i = 0; i < 11; i++) s += t('M' + (14 + i * 20) + ',150 V196', 1).replace('stroke="' + INK + '"', 'stroke="#9fb2bc"') + af(10 + i * 20, 158 + (i * 7) % 26, 8, 6, i % 4 ? PAL.grisC : PAL.rouge);
-    s += pose('matinalier', 'parle', -18, 150, 1.34, { rot: 5, casque: true, lacet: 30, tangage: 2 });
-    s += micro(446, 430, -72, 1.3, [560, 640, 548, 510]);
-    s += bulle(372, 92, ['VOUS AVEZ DIT', '« LE TRAIN GRATUIT POUR TOUS ».', '*QUI PAIE, MADAME TOURNESOL ?'], 22, { queue: [350, 262], graine: 12 });
+    s += pose('matinalier', 'parle', 70, 180, 1.0, { rot: 5, casque: true });
+    s += micro(446, 452, -74, 1.3, [540, 640, 530, 520]);
+    s += bulle(372, 92, ['VOUS AVEZ DIT', '« LE TRAIN GRATUIT POUR TOUS ».', '*QUI PAIE, MADAME TOURNESOL ?'], 22, { queue: [330, 226], graine: 12 });
     return kase(640, 620, 'Le journaliste de la matinale : « Vous avez dit le train gratuit pour tout le monde. Qui paie, Madame Tournesol ? »', s);
   }
   function radioInvitee() {
     var s = mousse(0, 0, 640, 620, OCRE_MUR, OCRE_MUR2);
     s += rect(420, 20, 210, 54, '#3b1712', 3) + af(428, 28, 194, 38, PAL.rouge) + L.ligne('À L’ANTENNE', 525, 36, 21, { ancre: 'm', encre: '#fff3cf', gras: true });
-    s += pose('tournesol', 'inquiet', 700, 148, 1.38, { gauche: true, rot: -6, casque: true, lacet: 14, tangage: -2 });
-    s += micro(208, 410, 72, 1.3, [120, 640, 116, 500]);
-    s += pensee(204, 118, ['QUI A ÉCRIT', 'CETTE FICHE ?', '*ET OÙ EST LA PAGE 2 ?'], 24, { vers: [330, 196], graine: 9 });
-    s += bulle(170, 548, ['C’EST… ENFIN… JE VOUS', 'RENVERRAI LE CHIFFRE.'], 21, { queue: [316, 430], graine: 17 });
+    s += pose('tournesol', 'inquiet', 620, 170, 1.04, { gauche: true, rot: -6, casque: true });
+    s += micro(236, 440, 74, 1.3, [316, 640, 320, 540]);
+    s += pensee(204, 118, ['QUI A ÉCRIT', 'CETTE FICHE ?', '*ET OÙ EST LA PAGE 2 ?'], 24, { vers: [322, 216], graine: 9 });
+    s += bulle(170, 548, ['C’EST… ENFIN… JE VOUS', 'RENVERRAI LE CHIFFRE.'], 21, { queue: [336, 466], graine: 17 });
     return kase(640, 620, 'Marine Tournesol, en sueur : « C’est… enfin… je vous renverrai le chiffre. » Elle pense : qui a écrit cette fiche, et où est la page 2 ?', s);
   }
 
@@ -400,14 +400,15 @@
     rangs.forEach(function (r, ir) {
       for (var q = 0; q < r[2]; q++) {
         var x = 16 + q * r[3] + (alea(n) - 0.5) * 20 + (ir % 2 ? 24 : 0);
-        s += usager(x, r[0] + (alea(n + 40) - 0.5) * 10, r[1], n, ir < 2 && n % 5 === 0);
+        var cache = x > 440 && x < 760 && ir === 2;
+        if (!cache) s += usager(x, r[0] + (alea(n + 40) - 0.5) * 10, r[1], n, ir < 2 && n % 5 === 0);
         n++;
       }
-      // Mégaphone dans la foule, juché sur un banc, porte-voix en main : la rangée de devant le coupe à la taille
-      if (ir === 1) s += pose('megaphone', 'colere', 462, 196, 0.66, { geste: 'megaphone', rot: 2, lacet: 18 });
     });
+    // Mégaphone dans la foule, porte-voix en main
+    s += pose('megaphone', 'colere', 400, 240, 0.8, { geste: 'megaphone', rot: 2 });
     // premier plan : on lui tourne le dos, on le filme
-    [[60, 4], [262, 3], [452, 6], [742, 12], [950, 1], [1146, 9]].forEach(function (q) { s += usager(q[0], 610, 1.7, q[1], true); });
+    [[396, 3], [520, 6], [646, 1], [770, 12], [150, 4], [1040, 9]].forEach(function (q) { s += usager(q[0], 600, 1.22, q[1], true); });
     return kase(W, H, 'Une gare parisienne un matin de grève : verrière de fer, tableaux des départs qui affichent « supprimé » partout, usagers qui filment avec leur téléphone, et Jean-Lutte Mégaphone au milieu de la foule, porte-voix à la main.', s);
   }
 
