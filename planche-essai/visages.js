@@ -298,6 +298,16 @@
     'David Lissé': { m: 1, age: 1, sc: '#26201c', se: 5, oe: 1.02, nl: 1, ga: 21, dr: 20, bf: 'sourit', cravate: '#3f5f8a', coiffure: C('raie', NOIR) },
     /* Rachida Dorures : la cinquantaine passée, longs cheveux noirs, teint mat, veste noire */
     'Rachida Dorures': { femme: 1, teint: 2, r: 2, age: 1, sc: '#191513', se: 4.6, sb: 5, oe: 1.1, nl: 0, ga: 21, dr: 20, bf: 'pleine', levres: '#a4503f', habit: '#1f1f2a', habitO: '#14141c', chemise: PAL.blanc, collier: PAL.ocre, boucle: PAL.ocre, sansOreille: true, coiffure: L(226, NOIR) }
+    ,
+    /* --- Rassemblement Nostalgique --- */
+    /* Sébastien Chenille : la cinquantaine, dégarni, lunettes carrées */
+    'Sébastien Chenille': { m: 2, age: 1, sc: '#5d5c54', se: 5.2, si: -2, oe: .96, nl: 2, ga: 20, dr: 19, cravate: '#1f2a55', lunettes: lunettes('carrees'), coiffure: K(SEL) },
+    /* Jean-Philippe Tangage : moins de quarante ans, brun, visage plein */
+    'Jean-Philippe Tangage': { r: 2, m: 3, c: -1, sc: '#26201c', se: 5.2, oe: 1.04, nez: 'rond', nl: -2, ga: 20, dr: 19, bf: 'sourit', cravate: '#27508c', coiffure: C('raie', BRUN) },
+    /* Louis Alibi : la cinquantaine, gris, visage carré */
+    'Louis Alibi': { q: 4, m: 2, age: 2, sc: '#5d5c54', se: 5.6, si: 1, ouv: .92, nl: 2, nb: 1, ga: 22, dr: 20, bf: 'sourit', cravate: '#1f2a55', coiffure: C('dense', GRIS) },
+    /* Laure Lavande : la quarantaine, longs cheveux blonds */
+    'Laure Lavande': { femme: 1, c: -1, age: 0, sc: '#8a6a2a', se: 3.6, sb: 3, oe: 1.06, nez: 'pointu', nl: -1, ga: 19, dr: 18, bf: 'pleine', levres: '#c9806e', habit: '#1f2a55', habitO: '#151d3d', chemise: PAL.blanc, sansOreille: true, coiffure: L(232, BLOND2, true) }
     /*SUITE*/
   };
   Object.keys(FICHES).forEach(function (nom) { NOMS[nom] = nom; ajoute(nom, FICHES[nom]); });
