@@ -376,7 +376,8 @@
   Object.keys(FICHES).forEach(function (nom) { NOMS[nom] = nom; ajoute(nom, FICHES[nom]); });
 
   /* Le personnage créé par le joueur (peau, coupe, couleur, lunettes, barbe, tenue de js/perso.js) : même dessin, même trait */
-  var TEINTS = [null, null, PEAUX[1], PEAUX[2], PEAUX[3], ['#6f4730', '#553523']];
+  /* les six pastilles de l'éditeur (ART.SKINS), chacune avec son ombre */
+  var TEINTS = [['#F6D4B6', '#dcae8a'], ['#F2CBA6', '#d6a67e'], ['#E9B58C', '#c8915f'], ['#C68B5E', '#a56d44'], ['#8D5A3B', '#6d4329'], ['#5C3A24', '#452a18']];
   function teintes(c) {
     function m(k) { var n = parseInt(String(c).slice(1), 16), o = function (v) { return Math.max(0, Math.min(255, Math.round(v * k))).toString(16).padStart(2, '0'); }; return '#' + o(n >> 16) + o((n >> 8) & 255) + o(n & 255); }
     return [c, m(.72), m(1.5)];
@@ -388,7 +389,7 @@
     var cle = 'joueur:' + [c.skin, c.hair, c.hairColor, c.glasses, c.beard, c.mouth, c.outfit, c.tenue, c.traits, c.name].join('|');
     if (P.FICHE[cle]) return cle;
     var hc = c.hairColor || '#3A2A20', T3 = teintes(hc), long = c.hair === 'long' || c.hair === 'carre' || c.hair === 'chignon';
-    var fins = c.traits === 'fins' || (c.traits !== 'marques' && long), teint = TEINTS[c.skin] || null;
+    var fins = c.traits === 'fins' || (c.traits !== 'marques' && long), teint = TEINTS[c.skin || 0];
     var f = { sc: T3[1], se: fins ? 4.2 : 5.2, ga: 20, dr: 19, bf: c.mouth === 'sourire' ? 'sourit' : c.mouth === 'grand' ? 'pleine' : 'droite', habit: c.outfit || PAL.marine, habitO: teintes(c.outfit || '#26305A')[1], pull: c.tenue === 'pull', cravate: c.tenue === 'cravate' ? '#7a1e24' : null };
     if (fins) { f.femme = 1; f.levres = '#c07a68'; f.sb = 3; }
     var courte = fins ? 'courtF' : 'raie';
@@ -408,7 +409,7 @@
     if (c.beard) f.barbe = barbe(T3[0], { h: 186, stries: T3[2] });
     if (c.glasses === 'rondes' || c.glasses === 'carrees') f.lunettes = lunettes(c.glasses);
     ajoute(cle, f);
-    if (teint) { P.FICHE[cle].peau = teint[0]; P.FICHE[cle].peauO = teint[1]; }
+    P.FICHE[cle].peau = teint[0]; P.FICHE[cle].peauO = teint[1];
     return cle;
   }
   root.Visages = { FICHES: FICHES, NOMS: NOMS, ajoute: ajoute, depuisVisage: depuisVisage };
