@@ -154,6 +154,62 @@
   /* ---------- Les images de la une ---------- */
   var UNE = {
     greve: function () { return S.imageGare({ sansCandidat: true }); },
+    /* le cortège : les façades, les ballons des syndicats, la banderole de tête, les pancartes */
+    manif: function () {
+      var s = R.af(0, 0, 1200, 680, '#cfe2e6') + nuage(180, 54, .8) + nuage(1010, 40, .7), n = 1, i;
+      [[-10, 240, '#e6d6b4'], [230, 250, '#d9c49c'], [480, 230, '#ead9b9'], [710, 260, '#d9c49c'], [970, 240, '#e6d6b4']].forEach(function (q) {
+        s += p('M' + q[0] + ',96 l16,-36 h' + (q[1] - 32) + ' l16,36 Z', '#7d8a94', 2.4) + R.rect(q[0], 96, q[1], 300, q[2], 2.6);
+        for (var c = 0; c < 4; c++) for (var l = 0; l < 2; l++) s += R.rect(q[0] + 24 + c * (q[1] - 30) / 4, 118 + l * 72, 30, 48, '#7fa3ad', 1.6) + (l === 0 ? t('M' + (q[0] + 18 + c * (q[1] - 30) / 4) + ',170 h42', 2.4) : '');
+      });
+      s += R.af(0, 396, 1200, 284, '#b1afa3') + t('M0,396 H1200', 2.8);
+      /* les ballons, attachés au cortège */
+      [[210, 138, '#c6402d', PAL.blanc, 'GRÈVE'], [960, 124, '#2f5d9b', PAL.blanc, 'EN LUTTE']].forEach(function (b, ib) {
+        s += t('M' + b[0] + ',' + (b[1] + 96) + ' C' + (b[0] + 16) + ',260 ' + (b[0] - 18) + ',320 ' + b[0] + ',400', 2);
+        s += p('M' + (b[0] - 92) + ',' + b[1] + ' C' + (b[0] - 92) + ',' + (b[1] - 88) + ' ' + (b[0] + 92) + ',' + (b[1] - 88) + ' ' + (b[0] + 92) + ',' + b[1] + ' C' + (b[0] + 92) + ',' + (b[1] + 54) + ' ' + (b[0] + 22) + ',' + (b[1] + 84) + ' ' + b[0] + ',' + (b[1] + 98) + ' C' + (b[0] - 22) + ',' + (b[1] + 84) + ' ' + (b[0] - 92) + ',' + (b[1] + 54) + ' ' + (b[0] - 92) + ',' + b[1] + ' Z', b[2], 3);
+        s += a('M' + (b[0] + 44) + ',' + (b[1] - 58) + ' C' + (b[0] + 84) + ',' + (b[1] - 36) + ' ' + (b[0] + 84) + ',' + (b[1] + 24) + ' ' + (b[0] + 40) + ',' + (b[1] + 54) + ' C' + (b[0] + 62) + ',' + (b[1] + 14) + ' ' + (b[0] + 62) + ',' + (b[1] - 26) + ' ' + (b[0] + 44) + ',' + (b[1] - 58) + ' Z', ib ? '#264d82' : '#a93423');
+        s += L.ligne(b[4], b[0], b[1] - 16, ib ? 28 : 36, { ancre: 'm', encre: b[3], gras: true, graine: 4 + ib });
+      });
+      /* le fond du cortège et ses pancartes */
+      for (i = 0; i < 16; i++) { s += S.usager(-6 + i * 80, 372, .5, n, false); n++; }
+      [[120, 'NON', '#f5d547'], [430, 'RETRAIT', PAL.blanc], [760, 'NON', '#f5d547'], [1080, 'ASSEZ', PAL.blanc]].forEach(function (q, iq) {
+        s += t('M' + q[0] + ',344 V410', 3.2) + '<g transform="rotate(' + (iq % 2 ? 3 : -3) + ' ' + q[0] + ' 320)">' + R.rect(q[0] - 66, 292, 132, 54, q[2], 2.4) + L.ligne(q[1], q[0], 304, 28, { ancre: 'm', encre: INK, gras: true, graine: 7 + iq }) + '</g>';
+      });
+      /* la banderole de tête, portée par le premier rang */
+      for (i = 0; i < 11; i++) { s += S.usager(50 + i * 110, 476, 1.12, n, false); n++; }
+      s += t('M170,530 V690 M1030,530 V690', 5);
+      s += p('M164,546 C400,532 800,562 1036,542 L1038,652 C800,672 400,640 166,658 Z', PAL.blanc, 3.2) + a('M164,546 C400,532 800,562 1036,542 L1036,558 C800,578 400,548 164,562 Z', PAL.rouge);
+      s += L.ligne('TOUS ENSEMBLE', 600, 574, 56, { ancre: 'm', encre: PAL.rouge, gras: true, graine: 3 });
+      return S.kase(1200, 680, 'Un cortège de grévistes : banderole de tête, pancartes et grands ballons syndicaux.', s);
+    },
+    /* le piquet : la grille fermée, les palettes, le brasero, les grévistes qui se relaient */
+    piquet: function () {
+      var s = R.af(0, 0, 1200, 680, '#c9c4cf') + a('M0,0 H1200 V150 C1000,120 800,170 600,140 C400,110 200,160 0,130 Z', '#b4afbd') + nuage(980, 62, .8, '#e8e5ec') + nuage(620, 40, .6, '#e8e5ec'), n = 1, i, j;
+      s += p('M-5,330 V170 L110,120 V170 L225,120 V170 L340,120 V170 L455,120 V170 L570,120 V170 L685,120 V170 L800,120 V170 L915,120 V170 L1030,120 V170 L1205,120 V330 Z', '#8f6a55', 2.8);
+      for (i = 0; i < 8; i++) s += R.rect(44 + i * 146, 196, 90, 74, '#3f4a55', 2);
+      s += R.af(0, 330, 1200, 350, '#8e8a7c') + t('M0,330 H1200', 2.8);
+      /* la grille et la pancarte */
+      for (i = 0; i < 21; i++) s += p('M' + (300 + i * 30) + ',226 V430', 'none', 5);
+      s += p('M292,240 H908 M292,412 H908', 'none', 7) + R.rect(274, 206, 28, 240, '#5a6068', 2.6) + R.rect(898, 206, 28, 240, '#5a6068', 2.6);
+      s += '<g transform="rotate(-3 600 260)">' + R.rect(424, 214, 352, 88, PAL.blanc, 3) + L.ligne('EN GRÈVE', 600, 234, 52, { ancre: 'm', encre: PAL.rouge, gras: true, graine: 3 }) + '</g>';
+      /* les grévistes devant la grille */
+      for (i = 0; i < 4; i++) { s += S.usager(330 + i * 66, 384, .62, n, false); n++; }
+      for (i = 0; i < 4; i++) { s += S.usager(780 + i * 84, 392, .72, n, i % 2 === 0); n++; }
+      for (j = 0; j < 2; j++) s += R.rect(270 + j * 30, 506 - j * 30, 900 - j * 60, 14, j ? '#c79a5e' : '#b98a50', 2.2) + R.rect(270 + j * 30, 532 - j * 30, 900 - j * 60, 14, j ? '#b98a50' : '#a87c46', 2.2);
+      for (i = 0; i < 12; i++) s += R.rect(280 + i * 76, 520, 20, 12, '#8e6535', 2) + (i > 0 && i < 11 ? R.rect(290 + i * 76, 490, 20, 12, '#8e6535', 2) : '');
+      /* les palettes empilées */
+      [[34, 572], [34, 532], [34, 492], [46, 452]].forEach(function (q) {
+        s += R.rect(q[0], q[1], 212, 12, '#c79a5e', 2.2) + R.rect(q[0], q[1] + 26, 212, 12, '#b98a50', 2.2);
+        for (j = 0; j < 3; j++) s += R.rect(q[0] + 4 + j * 92, q[1] + 12, 20, 14, '#8e6535', 2);
+      });
+      /* le brasero : le fût percé, les flammes, les mains tendues */
+      s += flamme(630, 500, .72);
+      s += p('M552,490 C580,474 680,474 708,490 L696,650 C670,664 590,664 564,650 Z', '#54585e', 3) + a('M672,482 C688,484 700,486 708,490 L696,650 C690,654 682,656 672,658 Z', '#3f4348');
+      s += t('M552,490 C580,506 680,506 708,490', 2.6);
+      for (i = 0; i < 3; i++) for (j = 0; j < 2; j++) s += cercle(592 + i * 38, 540 + j * 44, 8, '#f2a33a', 1.8);
+      /* le premier rang, autour du feu */
+      s += S.usager(392, 462, 1.14, n++, true) + S.usager(800, 462, 1.14, n++, false) + S.usager(1010, 478, 1.1, n++, true);
+      return S.kase(1200, 680, 'Un piquet de grève devant une grille fermée : palettes empilées, brasero, grévistes qui se réchauffent.', s);
+    },
     /* l'usine fermée : la grille, les cheminées froides, les salariés devant */
     usine: function () {
       var s = R.af(0, 0, 1200, 680, '#d9c6a5') + a('M0,0 H1200 V200 C1000,170 800,220 600,190 C400,160 200,210 0,180 Z', '#c9b48f'), n = 1, i;

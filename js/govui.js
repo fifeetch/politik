@@ -67,6 +67,7 @@
       gauge('😊', IB.mot('eco-popularity', 'Popularité'), pop + ' %', pop >= 45 ? 'soutenu' : pop >= 30 ? 'contesté' : 'impopulaire', pop < 30 ? 'bad' : pop >= 45 ? 'ok' : '') +
       gauge('🏛️', 'Assemblée', bloc + ' / 577', MAJ_LABEL[G.majorityType(gv)], bloc >= 289 ? 'ok' : 'bad');
     $('gov-eco').innerHTML = ecoStrip();
+    bandeauGreve();
     $('gov-hemi').innerHTML = hemicycle(gv.seats) + legend(gv.seats);
     renderTeam();
     $('gov-sat').innerHTML = D.SEGMENTS.map(function (s) {
@@ -937,14 +938,26 @@
     if (o.debt) p.push('dette +' + o.debt + ' pts');
     if (o.pop) p.push('popularité ' + (o.pop > 0 ? '+' : '') + o.pop);
     if (o.fire) p.push('tu choisis son remplaçant');
+    if (o.cas) p.push('une casserole de plus');
+    if (o.tient) p.push('une chance sur deux que la grève soit reconduite, plus coûteuse');
+    if (o.stop) p.push('la grève s\u2019arrête, crédibilité en hausse');
     Object.keys(o.sat || {}).forEach(function (s) { p.push(seg(s).icon + ' ' + (o.sat[s] > 0 ? '+' : '') + o.sat[s]); });
     return p.join(' · ') || 'aucun effet immédiat';
   }
   /* v5.7 : chaque événement a son image. Sans le dessin, l'événement s'affiche quand même */
   function evScene(nom) { var BD = window.PolitikBD; return BD && nom ? '<div class="ev-pic">' + BD.scene(nom) + '</div>' : ''; }
   var MIN_SCENE = { gaffe: 'tele', affaire: 'scandale', depart: 'conseil', fronde: 'conseil', succes: 'conseil' };
+  /* Pendant une grève, sa scène prend la place du bandeau de lieu */
+  function bandeauGreve() {
+    var BD = window.PolitikBD, b = document.querySelector('#screen-gov .bd-bandeau'), gr = G.greveEnCours(gv), k = gr ? gr.id + gr.tour + gr.due : 'lieu';
+    if (!BD || !b || b.getAttribute('data-k') === k) return;
+    b.setAttribute('data-k', k); b.classList.toggle('en-greve', !!gr);
+    b.innerHTML = !gr ? BD.LIEUX.elysee() : '<div class="bd-greve-img">' + BD.scene(gr.scene) + '</div><p class="bd-greve-txt"><b>' + esc(gr.nom) + '</b> : ' + (gr.due ? 'il faudra trancher cet été.' : 'reconduite, elle reprend l\u2019an prochain.') + '</p>';
+  }
   function showEvent() {
-    var ev = G.drawEvent(gv);
+    var greve = G.strikeEvent(gv);
+    if (!greve && G.eventsDone(gv) >= G.GREVE.parAn) return ministerEvent(next);
+    var ev = greve || G.drawEvent(gv);
     // v3.4 : « L'affaire du ministre » vise un vrai ministre de ton gouvernement (hors Premier ministre)
     var target = null;
     if (ev.id === 'ministre' && gv.cabinet) {
@@ -960,14 +973,17 @@
       onOpen: function () {
         Array.prototype.forEach.call(document.querySelectorAll('[data-o]'), function (b) {
           b.addEventListener('click', function () {
-            var o = ev.opts[+b.getAttribute('data-o')], b0 = snap(); G.applyOpt(gv, o);
-            var entry = { kind: 'actu', title: ev.title, text: ev.text, choice: o.label, notes: [] };
+            var o = ev.opts[+b.getAttribute('data-o')], b0 = snap(), note = G.applyOpt(gv, o);
+            var entry = { kind: 'actu', title: ev.title, text: ev.text, choice: o.label, notes: note ? [note] : [] };
+            if (!greve) G.doneEvent(gv);
             closeModal();
+            function suite() { render(); showEvent(); }
+            if (note) { jot(entry, b0); render(); return modal({ kicker: 'La grève', title: gv.greve ? 'Le conflit continue' : 'Fin du conflit', html: '<p>' + esc(note) + '</p>', buttons: [{ label: 'Continuer', primary: true, onClick: suite }] }); }
             if (o.fire && target) {   // limogé : tu choisis le remplaçant
               var expert = CB.replaceWithExpert(gv, target.post); render();
-              return chooseReplacement(target.post, target.x, expert, function (who) { entry.notes.push(who.name + ' reprend le poste'); jot(entry, b0); ministerEvent(next); });
+              return chooseReplacement(target.post, target.x, expert, function (who) { entry.notes.push(who.name + ' reprend le poste'); jot(entry, b0); suite(); });
             }
-            jot(entry, b0); ministerEvent(next);
+            jot(entry, b0); suite();
           });
         });
       } });
