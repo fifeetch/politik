@@ -1,6 +1,7 @@
 /* Politik — v1.0 : l'écran « Gouverner » (le quinquennat). S'appuie sur js/govern.js pour les règles. */
 (function () {
   var D = window.PolitikData, E = window.PolitikEngine, G = window.PolitikGov, LG = window.PolitikLegis, FX = window.PolitikFX, CB = window.PolitikCabinet, OP = window.PolitikOppo, CD = window.PolitikCards, A = window.PolitikArt, U = window.PolitikUI, IB = window.PolitikInfobulle, ECO = window.PolitikEconomy, MS = window.PolitikMandatSave, Bus = window.PolitikBus;
+  var MM = window.PolitikMediasMandat;
   var modal = U.modal, closeModal = U.closeModal, toast = U.toast, esc = U.esc, line = U.line, srcHtml = U.srcHtml;
   var gv = null, g = null, me = null, learned = {}, step = 0, lawsThisYear = 0;
   var keepGv = null;   // en cohabitation, ton mandat mis de côté pendant la dissolution décidée par le président
@@ -67,6 +68,7 @@
       gauge('😊', IB.mot('eco-popularity', 'Popularité'), pop + ' %', pop >= 45 ? 'soutenu' : pop >= 30 ? 'contesté' : 'impopulaire', pop < 30 ? 'bad' : pop >= 45 ? 'ok' : '') +
       gauge('🏛️', 'Assemblée', bloc + ' / 577', MAJ_LABEL[G.majorityType(gv)], bloc >= 289 ? 'ok' : 'bad');
     $('gov-eco').innerHTML = ecoStrip();
+    bandeauGreve();
     $('gov-hemi').innerHTML = hemicycle(gv.seats) + legend(gv.seats);
     renderTeam();
     $('gov-sat').innerHTML = D.SEGMENTS.map(function (s) {
@@ -86,6 +88,7 @@
     }).join('');
     $('gov-advisor').innerHTML = '<span class="adv-face">' + A.advisor() + '</span><p><b>Lulu :</b> ' + esc(advice()) + '</p>';
     $('gov-dissolve').hidden = !!gv.cohab || !(G.canDissolve(gv) && current() === 'loi');   // en cohabitation, la dissolution appartient au président
+    renderMedia();
     $('gov-next').textContent = gv.over ? 'Voir le bilan du mandat' : STEP_LABEL[current()];
   }
   /* b2 : la conjoncture, en une ligne. Chaque valeur ouvre le détail de ses causes (js/economy.js), toute la case est touchable */
@@ -149,6 +152,64 @@
     gv.cardSlot = step;
     swipeCard(function () { gv.cardDone = gv.year * 10 + step; render(); run(); });
   });
+  /* ---------- Lot 5 : passer à la télé ou à la radio (js/medias-mandat.js) ---------- */
+  function eventKnown() { return step > STEPS.indexOf('evenement'); }   // l'actualité de l'été n'est connue qu'une fois passée
+  function bdId() { var BD = window.PolitikBD, c = U.saveContext(); return BD.NOMS[party(me).candidate] || BD.depuisVisage(c.perso ? c.perso.face : null); }
+  function renderMedia() {
+    var b = $('gov-media'), why = $('gov-media-why'), off = gv.over || current() === 'legislatives';
+    b.hidden = !!off; why.hidden = true;
+    if (off) return;
+    var d = MM.dispo(gv, eventKnown());
+    b.disabled = !d.ok;
+    b.textContent = d.ok && d.secours ? '🎙️ Passage de secours : ' + d.crise.nom.charAt(0).toLowerCase() + d.crise.nom.slice(1) : '🎙️ Passer dans les médias';
+    if (!d.ok) { why.hidden = false; why.textContent = d.raison; }
+  }
+  $('gov-media').addEventListener('click', function () {
+    if (!gv || gv.over || !MM.dispo(gv, eventKnown()).ok) return;
+    var BD = window.PolitikBD, rows = ['vingt', 'matinale'];
+    modal({ kicker: 'Médias · facultatif', title: 'Où veux-tu passer ?', html: '<div class="pick media-pick">' + rows.map(function (k) {
+      return '<button type="button" class="pick-row" data-c="' + k + '"><span class="pick-i media-pic">' + BD.mediaCase(k, bdId()) + '</span><span class="pick-txt"><b>' + esc(MM.CANAUX[k].nom) + '</b><small>' + esc(MM.CANAUX[k].effet) + '</small></span></button>';
+    }).join('') + '</div>' + (MM.nbPasses(gv) ? '<p class="hint">Surexposition : après ' + MM.nbPasses(gv) + ' passage' + (MM.nbPasses(gv) > 1 ? 's' : '') + ', tes gains valent ' + Math.round(MM.usure(MM.nbPasses(gv)) * 100) + ' % de ceux du premier, et le risque monte.</p>' : ''),
+      buttons: [{ label: 'Pas cette fois' }], onOpen: function () {
+        Array.prototype.forEach.call(document.querySelectorAll('#modal [data-c]'), function (x) {
+          x.addEventListener('click', function () { var k = x.getAttribute('data-c'); closeModal(); if (k === 'vingt') mediaTones({ canal: k }); else mediaStations(); });
+        });
+      } });
+  });
+  function mediaStations() {
+    modal({ kicker: '📻 La matinale', title: 'Quelle radio ce matin ?', html: '<div class="pick">' + D.STATIONS.map(function (st) {
+      var fit = E.stationFit(me, st.id), top = D.SEGMENTS.slice().sort(function (a, b) { return st.segs[b.id] - st.segs[a.id]; }).slice(0, 2);
+      return '<button type="button" class="pick-row" data-st="' + st.id + '"><span class="pick-i">' + st.icon + '</span><span class="pick-txt"><b>' + esc(st.name) + '</b><small>Public : ' + top.map(function (s) { return s.icon + ' ' + esc(s.name.toLowerCase()); }).join(', ') + ' · ' + esc(fit.label) + '</small></span></button>';
+    }).join('') + '</div>', buttons: [{ label: 'Annuler' }], onOpen: function () {
+      Array.prototype.forEach.call(document.querySelectorAll('#modal [data-st]'), function (x) {
+        x.addEventListener('click', function () { var id = x.getAttribute('data-st'); closeModal(); mediaTones({ canal: 'matinale', station: id }); });
+      });
+    } });
+  }
+  function mediaTones(o) {
+    var BD = window.PolitikBD, known = eventKnown(), cr = MM.crise(gv, known), q = '« ' + MM.question(gv, o.canal, known) + ' »', st = o.station ? D.STATIONS.filter(function (x) { return x.id === o.station; })[0] : null;
+    var html = (st ? BD.studio(bdId(), st.name, q) : BD.tele(bdId(), MM.CANAUX.vingt.scene, q, true)) + (cr ? '<p class="hint">L\u2019actualité s\u2019invite : <b>' + esc(cr.nom) + '</b>. Le bon ton peut réduire le coût de la crise, le mauvais l\u2019aggraver.</p>' : '') +
+      '<div class="ans-k">Sur quel ton ?</div><div class="pick">' + Object.keys(MM.TONS).map(function (t) {
+        var T = MM.TONS[t], a = MM.apercu(gv, { canal: o.canal, station: o.station, ton: t }, known);
+        return '<button type="button" class="pick-row" data-t="' + t + '"><span class="pick-i">' + T.icone + '</span><span class="pick-txt"><b>' + esc(T.nom) + '</b><small>' + esc(T.effet) + '</small><small class="media-chiffres">Si ça passe : ' + MM.txtPts(a.gain) + ' · si ça rate : ' + MM.txtPts(a.rate) + ' · risque ' + a.risqueTxt + (a.def ? ' · déficit +' + fr(a.def, 2) + ' pt' : '') + '</small></span></button>';
+      }).join('') + '</div>';
+    modal({ kicker: st ? st.icon + ' ' + st.name : '📺 ' + MM.CANAUX.vingt.nom, title: 'En direct', cls: 'tv-modal', html: html, buttons: [{ label: 'Annuler' }], onOpen: function () {
+      Array.prototype.forEach.call(document.querySelectorAll('#modal [data-t]'), function (x) {
+        x.addEventListener('click', function () { var t = x.getAttribute('data-t'); closeModal(); mediaResult(MM.passer(gv, { canal: o.canal, station: o.station, ton: t }, known)); });
+      });
+    } });
+  }
+  function mediaResult(r) {
+    if (r.refuse) { toast(r.refuse); return; }
+    var BD = window.PolitikBD, radio = r.canal === 'matinale', moved = D.SEGMENTS.filter(function (s) { return Math.abs(r.sat[s.id] || 0) >= 0.5; });
+    var html = BD.grosPlan(bdId(), { cote: 'g', fond: radio ? 'studio' : '', casque: radio, expr: r.rate ? 'inquiet' : MM.TONS[r.ton].expr, texte: '« ' + r.replique + ' »', nom: party(me).candidate }) +
+      '<div class="brief media-res">' + line(r.rate ? '😬' : '✅', r.rate ? 'Mauvaise séquence : le passage tourne mal.' : 'Le passage se déroule bien.') + line('😊', 'Popularité : <b>' + MM.txtPts(r.pop) + '</b>, soit <b>' + G.popularity(gv) + ' %</b> maintenant.') +
+      (moved.length ? line('👥', moved.map(function (s) { return s.icon + ' ' + esc(s.name) + ' ' + MM.txtPts(r.sat[s.id]); }).join(' · ')) : '') +
+      (r.def ? line('💶', 'Déficit : <b>+' + fr(r.def, 2) + ' pt</b>, durable.') : '') +
+      (r.criseNom ? line('🔥', esc(r.criseNom) + (r.criseEffet > 0 ? ' : le bon ton apaise la crise (' + MM.txtPts(r.criseEffet) + ').' : r.criseEffet < 0 ? ' : le mauvais ton aggrave la crise (' + MM.txtPts(r.criseEffet) + ').' : ' : ce ton ne change rien à la crise.')) : '') + '</div>' +
+      (r.secours ? '<p class="hint">C\u2019était ton passage de secours de l\u2019année.</p>' : '');
+    modal({ kicker: radio ? '📻 ' + r.nom : '📺 ' + r.nom, title: 'Fin de l\u2019interview', cls: 'tv-modal', html: html, buttons: [{ label: 'Rendre l\u2019antenne', primary: true, onClick: function () { render(); checkpoint('gov'); } }] });
+  }
   /* ---------- Dissoudre l'Assemblée (article 12) ---------- */
   $('gov-dissolve').addEventListener('click', function () {
     if (!gv || !G.canDissolve(gv)) return;
@@ -825,7 +886,7 @@
   function lawRow(mid, attr) {
     var M = E.measure(mid), v = G.vote(gv, mid);
     return '<button type="button" class="pick-row" ' + attr + '="' + mid + '"><span class="pick-txt"><b>' + esc(M.name) + '</b><small>' + moneyTxt(M) + fansTxt(M) +
-      '</small>' + (rampTxt(M) ? '<small>⏳ ' + rampTxt(M) + '</small>' : '') + '<small>pronostic : ' + (v.passed ? '<b>adoptée</b>' : '<b>rejetée</b>') + ' (' + v.pour + ' pour, ' + v.contre + ' contre)</small></span></button>';
+      '</small>' + (M.loiSeule ? '<small>😟 popularité −' + Math.round(Math.abs(M.cost) / 15) + '</small>' : '') + (rampTxt(M) ? '<small>⏳ ' + rampTxt(M) + '</small>' : '') + '<small>pronostic : ' + (v.passed ? '<b>adoptée</b>' : '<b>rejetée</b>') + ' (' + v.pour + ' pour, ' + v.contre + ' contre)</small></span></button>';
   }
   function chooseLaw() {
     var pend = gv.measures.filter(function (m) { return m.status === 'pending'; }), cat = G.lawCatalog(gv);
@@ -937,14 +998,26 @@
     if (o.debt) p.push('dette +' + o.debt + ' pts');
     if (o.pop) p.push('popularité ' + (o.pop > 0 ? '+' : '') + o.pop);
     if (o.fire) p.push('tu choisis son remplaçant');
+    if (o.cas) p.push('une casserole de plus');
+    if (o.tient) p.push('une chance sur deux que la grève soit reconduite, plus coûteuse');
+    if (o.stop) p.push('la grève s\u2019arrête, crédibilité en hausse');
     Object.keys(o.sat || {}).forEach(function (s) { p.push(seg(s).icon + ' ' + (o.sat[s] > 0 ? '+' : '') + o.sat[s]); });
     return p.join(' · ') || 'aucun effet immédiat';
   }
   /* v5.7 : chaque événement a son image. Sans le dessin, l'événement s'affiche quand même */
   function evScene(nom) { var BD = window.PolitikBD; return BD && nom ? '<div class="ev-pic">' + BD.scene(nom) + '</div>' : ''; }
   var MIN_SCENE = { gaffe: 'tele', affaire: 'scandale', depart: 'conseil', fronde: 'conseil', succes: 'conseil' };
+  /* Pendant une grève, sa scène prend la place du bandeau de lieu */
+  function bandeauGreve() {
+    var BD = window.PolitikBD, b = document.querySelector('#screen-gov .bd-bandeau'), gr = G.greveEnCours(gv), k = gr ? gr.id + gr.tour + gr.due : 'lieu';
+    if (!BD || !b || b.getAttribute('data-k') === k) return;
+    b.setAttribute('data-k', k); b.classList.toggle('en-greve', !!gr);
+    b.innerHTML = !gr ? BD.LIEUX.elysee() : '<div class="bd-greve-img">' + BD.scene(gr.scene) + '</div><p class="bd-greve-txt"><b>' + esc(gr.nom) + '</b> : ' + (gr.due ? 'il faudra trancher cet été.' : 'reconduite, elle reprend l\u2019an prochain.') + '</p>';
+  }
   function showEvent() {
-    var ev = G.drawEvent(gv);
+    var greve = G.strikeEvent(gv);
+    if (!greve && G.eventsDone(gv) >= G.GREVE.parAn) return ministerEvent(next);
+    var ev = greve || G.drawEvent(gv);
     // v3.4 : « L'affaire du ministre » vise un vrai ministre de ton gouvernement (hors Premier ministre)
     var target = null;
     if (ev.id === 'ministre' && gv.cabinet) {
@@ -960,14 +1033,17 @@
       onOpen: function () {
         Array.prototype.forEach.call(document.querySelectorAll('[data-o]'), function (b) {
           b.addEventListener('click', function () {
-            var o = ev.opts[+b.getAttribute('data-o')], b0 = snap(); G.applyOpt(gv, o);
-            var entry = { kind: 'actu', title: ev.title, text: ev.text, choice: o.label, notes: [] };
+            var o = ev.opts[+b.getAttribute('data-o')], b0 = snap(), note = G.applyOpt(gv, o);
+            var entry = { kind: 'actu', title: ev.title, text: ev.text, choice: o.label, notes: note ? [note] : [] };
+            if (!greve) G.doneEvent(gv);
             closeModal();
+            function suite() { render(); showEvent(); }
+            if (note) { jot(entry, b0); render(); return modal({ kicker: 'La grève', title: gv.greve ? 'Le conflit continue' : 'Fin du conflit', html: '<p>' + esc(note) + '</p>', buttons: [{ label: 'Continuer', primary: true, onClick: suite }] }); }
             if (o.fire && target) {   // limogé : tu choisis le remplaçant
               var expert = CB.replaceWithExpert(gv, target.post); render();
-              return chooseReplacement(target.post, target.x, expert, function (who) { entry.notes.push(who.name + ' reprend le poste'); jot(entry, b0); ministerEvent(next); });
+              return chooseReplacement(target.post, target.x, expert, function (who) { entry.notes.push(who.name + ' reprend le poste'); jot(entry, b0); suite(); });
             }
-            jot(entry, b0); ministerEvent(next);
+            jot(entry, b0); suite();
           });
         });
       } });
@@ -1044,7 +1120,7 @@
     var y = gv.year, r = G.endYear(gv);
     gv.used493y = false;
     var html = '<div class="brief">' + line('💶', 'Déficit public : <b>' + fr(r.deficit, 1) + ' %</b> du PIB (objectif ' + fr(r.target, 1) + ' %).') +
-      line('📈', 'Dette publique : <b>' + fr(r.debt, 0) + ' %</b> du PIB.') + line('😊', 'Popularité : <b>' + r.pop + ' %</b>.') + gapLine(r) + '</div>' +
+      line('📈', 'Dette publique : <b>' + fr(r.debt, 0) + ' %</b> du PIB.') + line('😊', 'Popularité : <b>' + r.pop + ' %</b>.') + gapLine(r) + MM.deLAnnee(gv, y).map(function (p) { return line(p.canal === 'vingt' ? '📺' : '📻', esc(MM.ligne(p))); }).join('') + '</div>' +
       (r.text ? '<p class="verdict-bad">' + esc(r.text) + '</p>' : '<p>Les comptes tiennent la route. Bruxelles ne dit rien… pour l\'instant.</p>') +
       (y === 1 ? learn('trois_pourcent') : y === 2 ? learn('dette') : '');
     step = 0;

@@ -83,8 +83,46 @@
     { id: 'cour', scene: 'cour', title: 'Le rapport de la Cour des comptes', text: 'La Cour des comptes juge ta trajectoire budgétaire « peu crédible ».', opts: [
       { label: 'Annoncer un tour de vis', def: -0.1, pop: -3 }, { label: 'Contester les chiffres', pop: -1, debt: 1 }] },
     { id: 'innovation', scene: 'relance', title: 'Une gigafactory s\'installe', text: 'Un industriel veut construire une usine géante de batteries… si l\'État aide.', opts: [
-      { label: 'Subventionner', def: 0.03, sat: { pop: 5, pi: 2 } }, { label: 'Refuser', sat: { pop: -2 } }] }
+      { label: 'Subventionner', def: 0.03, sat: { pop: 5, pi: 2 } }, { label: 'Refuser', sat: { pop: -2 } }] },
+    { id: 'eboueurs', scene: 'piquet', title: 'Grève des éboueurs', text: 'Les poubelles montent sur les trottoirs des grandes villes. Les rats, eux, ne font pas grève.', opts: [
+      { label: 'Accorder la prime de pénibilité', def: 0.02 }, { label: 'Tenir, et réquisitionner', pop: -1, sat: { cad: -2 }, tient: 'eboueurs' }] },
+    { id: 'aeriens', scene: 'piquet', title: 'Les contrôleurs aériens débrayent', text: 'Mille vols annulés à la veille des vacances. Les aéroports se transforment en dortoirs.', opts: [
+      { label: 'Céder sur les effectifs', def: 0.02, sat: { cad: 1 } }, { label: 'Tenir bon', pop: -1, sat: { cad: -3 }, tient: 'aeriens' }] },
+    { id: 'edf', scene: 'piquet', title: 'Grève à l\'électricité', text: 'Des agents coupent le courant de quartiers ciblés, à commencer par ceux de tes ministres.', opts: [
+      { label: 'Ouvrir la négociation salariale', def: 0.05 }, { label: 'Tenir, malgré les coupures', pop: -1, debt: 1, tient: 'edf' }] },
+    { id: 'generale', scene: 'manif', title: 'Grève générale', text: 'Trains, écoles, ports, raffineries : tout s\'arrête en même temps. Un million de personnes dans la rue contre ta réforme.', opts: [
+      { label: 'Retirer la réforme', def: 0.15, pop: 3 }, { label: 'Tenir coûte que coûte', pop: -3, sat: { ind: -1, cad: -1, pi: -1, pop: -1, ret: -1, sae: -1 }, tient: 'generale' }] },
+    { id: 'medicaments', scene: 'hopital', title: 'Pénurie de médicaments', text: 'Plus d\'antibiotiques ni d\'insuline dans certaines pharmacies. Les files d\'attente s\'allongent.', opts: [
+      { label: 'Puiser dans les stocks d\'État', def: 0.05, once: true, sat: { ret: 3 } }, { label: 'Laisser le marché s\'ajuster', sat: { ret: -3 } }] },
+    { id: 'inondations', scene: 'pluie', title: 'Les inondations', text: 'Le fleuve est sorti de son lit. Des villages entiers sous l\'eau, et les maires réclament l\'État.', opts: [
+      { label: 'Ouvrir un fonds d\'urgence', def: 0.06, once: true, pop: 2 }, { label: 'Laisser faire les assureurs', pop: -2 }] },
+    { id: 'panne', scene: 'ville', title: 'La panne de l\'hiver', text: 'Grand froid, centrales à l\'arrêt, réseau au bord de la rupture. Une nuit entière sans lumière dans le Nord.', opts: [
+      { label: 'Relancer les réacteurs à l\'arrêt', def: 0.06, pop: 1 }, { label: 'Imposer la sobriété', pop: -1 }] },
+    { id: 'emeutes', scene: 'feu', title: 'Émeutes urbaines', text: 'Cinq nuits de voitures brûlées dans les banlieues. Les maires ne dorment plus.', opts: [
+      { label: 'Lancer un plan social', def: 0.06, sat: { sae: 3 } }, { label: 'Décréter le couvre-feu', pop: 1, sat: { sae: -5 } }] },
+    { id: 'cyclone', scene: 'pluie', title: 'Cyclone outre-mer', text: 'Le cyclone a arraché les toits et coupé l\'eau sur toute une île. Tes prédécesseurs avaient promis qu\'on serait prêts.', opts: [
+      { label: 'Tout reconstruire', def: 0.07, once: true, pop: 2 }, { label: 'Une aide minimale', pop: -2 }] },
+    { id: 'lobbies', scene: 'scandale', title: 'Le scandale des lobbies', text: 'Un amendement voté à l\'Assemblée a été écrit, à la virgule près, par une fédération professionnelle.', opts: [
+      { label: 'Tout rendre transparent', pop: 2, sat: { cad: -2 } }, { label: 'Nier', pop: -3, cas: true }] },
+    { id: 'sommet', scene: 'frontiere', title: 'Sommet européen tendu', text: 'Vingt-six partenaires et une nuit blanche à Bruxelles. La France est seule contre tous sur le budget commun.', opts: [
+      { label: 'Signer le compromis', pop: -1, debt: -1 }, { label: 'Claquer la porte', pop: 2, debt: 2 }] },
+    { id: 'fermeture', scene: 'usine', title: 'Une grande usine ferme', text: 'Le groupe délocalise, trois mille emplois disparaissent, et toute une vallée se tourne vers toi.', opts: [
+      { label: 'Nationaliser', def: 0.08, sat: { pop: 4 } }, { label: 'Accompagner le plan social', sat: { pop: -3 } }] },
+    { id: 'fuite', scene: 'tele', title: 'La fuite du rapport secret', text: 'Un rapport confidentiel sur l\'état du pays tourne en boucle sur les chaînes d\'info.', opts: [
+      { label: 'Tout publier', pop: 1 }, { label: 'Poursuivre l\'auteur de la fuite', pop: -3, sat: { cad: -1 } }] },
+    { id: 'evenement', scene: 'fete', title: 'Un grand événement réussi', text: 'Le monde entier a regardé, rien n\'a déraillé, et même les râleurs applaudissent.', opts: [
+      { label: 'Offrir une fête nationale', def: 0.02, once: true, pop: 2 }, { label: 'Rester sobre', pop: 1 }] }
   ];
+
+  /* ---------- Les grèves : tenir bon, c'est une chance sur deux de la retrouver l'année suivante, plus chère ---------- */
+  var GREVE = { chance: 0.5, credit: 1, parAn: 2 };
+  var GREVES = {
+    eboueurs: { nom: 'La grève des éboueurs', scene: 'piquet', def: 0.02, pop: -1 }, aeriens: { nom: 'La grève des contrôleurs aériens', scene: 'piquet', def: 0.02, pop: -1 },
+    edf: { nom: 'La grève à l\'électricité', scene: 'piquet', def: 0.05, pop: -1 }, generale: { nom: 'La grève générale', scene: 'manif', def: 0.15, pop: -3 },
+    cheminots: { nom: 'La grève des cheminots', scene: 'piquet', def: 0.05, pop: -2 }, raffineries: { nom: 'La grève des raffineries', scene: 'piquet', def: 0.05, pop: -2 },
+    infirmieres: { nom: 'La grève des infirmières', scene: 'manif', def: 0.06, pop: -2 }, profs: { nom: 'La grève des enseignants', scene: 'manif', def: 0.05, pop: -2 },
+    policiers: { nom: 'La colère des policiers', scene: 'police', def: 0.03, pop: -1 }
+  };
 
   /* ---------- Création du quinquennat ---------- */
   function create(g, pid, opts) {
@@ -297,6 +335,7 @@
     gv.deficit += k * m.cost / C.mdPerPoint;
     var q = gv.cabinet ? 1 + MIN.compSat * (compOf(minister(gv, postFor(mid))) - 2) : 1;   // v2.6 : un ministre compétent fait mieux passer la mesure
     addSat(gv, m.fans, C.satPerFan * k * q);
+    if (m.loiSeule) gv.popBonus -= Math.abs(m.cost) / 15 * k;   // v5.9 : une grande loi coûte aussi en popularité
     // v3.4 : le « ras-le-bol fiscal ». Chaque nouvel impôt hors programme coûte de la popularité, de plus en plus.
     if (m.cost < 0 && NEW_LAWS.recettes.indexOf(mid) >= 0 && !gv.measures.some(function (x) { return x.id === mid; })) {
       gv.newTaxes = (gv.newTaxes || 0) + 1;
@@ -341,8 +380,47 @@
     if (o.sat) addSat(gv, o.sat, 1);
     if (o.pop) gv.popBonus += o.pop;
     if (o.debt) { ECO.note(ecoOf(gv), 'debt', o.label || '', o.debt); gv.debt += o.debt; }
+    if (o.cas) gv.cas = (gv.cas || 0) + 1;
+    if (o.stop) return arreteGreve(gv);
+    if (o.tient) return tientGreve(gv, o);
   }
-  function drawEvent(gv) { var id = gv.eventsDeck[(gv.year - 1) % gv.eventsDeck.length]; return EVENTS.filter(function (e) { return e.id === id; })[0]; }
+  /* Deux événements par an : le n-ième de l'année, ou par défaut le prochain à traiter */
+  function eventsDone(gv) { return gv.evDone && gv.evDone.y === gv.year ? gv.evDone.n : 0; }
+  function doneEvent(gv) { gv.evDone = { y: gv.year, n: eventsDone(gv) + 1 }; }
+  function drawEvent(gv, n) {
+    var manque = EVENTS.filter(function (e) { return gv.eventsDeck.indexOf(e.id) < 0; }).map(function (e) { return e.id; });   // une sauvegarde d'avant les nouveaux événements
+    if (manque.length) gv.eventsDeck = gv.eventsDeck.concat(shuffle(manque, gv.rng));
+    var id = gv.eventsDeck[((gv.year - 1) * GREVE.parAn + (n == null ? eventsDone(gv) : n)) % gv.eventsDeck.length];
+    return EVENTS.filter(function (e) { return e.id === id; })[0];
+  }
+  function arreteGreve(gv, id) {
+    var d = GREVES[id || (gv.greve && gv.greve.id)];
+    gv.greve = null; gv.popBonus += GREVE.credit;
+    return d.nom + ' s\'arrête. Ta crédibilité y gagne : popularité +' + GREVE.credit + '.';
+  }
+  function tientGreve(gv, o) {
+    if (gv.greve && gv.greve.id !== o.tient) return null;   // une seule grève à la fois à l'écran : l'autre mobilise déjà
+    var d = GREVES[o.tient];
+    if (gv.year < C.years && gv.rng() < GREVE.chance) {
+      gv.greve = { id: o.tient, tour: (o.tour || 1) + 1, year: gv.year + 1 };
+      return d.nom + ' est reconduite : elle reprendra l\'an prochain, plus coûteuse.';
+    }
+    return arreteGreve(gv, o.tient);
+  }
+  /* La grève à l'écran du mandat, annoncée ou à trancher cette année */
+  function greveEnCours(gv) {
+    if (!gv.greve) return null;
+    var d = GREVES[gv.greve.id];
+    return { id: gv.greve.id, nom: d.nom, scene: d.scene, tour: gv.greve.tour, due: gv.greve.year <= gv.year };
+  }
+  /* La décision de l'année quand une grève est reconduite : à chaque tour, le prix monte de moitié */
+  function strikeEvent(gv) {
+    var g = greveEnCours(gv);
+    if (!g || !g.due) return null;
+    var d = GREVES[g.id], k = 1 + (g.tour - 1) / 2;
+    return { id: 'greve', scene: g.scene, title: d.nom + ' reprend', text: 'Le mouvement a été reconduit, et les caisses de grève tiennent encore. Année ' + g.tour + ' de conflit : chaque jour coûte plus cher que l\'an dernier.', opts: [
+      { label: 'Céder, cette fois', def: Math.round(d.def * k * 100) / 100, stop: true }, { label: 'Tenir encore', pop: Math.floor(d.pop * k), tient: g.id, tour: g.tour }] };
+  }
 
   /* ---------- Fin d'année : la conjoncture (js/economy.js), la dette, Bruxelles ---------- */
   function endYear(gv) {
@@ -401,6 +479,6 @@
 
   var API = { C: C, BUDGET_CARDS: BUDGET_CARDS, EVENTS: EVENTS, create: create, popularity: popularity, legislatives: legislatives, blocSeats: blocSeats,
     majorityType: majorityType, isAlly: isAlly, setLegis: setLegis, NEW_LAWS: NEW_LAWS, CAMPS: CAMPS, lawCatalog: lawCatalog, addExtra: addExtra, itemOf: itemOf, setLegisCohab: setLegisCohab, postFor: postFor, minister: minister, compOf: compOf, stance: stance, vote: vote, frondeurs: frondeurs, censure: censure, referendum: referendum, adopt: adopt, reject: reject,
-    governmentFalls: governmentFalls, canDissolve: canDissolve, dissolveMult: dissolveMult, dissolve: dissolve, applyFinancing: applyFinancing, canReferendum: canReferendum, drawCards: drawCards, applyOpt: applyOpt, drawEvent: drawEvent, endYear: endYear, verdict: verdict, campaignBalance: campaignBalance, addSat: addSat };
+    governmentFalls: governmentFalls, canDissolve: canDissolve, dissolveMult: dissolveMult, dissolve: dissolve, applyFinancing: applyFinancing, canReferendum: canReferendum, drawCards: drawCards, applyOpt: applyOpt, drawEvent: drawEvent, eventsDone: eventsDone, doneEvent: doneEvent, strikeEvent: strikeEvent, greveEnCours: greveEnCours, GREVE: GREVE, GREVES: GREVES, endYear: endYear, verdict: verdict, campaignBalance: campaignBalance, addSat: addSat };
   if (node) module.exports = API; else root.PolitikGov = API;
 })(this);

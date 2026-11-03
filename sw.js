@@ -1,6 +1,6 @@
 /* Politik — service worker : rend le jeu installable et jouable sans internet.
    À chaque nouvelle version du jeu, changer VERSION pour que les téléphones se mettent à jour. */
-var VERSION = 'politik-v5.8.0';
+var VERSION = 'politik-v5.9.0';
 /* LE CŒUR, précaché à l'installation. addAll est tout-ou-rien : un seul fichier absent ici et le service worker
    ne s'installe pas, donc plus de jeu hors ligne. Tout nouveau fichier du cœur s'ajoute ici, dans son groupe, sur sa ligne
    (test/check-socle.js vérifie que la liste correspond à index.html et que chaque fichier existe).
@@ -23,7 +23,7 @@ var FILES = [
   /* scripts : dessin et animations */
   'js/art.js', 'js/bd-lettrage.js', 'js/bd-personnages.js', 'js/bd-visages.js', 'js/bd-scenes.js', 'js/bd-jeu.js', 'js/press.js', 'js/fx.js', 'js/tuto.js', 'js/tips.js',
   /* scripts : moteurs du quinquennat */
-  'js/legis.js', 'js/economy.js', 'js/govern.js', 'js/cabinet.js', 'js/oppo.js', 'js/cards.js', 'js/mandat-save.js',
+  'js/legis.js', 'js/economy.js', 'js/govern.js', 'js/cabinet.js', 'js/oppo.js', 'js/cards.js', 'js/medias-mandat.js', 'js/mandat-save.js',
   /* scripts : son */
   'js/audio.js',
   /* scripts : écrans */
