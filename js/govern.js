@@ -68,21 +68,21 @@
 
   /* ---------- Les événements du quinquennat ---------- */
   var EVENTS = [
-    { id: 'canicule', title: 'Été caniculaire', text: 'Sécheresse, incendies, coupures d\'eau : le pays suffoque.', opts: [
+    { id: 'canicule', scene: 'chaleur', title: 'Été caniculaire', text: 'Sécheresse, incendies, coupures d\'eau : le pays suffoque.', opts: [
       { label: 'Plan d\'urgence climatique', def: 0.05, once: true, pop: 3, sat: { sae: 3 } }, { label: 'Laisser les préfets gérer', def: 0, pop: -4 }] },
-    { id: 'marches', title: 'Les marchés s\'inquiètent', text: 'Les taux d\'intérêt de la dette française grimpent. Les agences de notation menacent.', opts: [
+    { id: 'marches', scene: 'bourse', title: 'Les marchés s\'inquiètent', text: 'Les taux d\'intérêt de la dette française grimpent. Les agences de notation menacent.', opts: [
       { label: 'Plan d\'économies d\'urgence', def: -0.15, pop: -4, sat: { pi: -3, ret: -3 } }, { label: 'Rassurer sans rien changer', def: 0, debt: 2, pop: 0 }] },
-    { id: 'ministre', title: 'L\'affaire du ministre', text: 'Un de tes ministres est accusé d\'avoir menti sur son patrimoine.', opts: [
+    { id: 'ministre', scene: 'scandale', title: 'L\'affaire du ministre', text: 'Un de tes ministres est accusé d\'avoir menti sur son patrimoine.', opts: [
       { label: 'Le limoger', pop: 2, fire: true }, { label: 'Le défendre', pop: -5, cas: true }] },
-    { id: 'bleus', title: 'Les Bleus champions !', text: 'L\'équipe de France remporte la Coupe du monde. Le pays est en liesse.', opts: [
+    { id: 'bleus', scene: 'fete', title: 'Les Bleus champions !', text: 'L\'équipe de France remporte la Coupe du monde. Le pays est en liesse.', opts: [
       { label: 'Recevoir l\'équipe à l\'Élysée', pop: 4 }] },
-    { id: 'gilets', title: 'Colère des automobilistes', text: 'Des ronds-points occupés dans tout le pays contre le prix du carburant.', opts: [
+    { id: 'gilets', scene: 'rondpoint', title: 'Colère des automobilistes', text: 'Des ronds-points occupés dans tout le pays contre le prix du carburant.', opts: [
       { label: 'Geler les taxes sur le carburant', def: 0.05, pop: 4, sat: { pop: 6 } }, { label: 'Fermeté', pop: -6, sat: { pop: -8, ind: -4 } }] },
-    { id: 'tracteurs', title: 'Les tracteurs sur le périph', text: 'Les agriculteurs encerclent Paris.', opts: [
+    { id: 'tracteurs', scene: 'nature', title: 'Les tracteurs sur le périph', text: 'Les agriculteurs encerclent Paris.', opts: [
       { label: 'Négocier un plan', def: 0.03, once: true, sat: { ind: 7 } }, { label: 'Laisser passer l\'orage', sat: { ind: -8 }, pop: -2 }] },
-    { id: 'cour', title: 'Le rapport de la Cour des comptes', text: 'La Cour des comptes juge ta trajectoire budgétaire « peu crédible ».', opts: [
+    { id: 'cour', scene: 'cour', title: 'Le rapport de la Cour des comptes', text: 'La Cour des comptes juge ta trajectoire budgétaire « peu crédible ».', opts: [
       { label: 'Annoncer un tour de vis', def: -0.1, pop: -3 }, { label: 'Contester les chiffres', pop: -1, debt: 1 }] },
-    { id: 'innovation', title: 'Une gigafactory s\'installe', text: 'Un industriel veut construire une usine géante de batteries… si l\'État aide.', opts: [
+    { id: 'innovation', scene: 'relance', title: 'Une gigafactory s\'installe', text: 'Un industriel veut construire une usine géante de batteries… si l\'État aide.', opts: [
       { label: 'Subventionner', def: 0.03, sat: { pop: 5, pi: 2 } }, { label: 'Refuser', sat: { pop: -2 } }] }
   ];
 

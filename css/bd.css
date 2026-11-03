@@ -123,3 +123,27 @@
 .fl-r { width: 16px; color: var(--muted); }
 .fl-n { flex: 1; min-width: 0; }
 .fl-top b { font-family: var(--chiffres); }
+
+/* les événements du mandat : une page de journal et son image */
+.ev-page { display: grid; gap: 8px; }
+.ev-mast { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding-bottom: 5px; border-bottom: 3px double var(--ink); font: 700 15px var(--display); }
+.ev-mast span:last-child { font: 400 12px var(--body); color: var(--muted); }
+.ev-page h3 { margin: 0; font: 700 clamp(22px, 5.8vw, 28px)/1.12 var(--display); letter-spacing: -.3px; }
+.ev-page p { margin: 0; font: 400 16px/1.4 var(--display); }
+.ev-pic { border: 2px solid var(--ink); background: #fff; line-height: 0; margin-bottom: 8px; }
+.ev-page .ev-pic { margin-bottom: 0; }
+.ev-pic svg { display: block; width: 100%; height: auto; }
+.ev-pic .case > rect:last-child { display: none; }
+
+/* les cartes à glisser du mandat, sur papier et avec leur image */
+.swipe { background: var(--paper); color: var(--ink); }
+.sw-top .kicker, .sw-hint { color: var(--muted); }
+.sw-g b.small, .sw-g b.big { background: var(--ink); }
+.sw-card { width: min(100%, 420px); background: var(--sheet); border: 1.5px solid var(--ink); box-shadow: 0 3px 0 var(--ink); padding: 10px 12px 14px; gap: 8px; text-align: left; }
+.sw-card .ev-pic { width: 100%; margin: 0; pointer-events: none; }
+.sw-qui { display: flex; align-items: center; gap: 10px; width: 100%; }
+.sw-card .sw-face { flex: none; width: 58px; }
+.sw-who { font-size: 18px; }
+.sw-text { font-family: var(--display); }
+.sw-btns .btn { background: var(--sheet); color: var(--ink); border-color: var(--ink); box-shadow: 0 3px 0 var(--ink); }
+@media (max-height: 700px) { .sw-card .ev-pic { max-height: 150px; overflow: hidden; } }
