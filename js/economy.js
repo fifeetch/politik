@@ -158,13 +158,13 @@
     var nominal = eco.growth + eco.inflation * P.deflatorShare;
     E.nominal = entry('nominal', P.labels.nominal, '%', 'niveau', [{ label: P.labels.growth, value: eco.growth, ref: 'growth' }, { label: P.labels.inflation, value: eco.inflation * P.deflatorShare, ref: 'inflation' }]);
 
-    eco.pendingClose = { decided: decided, ramps: ramps, retours: retours, cyc: cyc, chargeRate: chargeRate, chargeDebt: chargeDebt, sat: sat, nominal: nominal };
+    eco.pendingClose = { decided: decided, ramps: ramps, retours: retours, cyc: cyc, chargeRate: chargeRate, chargeDebt: chargeDebt, sat: sat, nominal: nominal, bercy: i.bercy || 0, after: i.after || 0 };
     eco.report = { year: i.year, entries: E };
     return { deficitChange: feedback, nominal: nominal, debtRelief: i.debt * nominal / (100 + nominal), sat: sat, entries: E };
   }
 
   /* ---------- Fin d'année : le rapport complet, une fois connues les sanctions et la popularité ----------
-     o : { year, deficit, debtBefore, debt, debtRelief, bruxelles, markets, marketsDeficit, marketsPop, honeymoon, wear, pop, sat: { groupe: réel }, shares } */
+     o : { year, deficit, debtBefore, debt, debtRelief, bruxelles, markets, marketsDeficit, marketsPop, announced, honeymoon, wear, pop, sat: { groupe: réel }, shares } */
   function close(eco, o) {
     var pc = eco.pendingClose, E = eco.report.entries, L = P.labels;
     var defCauses = pc.decided.slice();
@@ -174,6 +174,13 @@
     defCauses.push({ label: L.debtCharge, value: pc.chargeRate + pc.chargeDebt, ref: 'debtCharge' });
     if (o.markets) defCauses.push({ label: L.markets, value: o.marketsDeficit });
     E.deficit = entry('deficit', L.deficit, 'pts de PIB', 'variation', defCauses, { value: o.deficit - eco.open.deficit, level: o.deficit });
+
+    /* b2 : pourquoi le déficit de fin d'année n'est pas le déficit annoncé au budget */
+    var gapCauses = [{ label: L.montee, value: sum(pc.ramps), ref: 'montee' }, { label: L.retour, value: sum(pc.retours), ref: 'retour' }, { label: pc.cyc > 0 ? L.slowdown : L.recovery, value: pc.cyc, ref: 'growth' },
+      { label: L.debtCharge, value: pc.chargeRate + pc.chargeDebt, ref: 'debtCharge' }, { label: L.bercy, value: pc.bercy }, { label: L.afterVote, value: pc.after }];
+    if (o.markets) gapCauses.push({ label: L.markets, value: o.marketsDeficit });
+    var announced = o.announced == null ? o.deficit - sum(gapCauses) : o.announced;
+    E.ecart = entry('ecart', L.ecart, 'pts de PIB', 'variation', gapCauses, { value: o.deficit - announced, level: announced });
 
     var dCauses = grouped(eco.ledger, 'debt');
     var dLed = sum(dCauses), dOther = o.debtBefore - eco.open.debt - dLed;
@@ -206,9 +213,42 @@
     eco.ledger = [];
     return eco.report;
   }
+  /* b2 : ce que les mesures en montée en charge n'auront pas encore rapporté (ou coûté) à la fin de l'année : la part du déficit prévu qui n'est pas acquise */
+  function pendingRamp(eco, year) {
+    return eco.items.reduce(function (t, it) {
+      if (!it.ramp) return t;
+      return t + it.pts * (it.ramp[Math.min(year - it.year, it.ramp.length - 1)] - 1) - it.rampDone;
+    }, 0);
+  }
+
+  /* ---------- b2 : les infobulles du rapport ----------
+     Une entrée du rapport devient une donnée d'infobulle (js/infobulle.js) : chaque cause, avec son renvoi vers une autre entrée.
+     Identifiants : INFO_PREFIX + id de l'entrée. Rien d'affiché ici, donc testé sous Node. */
+  var INFO_PREFIX = 'eco-';
+  function infoIds() { return ['growth', 'inflation', 'unemployment', 'rate', 'debtCharge', 'deficit', 'debt', 'ecart', 'montee', 'retour', 'impulsion', 'nominal', 'popularity', 'satisfaction'].concat(Object.keys(P.satWeights).map(function (g) { return 'sat.' + g; })); }
+  function fmt(x, d) { return Math.abs(x).toFixed(d).replace('.', ','); }
+  function signed(x) { return (round(x) === 0 ? '' : x > 0 ? '+' : '\u2212') + fmt(x, 2); }
+  function toneOf(x, sens) { return !sens || round(x) === 0 ? 'neutre' : (x > 0) === (sens === 'hausse-bonne') ? 'bon' : 'mauvais'; }
+  /* Un niveau garde son signe : une récession, un excédent. Jamais de « moins zéro ». */
+  function lvl(x, d) { return (x < 0 && Number(Math.abs(x).toFixed(d)) !== 0 ? '−' : '') + fmt(x, d); }
+  function levelText(e, x) { return e.unit === '%' ? lvl(x, 1) + ' %' : e.unit === 'points' ? Math.round(x) + ' %' : lvl(x, e.id === 'debt' ? 0 : 1) + (e.id === 'debtCharge' ? ' pts de PIB' : ' %'); }
+  function infobulle(report, id) {
+    var e = report && report.entries[id], sens = P.infoSens[id] || (id.indexOf('sat') === 0 ? 'hausse-bonne' : null);
+    if (!e) return { titre: P.labels[id] || P.labels.noReport, texte: P.labels.noReportText };
+    var lignes = e.causes.map(function (c) { var l = { texte: c.label, valeur: signed(c.value), ton: toneOf(c.value, sens) }; if (c.ref) l.renvoi = INFO_PREFIX + c.ref; return l; });
+    var levelled = e.kind === 'niveau' || e.level != null, shown = e.kind === 'niveau' ? e.value : e.level;
+    if (e.level != null && e.kind !== 'niveau') lignes.unshift({ texte: id === 'ecart' ? P.labels.ecartFrom : P.labels.overYear, valeur: id === 'ecart' ? levelText({ unit: 'pts de PIB', id: 'deficit' }, e.level) : signed(e.value), ton: id === 'ecart' ? 'neutre' : toneOf(e.value, sens) });
+    var out = { titre: e.label, valeur: id === 'ecart' ? signed(e.value) + ' pt' : levelled ? levelText(e, shown) : signed(e.value), ton: id === 'ecart' ? toneOf(e.value, sens) : levelled ? 'neutre' : toneOf(e.value, sens), lignes: lignes };
+    out.texte = (e.text || '') + (lignes.length ? '' : (e.text ? ' ' : '') + P.labels.nothingThisYear);
+    if (P.seeAlso[id]) out.renvois = P.seeAlso[id].filter(function (r) { return !!report.entries[r]; }).map(function (r) { return { id: INFO_PREFIX + r, texte: report.entries[r].label }; });
+    return out;
+  }
+  /* La cause qui pèse le plus dans une entrée : ce qu'on peut dire en une ligne, sans ouvrir l'infobulle */
+  function mainCause(e) { return e.causes.slice().sort(function (a, b) { return Math.abs(b.value) - Math.abs(a.value); })[0] || null; }
+
   /* L'année suivante part de là : les mesures ponctuelles viennent de s'arrêter */
   function open(eco, deficit, debt, pop, oneOff) { eco.open = { deficit: deficit, debt: debt, pop: pop }; eco.oneOff = oneOff || 0; }
 
-  var API = { create: create, note: note, register: register, step: step, close: close, open: open };
+  var API = { create: create, note: note, register: register, step: step, close: close, open: open, pendingRamp: pendingRamp, infobulle: infobulle, infoIds: infoIds, mainCause: mainCause, INFO_PREFIX: INFO_PREFIX };
   if (node) module.exports = API; else root.PolitikEconomy = API;
 })(this);
