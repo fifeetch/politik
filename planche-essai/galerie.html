@@ -15,6 +15,7 @@
   body { margin: 0; background: var(--papier); color: var(--encre); font-family: 'Atkinson', system-ui, sans-serif; font-size: 17px; line-height: 1.4; }
   .page { max-width: 1180px; margin: 0 auto; padding: 28px 24px 60px; }
   h1 { font-family: 'Anybody', sans-serif; font-weight: 900; font-stretch: 120%; font-size: clamp(30px, 6vw, 54px); line-height: 1; margin: 0 0 10px; }
+  h2 { font-family: 'Anybody', sans-serif; font-weight: 800; font-size: clamp(20px, 4vw, 28px); margin: 34px 0 12px; padding-top: 8px; border-top: 4px solid var(--encre); }
   p { margin: 0 0 22px; max-width: 62ch; }
   .grille { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px 18px; }
   .perso b { display: block; font-size: 18px; margin-top: 6px; line-height: 1.15; }
@@ -28,34 +29,28 @@
 <body>
 <div class="page">
   <h1>Galerie des visages</h1>
-  <p>Les 12 chefs de file : à gauche le portrait de base, à droite inquiet puis en colère. Caricatures aux noms parodiques du jeu, pas encore branchées.</p>
-  <div class="grille" id="grille"></div>
+  <p>Toutes les personnalités du jeu, parti par parti, le chef de file d'abord : à gauche le portrait de base, à droite inquiet puis en colère. Caricatures aux noms parodiques du jeu.</p>
+  <div id="partis"></div>
 </div>
 <script src="lettrage.js"></script>
 <script src="personnages.js"></script>
 <script src="visages.js"></script>
+<script src="../js/data.js"></script>
+<script src="../js/people.js"></script>
 <script>
 (function () {
-  var CHEFS = [
-    ['megaphone', 'Jean-Lutte Mégaphone', 'La France Indignée', '#e9c9c0'],
-    ['grandsmots', 'Raphaël Grandsmots', 'Le Parti Survivant', '#e7c3cb'],
-    ['tournesol', 'Marine Tournesol', 'Les Enracinés', '#cfe0c0'],
-    ['agite', 'Gabriel Agité', 'Réforme Encore', '#f0ddb0'],
-    ['raboteur', 'Bruno Raboteur', 'Les Rescapés', '#c6d6e4'],
-    ['lapenible', 'Marine La Pénible', 'Rassemblement Nostalgique', '#c3cbe0'],
-    ['arret', 'Nathalie Arrêtdetravail', 'Lutte Obstinée', '#e8bdb4'],
-    ['rillettes', 'Fabien Rillettes', 'Le Parti Camarade Français', '#e9c4b0'],
-    ['bientot', 'François Bientôtprésident', 'Mollesse Démocrate', '#f0e0b8'],
-    ['patience', 'Édouard Patience', 'Hors-Sol', '#c9dfe0'],
-    ['dupont', 'Nigaud Dupont-Arriéré', 'Debout La Flemme', '#d5d0e6'],
-    ['zero', 'Éric Zéronuance', 'Rétroconquête', '#d8cfc0']
-  ];
+  var FONDS = { FI: '#e9c9c0', SM: '#e7c3cb', VP: '#cfe0c0', EM: '#f0ddb0', UG: '#c6d6e4', MN: '#c3cbe0', LO: '#e8bdb4', PC: '#e9c4b0', MD: '#f0e0b8', HZ: '#c9dfe0', DL: '#d5d0e6', RQ: '#d8cfc0' };
+  var V = window.Visages, D = window.PolitikData, PP = window.PolitikPeople;
   function vue(id, expr, fond, large) {
     var box = large ? '30 -12 380 460' : '96 14 240 290';
     return '<svg viewBox="' + box + '" role="img" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><rect x="30" y="-12" width="380" height="460" fill="' + fond + '"/>' + window.Perso.buste(id, expr, { s: large ? 1 : .5 }) + '</svg>';
   }
-  document.getElementById('grille').innerHTML = CHEFS.map(function (c) {
-    return '<div class="perso"><div class="vues">' + vue(c[0], 'neutre', c[3], true) + '<div class="petites">' + vue(c[0], 'inquiet', c[3]) + vue(c[0], 'colere', c[3]) + '</div></div><b>' + c[1] + '</b><span>' + c[2] + '</span></div>';
+  document.getElementById('partis').innerHTML = D.PARTIES.filter(function (q) { return PP.PEOPLE[q.id]; }).map(function (q) {
+    return '<h2>' + q.name + '</h2><div class="grille">' + PP.PEOPLE[q.id].map(function (x) {
+      var id = V.NOMS[x[0]];
+      if (!id) return '';
+      return '<div class="perso"><div class="vues">' + vue(id, 'neutre', FONDS[q.id], true) + '<div class="petites">' + vue(id, 'inquiet', FONDS[q.id]) + vue(id, 'colere', FONDS[q.id]) + '</div></div><b>' + x[0] + '</b><span>' + x[4] + '</span></div>';
+    }).join('') + '</div>';
   }).join('');
 })();
 </script>
