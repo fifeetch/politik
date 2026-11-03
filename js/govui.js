@@ -1,8 +1,9 @@
 /* Politik — v1.0 : l'écran « Gouverner » (le quinquennat). S'appuie sur js/govern.js pour les règles. */
 (function () {
-  var D = window.PolitikData, E = window.PolitikEngine, G = window.PolitikGov, LG = window.PolitikLegis, FX = window.PolitikFX, CB = window.PolitikCabinet, OP = window.PolitikOppo, CD = window.PolitikCards, A = window.PolitikArt, U = window.PolitikUI, IB = window.PolitikInfobulle, ECO = window.PolitikEconomy;
+  var D = window.PolitikData, E = window.PolitikEngine, G = window.PolitikGov, LG = window.PolitikLegis, FX = window.PolitikFX, CB = window.PolitikCabinet, OP = window.PolitikOppo, CD = window.PolitikCards, A = window.PolitikArt, U = window.PolitikUI, IB = window.PolitikInfobulle, ECO = window.PolitikEconomy, MS = window.PolitikMandatSave, Bus = window.PolitikBus;
   var modal = U.modal, closeModal = U.closeModal, toast = U.toast, esc = U.esc, line = U.line, srcHtml = U.srcHtml;
   var gv = null, g = null, me = null, learned = {}, step = 0, lawsThisYear = 0;
+  var keepGv = null;   // en cohabitation, ton mandat mis de côté pendant la dissolution décidée par le président
   function $(id) { return document.getElementById(id); }
   function party(id) { return E.PARTY[id]; }
   function chip(pid) { var p = party(pid); return '<span class="who" style="background:' + p.color + ';color:' + p.ink + '">' + esc(E.sigle(pid)) + '</span>'; }
@@ -157,11 +158,11 @@
       '<div class="brief">' + line(pop >= 45 ? '✅' : '⚠️', pop >= 45 ? 'Avec une telle popularité, ton camp devrait gagner des sièges.' : 'Sous 45 % de popularité, ton camp risque de perdre des sièges.') +
       line('🔁', 'Une seule dissolution par mandat.') + '</div>' + learn('dissolution'),
       buttons: [{ label: 'Dissoudre', primary: true, onClick: function () {
-        var r = G.dissolve(gv, g);
+        var r = G.dissolve(gv, g); checkpoint('gov');
         legisNight({ dissolution: true, before: r.before, onDone: function () { U.go('gov'); render(); } });
       } }, { label: 'Garder cette Assemblée', onClick: closeModal }] });
   });
-  function next() { step = step + 1; if (step >= STEPS.length) { step = 0; } render(); }
+  function next() { step = step + 1; if (step >= STEPS.length) { step = 0; } render(); checkpoint('gov'); }
 
   /* ---------- v2.3-2.4 : les législatives ----------
      A. Ta campagne (v2.4) : former ton camp (alliances), 2 tours d'actions sur la carte des circonscriptions disputées.
@@ -197,7 +198,7 @@
 
   /* ===== A. La campagne des législatives ===== */
   var lc = null, lsel = null, lproj = null, lctx = null, lr1 = null, ldec = null, lpactTried = false;
-  /* o (v2.7) : { oppo: true, pres, margin, loser, partners, dissolution, presMult, allies, onEnd } pour faire campagne dans l'opposition */
+  /* o (v2.7) : { oppo: true, pres, margin, loser, partners, dissolution, presMult, allies, end, before } pour faire campagne dans l'opposition */
   var lopt = {};
   function startLegis(o) {
     lopt = o || {};
@@ -205,6 +206,7 @@
       : LG.newCampaign(g, { pres: me, margin: gv.margin, loser: gv.loser });
     if (lopt.allies) lc.allies = lopt.allies.slice();
     lsel = null; lctx = null; lr1 = null; ldec = null; lpactTried = false;
+    checkpoint('lcamp');
     U.go('lcamp'); renderCamp();
     allianceSheet(true);
   }
@@ -344,6 +346,7 @@
     var before = lproj.res.focusSeats, moves = LG.endTurn(g, lc), last = lc.turn > LCP.turns;
     if (last) lc.turn = LCP.turns;
     lproj = LG.projection(g, lc);
+    checkpoint(last ? 'vote1' : 'lcamp');
     var after = lproj.res.focusSeats, seen = {};
     var html = '<div class="brief">' + moves.filter(function (m) { var k = m.u; if (seen[k]) return false; seen[k] = 1; return true; }).slice(0, 4).map(function (m) {
       var u = lproj.res.unions.filter(function (x) { return x.id === m.u; })[0];
@@ -403,10 +406,27 @@
   $('lb-go').addEventListener('click', function () {
     if (!lctx) return;
     var res = LG.round2(lctx, lr1, ldec);
-    if (lopt.oppo) { gv.legis = res; gv.seats = res.seats; night2({ dissolution: lopt.dissolution, onDone: function () { lopt.onEnd(res); } }); return; }   // v2.7 : dans l'opposition
-    G.setLegis(gv, res);
-    night2({ onDone: function () { step = 0; startCabinet(); } });   // v2.6 : puis tu formes ton gouvernement
+    if (lopt.oppo) { gv.legis = res; gv.seats = res.seats; checkpoint('afterLegis'); night2({ dissolution: lopt.dissolution, onDone: afterLegis }); return; }   // v2.7 : dans l'opposition
+    G.setLegis(gv, res); checkpoint('afterLegis');
+    night2({ onDone: afterLegis });
   });
+  /* La suite des législatives, selon celles qu'on vient de jouer (lopt.end). Le résultat est dans gv.legis : une reprise repart d'ici. */
+  function afterLegis() {
+    var res = gv.legis;
+    if (!lopt.oppo) { step = 0; return startCabinet(); }   // v2.6 : tu formes ton gouvernement
+    if (lopt.end === 'cohab') {   // le président a dissous contre toi
+      var keep = keepGv, pres = lopt.pres; keepGv = null;
+      if (res.focusSeats < 289) return startOpposition(res, pres, keep.year);
+      gv = keep; G.setLegisCohab(gv, res, pres); gv.cohab.dissolved = true; gv.cohab.legisYear = gv.year; U.go('gov'); render(); checkpoint('gov'); toast('Tu gardes Matignon !');
+      return;
+    }
+    if (lopt.end === 'censure') {   // ta motion de censure a provoqué la dissolution
+      if (res.focusSeats >= 289) { var y = op.year; op = null; return startCohab(res, gv.pid, y); }
+      OP.afterLegis(op, res); oppoNext('Ton camp : ' + lopt.before + ' → ' + res.focusSeats + ' députés.'); U.go('oppo');
+      return;
+    }
+    if (res.focusSeats >= 289) startCohab(res, lopt.pres, 1); else startOpposition(res, lopt.pres, 1);
+  }
 
   /* ===== B. La soirée du 1er tour ===== */
   /* s : unions, votes1, participation1, circs (status, winner, q) — o : dissolution, btn, next */
@@ -650,6 +670,7 @@
       '<small>' + t.icon + ' <b>' + esc(t.name) + '</b> : ' + esc(t.text) + '</small>' + (extra || '') + '</span>';
   }
   function startCabinet() {
+    checkpoint('cabinet');
     CB.start(gv); gform = Object.assign({}, gv.cabinet.posts);
     renderForm(); U.go('gform');
   }
@@ -688,7 +709,7 @@
   }
   $('gf-lulu').addEventListener('click', function () { gform = CB.suggest(gv); renderForm(); toast('Lulu : « Les plus compétents aux postes clés, un ministère pour chaque allié. »'); });
   $('gf-go').addEventListener('click', function () {
-    var r = CB.form(gv, gform);
+    var r = CB.form(gv, gform); checkpoint('gov');
     var html = '<div class="gf-team">' + POSTS.map(function (p) { var x = gv.cabinet.posts[p.id]; return '<div class="gf-mini"><span class="gf-face">' + mface(x) + '</span><small>' + p.icon + ' ' + esc(p.short) + '</small><b>' + esc(x.name) + '</b></div>'; }).join('') + '</div>' +
       (r.notes.length ? '<div class="brief">' + r.notes.map(function (n) { return line(n.icon, esc(n.text)); }).join('') + '</div>' : '') +
       '<p class="hint">Un ministre compétent fait mieux passer les lois de son domaine ; un ministre peu loyal peut lancer une fronde ; un ministre connu fait parler de lui, en bien comme en mal. Un remaniement est possible chaque année.</p>';
@@ -1028,7 +1049,7 @@
     U.showPaper(paper, 'Le bilan de l\u2019année →', function () { bilanModal(); });
     function bilanModal() {
     modal({ kicker: 'Hiver · Bilan de l\'année ' + y, title: gv.over ? 'Le mandat s\'achève' : 'Une année de passée', html: html,
-      buttons: [{ label: gv.over ? 'Voir le bilan du mandat' : 'Année ' + gv.year, primary: true, onClick: function () { render(); if (gv.over) finalBilan(); else if (gv.cohab && presidentDissolves()) cohabDissolve(); } }] });
+      buttons: [{ label: gv.over ? 'Voir le bilan du mandat' : 'Année ' + gv.year, primary: true, onClick: function () { render(); if (gv.over) { checkpoint('gov'); finalBilan(); } else if (gv.cohab && presidentDissolves()) cohabDissolve(); else checkpoint('gov'); } }] });
     }
     render();
   }
@@ -1042,15 +1063,12 @@
   /* v2.7 : en cohabitation, le président peut dissoudre (pas dans l'année qui suit des législatives) quand tu faiblis */
   function presidentDissolves() { return gv.year - (gv.cohab.legisYear || 1) >= 1 && !gv.cohab.dissolved && G.popularity(gv) < D.OPPO.dissolveIfPop && gv.rng() < 0.4; }
   function cohabDissolve() {
-    var keep = gv, pres = gv.cohab.pres, before = G.blocSeats(gv);
+    var keep = gv, pres = gv.cohab.pres;
     modal({ kicker: 'Coup de tonnerre à l\'Élysée', title: 'Le président dissout l\'Assemblée', html: '<p>Ta popularité baisse : le président tente sa chance et renvoie les députés devant les électeurs. Si ton camp garde la majorité, tu restes à Matignon. Sinon, retour dans l\'opposition.</p>' + learn('dissolution'),
       buttons: [{ label: 'En campagne !', primary: true, onClick: function () {
-        keep.cohab.dissolved = true;
+        keep.cohab.dissolved = true; keepGv = keep;
         gv = { pid: pres, rng: g.rng, oppo: true };
-        startLegis({ oppo: true, pres: pres, margin: 0, dissolution: true, presMult: G.dissolveMult(100 - G.popularity(keep)), allies: keep.allies, onEnd: function (res) {
-          if (res.focusSeats >= 289) { gv = keep; G.setLegisCohab(gv, res, pres); gv.cohab.dissolved = true; gv.cohab.legisYear = gv.year; U.go('gov'); render(); toast('Tu gardes Matignon !'); }
-          else { startOpposition(res, pres, keep.year); }
-        } });
+        startLegis({ oppo: true, end: 'cohab', pres: pres, margin: 0, dissolution: true, presMult: G.dissolveMult(100 - G.popularity(keep)), allies: keep.allies });
       } }] });
   }
   function finalBilan() {
@@ -1066,7 +1084,7 @@
       (v.achievements.length ? '<div class="brief"><div class="kicker">Tes trophées</div>' + v.achievements.map(function (a) { return line('🏅', esc(a)); }).join('') + '</div>' : '') +
       '<p>' + (v.verdict === 'reelu' ? 'Les Français te font confiance pour cinq ans de plus.' : v.verdict === 'serre' ? 'Tu peux te représenter, mais rien n\'est joué : la campagne sera rude.' : 'Les Français veulent tourner la page.') + '</p>';
     modal({ kicker: 'Bilan du quinquennat', title: title, html: html,
-      buttons: [{ label: 'Nouvelle campagne', primary: true, onClick: function () { gv = null; U.go('choose'); } }, { label: 'Accueil', onClick: function () { gv = null; U.go('title'); } }] });
+      buttons: [{ label: 'Nouvelle campagne', primary: true, onClick: function () { MS.clear(); gv = null; U.go('choose'); } }, { label: 'Accueil', onClick: function () { MS.clear(); gv = null; U.go('title'); } }] });
   }
 
   /* ===== v2.7 : l'opposition ===== */
@@ -1076,8 +1094,7 @@
     if (!g || g.winner === me) return;
     var pres = g.winner, sec = g.result.second, pct = sec ? (sec.a === pres ? sec.pctA : sec.pctB) : g.result.first[0].pct;
     gv = { pid: pres, rng: g.rng, oppo: true }; learned = {};
-    startLegis({ oppo: true, pres: pres, margin: pct - 0.5, loser: sec ? (sec.a === pres ? sec.b : sec.a) : null, partners: (E.player(g, pres).deals || []).map(function (d) { return d.with; }),
-      onEnd: function (res) { if (res.focusSeats >= 289) startCohab(res, pres, 1); else startOpposition(res, pres, 1); } });
+    startLegis({ oppo: true, pres: pres, margin: pct - 0.5, loser: sec ? (sec.a === pres ? sec.b : sec.a) : null, partners: (E.player(g, pres).deals || []).map(function (d) { return d.with; }) });
   });
   /* Ton camp a la majorité : cohabitation, tu deviens Premier ministre */
   function startCohab(res, pres, year) {
@@ -1089,6 +1106,7 @@
   function startOpposition(res, pres, year) {
     op = OP.create(g, me, pres, res); op.year = year || 1; op.legisYear = op.year;
     gv = { pid: pres, rng: g.rng, oppo: true, legis: res, seats: res.seats };
+    checkpoint('oppo');
     U.go('oppo'); renderOppo();
     modal({ kicker: 'L\'opposition', title: 'Chef de l\'opposition', html: '<p>Pour cinq ans, tu mènes ton parti face au président ' + esc(party(pres).candidate) + '. Chaque trimestre, un choix : voter ses lois ou les combattre, réagir à l\'actualité, défendre tes propres textes, et peut-être le renverser.</p>' +
       '<div class="brief">' + line('🗳️', 'Ton but : arriver en tête des intentions de vote pour la prochaine présidentielle.') + line('🏛️', 'Si une motion de censure passe, le président peut dissoudre : nouvelles législatives, nouvelle chance de devenir Premier ministre.') + '</div>' });
@@ -1127,7 +1145,7 @@
     if (q === 'niche') return oppoNiche();
     return oppoCensure();
   });
-  function oppoNext(txt) { OP.next(op); renderOppo(); if (txt) toast(txt); }
+  function oppoNext(txt) { OP.next(op); renderOppo(); checkpoint('oppo'); if (txt) toast(txt); }
   function deltaTxt(d) { return (d >= 0 ? '+' : '−') + fr(Math.abs(d), 1) + ' point'; }
   function fitTxt(f) { return f > 0.25 ? '👍 Tes électeurs aiment cette mesure.' : f < -0.25 ? '👎 Tes électeurs rejettent cette mesure.' : '🤷 Tes électeurs sont partagés.'; }
   function voteHtml(v) {
@@ -1216,10 +1234,7 @@
       buttons: [{ label: 'En campagne !', primary: true, onClick: function () {
         var before = OP.mySeats(op);
         gv = { pid: op.pres, rng: g.rng, oppo: true };
-        startLegis({ oppo: true, pres: op.pres, margin: 0, dissolution: true, presMult: G.dissolveMult(op.presPop), allies: op.myCamp.slice(1), onEnd: function (res) {
-          if (res.focusSeats >= 289) { var y = op.year; op = null; startCohab(res, gv.pid, y); return; }
-          OP.afterLegis(op, res); gv.legis = res; gv.seats = res.seats; oppoNext('Ton camp : ' + before + ' → ' + res.focusSeats + ' députés.'); U.go('oppo');
-        } });
+        startLegis({ oppo: true, end: 'censure', before: before, pres: op.pres, margin: 0, dissolution: true, presMult: G.dissolveMult(op.presPop), allies: op.myCamp.slice(1) });
       } }] });
   }
   function oppoBilan() {
@@ -1233,6 +1248,65 @@
       '<div class="brief">' + line('📈', 'Ton parti : <b>' + (v.gain >= 0 ? '+' : '−') + fr(Math.abs(v.gain), 1) + ' points</b> en cinq ans.') + line('📜', 'Tes lois adoptées : <b>' + v.adopted + '</b>') + line('⚔️', 'Gouvernements renversés : <b>' + v.fell + '</b>') + '</div>' +
       '<p>' + (v.verdict === 'favori' ? 'Tu abordes la présidentielle en tête. À toi de transformer l\'essai !' : v.verdict === 'course' ? 'Tu restes dans le peloton de tête : tout se jouera pendant la campagne.' : 'Ton parti n\'a pas réussi à s\'imposer. Il faudra se réinventer.') + '</p>';
     modal({ kicker: 'Bilan de l\'opposition', title: title, html: html,
-      buttons: [{ label: 'Nouvelle campagne', primary: true, onClick: function () { op = null; gv = null; U.go('choose'); } }, { label: 'Accueil', onClick: function () { op = null; gv = null; U.go('title'); } }] });
+      buttons: [{ label: 'Nouvelle campagne', primary: true, onClick: function () { MS.clear(); op = null; gv = null; U.go('choose'); } }, { label: 'Accueil', onClick: function () { MS.clear(); op = null; gv = null; U.go('title'); } }] });
   }
+
+  /* ===== La sauvegarde du mandat (js/mandat-save.js) =====
+     Une photo au début de chaque étape stable, hasard compris. Reprendre ramène au début de l'étape, comme pour la campagne :
+     le même hasard redonne les mêmes tirages, recharger en plein choix ne fait donc rien gagner. */
+  var saveWarned = false;
+  function saveInfo(stage) {
+    if (stage === 'oppo') return 'Opposition · ' + (op.over ? 'fin du mandat' : 'année ' + op.year + ' sur ' + D.OPPO.years);
+    if (stage === 'lcamp' || stage === 'vote1' || stage === 'afterLegis') return 'Les législatives';
+    if (stage === 'cabinet') return 'Former le gouvernement';
+    return gv.over ? 'Fin du mandat' : 'Année ' + gv.year + ' sur ' + G.C.years + ' · ' + SEASON[step];
+  }
+  function checkpoint(stage) {
+    try {
+      var legis = stage === 'lcamp' || stage === 'vote1' || stage === 'afterLegis', c = U.saveContext();
+      var r = MS.write(MS.pack({ stage: stage, me: me, info: saveInfo(stage), g: g, quick: c.quick, perso: c.perso, founded: c.founded, lead: c.lead, foundedOn: c.foundedOn,
+        state: { gv: gv, op: op, keep: keepGv, lc: legis ? lc : null, lopt: legis ? lopt : null, learned: learned, step: step, lawsThisYear: lawsThisYear } }));
+      if (r.ok) saveWarned = false;
+      else if (!saveWarned) { saveWarned = true; toast('💾 Sauvegarde du mandat impossible (plus de place ?) : la dernière sauvegarde reste celle d’avant.'); }
+    } catch (e) { if (window.console) console.error('Politik : sauvegarde du mandat impossible', e); }
+  }
+  function saveRejected() {
+    MS.clear(); renderResumeMandate();
+    modal({ kicker: 'Sauvegarde', title: 'Sauvegarde du mandat écartée', html: '<p>Ta sauvegarde du mandat est abîmée ou vient d’une ancienne version du jeu : elle ne peut pas être reprise. Le reste du jeu n’est pas touché, tu peux lancer une nouvelle partie.</p>', buttons: [{ label: 'Compris', primary: true }] });
+  }
+  function resumeMandate() {
+    var r = MS.read();
+    if (!r) return renderResumeMandate();
+    if (r.bad) return saveRejected();
+    var sv = r.sv;
+    try {
+      g = U.restoreGame(sv); me = sv.me;
+      var s = MS.decode(sv.state, g);
+      gv = s.gv; op = s.op; keepGv = s.keep; lc = s.lc; lopt = s.lopt || {}; learned = s.learned || {}; step = s.step; lawsThisYear = s.lawsThisYear || 0;
+      lgStop(); lsel = null; lctx = null; lr1 = null; ldec = null; lpactTried = false;
+      if (sv.stage === 'gov') { U.go('gov'); render(); }
+      else if (sv.stage === 'oppo') { U.go('oppo'); renderOppo(); }
+      else if (sv.stage === 'cabinet') startCabinet();
+      else if (sv.stage === 'afterLegis') afterLegis();
+      else if (sv.stage === 'vote1') vote1();
+      else { U.go('lcamp'); renderCamp(); if (lc.turn === 1) allianceSheet(true); }
+      toast('Partie reprise : ' + sv.info + '.');
+    } catch (e) {
+      if (window.console) console.error('Politik : reprise du mandat impossible', e);
+      gv = null; op = null; keepGv = null; lc = null; U.go('title'); saveRejected();
+    }
+  }
+  function renderResumeMandate() {
+    var b = $('btn-resume-mandat'); if (!b) return;
+    var r = MS.read();
+    if (r && r.bad) { b.hidden = true; return saveRejected(); }
+    b.hidden = !r;
+    if (r) {
+      var P = E.PARTY[r.sv.me] || r.sv.founded;
+      b.innerHTML = (r.sv.stage === 'oppo' ? '↻ Reprendre ton opposition' : '↻ Reprendre ton mandat') + '<small>' + esc(P.name || P.short || '') + ' · ' + esc(r.sv.info) + '</small>';
+    }
+  }
+  $('btn-resume-mandat').addEventListener('click', resumeMandate);
+  Bus.on('nav:go', function (d) { if (d.name === 'title') renderResumeMandate(); });
+  renderResumeMandate();
 })();

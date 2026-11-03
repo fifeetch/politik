@@ -24,6 +24,8 @@ jobs:
         run: node test/check-laws.js
       - name: Économie du mandat (conjoncture, détail des causes, popularité, sanctions, budget)
         run: node test/check-economy.js
+      - name: Sauvegarde du mandat (aller-retour à chaque étape, reprise identique, sauvegardes abîmées)
+        run: node test/check-save-mandat.js
       - name: Socle (bus, infobulle, cache hors ligne, balises)
         run: |
           node test/check-bus.js

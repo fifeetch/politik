@@ -124,13 +124,18 @@
         });
       } });
   }
-  function resumeGame(from) {
-    var sv = (from && from.game) ? from : readSave(); if (!sv) return;
+  /* Remet en place la partie et le parti du joueur : pour la campagne reprise, et pour le mandat repris (js/govui.js) */
+  function restoreGame(sv) {
     perso = sv.perso; founded = sv.founded; leadOn = sv.lead;
     PS.reset(A); applyEdits();
     if (sv.foundedOn && founded) PS.found(founded, perso, A);
     else if (leadOn && perso && perso.name) PS.lead(sv.me, perso, A);
     g = E.loadGame(sv.game); me = sv.me; quickGame = sv.quick; selected = null; queue = []; theme = null; themePicked = false; advisorHidden = false;
+    return g;
+  }
+  function resumeGame(from) {
+    var sv = (from && from.game) ? from : readSave(); if (!sv) return;
+    restoreGame(sv);
     go('game'); nextTurn();
     toast('Partie reprise au tour ' + g.turn + '.');
   }
@@ -3267,7 +3272,8 @@
 
   /* Outils partagés avec la phase « Gouverner » (js/govui.js) */
   window.PolitikUI = { showPaper: showPaper, modal: modal, closeModal: closeModal, toast: toast, go: go, esc: esc, line: line, srcHtml: srcHtml, chip: chip,
-    game: function () { return g; }, me: function () { return me; } };
+    game: function () { return g; }, me: function () { return me; }, restoreGame: restoreGame,
+    saveContext: function () { return { quick: quickGame, perso: perso, founded: founded, lead: leadOn, foundedOn: !!(founded && me === founded.sigle) }; } };
   // v3.8.1 : un démarrage qui ne peut plus rester bloqué (une erreur ici n'empêche pas d'arriver à l'accueil)
   [renderTitleMap, renderChoose, renderResume].forEach(function (f) { try { f(); } catch (e) { if (window.console) console.error(e); } });
   if ($('btn-resume')) $('btn-resume').addEventListener('click', function () { resumeGame(); });
