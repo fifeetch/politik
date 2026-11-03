@@ -286,6 +286,18 @@
     'Yaël Brouhaha-Pivot': { femme: 1, r: 1, age: 1, sc: '#26201c', se: 4.4, sb: 3, oe: 1.02, nez: 'busque', nl: 1, ga: 20, dr: 19, bf: 'pleine', levres: '#a4503f', habit: '#27395c', habitO: '#1a2743', sansOreille: true, coiffure: L(212, BRUN) },
     /* Stéphane Séjour : la quarantaine, brun, mince, costume ajusté */
     'Stéphane Séjour': { m: -3, c: 2, sc: '#26201c', se: 4.8, oe: 1.02, nl: 3, nb: 1, ga: 19, dr: 18, cravate: '#2f3a4f', l: .92, coiffure: C('arriere', BRUN) }
+    ,
+    /* --- Les Rescapés --- */
+    /* Laurent Wapiti : la cinquantaine, cheveux blancs précoces, visage fin, parka rouge */
+    'Laurent Wapiti': { m: -5, c: 3, age: 1, sc: '#5d5c54', se: 4.4, si: -2, sb: 2, ouv: .86, nez: 'pointu', nl: 3, ga: 18, dr: 17, bf: 'mince', habit: '#b23a2a', habitO: '#8a2b1e', chemise: '#e7e2d2', l: .94, coiffure: C('arriere', BLANC) },
+    /* Xavier Bougonnant : la soixantaine, dégarni, lunettes carrées, visage large et bougon */
+    'Xavier Bougonnant': { r: 3, m: 5, q: 3, age: 2, sc: '#5d5c54', se: 6, si: -3, oe: .94, ouv: .88, nez: 'rond', nl: 0, nw: 3, ga: 22, dr: 20, bf: 'tombe', cravate: '#1f2a55', lunettes: lunettes('carrees'), coiffure: K(GRIS) },
+    /* Valérie Patraque : la cinquantaine, blonde au carré, tailleur */
+    'Valérie Patraque': { femme: 1, m: -2, c: 1, age: 1, sc: '#8a6a2a', se: 3.4, sb: 5, oe: 1.02, nez: 'pointu', nl: 0, ga: 20, dr: 19, bf: 'sourit', levres: '#c9806e', habit: '#1f2a55', habitO: '#151d3d', chemise: PAL.blanc, collier: PAL.blanc, sansOreille: true, coiffure: L(188, BLOND) },
+    /* David Lissé : la cinquantaine, cheveux foncés bien peignés, sourire */
+    'David Lissé': { m: 1, age: 1, sc: '#26201c', se: 5, oe: 1.02, nl: 1, ga: 21, dr: 20, bf: 'sourit', cravate: '#3f5f8a', coiffure: C('raie', NOIR) },
+    /* Rachida Dorures : la cinquantaine passée, longs cheveux noirs, teint mat, veste noire */
+    'Rachida Dorures': { femme: 1, teint: 2, r: 2, age: 1, sc: '#191513', se: 4.6, sb: 5, oe: 1.1, nl: 0, ga: 21, dr: 20, bf: 'pleine', levres: '#a4503f', habit: '#1f1f2a', habitO: '#14141c', chemise: PAL.blanc, collier: PAL.ocre, boucle: PAL.ocre, sansOreille: true, coiffure: L(226, NOIR) }
     /*SUITE*/
   };
   Object.keys(FICHES).forEach(function (nom) { NOMS[nom] = nom; ajoute(nom, FICHES[nom]); });
