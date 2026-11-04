@@ -86,7 +86,10 @@
     if (gv.deals && gv.deals.length) $('gov-prog').innerHTML += '<div class="kicker" style="margin-top:8px">Engagements d\'entre-deux-tours</div>' + gv.deals.map(function (d) {
       return '<div class="gp-row"><span>' + esc(E.measure(d.measure).name) + '</span><small>🤝 promis à ' + esc(E.PARTY[d.with].short) + ' · engagement de campagne, sans vote ni soutien automatique à l\'Assemblée</small></div>';
     }).join('');
-    $('gov-advisor').innerHTML = '<span class="adv-face">' + A.advisor() + '</span><p><b>Lulu :</b> ' + esc(advice()) + '</p>';
+    var dit = advice(), quand = gv.year * 10 + step; gv.luluDits = gv.luluDits || {};   // v5.11 : Lulu ne répète pas un conseil d'une étape à l'autre
+    if (!gv.luluDits[dit]) gv.luluDits[dit] = quand;
+    $('gov-advisor').hidden = gv.luluDits[dit] !== quand;
+    $('gov-advisor').innerHTML = '<span class="adv-face">' + A.advisor() + '</span><p><b>Lulu :</b> ' + esc(dit) + '</p>';
     $('gov-dissolve').hidden = !!gv.cohab || !(G.canDissolve(gv) && current() === 'loi');   // en cohabitation, la dissolution appartient au président
     renderMedia();
     $('gov-next').textContent = gv.over ? 'Voir le bilan du mandat' : STEP_LABEL[current()];

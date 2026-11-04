@@ -20,7 +20,7 @@
     risqueTon: { expliquer: 0.6, annoncer: 1, attaquer: 1.4 }, risqueAttaque: 0.1
   };
   var CANAUX = {
-    vingt: { nom: 'Le 20 h', scene: 'HEXA TV · LE 20 H', effet: 'Toute la France te regarde : effet fort sur la popularité, mais un raté se voit.', hote: 'Le présentateur du 20 h' },
+    vingt: { nom: 'Le 20 h', scene: 'FRANCE TV INFO · 20 H', effet: 'Toute la France te regarde : effet fort sur la popularité, mais un raté se voit.', hote: 'Le présentateur du 20 h' },
     matinale: { nom: 'La matinale', effet: 'Tu parles au public d’une station : il t’écoute, les autres peuvent s’agacer.', hote: 'L’intervieweur de 7 h 50' }
   };
   var TONS = {

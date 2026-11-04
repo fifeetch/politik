@@ -122,7 +122,7 @@
     var s = p('M416,396 C500,376 700,376 784,396 L806,424 C700,404 500,404 394,424 Z', LUM, 2.4);
     s += p('M394,424 C500,404 700,404 806,424 L796,500 C700,484 500,484 404,500 Z', '#27508c', 2.6);
     s += af(0, 0, 0, 0, 'none');
-    s += L.ligne('HEXA TV', 600, 432, 26, { ancre: 'm', encre: PAL.blanc, gras: true, graine: 9 });
+    s += L.ligne('FRANCE TV INFO', 600, 432, 22, { ancre: 'm', encre: PAL.blanc, gras: true, graine: 9 });
     s += p('M516,402 h28 l6,6 h-34 Z', PAL.blanc, 1.4) + p('M664,402 h28 l6,6 h-34 Z', PAL.blanc, 1.4);
     return s;
   }
