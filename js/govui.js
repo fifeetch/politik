@@ -884,9 +884,10 @@
     return (up.length ? ' · 👍 ' + up.join('') : '') + (down.length ? ' · 👎 ' + down.join('') : '');
   }
   function lawRow(mid, attr) {
-    var M = E.measure(mid), v = G.vote(gv, mid);
-    return '<button type="button" class="pick-row" ' + attr + '="' + mid + '"><span class="pick-txt"><b>' + esc(M.name) + '</b><small>' + moneyTxt(M) + fansTxt(M) +
-      '</small>' + (M.loiSeule ? '<small>😟 popularité −' + Math.round(Math.abs(M.cost) / 15) + '</small>' : '') + (rampTxt(M) ? '<small>⏳ ' + rampTxt(M) + '</small>' : '') + '<small>pronostic : ' + (v.passed ? '<b>adoptée</b>' : '<b>rejetée</b>') + ' (' + v.pour + ' pour, ' + v.contre + ' contre)</small></span></button>';
+    var M = E.measure(mid), v = G.vote(gv, mid), md = Math.abs(M.cost);
+    /* v5.10 : à l'écran le nom, le montant et le pronostic ; le nom ouvre le détail */
+    return '<button type="button" class="pick-row" ' + attr + '="' + mid + '"><span class="pick-txt"><b>' + esc(M.name) + '</b><small>' + (M.cost ? (M.cost < 0 ? 'rapporte ' : 'coûte ') + (md % 1 ? fr(md, 1) : md) + ' Md€ · ' : '') + (v.passed ? 'adoptée' : 'rejetée') + '</small>' +
+      '<small class="al-detail">' + moneyTxt(M) + fansTxt(M) + '</small>' + (M.loiSeule ? '<small class="al-detail">😟 popularité −' + Math.round(md / 15) + '</small>' : '') + (rampTxt(M) ? '<small class="al-detail">⏳ ' + rampTxt(M) + '</small>' : '') + '<small class="al-detail">Pronostic : ' + v.pour + ' pour, ' + v.contre + ' contre</small></span></button>';
   }
   function chooseLaw() {
     var pend = gv.measures.filter(function (m) { return m.status === 'pending'; }), cat = G.lawCatalog(gv);

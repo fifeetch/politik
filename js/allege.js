@@ -32,9 +32,13 @@
   var fiches = {};
   function nouvelle(entree) { var id = 'al-' + (++compte % 800); IB.definir(id, entree); fiches[id] = entree; return id; }
   function fiche(el) { return el && fiches[el.getAttribute('data-ib')]; }
+  /* Le mot marqué est un enfant : le titre ou le nom gardent leur police */
   function marque(el, id) {
-    el.classList.add('ib-mot', 'al-mot'); el.setAttribute('data-ib', id);
-    el.setAttribute('role', 'button'); el.setAttribute('tabindex', '0');
+    var m = doc.createElement('span');
+    while (el.firstChild) m.appendChild(el.firstChild);
+    el.appendChild(m);
+    m.classList.add('ib-mot', 'al-mot'); m.setAttribute('data-ib', id);
+    m.setAttribute('role', 'button'); m.setAttribute('tabindex', '0');
   }
   function ligne(t) { return { texte: t }; }
 
@@ -75,7 +79,7 @@
       var part = [];
       Array.prototype.forEach.call(rang.querySelectorAll('.pick-txt > small, .pick-txt > span:not([class]), .ans-q, .ans-who, .ans-n, .ans-c'), function (el) {
         var t = texte(el);
-        if (!t || (!el.classList.contains('ans-q') && !el.classList.contains('ans-who') && !el.classList.contains('ans-n') && !el.classList.contains('ans-c') && garder(t))) return;
+        if (!t || (!el.matches('.ans-q, .ans-who, .ans-n, .ans-c, .al-detail') && garder(t))) return;
         part.push(t); el.parentNode.removeChild(el);
       });
       if (part.length) marque(nom, nouvelle({ titre: texte(nom), lignes: part.map(ligne) }));
