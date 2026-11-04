@@ -1,6 +1,6 @@
 /* Politik — service worker : rend le jeu installable et jouable sans internet.
    À chaque nouvelle version du jeu, changer VERSION pour que les téléphones se mettent à jour. */
-var VERSION = 'politik-v5.11.0';
+var VERSION = 'politik-v5.12.0';
 /* LE CŒUR, précaché à l'installation. addAll est tout-ou-rien : un seul fichier absent ici et le service worker
    ne s'installe pas, donc plus de jeu hors ligne. Tout nouveau fichier du cœur s'ajoute ici, dans son groupe, sur sa ligne
    (test/check-socle.js vérifie que la liste correspond à index.html et que chaque fichier existe).
@@ -20,6 +20,7 @@ var FILES = [
   'js/infobulle.js',
   'js/allege.js',
   'js/lulu-ecrans.js',
+  'js/illustrations.js',
   /* scripts : données et moteurs */
   'js/data.js', 'js/people.js', 'js/map.js', 'js/engine.js', 'js/perso.js', 'js/ai.js',
   /* scripts : dessin et animations */
