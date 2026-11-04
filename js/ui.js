@@ -12,7 +12,7 @@
   var g = null, me = null, chosen = 'VP', selected = null, queue = [];
   /* v2.5 : ton personnage et ton parti (gardés d'une partie à l'autre) */
   var PS = window.PolitikPerso, perso = null, founded = null, leadOn = false;
-  try { perso = JSON.parse(localStorage.getItem('politik_perso') || 'null'); founded = JSON.parse(localStorage.getItem('politik_parti') || 'null'); leadOn = localStorage.getItem('politik_lead') === '1'; } catch (e) {}
+  try { perso = JSON.parse(localStorage.getItem('politik_perso') || 'null'); founded = JSON.parse(localStorage.getItem('politik_parti') || 'null'); /* v5.9.1 : ton personnage candidat est un choix de la partie, jamais une règle : on repart toujours du candidat du parti */ } catch (e) {}
   /* v4.8 : les partis modifiés par le joueur (nom, sigle, couleur, candidat, score de départ) */
   var partyEdits = {};
   try { partyEdits = JSON.parse(localStorage.getItem('politik_edits') || '{}') || {}; } catch (e) { partyEdits = {}; }
@@ -196,7 +196,7 @@
        name : title, setup, choose, programme, game, between, night, end, lcamp, lbtw, legis, oppo, gform, gov.
        Effets de bord : choose, title et setup oublient la partie en cours ; quitter game efface le bandeau d'alerte.
        Un écran ajouté : un élément #screen-<name> dans index.html suffit. Exposé en PolitikUI.go. */
-  function go(name) {
+  function go(name) { if (name === 'title') leadOn = false;   // retour à l'accueil : la prochaine partie repart du candidat du parti
     var prev = document.querySelector('.screen.active');
     if (name === 'choose' || name === 'title' || name === 'setup') g = null;
     if (name === 'setup') quick = false;
@@ -482,9 +482,9 @@
     var has = perso && perso.name, col = founded && chosen === founded.sigle ? founded.color : (E.PARTY[chosen] || { color: '#7B3FA0' }).color;
     $('perso-strip').innerHTML = '<span class="ps-face">' + A.face(PS.faceCfg(perso || PS.defaultChar(), col)) + '</span><span class="ps-txt"><b>' + (has ? esc(perso.name) : 'Ton personnage') + '</b><small>' +
       (has ? (founded && chosen === founded.sigle ? 'candidat de ton parti' : leadOn ? 'tu prends la tête du parti choisi' : 'tu joues avec le candidat du parti') : 'ton nom, ton visage, ton style en débat') + '</small></span>' +
-      (has && !(founded && chosen === founded.sigle) ? '<button type="button" class="ps-toggle" id="ps-lead" aria-pressed="' + leadOn + '">' + (leadOn ? 'Candidat : toi' : 'Être candidat') + '</button>' : '') +
+      (has && !(founded && chosen === founded.sigle) ? '<button type="button" class="ps-toggle" id="ps-lead" aria-pressed="' + leadOn + '">' + (leadOn ? 'Reprendre le candidat du parti' : 'Jouer mon personnage') + '</button>' : '') +
       '<button type="button" class="ps-edit" id="ps-edit">' + (has ? 'Modifier' : 'Créer') + '</button>';
-    $('ps-edit').onclick = function () { editChar(function () { if (!leadOn && perso.name) leadOn = true; savePerso(); renderChoose(); }); };
+    $('ps-edit').onclick = function () { editChar(function () { savePerso(); renderChoose(); }); };
     if ($('ps-lead')) $('ps-lead').onclick = function () { leadOn = !leadOn; savePerso(); renderChoose(); };
   }
   function renderFoundedDetail() {
