@@ -44,6 +44,8 @@ jobs:
         run: node test/check-allege.js
       - name: Lulu et les écrans
         run: node test/check-lulu.js
+      - name: Illustrations
+        run: node test/check-illustrations.js
       - name: Simulation courte de la présidentielle
         run: node test/simulate.js 20
       - name: Simulation courte du quinquennat (4 stratégies)

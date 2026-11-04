@@ -418,7 +418,7 @@
     var g = greveEnCours(gv);
     if (!g || !g.due) return null;
     var d = GREVES[g.id], k = 1 + (g.tour - 1) / 2;
-    return { id: 'greve', scene: g.scene, title: d.nom + ' reprend', text: 'Le mouvement a été reconduit, et les caisses de grève tiennent encore. Année ' + g.tour + ' de conflit : chaque jour coûte plus cher que l\'an dernier.', opts: [
+    return { id: 'greve', illu: g.id, scene: g.scene, title: d.nom + ' reprend', text: 'Le mouvement a été reconduit, et les caisses de grève tiennent encore. Année ' + g.tour + ' de conflit : chaque jour coûte plus cher que l\'an dernier.', opts: [
       { label: 'Céder, cette fois', def: Math.round(d.def * k * 100) / 100, stop: true }, { label: 'Tenir encore', pop: Math.floor(d.pop * k), tient: g.id, tour: g.tour }] };
   }
 

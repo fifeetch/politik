@@ -676,7 +676,7 @@
       '<div class="sw-gauges" id="sw-gauges">' + dots('none') + '</div></div>' +
       '<div class="sw-stage"><div class="sw-card" id="sw-card" style="--bg:' + (CD.KIND[c.kind] || '#E3E0D6') + '">' +
         '<span class="sw-choice sw-l" id="sw-l">' + esc(c.left.label) + '</span><span class="sw-choice sw-r" id="sw-r">' + esc(c.right.label) + '</span>' +
-        evScene(CD.sceneOf(c)) + '<div class="sw-qui"><div class="sw-face">' + (c.kind === 'lulu' ? A.advisor() : A.face(CD.faceOf(c))) + '</div><b class="sw-who">' + esc(c.who) + '</b></div><p class="sw-text">' + esc(c.text) + '</p></div></div>' +
+        evScene(CD.sceneOf(c), c.id) + '<div class="sw-qui"><div class="sw-face">' + (c.kind === 'lulu' ? A.advisor() : A.face(CD.faceOf(c))) + '</div><b class="sw-who">' + esc(c.who) + '</b></div><p class="sw-text">' + esc(c.text) + '</p></div></div>' +
       '<div class="sw-btns"><button type="button" class="btn" id="sw-bl">← ' + esc(c.left.label) + '</button><button type="button" class="btn" id="sw-br">' + esc(c.right.label) + ' →</button></div>' +
       '<p class="sw-hint">Glisse la carte, ou touche un choix. Les points montrent ce qui va bouger : 💶 budget, 😊 popularité, 🏛️ ta majorité, ⏳ une suite plus tard.</p>';
     el.hidden = false; FX.replay($('sw-card'), 'sw-in');
@@ -1009,14 +1009,14 @@
     return p.join(' · ') || 'aucun effet immédiat';
   }
   /* v5.7 : chaque événement a son image. Sans le dessin, l'événement s'affiche quand même */
-  function evScene(nom) { var BD = window.PolitikBD; return BD && nom ? '<div class="ev-pic">' + BD.scene(nom) + '</div>' : ''; }
+  function evScene(nom, id) { var BD = window.PolitikBD, I = window.PolitikIllu, im = I && id ? I.img(id) : ''; return BD && nom ? '<div class="ev-pic' + (im ? ' illu-pic' : '') + '">' + BD.scene(nom) + im + '</div>' : ''; }
   var MIN_SCENE = { gaffe: 'tele', affaire: 'scandale', depart: 'conseil', fronde: 'conseil', succes: 'conseil' };
   /* Pendant une grève, sa scène prend la place du bandeau de lieu */
   function bandeauGreve() {
     var BD = window.PolitikBD, b = document.querySelector('#screen-gov .bd-bandeau'), gr = G.greveEnCours(gv), k = gr ? gr.id + gr.tour + gr.due : 'lieu';
     if (!BD || !b || b.getAttribute('data-k') === k) return;
     b.setAttribute('data-k', k); b.classList.toggle('en-greve', !!gr);
-    b.innerHTML = !gr ? BD.LIEUX.elysee() : '<div class="bd-greve-img">' + BD.scene(gr.scene) + '</div><p class="bd-greve-txt"><b>' + esc(gr.nom) + '</b> : ' + (gr.due ? 'il faudra trancher cet été.' : 'reconduite, elle reprend l\u2019an prochain.') + '</p>';
+    b.innerHTML = !gr ? BD.LIEUX.elysee() : '<div class="bd-greve-img illu-pic">' + BD.scene(gr.scene) + (window.PolitikIllu ? window.PolitikIllu.img(gr.id) : '') + '</div><p class="bd-greve-txt"><b>' + esc(gr.nom) + '</b> : ' + (gr.due ? 'il faudra trancher cet été.' : 'reconduite, elle reprend l\u2019an prochain.') + '</p>';
   }
   function showEvent() {
     var greve = G.strikeEvent(gv);
@@ -1030,7 +1030,7 @@
       if (cands.length) target = { post: cands[0], x: gv.cabinet.posts[cands[0]] };
       if (target) ev = Object.assign({}, ev, { text: target.x.name + ' (' + postDef(target.post).name + ') est accusé(e) d\u2019avoir menti sur son patrimoine.' });
     }
-    var html = '<div class="ev-page"><div class="ev-mast"><span>Le Quotidien National</span><span>Été, année ' + gv.year + '</span></div><h3>' + esc(ev.title) + '</h3>' + evScene(ev.scene) + '<p>' + esc(ev.text) + '</p></div><div class="ans-k">Ta décision</div>' +
+    var html = '<div class="ev-page"><div class="ev-mast"><span>Le Quotidien National</span><span>Été, année ' + gv.year + '</span></div><h3>' + esc(ev.title) + '</h3>' + evScene(ev.scene, ev.illu || ev.id) + '<p>' + esc(ev.text) + '</p></div><div class="ans-k">Ta décision</div>' +
       (ev.id === 'cour' ? learn('cour') : '') + '<div class="pick">' +
       ev.opts.map(function (o, i) { return '<button type="button" class="pick-row" data-o="' + i + '"><span class="pick-txt"><b>' + esc(o.label) + '</b><small>' + optHtml(o) + '</small></span></button>'; }).join('') + '</div>';
     modal({ kicker: 'Été · Année ' + gv.year, title: 'L\'actualité s\'impose', html: html, buttons: [],
