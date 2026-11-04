@@ -7,7 +7,10 @@
   function a(id) { return IDS.indexOf(id) >= 0; }
   /* Le html de l'image à poser dans un cadre .illu-pic, ou rien si cet id n'a pas d'illustration */
   function img(id) { return a(id) ? '<img class="illu" src="assets/scenes/' + id + '.jpg" alt="" width="1200" height="675" draggable="false">' : ''; }
-  var API = { IDS: IDS, a: a, img: img };
+  /* Le journal de campagne parle en scènes : chacune renvoie à l'illustration du même sujet */
+  var JOURNAL = { greve: 'cheminots', usine: 'fermeture', pluie: 'inondations', chaleur: 'canicule', feu: 'canicule', hopital: 'infirmieres', police: 'policiers', caddie: 'marches', scandale: 'fuite', relance: 'innovation', nature: 'tracteurs' };
+  function duJournal(scene) { return JOURNAL[scene] || ''; }
+  var API = { IDS: IDS, a: a, img: img, duJournal: duJournal, JOURNAL: JOURNAL };
   if (node) { module.exports = API; return; }
   root.PolitikIllu = API;
   /* En cas d'échec, ou si le service worker a servi son aplat de repli, on retire l'image et le dessin réapparaît */
