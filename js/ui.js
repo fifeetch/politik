@@ -281,13 +281,30 @@
 
   /* ---------- Écran titre : carte décorative ---------- */
   function renderTitleMap() {
-    // la carte de l'affiche : chaque région à la couleur de son vainqueur des européennes 2024
-    var s = $('title-map');
-    D.REGIONS.forEach(function (r) {
-      var best = Object.keys(r.start).sort(function (a, b) { return r.start[b] - r.start[a]; })[0];
-      s.appendChild(svg('path', { d: M.regions[r.id].d, fill: party(best).color, stroke: '#FAFAF6', 'stroke-width': 1.6, 'stroke-linejoin': 'round' }));
+    // la carte de l'accueil : une soirée électorale qui hésite, chaque région passe d'un parti de tête à l'autre
+    var s = $('title-map'), calme = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches, zones = [];
+    D.REGIONS.forEach(function (r, i) {
+      var tete = Object.keys(r.start).sort(function (a, b) { return r.start[b] - r.start[a]; }).slice(0, 4);
+      var p = svg('path', { d: M.regions[r.id].d, fill: party(tete[i % tete.length]).color, stroke: '#FAFAF6', 'stroke-width': 1.6, 'stroke-linejoin': 'round' });
+      p.style.animationDelay = (i * 70) + 'ms';
+      s.appendChild(p); zones.push({ p: p, tete: tete });
     });
+    if (calme) return;
+    setInterval(function () {
+      if (document.hidden || !$('screen-title').classList.contains('active')) return;
+      var z = zones[Math.floor(Math.random() * zones.length)];
+      z.p.setAttribute('fill', party(z.tete[Math.floor(Math.random() * z.tete.length)]).color);
+    }, 1100);
   }
+
+  /* L'accueil n'a qu'un bouton : Jouer ouvre la fenêtre du choix de la partie */
+  (function () {
+    var menu = $('play-menu'); if (!menu) return;
+    function fermer() { menu.hidden = true; }
+    $('btn-open-play').addEventListener('click', function () { renderResume(); menu.hidden = false; });
+    menu.addEventListener('click', function (e) { if (e.target === menu || e.target.closest('button')) fermer(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') fermer(); });
+  })();
 
   /* ---------- v1.2 : paramètres de la partie ---------- */
   /* Score national de départ d'un parti, en %, pour un point de départ donné */
@@ -988,18 +1005,23 @@
   var pressLog = [], pressBefore = {}, pressChanges = [], lastPaper = null, paperCont = null;
   var Press = window.PolitikPress;
   var artVus = {};
+  /* Le cadre d'une scène du journal, avec son illustration si elle en a une (le dessin reste dessous, en secours) */
+  function cadreScene(cls, nom, dessin) {
+    var I = window.PolitikIllu, id = I ? I.duJournal(nom) : '';
+    return '<div class="' + cls + (id ? ' illu-pic' : '') + '">' + dessin + (id ? I.img(id) : '') + '</div>';
+  }
   function artScene(a) {
     if (!BD) return '';
     var key = a.why && a.why.key, nom = a.rub === 'Affaires' ? 'scandale' : a.rub === 'Régions' ? 'ville' : a.rub === 'Médias' ? 'tele' : a.rub === 'Meeting' || key === 'terrain' ? 'meeting' : key === 'medias' || key === 'matinale' || key === 'vingt' ? 'tele' : key === 'mobiliser' ? 'ville' : '';
     if (!nom || artVus[nom] || !BD.aUne(nom)) return '';
     artVus[nom] = true;
-    return '<div class="art-pic">' + BD.une(nom) + '</div>';
+    return cadreScene('art-pic', nom, BD.une(nom));
   }
   function articleHtml(a) {
     var p = a.pid ? party(a.pid) : null;
     return '<article class="art-item' + (a.mine ? ' mine' : '') + '" id="art-' + a.id + '">' +
       '<div class="art-rub"><span>' + esc(a.rub) + '</span>' + (a.mine ? '<em>Ton parti</em>' : '') + '<i>p. ' + a.page + '</i></div>' +
-      (a.id === 'main' ? '<div class="art-pic">' + Press.scene(a.scene) + '</div>' : artScene(a)) +
+      (a.id === 'main' ? cadreScene('art-pic', a.scene, Press.scene(a.scene)) : artScene(a)) +
       '<h3>' + esc(a.title) + '</h3>' +
       (a.rule ? '<p class="art-rule"><b>' + esc(a.ruleLabel || 'Pour la campagne') + ' :</b> ' + esc(a.rule) + '</p>' : '') +
       '<div class="art-body">' + (p && a.id !== 'main' ? '<span class="art-face" style="--pc:' + p.color + '">' + A.portrait(a.pid) + '</span>' : '') + '<p>' + esc(a.text) + '</p></div>' +
@@ -1081,7 +1103,7 @@
     return '<div class="une-top"><span class="une-nom">Le Quotidien National</span><span class="une-date">' + paper.day.charAt(0).toUpperCase() + paper.day.slice(1) + '<br>' + esc(paper.when || 'tour ' + g.turn + ' sur ' + R.maxTurns) + '</span></div>' +
       '<div class="une-word">' + esc(paper.word) + '</div>' +
       '<p class="une-sub">' + esc(m.lead || m.title) + '</p>' +
-      '<div class="une-pic">' + Press.scene(paper.scene) + '</div>' +
+      cadreScene('une-pic', paper.scene, Press.scene(paper.scene)) +
       '<div class="une-teasers">' + paper.teasers.map(function (a) {
         return '<button type="button" class="une-t" data-art="' + a.id + '"><b>' + esc(a.title) + '</b><small>' + (a.mine ? 'Ton parti · ' : '') + 'page ' + a.page + '</small></button>';
       }).join('') + '</div>';

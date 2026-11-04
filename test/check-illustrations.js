@@ -15,4 +15,6 @@ assert.ok(ids.length >= 22 && greves.length >= 8, 'événements et grèves retro
 ids.concat(greves).forEach(function (id) { assert.ok(I.a(id), id + ' : pas d\'illustration'); });
 assert.strictEqual(I.img('inconnu'), '', 'un id inconnu ne donne pas d\'image');
 assert.ok(I.img('canicule').indexOf('assets/scenes/canicule.jpg') > 0);
+Object.keys(I.JOURNAL).forEach(function (k) { assert.ok(I.a(I.JOURNAL[k]), k + ' : illustration du journal inconnue'); });
+assert.strictEqual(I.duJournal('inconnue'), '', 'une scène sans illustration garde son dessin');
 console.log('Illustrations : OK');

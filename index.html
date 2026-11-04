@@ -53,24 +53,28 @@
 
   <!-- Écran titre -->
   <section id="screen-title" class="screen active">
-    <div class="poster">
-      <span class="poster-k">Élection présidentielle</span>
-      <h1 class="logo">Politik</h1>
-      <svg id="title-map" class="title-map" viewBox="0 0 370 357" aria-hidden="true"></svg>
-      <p class="tagline">Fais campagne. Gagne la France.</p>
+    <h1 class="logo">Politik</h1>
+    <svg id="title-map" class="title-map" viewBox="0 0 370 357" aria-hidden="true"></svg>
+    <button class="btn btn-yellow btn-big btn-play" id="btn-open-play" type="button">▶ Jouer</button>
+    <p class="fineprint">Parodie politique. Toute ressemblance est volontaire.</p>
+    <div id="play-menu" class="modal" hidden>
+      <div class="modal-card" role="dialog" aria-modal="true" aria-label="Choisir une partie">
+        <button id="play-menu-close" class="play-close" type="button" aria-label="Fermer">✕</button>
+        <div class="stack">
+          <button class="btn btn-yellow btn-big btn-resume" id="btn-resume" type="button" hidden>↻ Reprendre ta partie</button>
+          <button class="btn btn-yellow btn-big btn-resume" id="btn-resume-mandat" type="button" hidden>↻ Reprendre ton mandat</button>
+          <button class="btn btn-ghost-light btn-resume" id="btn-load" type="button" hidden>📂 Charger une partie</button>
+          <button class="btn btn-yellow btn-big btn-new" data-action="play">▶ Nouvelle partie</button>
+          <button class="btn btn-ghost-light" data-action="eclair">⚡ Campagne éclair</button>
+          <button class="btn btn-ghost-light" data-go="setup">Partie personnalisée</button>
+          <button class="btn btn-ghost-light" id="btn-install" type="button" hidden>📲 Installer l'application</button>
+        </div>
+        <div class="play-links">
+          <button type="button" class="linkbtn" data-action="rules">Règles</button>
+          <button type="button" class="linkbtn" data-action="tuto">Tutoriel</button>
+        </div>
+      </div>
     </div>
-    <div class="stack">
-      <button class="btn btn-yellow btn-big btn-resume" id="btn-resume" type="button" hidden>↻ Reprendre ta partie</button>
-      <button class="btn btn-yellow btn-big btn-resume" id="btn-resume-mandat" type="button" hidden>↻ Reprendre ton mandat</button>
-      <button class="btn btn-ghost-light btn-resume" id="btn-load" type="button" hidden>📂 Charger une partie</button>
-      <button class="btn btn-yellow btn-big btn-play" data-action="play">▶ Jouer</button>
-      <button class="btn btn-ghost-light" data-action="eclair">⚡ Campagne éclair · 3 tours</button>
-      <button class="btn btn-ghost-light" data-go="setup">Partie personnalisée</button>
-      <button class="btn btn-ghost-light" data-action="rules">Règles du jeu</button>
-      <button class="btn btn-ghost-light" id="btn-install" type="button" hidden>📲 Installer l'application</button>
-    </div>
-    <button type="button" class="linkbtn title-tuto" data-action="tuto">Revoir le tutoriel</button>
-    <p class="fineprint">Parodie politique. Toute ressemblance est volontaire,<br>toute caricature est équitable.</p>
   </section>
 
   <!-- v1.2 : paramètres de la partie -->
