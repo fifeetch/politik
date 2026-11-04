@@ -77,9 +77,9 @@
       if (rang.classList.contains('off')) return;   // la raison d'un refus reste écrite
       var nom = rang.querySelector('.pick-txt > b, .ans-h > b'); if (!nom) return;
       var part = [];
-      Array.prototype.forEach.call(rang.querySelectorAll('.pick-txt > small, .pick-txt > span:not([class]), .ans-q, .ans-who, .ans-n, .ans-c'), function (el) {
+      Array.prototype.forEach.call(rang.querySelectorAll('.pick-txt > small, .pick-txt > span:not([class]), .ans-who, .ans-n, .ans-c'), function (el) {
         var t = texte(el);
-        if (!t || (!el.matches('.ans-q, .ans-who, .ans-n, .ans-c, .al-detail') && garder(t))) return;
+        if (!t || (!el.matches('.ans-who, .ans-n, .ans-c, .al-detail') && garder(t))) return;
         part.push(t); el.parentNode.removeChild(el);
       });
       if (part.length) marque(nom, nouvelle({ titre: texte(nom), lignes: part.map(ligne) }));
