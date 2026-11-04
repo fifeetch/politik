@@ -1195,6 +1195,11 @@
     if (!g || g.phase !== 'actions' || advisorHidden || luluOff || T.isActive()) { box.hidden = true; advShown = null; return; }
     var tipT = advReact ? null : tipOfTurn();
     var text = advReact || (tipT ? '💡 ' + tipT.text : advice());
+    if (!advReact) {   // v5.11 : un conseil déjà donné à un autre tour n'est pas répété
+      g.tips = g.tips || { seen: {}, turn: {} }; g.tips.dits = g.tips.dits || {};
+      if (g.tips.dits[text] && g.tips.dits[text] !== g.turn) { box.hidden = true; advShown = null; return; }
+      g.tips.dits[text] = g.turn;
+    }
     if (!box.hidden && text === advShown) return;
     box.hidden = false; advShown = text;
     if (!box.querySelector('.adv-bubble')) {
@@ -2071,7 +2076,7 @@
   function interviewModal(o) {
     var q = teleQuestion(o.theme), iv = E.interview(g, me, q.id, o.fmt, o.station ? E.stationBoost(me, o.station) : null);
     var stn = o.station && BD ? D.STATIONS.filter(function (x) { return x.id === o.station; })[0] : null;
-    var vingt = o.fmt === 'vingt', scene = !BD ? null : stn ? BD.studio(bdId(me), stn.name, '« ' + iv.q.ask + ' »') : BD.tele(bdId(me), vingt ? 'HEXA TV · LE 20 H' : 'HEXA TV · LE 13 H', '« ' + iv.q.ask + ' »', vingt);
+    var vingt = o.fmt === 'vingt', scene = !BD ? null : stn ? BD.studio(bdId(me), stn.name, '« ' + iv.q.ask + ' »') : BD.tele(bdId(me), vingt ? 'FRANCE TV INFO · 20 H' : 'FRANCE TV INFO · 13 H', '« ' + iv.q.ask + ' »', vingt);
     var html = (scene ? scene + '<div class="bd-info"><span>' + esc(o.kicker) + ' · ' + esc(o.host) + '</span></div>' : tvSet(o.kicker, iv, o.host, o.cls)) + (o.intro || '') + '<div class="ans-k">Ta réponse</div><div class="ans-list">' + iv.cards.map(function (c, i) {
       return '<button type="button" class="ans" data-i="' + i + '">' + answerCard(c, '<b class="ans-pt">' + ptStr(E.previewGain(g, me, c.gains)) + '</b>') + '</button>';
     }).join('') + '</div><p class="hint">Le chiffre = ce que la réponse rapporte à ton score au sondage national. Elle agit dans <b>toute la France</b>, sur les classes sociales qu\u2019elle touche, et son effet s\u2019estompe de 15 % par tour.</p>';
@@ -2476,20 +2481,23 @@
   }
   /* v2.1 : le flash info façon chaîne d'info. À l'écran : la carte des régions qui changent de main,
      UN gros titre, deux brèves au plus et le bandeau des sondages qui défile. Le reste s'ouvre avec « Tout le détail ». */
+  var flashTour = null;
   function showFlash(log, before, ctrl0, allies0) {
-    var f = flashData(log, before, ctrl0, allies0);
-    var after = E.isDebateTurn(g) ? debate : spotlight;
-    var contLabel = E.isDebateTurn(g) ? 'Place au débat 🎙️' : 'Fin du tour';
-    function cont() { handleOffers(after); }
+    flashTour = { log: log, before: before, ctrl0: ctrl0, allies0: allies0 };   // l'écran s'ouvre en fin de tour, bilan compris
+    flashData(log, before, ctrl0, allies0);
+    handleOffers(E.isDebateTurn(g) ? debate : spotlight);
+  }
+  function ouvrirFlash(b, then) {
+    var t = flashTour, f = flashData(t.log, t.before, t.ctrl0, t.allies0), label = g.over || g.phase === 'between' ? 'Continuer' : 'Tour suivant';
     function open() {
-      modal({ kicker: 'Tour ' + g.turn + ' · 20 h', title: 'Flash info', cls: 'tv-modal', html: tvHtml(f),
-        buttons: [{ label: contLabel, primary: true, onClick: cont }, { label: 'Tout le détail', onClick: detail }] });
+      modal({ kicker: 'Tour ' + (b ? b.turn : g.turn) + ' · 20 h', title: 'Flash info', cls: 'tv-modal', html: tvHtml(f, b),
+        buttons: [{ label: label, primary: true, onClick: then }, { label: 'Tout le détail', onClick: detail }] });
     }
     function detail() {
-      modal({ kicker: 'Flash info · tour ' + g.turn, title: 'Le détail de la soirée', html: flashDetail(f, log),
-        buttons: [{ label: contLabel, primary: true, onClick: cont }, { label: '‹ Revenir au direct', onClick: open }] });
+      modal({ kicker: 'Flash info', title: 'Le détail de la soirée', html: flashDetail(f, t.log),
+        buttons: [{ label: label, primary: true, onClick: then }, { label: '‹ Revenir au flash', onClick: open }] });
     }
-    open();
+    flashTour = null; open();
   }
   function who(pid) { return pid === me ? 'Toi' : party(pid).short; }
   var lastVictim = [];
@@ -2529,7 +2537,7 @@
   }
   function arrow(d) { return d >= 0.5 ? '<i class="up">▲ ' + d.toFixed(1).replace('.', ',') + '</i>' : d <= -0.5 ? '<i class="down">▼ ' + (-d).toFixed(1).replace('.', ',') + '</i>' : '<i>=</i>'; }
   /* v5.5 : le flash, en page de journal : le titre, la carte, ce qui a changé de main, puis où tu en es */
-  function tvHtml(f) {
+  function tvHtml(f, b) {
     var moves = f.moves || [], byReg = {}; moves.forEach(function (m) { byReg[m.rid] = m; });
     var map = '<svg class="fl-map" viewBox="0 0 370 357" role="img" aria-label="Carte des régions qui changent de main">' + D.REGIONS.map(function (r) {
       var m = byReg[r.id];
@@ -2557,7 +2565,7 @@
       '<h3 class="fl-head">' + esc(titre) + '</h3>' +
       (breves.length ? '<ul class="fl-breves">' + breves.map(function (h) { return '<li>' + esc(h.t) + '</li>'; }).join('') + '</ul>' : '') +
       '<div class="fl-cols"><div class="fl-carte">' + map + '</div><div class="fl-moves"><div class="fl-k">Les régions ce soir</div>' + (rows ? '<ul>' + rows + '</ul>' : '<p>Aucune région ne change de main.</p>') + '</div></div>' +
-      '<div class="fl-moi"><span class="fl-k">Ta position</span><b>' + ordinal(f.rank) + '</b><b>' + pctFr(f.mine.pct, 1) + ' %</b>' + arrow(f.mine.d) + '<p>' + quali + (g.led ? ' Ce tour : tes actions <b>' + ptStr(g.led.acts[me] || 0) + '</b>, les rivaux <b>' + ptStr(g.led.riv[me] || 0) + '</b>.' : '') + '</p></div>' +
+      '<div class="fl-moi"><span class="fl-k">Ta position</span><b>' + ordinal(f.rank) + '</b><b>' + pctFr(f.mine.pct, 1) + ' %</b>' + arrow(f.mine.d) + '<p>' + quali + '</p></div>' + (b ? bilanHtml(b) : '') +
       '<div class="fl-k fl-k2">Le sondage</div><ol class="fl-top">' + classe + '</ol></div>';
   }
   function flashDetail(f, log) {
@@ -2834,9 +2842,10 @@
       '<p class="bilan-mini">Tu passes de ' + pctFr(x.start, 1) + ' % à ' + pctFr(x.end, 1) + ' %. Le sondage est une part du total : quand tes rivaux gagnent des électeurs, ta part baisse même si tu n’en perds aucun.</p>';
   }
   function bilanModal(then) {
-    var b = g.bilan;
-    if (!b || !b.rows[me]) return then();
-    Bus.emit('ui:poll', { delta: b.rows[me].total });
+    var b = g.bilan, ok = b && b.rows[me];
+    if (ok) Bus.emit('ui:poll', { delta: b.rows[me].total });
+    if (flashTour) return ouvrirFlash(ok ? b : null, then);
+    if (!ok) return then();
     modal({ kicker: 'Fin du tour ' + b.turn, title: 'Ton bilan au sondage', html: bilanHtml(b), buttons: [{ label: g.over || g.phase === 'between' ? 'Continuer' : 'Tour suivant', primary: true, onClick: then }] });
   }
   function finishTurn(spot) {
