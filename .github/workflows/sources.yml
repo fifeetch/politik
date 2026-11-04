@@ -40,6 +40,8 @@ jobs:
         run: node test/check-medias.js
       - name: Scénarios du mandat
         run: node test/check-scenarios.js
+      - name: Moins de texte
+        run: node test/check-allege.js
       - name: Simulation courte de la présidentielle
         run: node test/simulate.js 20
       - name: Simulation courte du quinquennat (4 stratégies)
