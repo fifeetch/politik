@@ -1005,23 +1005,18 @@
   var pressLog = [], pressBefore = {}, pressChanges = [], lastPaper = null, paperCont = null;
   var Press = window.PolitikPress;
   var artVus = {};
-  /* Le cadre d'une scène du journal, avec son illustration si elle en a une (le dessin reste dessous, en secours) */
-  function cadreScene(cls, nom, dessin) {
-    var I = window.PolitikIllu, id = I ? I.duJournal(nom) : '';
-    return '<div class="' + cls + (id ? ' illu-pic' : '') + '">' + dessin + (id ? I.img(id) : '') + '</div>';
-  }
   function artScene(a) {
     if (!BD) return '';
     var key = a.why && a.why.key, nom = a.rub === 'Affaires' ? 'scandale' : a.rub === 'Régions' ? 'ville' : a.rub === 'Médias' ? 'tele' : a.rub === 'Meeting' || key === 'terrain' ? 'meeting' : key === 'medias' || key === 'matinale' || key === 'vingt' ? 'tele' : key === 'mobiliser' ? 'ville' : '';
     if (!nom || artVus[nom] || !BD.aUne(nom)) return '';
     artVus[nom] = true;
-    return cadreScene('art-pic', nom, BD.une(nom));
+    return '<div class="art-pic">' + BD.une(nom) + '</div>';
   }
   function articleHtml(a) {
     var p = a.pid ? party(a.pid) : null;
     return '<article class="art-item' + (a.mine ? ' mine' : '') + '" id="art-' + a.id + '">' +
       '<div class="art-rub"><span>' + esc(a.rub) + '</span>' + (a.mine ? '<em>Ton parti</em>' : '') + '<i>p. ' + a.page + '</i></div>' +
-      (a.id === 'main' ? cadreScene('art-pic', a.scene, Press.scene(a.scene)) : artScene(a)) +
+      (a.id === 'main' ? '<div class="art-pic">' + Press.scene(a.scene) + '</div>' : artScene(a)) +
       '<h3>' + esc(a.title) + '</h3>' +
       (a.rule ? '<p class="art-rule"><b>' + esc(a.ruleLabel || 'Pour la campagne') + ' :</b> ' + esc(a.rule) + '</p>' : '') +
       '<div class="art-body">' + (p && a.id !== 'main' ? '<span class="art-face" style="--pc:' + p.color + '">' + A.portrait(a.pid) + '</span>' : '') + '<p>' + esc(a.text) + '</p></div>' +
@@ -1103,7 +1098,7 @@
     return '<div class="une-top"><span class="une-nom">Le Quotidien National</span><span class="une-date">' + paper.day.charAt(0).toUpperCase() + paper.day.slice(1) + '<br>' + esc(paper.when || 'tour ' + g.turn + ' sur ' + R.maxTurns) + '</span></div>' +
       '<div class="une-word">' + esc(paper.word) + '</div>' +
       '<p class="une-sub">' + esc(m.lead || m.title) + '</p>' +
-      cadreScene('une-pic', paper.scene, Press.scene(paper.scene)) +
+      '<div class="une-pic">' + Press.scene(paper.scene) + '</div>' +
       '<div class="une-teasers">' + paper.teasers.map(function (a) {
         return '<button type="button" class="une-t" data-art="' + a.id + '"><b>' + esc(a.title) + '</b><small>' + (a.mine ? 'Ton parti · ' : '') + 'page ' + a.page + '</small></button>';
       }).join('') + '</div>';
