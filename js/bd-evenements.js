@@ -563,6 +563,27 @@
       });
       return S.kase(W, H, 'La fête devant la mairie : les lampions, le feu d’artifice, la foule qui danse.', s);
     },
+    /* la fusion : la poignée de mains devant le siège, les confettis, et les déçus sur le côté */
+    fusion: function () {
+      var s = R.af(0, 0, W, H, '#cfe2e6') + nuage(180, 60, .9) + nuage(1040, 50, .8), i;
+      s += R.rect(250, 100, 700, 340, '#e6d6b4', 3) + p('M230,104 H970 L930,60 H270 Z', '#6d7c88', 3);
+      for (i = 0; i < 6; i++) s += R.rect(280 + i * 112, 124, 74, 60, '#7fa3ad', 2.2);
+      s += R.rect(510, 300, 180, 140, '#4a3120', 3) + t('M600,300 V440', 3);
+      s += R.af(0, 440, W, 240, '#a39d8c') + t('M0,440 H1200', 3);
+      /* la banderole */
+      s += '<g class="an-banderole">' + p('M330,206 C480,194 720,218 870,200 L872,284 C720,302 480,276 332,292 Z', PAL.blanc, 3.2) + L.ligne('FUSION', 600, 220, 50, { ancre: 'm', encre: PAL.rouge, gras: true, graine: 3 }) + '</g>';
+      /* les partisans des deux partis */
+      [[330, 'a', 'long', PAL.rouge], [420, 'd', 'court', '#7d8f55'], [770, 'b', 'boucles', '#477a90'], [860, 'c', 'queue', PAL.ocreO]].forEach(function (q, i) { s += vit(gens(q[0], 540, .8, { peau: q[1], cheveux2: q[2], cheveux: PAL.noir, haut: q[3], pose: 'poing', bouche: 'crie', g: q[0] > 600 }), i); });
+      /* les deux délégués qui se serrent la main */
+      s += gens(520, 640, 1.06, { peau: 'b', cheveux2: 'gris', cheveux: PAL.grisC, haut: '#27395c', bas: '#27395c', pose: 'lance' });
+      s += gens(690, 640, 1.06, { g: true, peau: 'c', cheveux2: 'court', cheveux: PAL.noir, haut: '#3b3a46', bas: '#3b3a46', pose: 'lance' });
+      /* les déçus, à l'écart */
+      s += gens(110, 636, .96, { peau: 'a', cheveux: PAL.brunO, haut: '#6b6a5e', pose: 'pancarte', texte: 'TRAHISON', n: 2, bouche: 'crie' });
+      s += gens(1090, 636, .96, { g: true, peau: 'd', cheveux2: 'long', cheveux: PAL.noir, haut: '#2f8a8a', pose: 'montre', bouche: 'triste' });
+      /* les confettis */
+      for (i = 0; i < 26; i++) s += '<rect class="an-goutte" style="animation-delay:' + (-i * .17) + 's" x="' + (230 + (i * 89) % 760) + '" y="' + (40 + (i * 53) % 340) + '" width="12" height="8" fill="' + ['#c6402d', '#f5d547', '#27508f', '#7d8f55'][i % 4] + '" transform="rotate(' + (i * 37) + ' ' + (230 + (i * 89) % 760) + ' ' + (40 + (i * 53) % 340) + ')"/>';
+      return S.kase(W, H, 'Une fusion de partis : deux délégués se serrent la main sous les confettis, des déçus protestent à l’écart.', s);
+    },
     /* la nuit d'émeutes */
     emeutes: function () {
       var s = R.af(0, 0, W, H, '#1a2340'), i;

@@ -269,6 +269,12 @@
     var quiet = !crisis && ev.id === 'calme';
     var mainTitle = crisis ? crisis.title : (ev.theme || quiet ? g.news.headline : ev.title);
     var lead = (crisis ? (UNE_CRISIS[crisis.title] || [])[2] : (UNE_EVENTS[ev.id] || [])[2]) || '';
+    /* v5.15 : une fusion ou une scission fait la une du lendemain */
+    if (g.tactu && g.tactu.turn === g.turn - 1 && P(g.tactu.pid) && P(g.tactu.target)) {
+      u = ['Mariage.', 'fusion']; mainTitle = P(g.tactu.pid).short + ' absorbe ' + P(g.tactu.target).short; lead = 'La fusion est signée. Reste à la faire digérer aux militants et aux électeurs.'; quiet = false;
+    } else if (g.scission && g.scission.turn === g.turn && P(g.scission.pid)) {
+      u = ['Divorce.', 'fusion']; mainTitle = 'Scission chez ' + P(g.scission.pid).short; lead = 'Un courant claque la porte et emmène des soutiens avec lui.'; quiet = false;
+    }
     var mainText = (quiet ? '' : lead + ' ') + (ev && !ev.theme && !quiet && g.news.headline ? 'Autre sujet qui agite le pays : ' + lc(g.news.headline) + '. ' : '') +
       'Ce matin, tout le monde parle ' + (TOPICS[hotTheme] ? TOPICS[hotTheme][0] : 'de la campagne') + ' : les candidats qui en parleront marqueront des points.';
     arts.push({ id: 'main', rub: crisis ? 'Crise · ' + crisis.name : 'L\'événement', title: mainTitle, text: mainText, scene: u[1], lead: quiet ? '' : lead,

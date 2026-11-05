@@ -978,6 +978,10 @@
     // ---- les 2 ou 3 brèves de la une : seulement ce qui change ton tour ----
     var briefs = [];
     if (E.isDebateTurn(g)) briefs.push({ k: 'Ce soir', t: '🎙️ Débat télévisé', s: 'Garde quelques € pour te préparer.' });
+    var myGr = (info.grogne || []).filter(function (x) { return x.pid === me; })[0];
+    if (myGr) briefs.push(myGr.niveau >= 3 ? { k: 'Ton parti', t: '💥 Un courant fait scission', s: '−' + myGr.perdu + ' soutiens' + (myGr.voisin ? ', partis vers ' + esc(party(myGr.voisin).short) : '') } :
+      myGr.niveau === 2 ? { k: 'Ton parti', t: '😠 Le parti gronde', s: 'Une action de moins ce tour. Tu peux l\u2019apaiser.' } :
+      { k: 'Ton parti', t: '😠 Des fuites dans la presse', s: myGr.perdu ? '−' + myGr.perdu + ' soutien' : 'Rien de grave pour l\u2019instant.' });
     var myClan = (info.clan || []).filter(function (x) { return x.pid === me; })[0];
     if (myClan) briefs.push({ k: 'Scandale', t: '🚨 « ' + esc(myClan.name) + ' » révélé', s: esc(E.ptLabel(myClan.pt)) + ' au sondage' + (myClan.money ? ', −' + myClan.money + ' €' : '') + '.' });
     var myHit = info.later.filter(function (x) { return x.pid === me && x.hit; })[0];
@@ -1958,7 +1962,8 @@
   }
   function impactDots(n) { var h = ''; for (var i = 0; i < 4; i++) h += '<i class="' + (i < n ? 'on' : '') + '"></i>'; return '<span class="imp">' + h + '</span>'; }
   function renderMessage() {
-    var b = $('message'), t = th(theme);
+    var b = $('message'); if (!theme) return;
+    var t = th(theme);
     b.innerHTML = '<span class="msg-k">Message</span><span class="msg-t">' + t.icon + ' ' + esc(t.name) + (E.isHot(g, theme) ? ' 🔥' : '') + '</span>' +
       (selected ? '<span class="msg-w">· ' + IMPACT_WORD[E.impact(g, me, selected, theme)] + '</span>' : '') + '<span class="msg-change">▾</span>';
   }
@@ -2191,6 +2196,7 @@
      Plus de doublons : la Matinale et le 20 h sont dans « Médias » ; Meeting, Médias et Mobiliser restent sur l'écran.
      Chaque carte : icône, nom, une ligne, le coût et l'effet principal. Toucher la carte déplie le détail ; « Lancer » l'ajoute. */
   var MORE_SHORT = {
+    apaiser: 'Faire retomber la grogne',
     repos: 'Le candidat récupère', reseaux: 'Une vidéo, un coup de dé', militants: 'Une équipe sur le terrain, chaque tour', imposer: 'Ton thème à la une demain',
     contre: 'Affaiblir le rival en tête ici', fonds: 'Remplir la caisse', reforme: 'Gagner les régions du même type',
     nostalgie: 'Promettre le retour du passé', rappel: 'Faire revenir d’anciens électeurs', fusion: 'Absorber le micro-parti', eclat: 'Faire revenir les caméras',
@@ -2254,6 +2260,7 @@
     if (E.isBeta(g) && pl4.sign != null && pl4.sign < D.BETA.parr.need) std('strat', 'parrainages', { mine: true, ptTxt: '<b>' + pl4.sign + ' / ' + D.BETA.parr.need + '</b> signatures · avant la fin du tour ' + E.parrDeadline(g) });
     if (E.isBeta(g) && g.turn <= D.BETA.union.lastTurn) T.strat.push({ special: 'union', icon: '🤝', name: 'Candidature commune', short: MORE_SHORT.union, cost: { type: 'union', target: null }, err: null,
       detail: '<span class="fiche-l">Un parti de ton camp, au moins deux fois plus petit, se range derrière toi : 70 % de ses électeurs te rejoignent (jusqu’au tour ' + D.BETA.union.lastTurn + ').</span>' });
+    if (pl4.grogne) std('strat', 'apaiser', { ptTxt: 'Grogne <b>' + pl4.grogne + ' / 3</b>' });
     // 4. Récupération
     std('recup', 'repos', { ptTxt: '<b>+' + Math.min(R.reposForme, R.formeMax - pl4.forme) + ' ⚡</b> tout de suite' });
     std('recup', 'fonds', { ptTxt: '<b>+' + E.fundsGain(me).money + ' €</b> dans la caisse' });
@@ -2786,7 +2793,58 @@
     } }] });
   }
 
+  /* ---------- v5.15 : les tractations, une seule fois, après le premier débat ---------- */
+  function pctFr(x) { return (100 * x).toFixed(1).replace('.', ',') + ' %'; }
+  function ptsFr(x) { return (x >= 0 ? '+' : '−') + (100 * Math.abs(x)).toFixed(1).replace('.', ',') + ' pt'; }
+  var CONCESSIONS = [['rien', 'Ne rien céder'], ['mesure', 'Reprendre une de ses mesures'], ['tandem', 'Son chef à Matignon']];
+  if (window.PolitikInfobulle) window.PolitikInfobulle.definir({
+    'fusion-regle': { titre: 'La fusion', texte: 'Le parti le plus haut dans les sondages absorbe l\u2019autre et garde son nom et son candidat. Une partie des électeurs du partenaire suit, les autres partent chez un voisin ou s\u2019abstiennent. Certains des tiens s\u2019en vont aussi. Plus les deux partis sont éloignés, plus ça fuit. Tu récupères aussi une partie de sa caisse et ses équipes.' },
+    'fusion-grogne': { titre: 'La grogne', texte: 'Les membres du parti digèrent mal la fusion. Niveau 1 : des fuites dans la presse, parfois un soutien perdu. Niveau 2 : une action de moins chaque tour. Niveau 3 : un courant fait scission et part avec des soutiens. Elle retombe avec le temps, ou plus vite avec l\u2019action Apaiser le parti.' }
+  });
+  function motIb(id, lib) { return window.PolitikInfobulle ? window.PolitikInfobulle.mot(id, lib) : esc(lib); }
+  function tractations(then) {
+    var T = E.fusionStart(g), BDv = window.PolitikBD;
+    function image() { return BDv && BDv.aUne('fusion') ? '<div class="art-pic">' + BDv.une('fusion') + '</div>' : ''; }
+    function fin() { E.fusionIA(g); render(); bilan(); }
+    function menu() {
+      var c = g.players.filter(function (p) { return p.id !== me && !E.fusionError(g, me, p.id); }).sort(function (a, b) { return E.dist(me, a.id) - E.dist(me, b.id); });
+      if (!c.length) return fin();
+      modal({ kicker: 'Les tractations', title: T.n[me] ? 'Un autre partenaire ?' : 'Fusionner ?', html: image() + '<p>' + motIb('fusion-regle', 'Une seule occasion') + ', juste après le débat. Tu pèses <b>' + pctFr(E.pollShare(g, me)) + '</b>.</p>',
+        buttons: c.map(function (p) { return { label: party(p.id).short + ' · ' + pctFr(E.pollShare(g, p.id)), onClick: function () { conditions(p.id); } }; }).concat([{ label: T.n[me] ? 'Ça suffit' : 'Rester seul', primary: true, onClick: fin }]) });
+    }
+    function conditions(t) {
+      var moi = E.pollShare(g, me), lui = E.pollShare(g, t);
+      modal({ title: 'Que cèdes-tu ?', kicker: 'Tractations · ' + party(t).short, html: axisHtml(t) + '<p class="hint">' + motIb('fusion-grogne', 'La grogne') + ' de ton parti monte selon ce que tu cèdes.</p>',
+        buttons: CONCESSIONS.map(function (c) {
+          var x = E.fusionTaux(me, t, c[0]);
+          return { label: c[1] + ' · accord ' + chanceLabel(E.fusionChance(g, me, t, c[0])) + ' · ' + ptsFr(lui * x.suit - moi * x.perte) + ' · grogne ' + x.grogne, onClick: function () { resultat(t, c[0]); } };
+        }).concat([{ label: 'Retour', onClick: menu }]) });
+    }
+    function resultat(t, k) {
+      var r = E.fusionTry(g, me, t, k); render();
+      if (!r.ok) return modal({ kicker: 'Tractations · ' + party(t).short, title: 'C2019est non', html: '<p>La porte reste fermée : ' + esc(party(t).candidate) + ' préfère tenter sa chance seul.</p>', buttons: [{ label: 'Continuer', primary: true, onClick: menu }] });
+      var h = image() + '<div class="brief">' + line('📊', 'Tu passes de <b>' + pctFr(r.avant) + '</b> à <b>' + pctFr(r.apres) + '</b>') +
+        (r.vers ? line('💔', 'Une partie de ses électeurs part vers ' + esc(party(r.vers).short)) : '') +
+        (k !== 'rien' && r.versAutre ? line('🚪', 'Certains des tiens filent vers ' + esc(party(r.versAutre).short)) : '') +
+        (r.mesure ? line('📜', 'Au programme : ' + esc(E.measure(r.mesure).name)) : '') +
+        (k === 'tandem' ? line('🤝', esc(party(t).candidate) + ' est ton futur Premier ministre') : '') +
+        line('😠', motIb('fusion-grogne', 'Grogne') + ' de ton parti : <b>' + r.grogne + ' / 3</b>') + '</div>';
+      modal({ kicker: 'Tractations · ' + party(t).short, title: 'Accord signé', html: h, buttons: [{ label: 'Continuer', primary: true, onClick: menu }] });
+    }
+    function bilan() {
+      var autres = T.log.filter(function (x) { return x.ok && x.pid !== me; });
+      var h = autres.map(function (x) { return line('🤝', esc(party(x.pid).short) + ' absorbe ' + esc(party(x.target).short) + ' : <b>' + pctFr(x.apres) + '</b>'); }).join('');
+      function offre() {
+        if (!T.offre || !E.player(g, T.offre)) return then();
+        modal({ kicker: 'Les tractations', title: 'Une main tendue', html: '<p>' + esc(party(T.offre).candidate) + ' (' + esc(party(T.offre).short) + ') te propose de te ranger derrière sa candidature.</p>', buttons: [{ label: 'Je reste candidat', primary: true, onClick: then }] });
+      }
+      if (!h) return offre();
+      modal({ kicker: 'Les tractations', title: 'Pendant ce temps…', html: '<div class="brief">' + h + '</div>', buttons: [{ label: 'Continuer', primary: true, onClick: offre }] });
+    }
+    menu();
+  }
   function spotlight() {
+    if (E.fusionDue(g)) return tractations(spotlight);
     var t = E.spotlightTarget(g);
     if (!t) return finishTurn(null);
     if (t === me) {
@@ -3369,7 +3427,7 @@
   });
 
   /* Outils partagés avec la phase « Gouverner » (js/govui.js) */
-  window.PolitikUI = { showPaper: showPaper, modal: modal, closeModal: closeModal, toast: toast, go: go, esc: esc, line: line, srcHtml: srcHtml, chip: chip,
+  window.PolitikUI = { tractations: tractations, showPaper: showPaper, modal: modal, closeModal: closeModal, toast: toast, go: go, esc: esc, line: line, srcHtml: srcHtml, chip: chip,
     game: function () { return g; }, me: function () { return me; }, restoreGame: restoreGame,
     saveContext: function () { return { quick: quickGame, perso: perso, founded: founded, lead: leadOn, foundedOn: !!(founded && me === founded.sigle) }; } };
   // v3.8.1 : un démarrage qui ne peut plus rester bloqué (une erreur ici n'empêche pas d'arriver à l'accueil)

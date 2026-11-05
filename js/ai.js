@@ -44,6 +44,7 @@
     }
     list.push({ type: 'fonds' });
     list.push({ type: 'repos' });   // v3.6.6
+    if (pl.grogne) list.push({ type: 'apaiser' });   // v5.15
     // v3.1 : les actions propres à un parti
     var tr = E.traitOf(pid);
     if (tr === 'nostalgie') D.REGIONS.forEach(function (r) { list.push({ type: 'nostalgie', region: r.id }); });
@@ -140,6 +141,7 @@
         var chU = E.unionChance(v, pid, act.target), pt = E.poll(v).filter(function (x) { return x.pid === act.target; })[0];
         val += chU * (pt ? pt.pct : 0) * 100 * 0.7 * 1.6 * 1.5 - 1; break; }   // un rival de moins dans son camp
       case 'defi': val += 2.2 + v.turn * 0.15; break;   // v4.4
+      case 'apaiser': val += (pl.grogne || 0) >= 2 ? 1 + pl.grogne * 2 : 0.8; break;   // v5.15
       case 'nostalgie': {
         var nv = E.nostalgiaPreview(v, pid, act.region);
         if (!nv || nv.stone) return null;   // l'ordinateur ne va jamais jusqu'à l'âge de pierre

@@ -998,6 +998,119 @@
     if (player(g, target).sign != null && player(g, target).sign < D.BETA.parr.need && g.turn <= parrDeadline(g)) ch += 0.15;   // pas ses parrainages
     return Math.max(0, Math.min(0.95, ch));
   }
+  /* ---------- v5.15 : la fusion, après le premier débat ---------- */
+  function fusionDue(g) { var d = R.debateTurns[0]; return g.turn === d && R.maxTurns > d && !g.tract; }
+  function fusionStart(g) { if (!g.tract) g.tract = { turn: g.turn, n: {}, tried: {}, log: [], offre: null, vainqueur: g.debatVainqueur || null }; return g.tract; }
+  function fusionError(g, pid, target) {
+    var F = R.fusion, T = g.tract;
+    if (!T || T.turn !== g.turn) return 'Les tractations n\u2019ont lieu qu\u2019après le premier débat.';
+    if (!target || !player(g, target) || target === pid) return 'Choisis un parti en lice.';
+    if (player(g, target).human) return 'On ne peut pas absorber le joueur.';
+    if ((T.n[pid] || 0) >= F.maxPartners) return 'Pas plus de ' + F.maxPartners + ' partenaires.';
+    if (T.tried[pid + '>' + target]) return 'Il a déjà donné sa réponse.';
+    if (dist(pid, target) > F.maxDist) return 'Trop éloigné de toi sur l\u2019axe politique.';
+    var a = blocOf(pid), b = blocOf(target);
+    if (a !== b && ((a !== 'c' && b !== 'c') || dist(pid, target) > 1)) return 'Pas le même camp : ses électeurs ne suivraient pas.';
+    var U = D.BETA.union;
+    if (U.cordon.indexOf(pid) >= 0 && U.cordonOk.indexOf(target) < 0) return 'Le cordon sanitaire : ce parti refuse.';
+    if (U.cordon.indexOf(target) >= 0 && U.cordonOk.indexOf(pid) < 0) return 'Le cordon sanitaire : tu refuserais toi-même.';
+    if (pollShare(g, target) >= pollShare(g, pid)) return 'Il est devant toi dans les sondages : c\u2019est lui qui absorberait.';
+    return null;
+  }
+  function fusionChance(g, pid, target, k) {
+    var F = R.fusion, ch = (F.accept[dist(pid, target)] || 0) + F.concessions[k].accept, pt = pollShare(g, target), pp = pollShare(g, pid);
+    if (pt < 0.05) ch += 0.15;           // un petit parti sait qu'il ne passera pas
+    if (pt > 0.6 * pp) ch -= 0.2;        // presque à égalité : il veut sa chance
+    if (g.tract && g.tract.vainqueur === pid) ch += 0.1;   // le vainqueur du débat attire
+    return Math.max(0.05, Math.min(0.95, ch));
+  }
+  /* Ce que coûtera l'accord, en proportion : ce qui suit, et ce qui part */
+  function fusionTaux(pid, target, k) {
+    var F = R.fusion, C = F.concessions[k], d = dist(pid, target);
+    return { suit: Math.max(0.3, C.suit - F.suitDist * (d - 1)), perte: C.perte + F.perteDist * (d - 1), grogne: Math.min(3, C.grogne + (d - 1)) };
+  }
+  /* Le parti voisin qui récupère les déçus (hors des deux partis qui fusionnent) ; pour le partenaire, du côté opposé à l'absorbeur si possible */
+  function fusionVoisin(g, de, sauf, cote) {
+    var l = pids(g).filter(function (o) { return o !== de && o !== sauf; });
+    var c = cote ? l.filter(function (o) { return (PARTY[o].pos - PARTY[de].pos) * cote > 0; }) : l;
+    return (c.length ? c : l).sort(function (x, y) { return Math.abs(PARTY[de].pos - PARTY[x].pos) - Math.abs(PARTY[de].pos - PARTY[y].pos); })[0] || null;
+  }
+  /* Tente l'accord. S'il est conclu, le partenaire disparaît : une partie de ses électeurs suit, le reste part ou s'abstient. */
+  function fusionTry(g, pid, target, k) {
+    var err = fusionError(g, pid, target); if (err) return { ok: false, err: err };
+    var T = g.tract, F = R.fusion, ch = fusionChance(g, pid, target, k), res = { pid: pid, target: target, k: k, ok: false };
+    T.tried[pid + '>' + target] = 1;
+    if (g.rng() >= ch) { T.log.push(res); return res; }
+    var tx = fusionTaux(pid, target, k), pl = player(g, pid), tg = player(g, target), cote = PARTY[target].pos > PARTY[pid].pos ? 1 : -1;
+    var versRival = fusionVoisin(g, target, pid, cote), versAutre = fusionVoisin(g, pid, target, -cote), r1 = 0, r2 = 0;
+    res.avant = pollShare(g, pid); res.sien = pollShare(g, target);
+    D.REGIONS.forEach(function (r) {
+      r1 += cubes(g, r.id, target) * (1 - tx.suit) * F.leakRival; var n1 = Math.floor(r1); r1 -= n1;
+      if (n1 && versRival) addCubes(g, r.id, versRival, n1);
+      r2 += cubes(g, r.id, pid) * tx.perte; var n2 = Math.min(Math.floor(r2), cubes(g, r.id, pid)); r2 -= n2;
+      if (n2) { addCubes(g, r.id, pid, -n2); if (versAutre) addCubes(g, r.id, versAutre, n2); }
+      if (g.bases && g.bases[r.id] && g.bases[r.id].indexOf(target) >= 0 && g.bases[r.id].indexOf(pid) < 0) g.bases[r.id].push(pid);
+    });
+    pl.money += Math.floor((tg.money || 0) * F.moneyShare);
+    if (k === 'mesure') {   // une de ses mesures entre dans ton programme
+      var m = (tg.programme || []).filter(function (id) { return (pl.programme || []).indexOf(id) < 0; })[0];
+      if (m) { pl.programme = (pl.programme || []).concat([m]); pl.budget = programmeCost(pl.programme.concat(pl.financing || [])); res.mesure = m; }
+    }
+    removeParty(g, target, pid, tx.suit, 'fusion');
+    g._cp = null;
+    var vise = res.avant + res.sien * tx.suit - res.avant * tx.perte, ids = D.REGIONS.map(function (r) { return r.id; });
+    for (var it = 0; it < 120; it++) {
+      var ec = pollShare(g, pid) - vise; if (Math.abs(ec) < 0.002) break;
+      var rg = ids.slice().sort(function (x, y) { return ec > 0 ? cubes(g, y, pid) - cubes(g, x, pid) : cubes(g, x, pid) - cubes(g, y, pid); })[0];
+      if (!addCubes(g, rg, pid, ec > 0 ? -1 : 1)) break;
+      g._cp = null;
+    }
+    pl.grogne = Math.min(3, (pl.grogne || 0) + tx.grogne);
+    T.n[pid] = (T.n[pid] || 0) + 1;
+    if (!g.tactu) g.tactu = { pid: pid, target: target, turn: g.turn };   // la une parle de la première fusion, celle du joueur s'il y en a une
+    g._cp = null;
+    res.ok = true; res.apres = pollShare(g, pid); res.vers = versRival; res.versAutre = versAutre; res.grogne = pl.grogne;
+    T.log.push(res);
+    return res;
+  }
+  /* Les partis de l'ordinateur négocient à leur tour ; l'un d'eux peut aussi tendre la main au joueur (qui reste libre de refuser) */
+  function fusionIA(g) {
+    var T = fusionStart(g), F = R.fusion, faites = 0;
+    if (T.iaFait) return T;
+    T.iaFait = true;
+    ranking(g).forEach(function (pid) {
+      var pl = player(g, pid); if (!pl || pl.human || faites >= F.iaMax || (T.n[pid] || 0) > 0) return;
+      var c = pids(g).filter(function (o) { return !fusionError(g, pid, o); }).sort(function (a, b) { return dist(pid, a) - dist(pid, b) || pollShare(g, b) - pollShare(g, a); })[0];
+      if (!c || g.rng() >= F.iaTente) return;
+      if (fusionTry(g, pid, c, 'mesure').ok) faites++;
+    });
+    var hu = g.players.filter(function (p) { return p.human; })[0];
+    if (hu) {
+      var ph = pollShare(g, hu.id), of = pids(g).filter(function (o) { var a = blocOf(o), b = blocOf(hu.id); return o !== hu.id && pollShare(g, o) > ph && dist(o, hu.id) <= F.maxDist && (a === b || ((a === 'c' || b === 'c') && dist(o, hu.id) <= 1)); })[0];
+      if (of && !(T.n[hu.id] > 0)) T.offre = of;
+    }
+    return T;
+  }
+  /* La grogne, au début de chaque tour : 1 = des fuites, 2 = une action de moins, 3 = un courant fait scission */
+  function grogneTick(g, out) {
+    g.players.forEach(function (pl) {
+      var n = pl.grogne || 0; if (!n) return;
+      var ev = { pid: pl.id, niveau: n, voisin: null, perdu: 0 };
+      if (n === 1) {
+        var rid = D.REGIONS.map(function (r) { return r.id; }).sort(function (a, b) { return cubes(g, b, pl.id) - cubes(g, a, pl.id); })[0];
+        if (rid && g.rng() < 0.5) ev.perdu = -addCubes(g, rid, pl.id, -1);
+      } else if (n === 2) {
+        g.mods.fewer = g.mods.fewer || {}; g.mods.fewer[pl.id] = (g.mods.fewer[pl.id] || 0) + 1;
+      } else {
+        var v = fusionVoisin(g, pl.id, null, 0), c = 0; ev.voisin = v;
+        D.REGIONS.forEach(function (r) { c += cubes(g, r.id, pl.id) * R.fusion.fronde; var q = Math.floor(c); c -= q; if (q) { var got = -addCubes(g, r.id, pl.id, -q); ev.perdu += got; if (v) addCubes(g, r.id, v, got); } });
+        pl.grogne = 1; g.scission = { pid: pl.id, turn: g.turn };
+      }
+      pl.grogneT = (pl.grogneT || 0) + 1;
+      if (n < 3 && pl.grogneT % 2 === 0) pl.grogne = Math.max(0, n - 1);   // le temps fait aussi son œuvre
+      out.grogne = (out.grogne || []).concat([ev]);
+    });
+  }
   function defiError(g, pid, target) {
     if (!isBeta(g)) return 'Seulement en mode Bêta.';
     if (player(g, pid).defiUsed) return 'Un seul défi par campagne.';
@@ -1018,6 +1131,7 @@
     ledStart(g);   // v4.5 : le bilan du tour part d'ici
     // marqueurs expirés
     g.markers = g.markers.filter(function (m) { return m.until >= g.turn; });
+    grogneTick(g, out);
     if (g.turn > 1) {
       g.players.forEach(function (pl) {
         var bonus = Math.min(R.incomeRegionMax, controlledRegions(g, pl.id).length * R.incomePerRegion);
@@ -1323,6 +1437,7 @@
       if (player(g, pid).rappelTurn === g.turn) return 'François Hésitant ne décroche qu\u2019une fois par tour.';
     }
     if (act.type === 'repos' && player(g, pid).forme >= R.formeMax) return 'Ton candidat est déjà en pleine forme.';
+    if (act.type === 'apaiser' && !player(g, pid).grogne) return 'Ton parti ne gronde pas.';
     if (def.beta && !isBeta(g)) return 'Seulement en mode Bêta.';
     if (act.type === 'parrainages') { var plS = player(g, pid); if (plS.sign == null || plS.sign >= D.BETA.parr.need) return 'Tu as déjà tes 500 signatures.'; if (g.turn > parrDeadline(g)) return 'Trop tard pour les parrainages.'; }
     if (act.type === 'union') { var ue = unionError(g, pid, act.target); if (ue) return ue; }
@@ -1601,6 +1716,7 @@
         var prof2 = REG[act.region].profile;
         D.REGIONS.forEach(function (r) { if (r.profile === prof2) { var x = addCubes(g, r.id, pid, 1); if (x) t.push('+1 ' + r.name); } });
         break; }
+      case 'apaiser': { pl.grogne = Math.max(0, (pl.grogne || 0) - 1); t.push('🕊️ reçoit les courants : la grogne retombe'); break; }
       case 'repos': {
         var f0r = pl.forme; pl.forme = Math.min(R.formeMax, pl.forme + R.reposForme);
         t.push('le candidat souffle un peu : +' + (pl.forme - f0r) + ' ⚡'); break; }
@@ -2001,7 +2117,7 @@
     }
     var top = list[0].score, firsts = list.filter(function (x) { return x.score === top; });
     if (firsts.length === 1) {
-      player(g, firsts[0].pid).debateWins += 1; res.winner = firsts[0].pid; reward(firsts[0].pid, 1);
+      player(g, firsts[0].pid).debateWins += 1; g.debatVainqueur = firsts[0].pid; res.winner = firsts[0].pid; reward(firsts[0].pid, 1);
       var second = list[1].score;
       list.filter(function (x) { return x.score === second; }).forEach(function (x) { reward(x.pid, 0.5); });
     } else firsts.forEach(function (x) { reward(x.pid, 0.5); });
@@ -2078,6 +2194,7 @@
     return out;
   }
   function endTurn(g) {
+    if (fusionDue(g)) fusionIA(g);
     updateAllControl(g);
     ledMark(g, 'Fin du tour (régions qui changent de main)', '•');   // v4.8
     if (g.turn >= R.maxTurns) g.lastWear = {};   // v4.5 : pas d'usure des médias au dernier tour
@@ -2430,6 +2547,7 @@
     piqueOutcome: piqueOutcome, piqueBonus: piqueBonus, faceRiposte: faceRiposte, createGame: createGame, startTurn: startTurn, resolveActions: resolveActions, resolveDebate: resolveDebate, setupDebate: setupDebate, debateCards: debateCards, duelOutcome: duelOutcome, debateCounter: debateCounter, aiDebatePick: aiDebatePick, debateWeights: debateWeights, setupFace: setupFace, resolveFace: resolveFace, audScore: audScore, duelResult: duelResult, replyPoints: replyPoints,
     isDebateTurn: isDebateTurn, spotlightTarget: spotlightTarget, applySpotlight: applySpotlight, endTurn: endTurn,
     finalScores: finalScores, firstRound: firstRound, openBetween: openBetween, betweenAct: betweenAct, betweenError: betweenError, answerCounter: answerCounter, answerBetweenOffer: answerBetweenOffer, setConsigne: setConsigne, concessionsFor: concessionsFor, dealChance: dealChance, aiBetweenStep: aiBetweenStep, aiConsigne: aiConsigne, rivalTargets: rivalTargets, threatCost: threatCost, transfersFor: transfersFor, projectSecond: projectSecond, closeBetween: closeBetween, autoBetween: autoBetween, objectiveMet: objectiveMet, objectiveProgress: objectiveProgress, objectiveShare: objectiveShare, terrainBreakdown: terrainBreakdown, crowdBonus: crowdBonus, crowdInfo: crowdInfo, turnOrder: turnOrder, election: election, poll: poll, votes: votes,
+    fusionDue: fusionDue, fusionStart: fusionStart, fusionError: fusionError, fusionChance: fusionChance, fusionTaux: fusionTaux, pollShare: pollShare, fusionTry: fusionTry, fusionIA: fusionIA,
     dist: dist, fundsGain: fundsGain, allyOf: allyOf, allianceError: allianceError, answerOffer: answerOffer, acceptChance: acceptChance,
     poachTarget: poachTarget, transferRate: transferRate,
     actionCost: actionCost, checkAction: checkAction, mediaRegions: mediaRegions, gain: gain, bestRegions: bestRegions,

@@ -656,7 +656,7 @@ section('Bêta : nouvelles mécaniques de campagne (v4.4)');
   var after = E.poll(g2).filter(function (x) { return x.pid === 'SM'; })[0].pct;
   ok(!E.player(g2, 'VP') && r.moved > 0 && after > before, 'candidature commune : les Enracinés se retirent, le PS récupère des électeurs (+' + (100 * (after - before)).toFixed(1) + ' pt)');
   // parrainages : élimination en fin de tour 3
-  var g3 = E.createGame('SM', { seed: 172, base: 'sond', mode: 'beta' });
+  var g3 = E.createGame('SM', { seed: 172, base: 'sond', mode: 'beta' }); g3.tract = { turn: 3, n: {}, tried: {}, log: [], iaFait: true };   // pas de fusion ici : on teste les parrainages
   E.player(g3, 'LO').sign = 100; E.player(g3, 'PC').sign = 500;
   for (var t = 0; t < 3; t++) { E.startTurn(g3); var res = E.endTurn(g3); }
   ok(!E.player(g3, 'LO') && E.player(g3, 'PC') && res.out && res.out.some(function (o) { return o.pid === 'LO'; }), 'sans 500 signatures à la fin du tour 3, le parti est éliminé (LO), les autres restent');
