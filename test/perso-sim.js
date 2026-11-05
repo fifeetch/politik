@@ -12,6 +12,7 @@ for (var i = 0; i < N; i++) {
   var themes = pos < 3 ? ['ecologie', 'services'] : pos < 4.5 ? ['emploi', 'pouvoir'] : ['securite', 'immigration'];
   var p = PS.found({ name: 'Le Grand Élan', sigle: 'GE', color: '#7B3FA0', pos: pos, themes: themes }, ch);
   var g = E.createGame(null, { seed: 400 + i, aiParties: D.PARTIES.map(function (x) { return x.id; }), mode: process.env.MODE, base: process.env.BASE });
+  g.tract = { turn: 3, n: {}, tried: {}, log: [], iaFait: true };   // pas de fusion : on mesure le parti créé seul
   var o = out[pos]; o.n++;
   try {
     o.start += E.poll(g).filter(function (x) { return x.pid === 'GE'; })[0].pct;

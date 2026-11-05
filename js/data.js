@@ -691,6 +691,7 @@
     parrainages: { name: 'Chercher des parrainages', icon: '✍️', cost: { money: 1, forme: 1 }, target: null, beta: true, text: 'Faire le tour des mairies : +130 signatures (il en faut 500 avant la fin du tour 3)' },   // v4.4
     union:    { name: 'Candidature commune', icon: '🤝', cost: { money: 2 }, target: 'party', beta: true, text: 'Proposer à un parti proche de se ranger derrière toi : 70 % de ses électeurs te rejoignent' },   // v4.4
     defi:     { name: 'Défier en débat',   icon: '🎤', cost: { money: 1 }, target: 'party', beta: true, text: 'Défier un rival en face-à-face : s\u2019il refuse, la chaise vide lui coûte cher' },   // v4.4
+    apaiser:  { name: 'Apaiser le parti', icon: '🕊️', cost: { money: 1 }, target: null, text: 'Recevoir les courants, promettre, écouter : la grogne retombe d\u2019un cran' },   // v5.15
     repos:    { name: 'Repos',          icon: '😴', cost: { money: 0 }, target: null,     text: 'Une journée loin des caméras : +2 ⚡ tout de suite' },   // v3.6.6
     /* v3.1 : les actions propres à un parti (voir TRAITS) */
     nostalgie:{ name: 'C\u2019était mieux avant', icon: '⏪', only: ['MN', 'RQ'], cost: { money: 2, forme: 1 }, target: 'region', text: 'Promettre le retour du passé : plaît aux retraités, fait fuir les jeunes à mesure qu\u2019on recule' },
@@ -855,6 +856,17 @@
     moneyBlend: 0,               // 0 = chaque parti garde sa cagnotte de départ ; 1 = tout le monde part avec 5 €
     actionsPerTurn: 3,
     debateTurns: [3, 6, 8],
+    /* v5.15 : la fusion, ouverte une seule fois, juste après le premier débat. suit = part des électeurs du partenaire qui suivent ;
+       perte = part de tes propres électeurs qui s'en vont ; ces deux chiffres se dégradent quand les partis sont éloignés (par cran de distance). */
+    fusion: {
+      maxPartners: 2, maxDist: 2, accept: { 1: 0.55, 2: 0.35 }, leakRival: 0.5, moneyShare: 0.5, suitDist: 0.1, perteDist: 0.015, iaTente: 0.3, iaMax: 2,
+      concessions: {
+        rien:   { accept: -0.25, suit: 0.6, perte: 0, grogne: 1 },
+        mesure: { accept: 0, suit: 0.7, perte: 0.01, grogne: 1 },
+        tandem: { accept: 0.25, suit: 0.8, perte: 0.03, grogne: 2 }
+      },
+      fronde: 0.08
+    },
     incomeMoney: 6, incomePerRegion: 1, incomeRegionMax: 3,   // v5.0 : plus de revenu d'influence ★ · v3.6.3 : 6 € par tour (4 avant) : 3 vraies actions même sans région
     minControl: 3, maxCubes: 10, startCubes: 3,
     socle: 0.5,                    // v3.2 : en Réaliste, la moitié des électeurs vote par fidélité (socle électoral)
