@@ -193,9 +193,6 @@
   #paper-inside .art-item, #paper-inside .art-lulu, #paper-inside .art-learn { break-inside: avoid; }
 }
 
-/* les illustrations dessinées : posées sur le dessin du jeu, qui reste en secours */
-.illu-pic { position: relative; overflow: hidden; }
-.illu-pic .illu { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; }
 
 /* l'accueil : le titre, la carte en grand, un seul bouton */
 #screen-title { justify-content: flex-start; gap: 10px; background: radial-gradient(circle at 50% 52%, var(--sheet) 0, var(--sheet) 28%, var(--paper) 72%); }
@@ -214,4 +211,36 @@
 .play-close { position: absolute; top: 8px; right: 8px; width: 40px; height: 40px; border: 0; background: none; color: var(--ink); font-size: 20px; cursor: pointer; }
 .play-links { display: flex; justify-content: center; gap: 24px; }
 .play-links .linkbtn { color: var(--ink-2); font-size: 14px; min-height: 40px; }
-#paper-front .une-pic.illu-pic, .art-pic.illu-pic, .actu-pages .art-pic.illu-pic { position: relative; overflow: hidden; }
+/* les petites animations des dessins : discrètes, et coupées si le joueur limite les mouvements */
+.an-flamme, .an-pancarte, .an-gens { transform-box: fill-box; }
+.an-flamme { transform-origin: 50% 100%; animation: an-flamme .55s ease-in-out infinite alternate; }
+@keyframes an-flamme { from { transform: skewX(-2deg); } to { transform: scale(.96, 1.09) skewX(3deg); } }
+.an-braise { animation: an-braise 3s linear infinite; }
+@keyframes an-braise { from { transform: translateY(30px); opacity: 0; } 15% { opacity: 1; } to { transform: translateY(-170px); opacity: 0; } }
+.an-fumee { animation: an-fumee 7s ease-in-out infinite alternate; }
+@keyframes an-fumee { from { transform: translateX(-14px); } to { transform: translateX(18px); } }
+.an-largage { animation: an-largage .8s linear infinite; }
+@keyframes an-largage { to { stroke-dashoffset: -92; } }
+.an-goutte { animation: an-goutte 1s ease-in infinite; }
+@keyframes an-goutte { from { transform: translateY(-14px); opacity: 1; } to { transform: translateY(16px); opacity: .2; } }
+.an-pluie { animation: an-pluie .5s linear infinite; }
+@keyframes an-pluie { from { transform: translate(14px, -46px); } to { transform: translate(-6px, 12px); } }
+.an-helice { transform-box: fill-box; transform-origin: center; animation: an-helice .12s linear infinite alternate; }
+@keyframes an-helice { to { transform: scaleY(.2); } }
+.an-avion { animation: an-avion 3s ease-in-out infinite alternate; }
+@keyframes an-avion { to { transform: translate(-8px, 5px); } }
+.an-train { animation: an-train 2.4s ease-in-out infinite alternate; }
+@keyframes an-train { from { transform: translateX(-14px); } to { transform: translateX(14px); } }
+.an-pancarte { transform-origin: 50% 100%; animation: an-pancarte 1s ease-in-out infinite alternate; }
+@keyframes an-pancarte { from { transform: rotate(-3deg); } to { transform: rotate(3deg); } }
+.an-banderole { animation: an-banderole 1.3s ease-in-out infinite alternate; }
+@keyframes an-banderole { from { transform: translateY(-3px) rotate(-.4deg); } to { transform: translateY(3px) rotate(.4deg); } }
+.an-gens { transform-origin: 50% 100%; animation: an-gens 1.1s ease-in-out infinite alternate; }
+@keyframes an-gens { from { transform: translateY(0); } to { transform: translateY(-6px); } }
+.an-route { animation: an-route 2.6s ease-in-out infinite alternate; }
+@keyframes an-route { from { transform: translateX(-60px); } to { transform: translateX(60px); } }
+.an-clignote { animation: an-clignote .9s steps(2) infinite; }
+@keyframes an-clignote { from { opacity: 1; } to { opacity: .25; } }
+.an-courbe { stroke-dasharray: 1600; animation: an-courbe 3.5s ease-out infinite; }
+@keyframes an-courbe { from { stroke-dashoffset: 1600; } 80%, to { stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce) { [class*="an-"] { animation: none !important; } }

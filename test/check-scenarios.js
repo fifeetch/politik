@@ -1,6 +1,6 @@
 /* Les événements du mandat : chacun a une image dessinée qui existe, et des choix valides. */
 var assert = require('assert'), fs = require('fs'), D = require('../js/data.js'), E = require('../js/engine.js'), G = require('../js/govern.js');
-var src = fs.readFileSync(__dirname + '/../js/bd-jeu.js', 'utf8');
+var src = fs.readFileSync(__dirname + '/../js/bd-jeu.js', 'utf8') + fs.readFileSync(__dirname + '/../js/bd-evenements.js', 'utf8');
 var SEG = D.SEGMENTS.map(function (x) { return x.id; }), vus = {};
 assert.ok(G.EVENTS.length >= 22);
 ['eboueurs', 'aeriens', 'edf', 'generale', 'medicaments', 'inondations', 'panne', 'emeutes', 'cyclone', 'lobbies', 'sommet', 'fermeture', 'fuite', 'evenement'].forEach(function (id) {
