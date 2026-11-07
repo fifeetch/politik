@@ -2848,10 +2848,30 @@
     var t = E.spotlightTarget(g);
     if (!t) return finishTurn(null);
     if (t === me) {
-      var can = mePl().money >= R.spotlightCost;
-      modal({ kicker: 'Sous les projecteurs', title: 'Tu es en tête des sondages !', html: '<p>Les médias fouillent ton passé. Paie <b>' + R.spotlightCost + ' €</b> (avocats, communicants) pour étouffer l\'affaire, ou perds 1 soutien dans tes 2 plus grandes régions.</p>',
-        buttons: [{ label: 'Payer ' + R.spotlightCost + ' €', primary: true, disabled: !can, onClick: function () { finishTurn(E.applySpotlight(g, me, true)); } },
-                  { label: 'Perdre 2 soutiens', onClick: function () { finishTurn(E.applySpotlight(g, me, false)); } }] });
+      // v5.16 : la meute devant ton QG, une vraie affaire, trois réponses
+      var can = mePl().money >= R.spotlightCost, ch = Math.round(100 * E.dementirChance(g, me));
+      var rows = [
+        { id: 'avocats', ic: '⚖️', b: 'Avocats et communicants', s: can ? R.spotlightCost + ' € · l\u2019affaire est étouffée' : 'Il te faut ' + R.spotlightCost + ' €' },
+        { id: 'excuses', ic: '🙏', b: 'Faire des excuses', s: '−1 soutien dans ta meilleure région' },
+        { id: 'dementir', ic: '🙅', b: 'Tout démentir', s: ch + ' % de chances que ça passe · sinon −' + D.SPOTLIGHT.echec + ' soutiens et +1 casserole' }
+      ];
+      var html = '<div class="aff-une">' + Press.scene('projecteurs') +
+        '<div class="une-top"><span class="une-logo"><b>QN</b><span>Le Quotidien<br>National</span></span><span class="aff-tag">En tête des sondages</span></div>' +
+        '<div class="aff-word">Projecteurs.</div><p class="aff-title">' + esc(E.spotlightAffair(g)) + '</p></div>' +
+        '<div class="pick">' + rows.map(function (r) {
+          return '<button type="button" class="pick-row" data-spot="' + r.id + '"' + (r.id === 'avocats' && !can ? ' disabled' : '') + '><span class="pick-txt"><b>' + r.ic + ' ' + esc(r.b) + '</b><small>' + esc(r.s) + '</small></span></button>';
+        }).join('') + '</div>';
+      modal({ kicker: '🔦 Sous les projecteurs', title: 'Tu es en tête, la presse fouille', html: html, buttons: [],
+        onOpen: function () {
+          Array.prototype.forEach.call(document.querySelectorAll('[data-spot]'), function (row) {
+            row.addEventListener('click', function () {
+              var res = E.applySpotlight(g, me, row.getAttribute('data-spot'));
+              closeModal();
+              if (res.choice === 'dementir') toast(res.ok ? '🙅 Démenti réussi : l\u2019affaire retombe' : '😬 Le démenti ne tient pas : −' + res.regions.length + ' soutiens, +1 casserole');
+              finishTurn(res);
+            });
+          });
+        } });
     } else finishTurn(E.applySpotlight(g, t, AI.paySpotlight(g, t)));
   }
 
@@ -2925,8 +2945,10 @@
   }
   function finishTurn(spot) {
     var res = E.endTurn(g); render();
-    if (spot && !spot.paid && spot.pid !== me) toast(party(spot.pid).short + ' sous les projecteurs : −1 soutien en ' + spot.regions.map(function (x) { return SHORT[x]; }).join(', '));
-    else if (spot && spot.paid && spot.pid !== me) toast(party(spot.pid).short + ' paie ' + R.spotlightCost + ' € pour éviter le scandale');
+    if (spot && spot.pid !== me) {   // v5.16 : ce que le premier des sondages a répondu
+      var reg = spot.regions.length ? ' : −1 soutien en ' + spot.regions.map(function (x) { return SHORT[x]; }).join(', ') : '';
+      toast('🔦 ' + party(spot.pid).short + (spot.paid ? ' paie ses avocats pour étouffer l\u2019affaire' : spot.choice === 'excuses' ? ' s\u2019excuse' + reg : spot.ok ? ' dément, et ça passe' : ' dément, et ça rate' + reg));
+    }
     if (g.humanOut) return humanOut();   // v4.4 : pas tes 500 parrainages
     if (res.out && res.out.length) {   // v4.4 : les partis sans leurs 500 signatures quittent la course
       var outH = '<p>Sans leurs 500 signatures d\u2019élus, ces partis ne seront pas candidats :</p><div class="brief">' + res.out.map(function (o) {
@@ -3401,7 +3423,7 @@
       '<p><b>🎙️ Le face-à-face</b> (entre les deux tours) : 3 questions entre les deux finalistes. Le gagnant fait basculer jusqu\u2019à 3 % des électeurs de l\u2019autre pour le second tour.</p>' +
       '<p><b>⚖️ Mode Réaliste : le poids des urnes.</b> Chaque soutien pèse selon le score historique de son parti dans la région : un soutien du parti en tête de la région compte beaucoup, celui d\u2019un petit parti beaucoup moins. Et la moitié des électeurs vote par fidélité (le <b>socle électoral</b>) : la campagne se joue sur l\u2019autre moitié. Résultat : les petits partis ont du mal à dépasser leur score historique, et chaque région garde sa couleur (terre de gauche, de droite ou disputée, dans la fiche de la région). En mode Simulation, tout le monde pèse pareil.</p>' +
       '<p><b>🧪 Mode Bêta.</b> Le mode Réaliste avec les règles à l\u2019essai : ' + D.BETA.changes.map(esc).join(' ') + '</p>' +
-      '<p><b>Sous les projecteurs :</b> le premier des sondages paie ' + R.spotlightCost + ' € ou perd des soutiens à chaque fin de tour.</p>' +
+      '<p><b>Sous les projecteurs :</b> le premier des sondages voit sortir une affaire, jamais deux tours de suite. Il paie ses avocats (' + R.spotlightCost + ' €), s\u2019excuse (−1 soutien) ou dément (gratuit si ça passe).</p>' +
       '<p><b>🎭 Les traits satiriques.</b> Huit partis vivent un gag qui se joue de l\u2019intérieur, avec un avantage et un coût : ' + Object.keys(D.TRAITS).map(function (k) { var t = D.TRAITS[k]; return t.icon + ' <b>' + esc(t.name) + '</b> (' + t.parties.map(function (p) { return esc(party(p).short); }).join(', ') + ')'; }).join(' · ') + '. Le détail est dans l\u2019onglet de ton parti, et les actions propres à ton parti dans le menu « Plus ».</p>' });
   }
 
@@ -3427,7 +3449,7 @@
   });
 
   /* Outils partagés avec la phase « Gouverner » (js/govui.js) */
-  window.PolitikUI = { tractations: tractations, showPaper: showPaper, modal: modal, closeModal: closeModal, toast: toast, go: go, esc: esc, line: line, srcHtml: srcHtml, chip: chip,
+  window.PolitikUI = { tractations: tractations, spotlight: spotlight, showPaper: showPaper, modal: modal, closeModal: closeModal, toast: toast, go: go, esc: esc, line: line, srcHtml: srcHtml, chip: chip,
     game: function () { return g; }, me: function () { return me; }, restoreGame: restoreGame,
     saveContext: function () { return { quick: quickGame, perso: perso, founded: founded, lead: leadOn, foundedOn: !!(founded && me === founded.sigle) }; } };
   // v3.8.1 : un démarrage qui ne peut plus rester bloqué (une erreur ici n'empêche pas d'arriver à l'accueil)

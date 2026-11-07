@@ -520,10 +520,13 @@
       s += gens(720, 640, 1, { g: true, peau: 'b', cheveux2: 'casquette', cheveux: PAL.noir, coiffe: '#1a2743', haut: '#27395c', bas: '#1a2743', pose: 'tient' });
       return S.kase(W, H, 'Un poste-frontière en montagne : la barrière baissée, le panneau France, une voiture contrôlée.', s);
     },
+    /* v5.16 : sous les projecteurs, la même meute devant le QG de campagne */
+    projecteurs: function () { return SCENES.scandale('QG DE CAMPAGNE', 'Devant la porte close du QG de campagne, photographes et flashs ; un dossier confidentiel à terre.'); },
     /* la meute devant le ministère */
-    scandale: function () {
+    scandale: function (enseigne, legende) {
+      enseigne = enseigne || 'MINISTÈRE';
       var s = R.af(0, 0, W, H, '#2f4772') + R.af(0, 0, W, 60, '#22345a'), i;
-      s += R.rect(280, 60, 640, 420, '#d6cfb6', 3) + p('M250,60 H950 L920,20 H280 Z', '#8d8d84', 3) + R.rect(320, 90, 560, 60, '#efe9dc', 2.8) + L.ligne('MINISTÈRE', 600, 100, 38, { ancre: 'm', encre: INK, gras: true, graine: 3 });
+      s += R.rect(280, 60, 640, 420, '#d6cfb6', 3) + p('M250,60 H950 L920,20 H280 Z', '#8d8d84', 3) + R.rect(320, 90, 560, 60, '#efe9dc', 2.8) + L.ligne(enseigne, 600, 100, enseigne.length > 10 ? 30 : 38, { ancre: 'm', encre: INK, gras: true, graine: 3 });
       s += p('M480,480 V230 C480,170 720,170 720,230 V480 Z', '#4a3120', 3.4) + t('M600,190 V480', 3) + cercle(580, 350, 7, PAL.ocre, 2) + cercle(620, 350, 7, PAL.ocre, 2);
       s += R.af(0, 480, W, 200, '#8d8778') + t('M0,480 H1200', 3);
       /* les journalistes, les micros, les flashs */
@@ -536,7 +539,7 @@
       });
       /* le dossier tombé */
       s += '<g transform="rotate(-6 600 590)">' + R.rect(470, 540, 260, 110, '#d9b878', 3) + L.ligne('CONFIDENTIEL', 600, 578, 28, { ancre: 'm', encre: PAL.rouge, gras: true, graine: 4 }) + '</g>';
-      return S.kase(W, H, 'Devant la porte close du ministère, journalistes et flashs ; un dossier confidentiel à terre.', s);
+      return S.kase(W, H, legende || 'Devant la porte close du ministère, journalistes et flashs ; un dossier confidentiel à terre.', s);
     },
     /* la fête */
     fete: function () {
