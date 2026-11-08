@@ -47,6 +47,24 @@
     ['♓', 'Poissons', 'Noyez le poisson : c’est votre spécialité, et ça marche très bien en interview.']
   ];
 
+  /* v5.18 : les petites phrases. Chaque parti a ses éléments de langage parodiques ; tous en prennent autant. */
+  var PHRASES = {
+    FI: ['Nous sommes le peuple, et le peuple, c\u2019est nous.', 'Je ne crie pas, j\u2019articule fort.'],
+    SM: ['Nous sommes de retour. Nous n\u2019étions jamais vraiment partis. Enfin, un peu.', 'Le Parti Survivant a survécu à tout, y compris à lui-même.'],
+    VP: ['J\u2019irai au meeting en train. Celui de 6 h 12, s\u2019il n\u2019est pas supprimé.', 'La planète n\u2019attendra pas. Le congrès du parti, si.'],
+    EM: ['Je suis à la fois pour, et pour.', 'La réforme de la réforme est déjà en marche.'],
+    UG: ['Le bon sens, c\u2019est nous. Les autres aussi, mais moins.', 'Nous sommes l\u2019opposition responsable, sauf quand nous sommes au pouvoir.'],
+    MN: ['Le changement, c\u2019est de revenir comme avant.', 'Je ne suis pas extrême, je suis extrêmement raisonnable.'],
+    LO: ['Travailleuses, travailleurs, on se revoit dans cinq ans.', 'Notre score ne compte pas : c\u2019est la lutte qui compte.'],
+    PC: ['Les jours heureux reviendront, avec du saucisson.', 'Un bon repas vaut mieux qu\u2019un long programme.'],
+    MD: ['Je serai candidat. Peut-être. Sûrement. On verra.', 'Ni à gauche, ni à droite, ni pressé.'],
+    HZ: ['J\u2019ai tout mon temps.', 'Je ne pense pas à cette élection. Je pense à la suivante.'],
+    DL: ['Debout ! Dès qu\u2019on aura fini le café.', 'La France doit se relever. Après la sieste.'],
+    RQ: ['C\u2019était mieux avant, et avant, c\u2019était mieux qu\u2019avant.', 'Je ne fais pas dans la nuance : ça fait perdre du temps.']
+  };
+  var PHRASES_NEUF = ['Nous ne sommes ni de droite ni de gauche, bien au contraire.', 'Notre programme ? Il est en cours d\u2019écriture, comme celui des autres.'];
+  function phrase(pid, k) { var l = PHRASES[pid] || PHRASES_NEUF; return l[Math.abs(hash(pid + ':' + k)) % l.length]; }
+
   function hash(s) { s = String(s); var h = 7; for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 100003; return h; }
 
   /* ctx : { turn, maxTurns, me, debate (bool), city, leader (sigle court), theme (nom du sujet du jour) } — tout est facultatif */
@@ -66,9 +84,10 @@
     breves.push(BREVES[(base + 3 * t) % BREVES.length]);
     if (breves.length < 2) breves.push(BREVES[(base + 3 * t + 1) % BREVES.length]);
     var horo = [0, 1, 2].map(function (i) { return HOROSCOPE[(base + 3 * t + i + Math.floor(t / 4)) % HOROSCOPE.length]; });
-    return { pub: pub, breves: breves, horo: horo };
+    var pids = ctx.pids || [], qui = pids.length ? pids[(base + 5 * t) % pids.length] : null;
+    return { pub: pub, breves: breves, horo: horo, petite: qui ? { pid: qui, text: phrase(qui, t) } : null };
   }
 
-  var API = { PUBS: PUBS, BREVES: BREVES, HOROSCOPE: HOROSCOPE, edition: edition };
+  var API = { PUBS: PUBS, BREVES: BREVES, HOROSCOPE: HOROSCOPE, PHRASES: PHRASES, phrase: phrase, edition: edition };
   if (node) module.exports = API; else root.PolitikHumour = API;
 })(this);
