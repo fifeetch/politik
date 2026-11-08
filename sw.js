@@ -23,7 +23,7 @@ var FILES = [
   /* scripts : données et moteurs */
   'js/data.js', 'js/people.js', 'js/map.js', 'js/engine.js', 'js/perso.js', 'js/ai.js',
   /* scripts : dessin et animations */
-  'js/art.js', 'js/bd-lettrage.js', 'js/bd-personnages.js', 'js/bd-visages.js', 'js/bd-scenes.js', 'js/bd-jeu.js', 'js/bd-evenements.js', 'js/press.js', 'js/fx.js', 'js/tuto.js', 'js/tips.js',
+  'js/art.js', 'js/bd-lettrage.js', 'js/bd-personnages.js', 'js/bd-visages.js', 'js/bd-scenes.js', 'js/bd-jeu.js', 'js/bd-evenements.js', 'js/press.js', 'js/press-humour.js', 'js/fx.js', 'js/tuto.js', 'js/tips.js',
   /* scripts : moteurs du quinquennat */
   'js/legis.js', 'js/economy.js', 'js/govern.js', 'js/cabinet.js', 'js/oppo.js', 'js/cards.js', 'js/medias-mandat.js', 'js/mandat-save.js',
   /* scripts : son */
