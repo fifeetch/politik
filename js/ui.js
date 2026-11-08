@@ -1202,8 +1202,16 @@
     var tip = extraTip || tipOfTurn();
     var h = '<div class="learn">' + A.advisor() + '<div class="lulu-m">' +
       '<span class="kicker">Mon conseil du tour</span><p>' + esc(advice()) + '</p>' +
-      (tip ? '<span class="kicker">💡 Astuce</span><p>' + esc(tip.text) + '</p>' : '') + '</div></div>';
+      (tip ? '<span class="kicker">💡 Astuce</span><p>' + esc(tip.text) + '</p>' : '') + '</div></div>' +
+      '<span class="kicker lulu-q-k">Pose-moi une question</span><div class="pick lulu-q">' + LULU_FAQ.map(function (f) {
+        return '<button type="button" class="pick-row" data-faq="' + f.id + '"><span class="pick-txt"><b>' + f.ic + ' ' + esc(f.q) + '</b></span></button>';
+      }).join('') + '</div>';
     modal({ kicker: D.ADVISOR.title, title: D.ADVISOR.name + ' te conseille', html: h,
+      onOpen: function () {
+        Array.prototype.forEach.call(document.querySelectorAll('[data-faq]'), function (b) {
+          b.addEventListener('click', function () { luluAnswer(b.getAttribute('data-faq')); });
+        });
+      },
       buttons: [{ label: 'Une autre astuce', onClick: function () { luluModal(anotherTip()); } },
                 { label: 'Merci Lulu', primary: true },
                 { label: '🔕 Je ne veux plus de conseils', onClick: function () {
@@ -1211,6 +1219,79 @@
                   toast('Lulu se tait. Pour la rappeler : onglet « Mon parti » → « Réactiver Lulu ».');
                 } }] });
   }
+  /* v5.16 : l'aide en jeu. Lulu répond aux questions sur les règles, avec les chiffres de ta partie.
+     On l'ouvre depuis sa fenêtre, ou en touchant le haut de l'écran (actions, sondage, argent, énergie). */
+  function plur(n, mot) { return n + ' ' + mot + (n > 1 ? 's' : ''); }
+  var LULU_FAQ = [
+    { id: 'actions', ic: '🎯', q: 'Combien d\u2019actions je peux jouer ?', a: function () {
+      var n = E.actionsFor(g, me), left = Math.max(0, n - queue.length);
+      return [
+        'Chaque tour, tu joues ' + R.actionsPerTurn + ' actions. Tes rivaux aussi : tout le monde joue en même temps et en secret, puis on découvre les résultats.',
+        (n < R.actionsPerTurn ? 'Un \u00e9v\u00e9nement t\u2019en retire ' + (R.actionsPerTurn - n) + ' ce tour-ci. ' : '') +
+        (left ? 'Il t\u2019en reste ' + left + ' à programmer : choisis une région sur la carte, puis une action.' : 'Tes ' + plur(n, 'action') + ' sont prêtes : tu peux valider le tour.'),
+        'Le nombre ne change pas, mais chaque action coûte de l\u2019argent (€) et souvent de l\u2019énergie (⚡). Sans le sou, une 💰 Collecte ; à bout de forces, un 😴 Repos.'
+      ];
+    } },
+    { id: 'sondage', ic: '📊', q: 'Comment monter dans les sondages ?', a: function () {
+      var rk = E.ranking(g), pos = rk.indexOf(me) + 1, poll = E.pollMap(g)[me] || 0;
+      return [
+        'Tu es à ' + pctFr(poll, 1) + ' %, ' + (pos === 1 ? 'en tête' : pos + 'e sur ' + rk.length) + '. Le sondage est le seul score qui compte : c\u2019est lui qui décide de l\u2019élection.',
+        'Chaque action affiche ce qu\u2019elle te fait gagner, en points. Les grandes régions pèsent plus : l\u2019Île-de-France compte bien plus que la Corse.',
+        'Le sondage est une part du gâteau : si tes rivaux gagnent des électeurs, ta part baisse même si tu n\u2019en perds aucun.'
+      ];
+    } },
+    { id: 'argent', ic: '💶', q: 'D\u2019où vient l\u2019argent ?', a: function () {
+      var pl = mePl();
+      return [
+        'Tu as ' + pl.money + ' €. Chaque tour, tu touches ' + R.incomeMoney + ' €, plus ' + R.incomePerRegion + ' € par région que tu contrôles (' + R.incomeRegionMax + ' € au plus).',
+        'Un Meeting coûte 2 €, la Télé 4 €. La Matinale radio est gratuite, mais elle fatigue.',
+        pl.money < 3 ? 'Tu es presque à sec : une 💰 Collecte (menu Plus) remplit les caisses.' : 'Garde-toi quelques euros pour les soirs de débat : chaque € de préparation rend tes réponses plus fortes.'
+      ];
+    } },
+    { id: 'energie', ic: '⚡', q: 'À quoi sert l\u2019énergie ?', a: function () {
+      var pl = mePl();
+      return [
+        'Ton candidat a ' + pl.forme + ' ⚡ sur ' + R.formeMax + '. Un Meeting, la Télé ou la radio en coûtent 1.',
+        'Il récupère ' + R.formeRegen + ' ⚡ à chaque tour. Un 😴 Repos en rend ' + R.reposForme + ' tout de suite.',
+        'À 0 ⚡, il est épuisé : la gaffe le guette, et une gaffe, c\u2019est une casserole 🍳.'
+      ];
+    } },
+    { id: 'regions', ic: '🗺️', q: 'Comment prendre une région ?', a: function () {
+      return [
+        'Une région est à toi quand tu y as le plus de soutiens, avec au moins ' + R.minControl + ' soutiens.',
+        'Un 📣 Meeting t\u2019en apporte de 1 à 4 selon ton message. Touche le nom d\u2019une région pour voir combien il te manque.',
+        'Une région à toi te rapporte ' + R.incomePerRegion + ' € par tour, et ses électeurs comptent dans ton sondage.'
+      ];
+    } },
+    { id: 'tours', ic: '📅', q: 'Combien de tours avant l\u2019élection ?', a: function () {
+      var deb = (R.debateTurns || []).filter(function (t) { return t >= g.turn; });
+      return [
+        'On est au tour ' + g.turn + ' sur ' + R.maxTurns + '. Après le dernier, c\u2019est le 1er tour de l\u2019élection, puis le second entre les deux premiers.',
+        deb.length ? 'Débat' + (deb.length > 1 ? 's' : '') + ' télévisé' + (deb.length > 1 ? 's' : '') + ' à venir : tour' + (deb.length > 1 ? 's ' : ' ') + deb.join(', ') + '. Prépare-les avec quelques euros.' : 'Plus de débat d\u2019ici le vote : tout se joue sur le terrain.',
+        'Le premier des sondages passe « Sous les projecteurs » : la presse lui sort une affaire, jamais deux tours de suite.'
+      ];
+    } },
+    { id: 'casseroles', ic: '🍳', q: 'C\u2019est quoi, les casseroles ?', a: function () {
+      var pl = mePl();
+      return [
+        'Ce sont les vieilles histoires qui traînent : tu en as ' + pl.cas + '. Plus tu en as, plus une affaire risque de sortir.',
+        'On en prend en gaffant, en attaquant mal, ou quand un démenti ne tient pas.',
+        'Un rival chargé de casseroles ? 🔎 Enquête sur lui (menu Plus).'
+      ];
+    } }
+  ];
+  function luluAnswer(id) {
+    var f = LULU_FAQ.filter(function (x) { return x.id === id; })[0]; if (!f || !g) return;
+    var h = '<div class="learn">' + A.advisor() + '<div class="lulu-m">' + f.a().map(function (p) { return '<p>' + esc(p) + '</p>'; }).join('') + '</div></div>';
+    modal({ kicker: D.ADVISOR.name + ' t\u2019explique', title: f.ic + ' ' + f.q, html: h,
+      buttons: [{ label: 'Autre question', onClick: function () { luluModal(); } }, { label: 'Merci Lulu', primary: true }] });
+  }
+  [['phase-label', 'actions'], ['turn-label', 'tours'], ['res-poll', 'sondage'], ['res-money', 'argent'], ['res-forme', 'energie']].forEach(function (x) {
+    var n = $(x[0]); if (!n) return;
+    n.classList.add('lulu-help'); n.setAttribute('role', 'button'); n.setAttribute('tabindex', '0');
+    n.addEventListener('click', function () { if (g && g.phase === 'actions') luluAnswer(x[1]); });
+    n.addEventListener('keydown', function (e) { if ((e.key === 'Enter' || e.key === ' ') && g && g.phase === 'actions') { e.preventDefault(); luluAnswer(x[1]); } });
+  });
   function renderAdvisor() {
     var box = $('advisor');
     if (!g || g.phase !== 'actions' || advisorHidden || luluOff || T.isActive()) { box.hidden = true; advShown = null; return; }
@@ -1519,7 +1600,8 @@
     estCache = {}; hideTip();
     var pl = mePl(), pr = projected();
     $('turn-label').textContent = 'Tour ' + g.turn + ' sur ' + R.maxTurns;
-    $('phase-label').textContent = E.isDebateTurn(g) ? 'Débat télévisé ce soir' : '3 actions à jouer';
+    var left = Math.max(0, E.actionsFor(g, me) - queue.length);   // v5.16 : ce qu'il reste à programmer
+    $('phase-label').textContent = (left ? plur(left, 'action') + ' à jouer' : 'Prêt : valide le tour') + (E.isDebateTurn(g) ? ' · débat ce soir' : '');
     function pill(id, sym, now, before, word) { $(id).innerHTML = '<span>' + sym + ' ' + now + (now !== before ? '<small>/' + before + '</small>' : '') + '</span><small class="pill-w">' + word + '</small>'; }
     var myPoll = E.pollMap(g)[me] || 0;   // v5.0 : l'influence ★ a disparu ; à sa place, ton score au sondage
     $('res-poll').innerHTML = '<span>' + pctFr(myPoll, 1) + ' %</span><small class="pill-w">sondage</small>';
@@ -2794,7 +2876,8 @@
   }
 
   /* ---------- v5.15 : les tractations, une seule fois, après le premier débat ---------- */
-  function pctFr(x) { return (100 * x).toFixed(1).replace('.', ',') + ' %'; }
+  function pctFus(x) {   // v5.16 : renommée (elle écrasait pctFr partout : « 5,2 % % »)
+   return (100 * x).toFixed(1).replace('.', ',') + ' %'; }
   function ptsFr(x) { return (x >= 0 ? '+' : '−') + (100 * Math.abs(x)).toFixed(1).replace('.', ',') + ' pt'; }
   var CONCESSIONS = [['rien', 'Ne rien céder'], ['mesure', 'Reprendre une de ses mesures'], ['tandem', 'Son chef à Matignon']];
   if (window.PolitikInfobulle) window.PolitikInfobulle.definir({
@@ -2809,8 +2892,8 @@
     function menu() {
       var c = g.players.filter(function (p) { return p.id !== me && !E.fusionError(g, me, p.id); }).sort(function (a, b) { return E.dist(me, a.id) - E.dist(me, b.id); });
       if (!c.length) return fin();
-      modal({ kicker: 'Les tractations', title: T.n[me] ? 'Un autre partenaire ?' : 'Fusionner ?', html: image() + '<p>' + motIb('fusion-regle', 'Une seule occasion') + ', juste après le débat. Tu pèses <b>' + pctFr(E.pollShare(g, me)) + '</b>.</p>',
-        buttons: c.map(function (p) { return { label: party(p.id).short + ' · ' + pctFr(E.pollShare(g, p.id)), onClick: function () { conditions(p.id); } }; }).concat([{ label: T.n[me] ? 'Ça suffit' : 'Rester seul', primary: true, onClick: fin }]) });
+      modal({ kicker: 'Les tractations', title: T.n[me] ? 'Un autre partenaire ?' : 'Fusionner ?', html: image() + '<p>' + motIb('fusion-regle', 'Une seule occasion') + ', juste après le débat. Tu pèses <b>' + pctFus(E.pollShare(g, me)) + '</b>.</p>',
+        buttons: c.map(function (p) { return { label: party(p.id).short + ' · ' + pctFus(E.pollShare(g, p.id)), onClick: function () { conditions(p.id); } }; }).concat([{ label: T.n[me] ? 'Ça suffit' : 'Rester seul', primary: true, onClick: fin }]) });
     }
     function conditions(t) {
       var moi = E.pollShare(g, me), lui = E.pollShare(g, t);
@@ -2823,7 +2906,7 @@
     function resultat(t, k) {
       var r = E.fusionTry(g, me, t, k); render();
       if (!r.ok) return modal({ kicker: 'Tractations · ' + party(t).short, title: 'C2019est non', html: '<p>La porte reste fermée : ' + esc(party(t).candidate) + ' préfère tenter sa chance seul.</p>', buttons: [{ label: 'Continuer', primary: true, onClick: menu }] });
-      var h = image() + '<div class="brief">' + line('📊', 'Tu passes de <b>' + pctFr(r.avant) + '</b> à <b>' + pctFr(r.apres) + '</b>') +
+      var h = image() + '<div class="brief">' + line('📊', 'Tu passes de <b>' + pctFus(r.avant) + '</b> à <b>' + pctFus(r.apres) + '</b>') +
         (r.vers ? line('💔', 'Une partie de ses électeurs part vers ' + esc(party(r.vers).short)) : '') +
         (k !== 'rien' && r.versAutre ? line('🚪', 'Certains des tiens filent vers ' + esc(party(r.versAutre).short)) : '') +
         (r.mesure ? line('📜', 'Au programme : ' + esc(E.measure(r.mesure).name)) : '') +
@@ -2833,7 +2916,7 @@
     }
     function bilan() {
       var autres = T.log.filter(function (x) { return x.ok && x.pid !== me; });
-      var h = autres.map(function (x) { return line('🤝', esc(party(x.pid).short) + ' absorbe ' + esc(party(x.target).short) + ' : <b>' + pctFr(x.apres) + '</b>'); }).join('');
+      var h = autres.map(function (x) { return line('🤝', esc(party(x.pid).short) + ' absorbe ' + esc(party(x.target).short) + ' : <b>' + pctFus(x.apres) + '</b>'); }).join('');
       function offre() {
         if (!T.offre || !E.player(g, T.offre)) return then();
         modal({ kicker: 'Les tractations', title: 'Une main tendue', html: '<p>' + esc(party(T.offre).candidate) + ' (' + esc(party(T.offre).short) + ') te propose de te ranger derrière sa candidature.</p>', buttons: [{ label: 'Je reste candidat', primary: true, onClick: then }] });
@@ -2848,10 +2931,30 @@
     var t = E.spotlightTarget(g);
     if (!t) return finishTurn(null);
     if (t === me) {
-      var can = mePl().money >= R.spotlightCost;
-      modal({ kicker: 'Sous les projecteurs', title: 'Tu es en tête des sondages !', html: '<p>Les médias fouillent ton passé. Paie <b>' + R.spotlightCost + ' €</b> (avocats, communicants) pour étouffer l\'affaire, ou perds 1 soutien dans tes 2 plus grandes régions.</p>',
-        buttons: [{ label: 'Payer ' + R.spotlightCost + ' €', primary: true, disabled: !can, onClick: function () { finishTurn(E.applySpotlight(g, me, true)); } },
-                  { label: 'Perdre 2 soutiens', onClick: function () { finishTurn(E.applySpotlight(g, me, false)); } }] });
+      // v5.16 : la meute devant ton QG, une vraie affaire, trois réponses
+      var can = mePl().money >= R.spotlightCost, ch = Math.round(100 * E.dementirChance(g, me));
+      var rows = [
+        { id: 'avocats', ic: '⚖️', b: 'Avocats et communicants', s: can ? R.spotlightCost + ' € · l\u2019affaire est étouffée' : 'Il te faut ' + R.spotlightCost + ' €' },
+        { id: 'excuses', ic: '🙏', b: 'Faire des excuses', s: '−1 soutien dans ta meilleure région' },
+        { id: 'dementir', ic: '🙅', b: 'Tout démentir', s: ch + ' % de chances que ça passe · sinon −' + D.SPOTLIGHT.echec + ' soutiens et +1 casserole' }
+      ];
+      var html = '<div class="aff-une">' + Press.scene('projecteurs') +
+        '<div class="une-top"><span class="une-logo"><b>QN</b><span>Le Quotidien<br>National</span></span><span class="aff-tag">En tête des sondages</span></div>' +
+        '<div class="aff-word">Projecteurs.</div><p class="aff-title">' + esc(E.spotlightAffair(g)) + '</p></div>' +
+        '<div class="pick">' + rows.map(function (r) {
+          return '<button type="button" class="pick-row" data-spot="' + r.id + '"' + (r.id === 'avocats' && !can ? ' disabled' : '') + '><span class="pick-txt"><b>' + r.ic + ' ' + esc(r.b) + '</b><small>' + esc(r.s) + '</small></span></button>';
+        }).join('') + '</div>';
+      modal({ kicker: '🔦 Sous les projecteurs', title: 'Tu es en tête, la presse fouille', html: html, buttons: [],
+        onOpen: function () {
+          Array.prototype.forEach.call(document.querySelectorAll('[data-spot]'), function (row) {
+            row.addEventListener('click', function () {
+              var res = E.applySpotlight(g, me, row.getAttribute('data-spot'));
+              closeModal();
+              if (res.choice === 'dementir') toast(res.ok ? '🙅 Démenti réussi : l\u2019affaire retombe' : '😬 Le démenti ne tient pas : −' + res.regions.length + ' soutiens, +1 casserole');
+              finishTurn(res);
+            });
+          });
+        } });
     } else finishTurn(E.applySpotlight(g, t, AI.paySpotlight(g, t)));
   }
 
@@ -2925,8 +3028,10 @@
   }
   function finishTurn(spot) {
     var res = E.endTurn(g); render();
-    if (spot && !spot.paid && spot.pid !== me) toast(party(spot.pid).short + ' sous les projecteurs : −1 soutien en ' + spot.regions.map(function (x) { return SHORT[x]; }).join(', '));
-    else if (spot && spot.paid && spot.pid !== me) toast(party(spot.pid).short + ' paie ' + R.spotlightCost + ' € pour éviter le scandale');
+    if (spot && spot.pid !== me) {   // v5.16 : ce que le premier des sondages a répondu
+      var reg = spot.regions.length ? ' : −1 soutien en ' + spot.regions.map(function (x) { return SHORT[x]; }).join(', ') : '';
+      toast('🔦 ' + party(spot.pid).short + (spot.paid ? ' paie ses avocats pour étouffer l\u2019affaire' : spot.choice === 'excuses' ? ' s\u2019excuse' + reg : spot.ok ? ' dément, et ça passe' : ' dément, et ça rate' + reg));
+    }
     if (g.humanOut) return humanOut();   // v4.4 : pas tes 500 parrainages
     if (res.out && res.out.length) {   // v4.4 : les partis sans leurs 500 signatures quittent la course
       var outH = '<p>Sans leurs 500 signatures d\u2019élus, ces partis ne seront pas candidats :</p><div class="brief">' + res.out.map(function (o) {
@@ -3401,7 +3506,7 @@
       '<p><b>🎙️ Le face-à-face</b> (entre les deux tours) : 3 questions entre les deux finalistes. Le gagnant fait basculer jusqu\u2019à 3 % des électeurs de l\u2019autre pour le second tour.</p>' +
       '<p><b>⚖️ Mode Réaliste : le poids des urnes.</b> Chaque soutien pèse selon le score historique de son parti dans la région : un soutien du parti en tête de la région compte beaucoup, celui d\u2019un petit parti beaucoup moins. Et la moitié des électeurs vote par fidélité (le <b>socle électoral</b>) : la campagne se joue sur l\u2019autre moitié. Résultat : les petits partis ont du mal à dépasser leur score historique, et chaque région garde sa couleur (terre de gauche, de droite ou disputée, dans la fiche de la région). En mode Simulation, tout le monde pèse pareil.</p>' +
       '<p><b>🧪 Mode Bêta.</b> Le mode Réaliste avec les règles à l\u2019essai : ' + D.BETA.changes.map(esc).join(' ') + '</p>' +
-      '<p><b>Sous les projecteurs :</b> le premier des sondages paie ' + R.spotlightCost + ' € ou perd des soutiens à chaque fin de tour.</p>' +
+      '<p><b>Sous les projecteurs :</b> le premier des sondages voit sortir une affaire, jamais deux tours de suite. Il paie ses avocats (' + R.spotlightCost + ' €), s\u2019excuse (−1 soutien) ou dément (gratuit si ça passe).</p>' +
       '<p><b>🎭 Les traits satiriques.</b> Huit partis vivent un gag qui se joue de l\u2019intérieur, avec un avantage et un coût : ' + Object.keys(D.TRAITS).map(function (k) { var t = D.TRAITS[k]; return t.icon + ' <b>' + esc(t.name) + '</b> (' + t.parties.map(function (p) { return esc(party(p).short); }).join(', ') + ')'; }).join(' · ') + '. Le détail est dans l\u2019onglet de ton parti, et les actions propres à ton parti dans le menu « Plus ».</p>' });
   }
 
@@ -3427,7 +3532,7 @@
   });
 
   /* Outils partagés avec la phase « Gouverner » (js/govui.js) */
-  window.PolitikUI = { tractations: tractations, showPaper: showPaper, modal: modal, closeModal: closeModal, toast: toast, go: go, esc: esc, line: line, srcHtml: srcHtml, chip: chip,
+  window.PolitikUI = { tractations: tractations, spotlight: spotlight, showPaper: showPaper, modal: modal, closeModal: closeModal, toast: toast, go: go, esc: esc, line: line, srcHtml: srcHtml, chip: chip,
     game: function () { return g; }, me: function () { return me; }, restoreGame: restoreGame,
     saveContext: function () { return { quick: quickGame, perso: perso, founded: founded, lead: leadOn, foundedOn: !!(founded && me === founded.sigle) }; } };
   // v3.8.1 : un démarrage qui ne peut plus rester bloqué (une erreur ici n'empêche pas d'arriver à l'accueil)

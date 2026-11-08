@@ -513,6 +513,22 @@
   ];
   var BUDGET_AFFAIR = { id: 'budget', title: 'Le programme non financé', text: 'Les économistes ont fait les comptes : ton programme coûte bien plus que ce que tu annonces.' };
   /* Les 4 façons de réagir à une affaire */
+  /* v5.16 : sous les projecteurs, une vraie affaire tirée au sort et trois réponses */
+  var SPOTLIGHT = {
+    affaires: [
+      'Une vieille facture de traiteur refait surface',
+      'Ton ancien stagiaire raconte tout',
+      'Un selfie gênant de 2009 circule',
+      'Les notes de frais de ta permanence épluchées',
+      'Un vieux message oublié ressort',
+      'Ton chauffeur aurait brûlé trois feux rouges',
+      'Le château gonflable de ton anniversaire payé par le parti ?',
+      'Ta résidence secondaire intrigue'
+    ],
+    dementir: 0.6,     // chance que le démenti passe…
+    parCas: 0.15,      // … moins 15 % par casserole (15 % au moins)
+    echec: 2           // un démenti qui rate : −2 soutiens et +1 casserole
+  };
   var REACTIONS = [
     { id: 'nier',    label: 'Nier en bloc',                hint: 'Pile ou face : ça passe… ou −3 soutiens et +1 casserole', fx: [{ k: 'dice', chance: 0.5, win: [], lose: [{ k: 'strong', n: -3 }, { k: 'cas', n: 1 }] }] },
     { id: 'excuses', label: 'S\'excuser publiquement',     hint: '−1 soutien dans tes 2 meilleures régions, mais −2 casseroles : la page est tournée', fx: [{ k: 'loseTop', n: 1, count: 2 }, { k: 'cas', n: -2 }] },
@@ -876,7 +892,7 @@
     othersKeep: 0.82,            // v1.1 mode Réaliste : à chaque tour, les « autres listes » gardent 82 % de leurs électeurs
     othersTransfer: 0.6,         // au 2nd tour, 60 % des électeurs des autres listes votent pour un finaliste
     startScale: 10,              // mode Réaliste : cubes de départ = score moyen législatives + européennes 2024 (%) × 10 / 100
-    spotlightCost: 3,            // v5.0 : 3 € (avant 2 ★) pour étouffer l'affaire quand on est en tête
+    spotlightCost: 3,            // v5.0 : 3 € (avant 2 ★) pour étouffer l'affaire quand on est en tête · v5.16 : jamais deux tours de suite, et 3 réponses
     /* v1.6 : tous les partis du jeu se présentent au 1er tour (le joueur + les autres, menés par l'ordinateur) */
     rivals: 99,                  // nombre maximal d'adversaires (99 = tous les partis de data.js)
     debateDuels: 3,              // à chaque débat, chaque parti affronte 3 adversaires (et non tous)
@@ -1470,7 +1486,7 @@
 
   var DATA = { REFERENCE_2027: REFERENCE_2027, POLLS: POLLS, BASES: BASES, REGIONS: REGIONS, PROFILES: PROFILES, THEMES: THEMES, HEADLINES: HEADLINES, PARTIES: PARTIES, ACTIONS: ACTIONS,
                PIQUES: PIQUES, RELANCES: RELANCES, CARDS: CARDS, CARD_RULES: CARD_RULES, FICHES: FICHES, EVENTS: EVENTS, DILEMMAS: DILEMMAS, CRISES: CRISES, REPLIES: REPLIES, TEMPERS: TEMPERS, TRAITS: TRAITS, NOSTALGIA: NOSTALGIA, PETALS: PETALS, MICRO: MICRO, BINGO: BINGO, BINGO_LINES: BINGO_LINES,
-               MEASURES: MEASURES, FUNDING: FUNDING, SEGMENTS: SEGMENTS, VOTE_PROP: VOTE_PROP, CLASS_PROF: CLASS_PROF, CLASS_SRC: CLASS_SRC, HEART: HEART, MAJORITY: MAJORITY, BETA: BETA, MEDIA: MEDIA, ANSWERS: ANSWERS, STATIONS: STATIONS, DEB_REG: DEB_REG, DEB_BEATS: DEB_BEATS, DEB_REG_NAME: DEB_REG_NAME, DEBATE: DEBATE, STATION_FIT: STATION_FIT, VINGT: VINGT, QUESTIONS: QUESTIONS, SEGMENTS_SRC: SEGMENTS_SRC, AFFAIRS: AFFAIRS, LEARN: LEARN, BUDGET_AFFAIR: BUDGET_AFFAIR, REACTIONS: REACTIONS, ADVISOR: ADVISOR, OBJECTIVES: OBJECTIVES, RULES: RULES, FORMATS: FORMATS, LEGIS: LEGIS, MINISTRY: MINISTRY, OPPO: OPPO, ECONOMY: ECONOMY, validate: validate };
+               MEASURES: MEASURES, FUNDING: FUNDING, SEGMENTS: SEGMENTS, VOTE_PROP: VOTE_PROP, CLASS_PROF: CLASS_PROF, CLASS_SRC: CLASS_SRC, HEART: HEART, MAJORITY: MAJORITY, BETA: BETA, MEDIA: MEDIA, ANSWERS: ANSWERS, STATIONS: STATIONS, DEB_REG: DEB_REG, DEB_BEATS: DEB_BEATS, DEB_REG_NAME: DEB_REG_NAME, DEBATE: DEBATE, STATION_FIT: STATION_FIT, VINGT: VINGT, QUESTIONS: QUESTIONS, SEGMENTS_SRC: SEGMENTS_SRC, AFFAIRS: AFFAIRS, LEARN: LEARN, BUDGET_AFFAIR: BUDGET_AFFAIR, REACTIONS: REACTIONS, SPOTLIGHT: SPOTLIGHT, ADVISOR: ADVISOR, OBJECTIVES: OBJECTIVES, RULES: RULES, FORMATS: FORMATS, LEGIS: LEGIS, MINISTRY: MINISTRY, OPPO: OPPO, ECONOMY: ECONOMY, validate: validate };
   if (typeof module !== 'undefined' && module.exports) module.exports = DATA;
   else root.PolitikData = DATA;
 })(this);

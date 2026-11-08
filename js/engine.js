@@ -2181,16 +2181,37 @@
   }
 
   /* ---------- Sous les projecteurs + fin de tour ---------- */
-  function spotlightTarget(g) { return leader(g); }
-  function applySpotlight(g, pid, pay) {
-    var pl = player(g, pid), out = { pid: pid, paid: false, regions: [] };
-    if (pay && pl.money >= R.spotlightCost) { pl.money -= R.spotlightCost; out.paid = true; }   // v5.0 : en € (avant : 2 ★)
-    else {
-      var regs = controlledRegions(g, pid).sort(function (a, b) { return b.pts - a.pts; }).slice(0, 2);
+  /* v5.16 : jamais deux tours de suite (avant : à chaque tour, au premier des sondages) */
+  function spotlightTarget(g) {
+    if (g.spotTurn != null && g.spotTurn === g.turn - 1) return null;
+    return leader(g);
+  }
+  /* l'affaire du tour, tirée une seule fois */
+  function spotlightAffair(g) {
+    var A = D.SPOTLIGHT.affaires;
+    if (!g.spotAff || g.spotAff.turn !== g.turn) g.spotAff = { turn: g.turn, i: Math.floor(g.rng() * A.length) };
+    return A[g.spotAff.i];
+  }
+  function dementirChance(g, pid) { var S = D.SPOTLIGHT; return Math.max(0.15, S.dementir - S.parCas * player(g, pid).cas); }
+  /* choice : 'avocats' (3 €), 'excuses' (−1 soutien), 'dementir' (gratuit, ou −2 soutiens et +1 casserole s'il rate).
+     true / false restent compris (anciens appels) : payer ou s'excuser. */
+  function applySpotlight(g, pid, choice) {
+    if (choice === true) choice = 'avocats'; else if (choice !== 'dementir' && choice !== 'avocats') choice = 'excuses';
+    var pl = player(g, pid), out = { pid: pid, choice: choice, paid: false, ok: true, cas: false, regions: [], affaire: spotlightAffair(g) }, n = 1;
+    g.spotTurn = g.turn;
+    if (choice === 'avocats' && pl.money >= R.spotlightCost) { pl.money -= R.spotlightCost; out.paid = true; n = 0; }   // v5.0 : en € (avant : 2 ★)
+    else if (choice === 'avocats') out.choice = 'excuses';   // pas de quoi payer : on s'excuse
+    else if (choice === 'dementir') {
+      out.ok = g.rng() < dementirChance(g, pid);
+      if (out.ok) n = 0; else { n = D.SPOTLIGHT.echec; pl.cas = Math.min(R.casseroleMax, pl.cas + 1); out.cas = true; }
+    }
+    if (n) {
+      var regs = controlledRegions(g, pid).sort(function (a, b) { return b.pts - a.pts; }).slice(0, n);
       regs.forEach(function (r) { addCubes(g, r.id, pid, -1); out.regions.push(r.id); });
       updateAllControl(g);
     }
-    ledMark(g, 'Sous les projecteurs (' + sigle(pid) + (out.paid ? ' paie pour étouffer l\u2019affaire' : ' perd 2 soutiens') + ')', '🔦');   // v4.8
+    var quoi = out.paid ? ' paie ses avocats' : out.choice === 'excuses' ? ' s\u2019excuse, −' + out.regions.length + ' soutien' : out.ok ? ' dément, ça passe' : ' dément, ça rate : −' + out.regions.length + ' soutiens';
+    ledMark(g, 'Sous les projecteurs (' + sigle(pid) + quoi + ')', '🔦');   // v4.8
     return out;
   }
   function endTurn(g) {
@@ -2545,7 +2566,7 @@
   var API = {
     estimate: estimate, ledStart: ledStart, regScore: regScore, candQ: candQ, candD: candD, candFor: candFor, candMedia: candMedia, gaffeLimit: gaffeLimit, regionSnapshot: regionSnapshot,
     piqueOutcome: piqueOutcome, piqueBonus: piqueBonus, faceRiposte: faceRiposte, createGame: createGame, startTurn: startTurn, resolveActions: resolveActions, resolveDebate: resolveDebate, setupDebate: setupDebate, debateCards: debateCards, duelOutcome: duelOutcome, debateCounter: debateCounter, aiDebatePick: aiDebatePick, debateWeights: debateWeights, setupFace: setupFace, resolveFace: resolveFace, audScore: audScore, duelResult: duelResult, replyPoints: replyPoints,
-    isDebateTurn: isDebateTurn, spotlightTarget: spotlightTarget, applySpotlight: applySpotlight, endTurn: endTurn,
+    isDebateTurn: isDebateTurn, spotlightTarget: spotlightTarget, spotlightAffair: spotlightAffair, dementirChance: dementirChance, applySpotlight: applySpotlight, endTurn: endTurn,
     finalScores: finalScores, firstRound: firstRound, openBetween: openBetween, betweenAct: betweenAct, betweenError: betweenError, answerCounter: answerCounter, answerBetweenOffer: answerBetweenOffer, setConsigne: setConsigne, concessionsFor: concessionsFor, dealChance: dealChance, aiBetweenStep: aiBetweenStep, aiConsigne: aiConsigne, rivalTargets: rivalTargets, threatCost: threatCost, transfersFor: transfersFor, projectSecond: projectSecond, closeBetween: closeBetween, autoBetween: autoBetween, objectiveMet: objectiveMet, objectiveProgress: objectiveProgress, objectiveShare: objectiveShare, terrainBreakdown: terrainBreakdown, crowdBonus: crowdBonus, crowdInfo: crowdInfo, turnOrder: turnOrder, election: election, poll: poll, votes: votes,
     fusionDue: fusionDue, fusionStart: fusionStart, fusionError: fusionError, fusionChance: fusionChance, fusionTaux: fusionTaux, pollShare: pollShare, fusionTry: fusionTry, fusionIA: fusionIA,
     dist: dist, fundsGain: fundsGain, allyOf: allyOf, allianceError: allianceError, answerOffer: answerOffer, acceptChance: acceptChance,

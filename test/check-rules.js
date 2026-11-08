@@ -731,7 +731,7 @@ section('v4.8 : bilan détaillé, salle comble, personnalités, score de départ
     var x = E.endTurn(g).bilan.rows.VP, sl = 0, so = 0;
     x.list.forEach(function (a) { sl += a.pt; }); x.oth.forEach(function (o) { so += o.d; });
     if (Math.abs(sl - x.acts) > 1e-9) good = false;
-    if (Math.abs(so - x.other) > 1e-9) othOk = false;
+    if (Math.abs(so - x.other) > 0.0002) othOk = false;   // v5.16 : le bilan laisse de côté les restes de moins de 0,02 pt (voir ledClose)
   }
   ok(good, 'bilan : « Tes actions » = la somme de tes actions une par une');
   ok(othOk, 'bilan : « Événements et imprévus » = la somme des événements nommés');
