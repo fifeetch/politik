@@ -262,7 +262,12 @@
     var duel = d && d.qid ? d : { a: pid, b: opp, theme: theme, qid: E.pickQuestion(g, theme, 31).id };
     return E.aiDebatePick(g, pid, duel);
   }
-  function payspotlight(g, pid) { return E.player(g, pid).money >= D.RULES.spotlightCost + 3; }   // v5.0 : en €
+  /* v5.16 : avocats s'il a de quoi, démenti s'il n'a rien à se reprocher, sinon excuses */
+  function payspotlight(g, pid) {
+    var pl = E.player(g, pid);
+    if (pl.money >= D.RULES.spotlightCost + 3) return 'avocats';
+    return E.dementirChance(g, pid) >= 0.5 ? 'dementir' : 'excuses';
+  }
 
   /* Dilemmes : l'IA estime la valeur moyenne de chaque option */
   function fxValue(g, pid, list) {
