@@ -35,6 +35,9 @@
 
   /* ---------- Le mot de la une, et la scène dessinée ---------- */
   var UNE_EVENTS = {
+    meme: ['Mème.', 'tele', 'Une affiche de campagne détournée fait le tour des téléphones : impossible d\'y échapper.'],   // v5.18
+    college: ['Récré.', 'ville', 'Un sondage réalisé dans les cours de récréation bouleverse le classement. Ils ne votent pas, mais tout le monde en parle.'],
+    grimace: ['Grimace.', 'nature', 'Une dégustation filmée tourne mal : la grimace du favori passe en boucle sur toutes les chaînes.'],
     crise: ['Panique.', 'caddie', 'Les prix flambent, les marchés plongent : le pays a peur pour son porte-monnaie.'], greve: ['Bloqués.', 'greve', 'Plus un train ne roule : les usagers fulminent, les syndicats tiennent bon.'], scandale: ['Scandale.', 'scandale', 'Révélations en cascade : toute la classe politique retient son souffle.'], buzz: ['Viral.', 'tele', 'Une vidéo de campagne affole les compteurs : tout le pays en parle.'],
     sondage: ['Surprise !', 'tele', 'Coup de tonnerre dans les intentions de vote : les états-majors s\'agitent.'], fete: ['Bal.', 'fete', 'Défilé, bals et feux d\'artifice : les candidats serrent des mains sous les lampions.'], division: ['Déchirés.', 'meeting', 'Les chefs s\'écharpent en public : ambiance glaciale dans les partis.'], fuite: ['Fuite.', 'scandale', 'Des notes internes fuitent dans la presse : panique dans les QG de campagne.'],
     salon: ['À la ferme.', 'nature', 'Entre les vaches et les tracteurs, les candidats font le passage obligé de la campagne.'], usine: ['Rideau.', 'usine', 'Une usine de 800 salariés baisse le rideau : la colère gronde devant les grilles.'], patrimoine: ['Patrimoine.', 'ville', 'Châteaux et ministères ouvrent leurs portes : les candidats soignent leur image.'], mecene: ['Le chèque.', 'scandale', 'Un riche donateur sort son carnet de chèques : les trésoriers des partis jubilent.'],
@@ -302,7 +305,8 @@
       var a = { pid: l.pid, mine: l.pid === me, rub: 'Campagne', why: { k: 'act', l: l, key: type } };
       if (type === 'terrain') {
         a.title = pick([p.short + ' à la rencontre des habitants de ' + city, p.candidate + ' fait salle comble à ' + city, 'À ' + city + ', ' + p.candidate + ' parle ' + topic], key);
-        a.text = p.candidate + ' était à ' + city + ' (' + E.REG[l.region].name + ') ' + pick(CROWDS, key + 'c') + '. Il a surtout été question ' + topic + '.' + quote;
+        a.text = p.candidate + ' était à ' + city + ' (' + E.REG[l.region].name + ') ' + pick(CROWDS, key + 'c') + '. Il a surtout été question ' + topic + '.' + quote +
+          (typeof window !== 'undefined' && window.PolitikHumour ? ' Et pour conclure : « ' + window.PolitikHumour.phrase(l.pid, key) + ' »' : '');   // v5.18 : la petite phrase
       } else if (type === 'union') {   // v4.4
         var tu = l.union ? l.union.target : l.unionRefused, Pu = tu ? P(tu) : null;
         if (!Pu) return;

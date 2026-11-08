@@ -1698,3 +1698,8 @@ button { font-family: inherit; color: inherit; }
 .site .site-art.hero h3 { font-size: 23px; line-height: 1.12; }
 .site .art-breves, .site .art-horo, .site .art-lulu, .site .art-learn { border-bottom: 1px solid #d8cdb2; }
 #paper-inside .pages-in.site { column-count: auto; max-width: 720px; margin: 0 auto; }
+
+/* v5.18 : la petite phrase du jour */
+.art-phrase blockquote { margin: 6px 0 4px; padding: 0 0 0 12px; border-left: 4px solid var(--press-red); font: italic 700 18px/1.3 Georgia, 'Times New Roman', serif; }
+.art-phrase .phrase-qui { margin: 0; font: 600 12.5px 'Archivo', var(--body); color: #6b6253; }
+.site .art-phrase { background: #f6f1e4; border-bottom: 1px solid #d8cdb2; }

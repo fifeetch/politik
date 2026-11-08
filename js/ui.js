@@ -1135,7 +1135,8 @@
       D.REGIONS.forEach(function (r) { var c = E.cubes(g, r.id, me); if (c > bc) { bc = c; best = r.id; } });
       var cities = best && Press.CITIES && Press.CITIES[best], th0 = g.news && E.THEME[g.news.theme];
       return H.edition({ turn: g.turn, maxTurns: R.maxTurns, me: me, debate: E.isDebateTurn(g),
-        city: cities ? cities[g.turn % cities.length] : null, leader: party(E.ranking(g)[0]).short, theme: th0 ? th0.name : null });
+        city: cities ? cities[g.turn % cities.length] : null, leader: party(E.ranking(g)[0]).short, theme: th0 ? th0.name : null,
+        pids: g.players.map(function (p) { return p.id; }) });
     } catch (e) { return null; }
   }
   function pubHtml(p) {
@@ -1144,7 +1145,9 @@
       '<p class="pub-acc">' + esc(p.accroche) + '</p><p class="pub-txt">' + esc(p.texte) + '</p><p class="pub-ment">* ' + esc(p.mentions) + '</p></aside>';
   }
   function humourHtml(h) {
-    return '<section class="art-item art-breves"><div class="art-rub"><span>En bref</span></div><ul>' +
+    var pp = h.petite && party(h.petite.pid);
+    return (pp ? '<section class="art-item art-phrase"><div class="art-rub"><span>La petite phrase du jour</span></div><blockquote>« ' + esc(h.petite.text) + ' »</blockquote><p class="phrase-qui">' + esc(pp.candidate) + ' (' + esc(pp.short) + ')</p></section>' : '') +
+      '<section class="art-item art-breves"><div class="art-rub"><span>En bref</span></div><ul>' +
       h.breves.map(function (b) { return '<li>' + esc(b) + '</li>'; }).join('') + '</ul></section>' +
       '<section class="art-item art-horo"><div class="art-rub"><span>L’horoscope politique</span></div>' +
       h.horo.map(function (s) { return '<p><b><span aria-hidden="true">' + s[0] + '</span> ' + esc(s[1]) + '</b> ' + esc(s[2]) + '</p>'; }).join('') + '</section>';
@@ -1164,7 +1167,7 @@
       '<div class="kq-devise">Le journal qui sait tout, juste après tout le monde</div>' +
       '<div class="kq-main"><span class="kq-tag">' + esc(tag) + '</span><h2 class="kq-titre">' + esc(m.title) + '</h2>' +
       (m.lead ? '<p class="kq-chapo">' + esc(m.lead) + '</p>' : '') +
-      '<div class="kq-pic">' + Press.scene(paper.scene) + '</div></div>' +
+      '<div class="kq-pic">' + Press.scene(paper.scene).replace(/^<svg(?![^>]*preserveAspectRatio)/, '<svg preserveAspectRatio="xMidYMid slice"') + '</div></div>' +
       '<div class="kq-renvois">' + paper.teasers.map(function (a) {
         return '<button type="button" class="kq-r" data-art="' + a.id + '"><b>' + esc(a.rub) + (a.mine ? ' · ton parti' : '') + '</b><span>' + esc(a.title) + '</span><i>p. ' + a.page + '</i></button>';
       }).join('') + '</div>' +
@@ -1392,25 +1395,37 @@
     advReactTimer = setTimeout(function () { advReact = null; if (g) renderAdvisor(); }, 5200);
   }
   /* Ce que Lulu dit quand tu programmes une action */
+  /* v5.18 : Lulu, pince-sans-rire. Le conseil reste vrai ; la réplique change d'un coup à l'autre. */
+  function luluPick(list, act) { return list[(g.turn * 3 + queue.length + (act.region || '').length) % list.length]; }
   function luluLine(act, wasTiring) {
-    var rn = act.region ? E.REG[act.region].name : '';
-    if (wasTiring) return 'Doucement ! Le candidat tire la langue (⚡ à 0) : à ce rythme, la gaffe nous guette.';
-    if (queue.length >= R.actionsPerTurn) return 'Les 3 actions sont prêtes. Tu valides quand tu veux, on fonce !';
+    var rn = act.region ? E.REG[act.region].name : '', petite = act.region && E.REG[act.region].ins < 1.5;
+    if (wasTiring) return luluPick(['Doucement ! Le candidat tire la langue (⚡ à 0) : à ce rythme, la gaffe nous guette.',
+      '⚡ à 0. Le candidat dort debout, je lui ai mis des lunettes noires pour que ça ne se voie pas.',
+      'Encore ? Il vient de serrer la main d\u2019un portemanteau. ⚡ à 0 : gare à la gaffe.'], act);
+    if (queue.length >= E.actionsFor(g, me)) return luluPick(['Les actions sont prêtes. Tu valides quand tu veux, on fonce !',
+      'C\u2019est bouclé. J\u2019ai déjà écrit le communiqué de victoire, au cas où.',
+      'Programme du jour complet. Le candidat demande s\u2019il peut au moins déjeuner.'], act);
     switch (act.type) {
       case 'terrain': var mL = estRange(act);
-        return mL && mL.hi >= 0.003 ? mL.txt + ' au sondage avec ' + rn + ' ? Je réserve la plus grande salle de la ville !' : 'Un meeting en ' + rn + ' : je préviens la presse locale.';
-      case 'medias': return 'La télé, ça touche toute la France d\u2019un coup. Mais l\u2019effet s\u2019use : pense aussi au terrain.';
-      case 'mobiliser': return 'Aller chercher ceux qui ne votent plus en ' + rn + ' : c\'est souvent là que tout se joue.';
-      case 'reseaux': return 'Les réseaux sociaux… carton ou flop. Croisons les doigts !';
-      case 'imposer': return 'Demain, tout le monde parlera de notre sujet. Malin.';
-      case 'contre': return 'Ça va faire du bruit… et nous coûter une casserole 🍳.';
-      case 'militants': return 'Des militants en ' + rn + ' : ils rapporteront à chaque tour.';
-      case 'fonds': return 'On renfloue les caisses. Les donateurs adorent les petits-fours.';
-      case 'reforme': return 'Montrer ce qu\'on fait là où on gouverne : du concret, j\'adore.';
+        if (petite) return luluPick(['Un meeting en ' + rn + ' ? Courageux. Je réserve une salle… de taille raisonnable.',
+          'En ' + rn + ', chaque voix compte. Surtout qu\u2019il n\u2019y en a pas énormément.'], act);
+        return mL && mL.hi >= 0.003 ? luluPick([mL.txt + ' au sondage avec ' + rn + ' ? Je réserve la plus grande salle de la ville !',
+          mL.txt + ' en ' + rn + ' : je commande les drapeaux et les sandwichs triangle.'], act) : 'Un meeting en ' + rn + ' : je préviens la presse locale. Elle viendra peut-être.';
+      case 'medias': return luluPick(['La télé, ça touche toute la France d\u2019un coup. Mais l\u2019effet s\u2019use : pense aussi au terrain.',
+        'Plateau télé : j\u2019ai briefé le maquilleur. Le fond de teint, lui, ne s\u2019use pas. Ton effet, si.'], act);
+      case 'mobiliser': return luluPick(['Aller chercher ceux qui ne votent plus en ' + rn + ' : c\'est souvent là que tout se joue.',
+        'Porte-à-porte en ' + rn + '. Rappel aux militants : on sonne, on sourit, on ne parle pas du programme en entier.'], act);
+      case 'reseaux': return luluPick(['Les réseaux sociaux… carton ou flop. Croisons les doigts !', 'Une vidéo de 30 secondes. Le stagiaire jure qu\u2019elle va « percer ». Le stagiaire a 19 ans.'], act);
+      case 'imposer': return 'Demain, tout le monde parlera de notre sujet. Ils diront qu\u2019ils y avaient pensé avant, évidemment.';
+      case 'contre': return luluPick(['Ça va faire du bruit… et nous coûter une casserole 🍳.', 'Une attaque frontale. J\u2019appelle l\u2019avocat, juste pour prendre un café.'], act);
+      case 'militants': return 'Des militants en ' + rn + ' : ils rapporteront à chaque tour. Et ils apportent les croissants.';
+      case 'fonds': return luluPick(['On renfloue les caisses. Les donateurs adorent les petits-fours.', 'Dîner de levée de fonds : 200 € le couvert, le saumon est en option.'], act);
+      case 'reforme': return 'Montrer ce qu\'on fait là où on gouverne : du concret, j\'adore. Enfin, du concret de campagne.';
       case 'card': return E.cardHot(g, act.card) ? 'Pile le sujet du jour : « ' + D.CARDS[act.card].name + ' » va faire un carton (+50 %) !' : 'Tu sors une carte maîtresse : « ' + D.CARDS[act.card].name + ' » !';
       case 'clan': return 'Je n\u2019ai rien vu, rien entendu. Mais si ça sort, on est cuits 🙈';
-      case 'enquete': return 'On fouille… mais si on se fait prendre, ça nous retombe dessus.';
+      case 'enquete': return luluPick(['On fouille… mais si on se fait prendre, ça nous retombe dessus.', 'J\u2019ai engagé un détective. Il porte un imperméable en plein mois d\u2019août : discret.'], act);
       case 'rupture': return 'Rompre ? Leurs électeurs ne l\'oublieront pas de sitôt.';
+      case 'repos': return 'Une journée off. Officiellement, le candidat « travaille sur ses dossiers ».';
     }
     return 'Noté !';
   }
