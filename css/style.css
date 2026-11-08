@@ -1599,3 +1599,12 @@ button { font-family: inherit; color: inherit; }
   .gauge b { font-size: 19px; }
   .gov-team { flex-wrap: wrap; }
 }
+
+/* v5.16 : l'aide de Lulu — toucher le haut de l'écran ouvre son explication */
+.lulu-help { cursor: pointer; }
+.lulu-help:focus-visible { outline: 2px solid var(--violet); outline-offset: 2px; }
+.phase-label.lulu-help { text-decoration: underline dotted; text-underline-offset: 3px; }
+.lulu-q-k { display: block; margin-top: 14px; }
+.lulu-q { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+.lulu-q .pick-row { min-height: 44px; }
+.lulu-m p + p { margin-top: 8px; }
