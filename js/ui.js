@@ -1093,9 +1093,35 @@
   }
   function articlesHtml(paper) {
     artVus = {};
-    return '<div class="pages-in">' + paper.articles.map(articleHtml).join('') +
+    var hu = humourEdition(), arts = paper.articles;
+    return '<div class="pages-in">' + arts.map(function (a, i) {
+        return articleHtml(a) + (hu && (i === 1 || (i === 0 && arts.length === 1)) ? pubHtml(hu.pub) : '');   // v5.17 : la pub entre deux articles
+      }).join('') +
+      (hu ? humourHtml(hu) : '') +
       (paper.mine ? '<section class="art-lulu"><div class="art-rub"><span>Le mot de Lulu</span></div><div class="learn">' + A.advisor() + '<div class="brief">' + paper.mine + '</div></div></section>' : '') +
       (paper.learn ? '<section class="art-learn">' + paper.learn + '</section>' : '') + '</div>';
+  }
+  /* v5.17 : le coin satirique (pub parodique, brèves, horoscope politique), selon le moment de la partie */
+  function humourEdition() {
+    var H = window.PolitikHumour; if (!H || !g) return null;
+    try {
+      var best = null, bc = -1;
+      D.REGIONS.forEach(function (r) { var c = E.cubes(g, r.id, me); if (c > bc) { bc = c; best = r.id; } });
+      var cities = best && Press.CITIES && Press.CITIES[best], th0 = g.news && E.THEME[g.news.theme];
+      return H.edition({ turn: g.turn, maxTurns: R.maxTurns, me: me, debate: E.isDebateTurn(g),
+        city: cities ? cities[g.turn % cities.length] : null, leader: party(E.ranking(g)[0]).short, theme: th0 ? th0.name : null });
+    } catch (e) { return null; }
+  }
+  function pubHtml(p) {
+    return '<aside class="art-pub" aria-label="Publicité parodique"><span class="pub-tag">Publicité</span>' +
+      '<div class="pub-ic" aria-hidden="true">' + p.ic + '</div><div class="pub-nom">' + esc(p.nom) + '</div>' +
+      '<p class="pub-acc">' + esc(p.accroche) + '</p><p class="pub-txt">' + esc(p.texte) + '</p><p class="pub-ment">* ' + esc(p.mentions) + '</p></aside>';
+  }
+  function humourHtml(h) {
+    return '<section class="art-item art-breves"><div class="art-rub"><span>En bref</span></div><ul>' +
+      h.breves.map(function (b) { return '<li>' + esc(b) + '</li>'; }).join('') + '</ul></section>' +
+      '<section class="art-item art-horo"><div class="art-rub"><span>L’horoscope politique</span></div>' +
+      h.horo.map(function (s) { return '<p><b><span aria-hidden="true">' + s[0] + '</span> ' + esc(s[1]) + '</b> ' + esc(s[2]) + '</p>'; }).join('') + '</section>';
   }
   function frontHtml(paper) {
     var m = paper.main;
