@@ -1367,6 +1367,14 @@
       case 'buzz': g.mods.socialFree = true; say(null, 'Buzz gratuits ce tour.'); break;
       case 'sondage': { var lp = last(g), dS = pollShift(g, lp, 0.003); say(lp, PARTY[lp].short + ' : ' + ptLabel(dS) + ' au sondage.'); break; }
       case 'fete': say(null, 'Trêve républicaine : pas d\u2019effet sur la campagne.'); break;
+      /* v5.18 : les événements absurdes */
+      case 'meme': { var pm = g.players[Math.floor(g.rng() * g.players.length)].id, up = g.rng() < 0.5, dM = pollShift(g, pm, up ? 0.003 : -0.002);
+        say(pm, PARTY[pm].short + (up ? ' : le mème fait rire, ' : ' : le mème fait rire… de lui, ') + ptLabel(dM) + ' au sondage.'); break; }
+      case 'college': { var lc = last(g); player(g, lc).money += 2; say(lc, PARTY[lc].short + ' gagne 2 € (des parents amusés).'); break; }
+      case 'grimace': { var lg = leader(g);
+        if (lg) { var dG = pollShift(g, lg, -0.002); say(lg, PARTY[lg].short + ' : ' + ptLabel(dG) + ' au sondage.'); }
+        else say(null, 'Personne n\u2019est en tête : le fromage reste dans l\u2019assiette.');
+        break; }
       case 'division': case 'division2':
         g.players.forEach(function (p) {
           var n = p.id === 'UG' ? 2 : 1; var rid = strongestRegion(g, p.id);

@@ -1016,15 +1016,24 @@
     artVus[nom] = true;
     return '<div class="art-pic">' + BD.une(nom) + '</div>';
   }
-  function articleHtml(a) {
-    var p = a.pid ? party(a.pid) : null;
-    return '<article class="art-item' + (a.mine ? ' mine' : '') + '" id="art-' + a.id + '">' +
-      '<div class="art-rub"><span>' + esc(a.rub) + '</span>' + (a.mine ? '<em>Ton parti</em>' : '') + '<i>p. ' + a.page + '</i></div>' +
-      (a.id === 'main' ? '<div class="art-pic">' + Press.scene(a.scene) + '</div>' : artScene(a)) +
-      '<h3>' + esc(a.title) + '</h3>' +
+  /* v5.18 : l'intérieur du journal se lit comme un vrai site d'information.
+     Un article à la une, ouvert ; les autres en liste (vignette, rubrique, heure), qu'on touche pour les déplier. */
+  function siteHash(s) { s = String(s); var h = 7; for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 100003; return h; }
+  function siteAgo(i) { var m = 25 + i * 47; return 'Il y a ' + (m < 60 ? m + ' min' : Math.floor(m / 60) + ' h'); }
+  var SITE_ABO = { 'Affaires': 1, 'Coulisses': 1 };
+  var SITE_IC = { 'Sondage': '📊', 'Affaires': '⚖️', 'Régions': '🗺️', 'Médias': '📺', 'Programmes': '📜', 'Coulisses': '🚪', 'Campagne': '📣', 'Meeting': '📣' };
+  function articleHtml(a, i) {
+    var p = a.pid ? party(a.pid) : null, hero = a.id === 'main', words = String(a.text || '').split(/\s+/).length;
+    var meta = '<div class="site-meta"><b>' + esc(a.rub) + '</b>' + (SITE_ABO[a.rub] ? '<span class="site-abo-b">Abonnés</span>' : '') + (a.mine ? '<em>Ton parti</em>' : '') + '<span>' + siteAgo(i || 0) + '</span></div>';
+    var thumb = hero ? '' : '<span class="site-th"' + (p ? ' style="--pc:' + p.color + '"' : '') + '>' + (p ? A.portrait(a.pid) : '<i aria-hidden="true">' + (SITE_IC[a.rub] || '📰') + '</i>') + '</span>';
+    return '<article class="art-item site-art' + (hero ? ' hero open' : '') + (a.mine ? ' mine' : '') + '" id="art-' + a.id + '" data-rub="' + esc(a.rub) + '">' +
+      (hero ? '<div class="art-pic">' + Press.scene(a.scene) + '</div>' : '') +
+      '<button type="button" class="site-art-h"' + (hero ? ' tabindex="-1"' : '') + ' aria-expanded="' + (hero ? 'true' : 'false') + '">' + thumb + '<span class="site-art-t">' + meta + '<h3>' + esc(a.title) + '</h3>' +
+      '<small class="site-by">Par la rédaction · ' + Math.max(1, Math.ceil(words / 45)) + ' min de lecture · 💬 ' + (12 + siteHash(a.id + g.turn) % 380) + '</small></span></button>' +
+      '<div class="site-body">' + (hero ? '' : artScene(a)) +
       (a.rule ? '<p class="art-rule"><b>' + esc(a.ruleLabel || 'Pour la campagne') + ' :</b> ' + esc(a.rule) + '</p>' : '') +
       '<div class="art-body">' + (p && a.id !== 'main' ? '<span class="art-face" style="--pc:' + p.color + '">' + A.portrait(a.pid) + '</span>' : '') + '<p>' + esc(a.text) + '</p></div>' +
-      (a.why ? '<button type="button" class="art-more" data-why="' + esc(a.id) + '">🔎 Les coulisses <span aria-hidden="true">›</span></button>' : '') + '</article>';
+      (a.why ? '<button type="button" class="art-more" data-why="' + esc(a.id) + '">🔎 Les coulisses <span aria-hidden="true">›</span></button>' : '') + '</div></article>';
   }
   /* v4.8 : les coulisses d'un article. Le journal raconte ; ici, on explique ce qui s'est passé DANS LE JEU :
      l'action jouée, sa règle, son effet chiffré, et le trait du parti quand c'est un gag. Plus on fouille, plus on comprend. */
@@ -1093,14 +1102,31 @@
   }
   function articlesHtml(paper) {
     artVus = {};
-    var hu = humourEdition(), arts = paper.articles;
-    return '<div class="pages-in">' + arts.map(function (a, i) {
-        return articleHtml(a) + (hu && (i === 1 || (i === 0 && arts.length === 1)) ? pubHtml(hu.pub) : '');   // v5.17 : la pub entre deux articles
+    var hu = humourEdition(), arts = paper.articles, rubs = [];
+    arts.forEach(function (a) { if (a.id !== 'main' && rubs.indexOf(a.rub) < 0) rubs.push(a.rub); });
+    var live = arts.slice(0, 4).map(function (a) { return a.title; }).concat(hu ? hu.breves : []);
+    return '<div class="pages-in site">' +
+      '<header class="site-head"><span class="site-logo">Le Quotidien National<em>.fr</em></span><span class="site-sub" aria-hidden="true">S’abonner</span></header>' +
+      '<nav class="site-nav" aria-label="Rubriques"><button type="button" class="on" data-rubf="">À la une</button>' + rubs.map(function (r) { return '<button type="button" data-rubf="' + esc(r) + '">' + esc(r) + '</button>'; }).join('') + '</nav>' +
+      '<div class="site-live"><b>En direct</b><div class="site-live-w"><span>' + live.map(esc).join(' &nbsp;·&nbsp; ') + '</span></div></div>' +
+      arts.map(function (a, i) {
+        return articleHtml(a, i) + (hu && (i === 2 || (i === arts.length - 1 && i < 2)) ? pubHtml(hu.pub) : '');   // v5.17 : la pub entre deux articles
       }).join('') +
       (hu ? humourHtml(hu) : '') +
       (paper.mine ? '<section class="art-lulu"><div class="art-rub"><span>Le mot de Lulu</span></div><div class="learn">' + A.advisor() + '<div class="brief">' + paper.mine + '</div></div></section>' : '') +
-      (paper.learn ? '<section class="art-learn">' + paper.learn + '</section>' : '') + '</div>';
+      (paper.learn ? '<section class="art-learn">' + paper.learn + '</section>' : '') +
+      '<footer class="site-foot"><b>Le Quotidien National</b><span>Mentions légales · Nous contacter · Gérer mes cookies (il n’y en a pas)</span><span>© La rédaction, qui décline toute responsabilité.</span></footer></div>';
   }
+  /* v5.18 : le site se lit au doigt — déplier un article, filtrer par rubrique */
+  document.addEventListener('click', function (e) {
+    var h = e.target.closest('.site-art-h');
+    if (h) { var art = h.closest('.site-art'); if (art.classList.contains('hero')) return; var o = art.classList.toggle('open'); h.setAttribute('aria-expanded', o ? 'true' : 'false'); return; }
+    var f = e.target.closest('[data-rubf]'); if (!f) return;
+    var site = f.closest('.site'), r = f.getAttribute('data-rubf');
+    Array.prototype.forEach.call(site.querySelectorAll('[data-rubf]'), function (b) { b.classList.toggle('on', b === f); });
+    site.classList.toggle('filtre', !!r);
+    Array.prototype.forEach.call(site.querySelectorAll('.site-art'), function (a) { a.classList.toggle('cache', !!r && a.getAttribute('data-rub') !== r); if (r && a.getAttribute('data-rub') === r) a.classList.add('open'); });
+  });
   /* v5.17 : le coin satirique (pub parodique, brèves, horoscope politique), selon le moment de la partie */
   function humourEdition() {
     var H = window.PolitikHumour; if (!H || !g) return null;
@@ -1109,7 +1135,8 @@
       D.REGIONS.forEach(function (r) { var c = E.cubes(g, r.id, me); if (c > bc) { bc = c; best = r.id; } });
       var cities = best && Press.CITIES && Press.CITIES[best], th0 = g.news && E.THEME[g.news.theme];
       return H.edition({ turn: g.turn, maxTurns: R.maxTurns, me: me, debate: E.isDebateTurn(g),
-        city: cities ? cities[g.turn % cities.length] : null, leader: party(E.ranking(g)[0]).short, theme: th0 ? th0.name : null });
+        city: cities ? cities[g.turn % cities.length] : null, leader: party(E.ranking(g)[0]).short, theme: th0 ? th0.name : null,
+        pids: g.players.map(function (p) { return p.id; }) });
     } catch (e) { return null; }
   }
   function pubHtml(p) {
@@ -1118,20 +1145,34 @@
       '<p class="pub-acc">' + esc(p.accroche) + '</p><p class="pub-txt">' + esc(p.texte) + '</p><p class="pub-ment">* ' + esc(p.mentions) + '</p></aside>';
   }
   function humourHtml(h) {
-    return '<section class="art-item art-breves"><div class="art-rub"><span>En bref</span></div><ul>' +
+    var pp = h.petite && party(h.petite.pid);
+    return (pp ? '<section class="art-item art-phrase"><div class="art-rub"><span>La petite phrase du jour</span></div><blockquote>« ' + esc(h.petite.text) + ' »</blockquote><p class="phrase-qui">' + esc(pp.candidate) + ' (' + esc(pp.short) + ')</p></section>' : '') +
+      '<section class="art-item art-breves"><div class="art-rub"><span>En bref</span></div><ul>' +
       h.breves.map(function (b) { return '<li>' + esc(b) + '</li>'; }).join('') + '</ul></section>' +
       '<section class="art-item art-horo"><div class="art-rub"><span>L’horoscope politique</span></div>' +
       h.horo.map(function (s) { return '<p><b><span aria-hidden="true">' + s[0] + '</span> ' + esc(s[1]) + '</b> ' + esc(s[2]) + '</p>'; }).join('') + '</section>';
   }
+  /* v5.18 : la une est un vrai journal posé sur le comptoir du kiosque : plié, puis déplié */
+  function codeBarres(seed) {
+    var x = 0, s = '', h = siteHash(seed);
+    for (var i = 0; i < 34; i++) { var w = 1 + ((h >> (i % 15)) & 1) + (i % 7 === 0 ? 1 : 0); s += '<rect x="' + x + '" y="0" width="' + w + '" height="30" fill="#161616"/>'; x += w + 1 + ((h >> ((i + 3) % 15)) & 1); }
+    return '<svg class="kq-cb" viewBox="0 0 ' + x + ' 30" preserveAspectRatio="none" aria-hidden="true">' + s + '</svg>';
+  }
   function frontHtml(paper) {
-    var m = paper.main;
-    return '<div class="une-top"><span class="une-nom">Le Quotidien National</span><span class="une-date">' + paper.day.charAt(0).toUpperCase() + paper.day.slice(1) + '<br>' + esc(paper.when || 'tour ' + g.turn + ' sur ' + R.maxTurns) + '</span></div>' +
-      '<div class="une-word">' + esc(paper.word) + '</div>' +
-      '<p class="une-sub">' + esc(m.lead || m.title) + '</p>' +
-      '<div class="une-pic">' + Press.scene(paper.scene) + '</div>' +
-      '<div class="une-teasers">' + paper.teasers.map(function (a) {
-        return '<button type="button" class="une-t" data-art="' + a.id + '"><b>' + esc(a.title) + '</b><small>' + (a.mine ? 'Ton parti · ' : '') + 'page ' + a.page + '</small></button>';
-      }).join('') + '</div>';
+    var m = paper.main, tag = String(paper.word || '').replace(/\.$/, ''), num = 12480 + (g ? g.turn : 0) * 7 + (paper.when ? 300 : 0);
+    var day = paper.day.charAt(0).toUpperCase() + paper.day.slice(1);
+    return '<div class="kq"><div class="kq-paper"><div class="kq-fold" aria-hidden="true"></div>' +
+      '<div class="kq-meta"><span>N° ' + num.toLocaleString('fr-FR') + '</span><span>' + esc(day) + ' · ' + esc(paper.when || 'tour ' + g.turn + ' sur ' + R.maxTurns) + '</span><span>2,20 €</span></div>' +
+      '<div class="kq-nom">Le Quotidien National</div>' +
+      '<div class="kq-devise">Le journal qui sait tout, juste après tout le monde</div>' +
+      '<div class="kq-main"><span class="kq-tag">' + esc(tag) + '</span><h2 class="kq-titre">' + esc(m.title) + '</h2>' +
+      (m.lead ? '<p class="kq-chapo">' + esc(m.lead) + '</p>' : '') +
+      '<div class="kq-pic">' + Press.scene(paper.scene).replace(/^<svg(?![^>]*preserveAspectRatio)/, '<svg preserveAspectRatio="xMidYMid slice"') + '</div></div>' +
+      '<div class="kq-renvois">' + paper.teasers.map(function (a) {
+        return '<button type="button" class="kq-r" data-art="' + a.id + '"><b>' + esc(a.rub) + (a.mine ? ' · ton parti' : '') + '</b><span>' + esc(a.title) + '</span><i>p. ' + a.page + '</i></button>';
+      }).join('') + '</div>' +
+      '<div class="kq-pied">' + codeBarres(num) + '<span>Imprimé sur papier recyclé (trois fois). Ne pas jeter sur la voie publique, sauf en manifestation.</span></div>' +
+      '</div></div>';
   }
   /* le mot géant prend toute la largeur, sans déborder */
   function fitWord() {
@@ -1144,7 +1185,7 @@
     curPaper = paper;
     paperCont = cont;
     $('paper-front').innerHTML = frontHtml(paper);
-    $('paper-inside').innerHTML = '<div class="pages-head"><button type="button" class="linkbtn" id="paper-back">‹ La une</button><span>Le Quotidien National · ' + esc(paper.when || 'tour ' + g.turn) + '</span></div>' + articlesHtml(paper);
+    $('paper-inside').innerHTML = '<div class="pages-head"><button type="button" class="linkbtn" id="paper-back">‹ La une</button><span class="site-url"><i aria-hidden="true">🔒</i> lequotidiennational.fr/edition/' + esc(paper.when ? paper.when.replace(/\s+/g, '-') : 'tour-' + g.turn) + '</span></div>' + articlesHtml(paper);
     $('paper-inside').hidden = true; $('paper-front').hidden = false;
     $('paper-open').hidden = false;
     $('paper-go').textContent = contLabel;
@@ -1159,7 +1200,7 @@
     FX.replay($('paper-inside'), 'pages-in-anim');
     var t = id && $('paper-inside').querySelector('#art-' + id);
     $('paper-inside').scrollTop = 0;
-    if (t) { $('paper-inside').scrollTop = t.offsetTop - 56; FX.replay(t, 'art-hi'); }
+    if (t) { t.classList.add('open'); $('paper-inside').scrollTop = t.offsetTop - 56; FX.replay(t, 'art-hi'); }
   }
   function closePaper() { $('paper').hidden = true; var c = paperCont; paperCont = null; if (c) c(); }
   $('paper-go').addEventListener('click', closePaper);
@@ -1354,25 +1395,37 @@
     advReactTimer = setTimeout(function () { advReact = null; if (g) renderAdvisor(); }, 5200);
   }
   /* Ce que Lulu dit quand tu programmes une action */
+  /* v5.18 : Lulu, pince-sans-rire. Le conseil reste vrai ; la réplique change d'un coup à l'autre. */
+  function luluPick(list, act) { return list[(g.turn * 3 + queue.length + (act.region || '').length) % list.length]; }
   function luluLine(act, wasTiring) {
-    var rn = act.region ? E.REG[act.region].name : '';
-    if (wasTiring) return 'Doucement ! Le candidat tire la langue (⚡ à 0) : à ce rythme, la gaffe nous guette.';
-    if (queue.length >= R.actionsPerTurn) return 'Les 3 actions sont prêtes. Tu valides quand tu veux, on fonce !';
+    var rn = act.region ? E.REG[act.region].name : '', petite = act.region && E.REG[act.region].ins < 1.5;
+    if (wasTiring) return luluPick(['Doucement ! Le candidat tire la langue (⚡ à 0) : à ce rythme, la gaffe nous guette.',
+      '⚡ à 0. Le candidat dort debout, je lui ai mis des lunettes noires pour que ça ne se voie pas.',
+      'Encore ? Il vient de serrer la main d\u2019un portemanteau. ⚡ à 0 : gare à la gaffe.'], act);
+    if (queue.length >= E.actionsFor(g, me)) return luluPick(['Les actions sont prêtes. Tu valides quand tu veux, on fonce !',
+      'C\u2019est bouclé. J\u2019ai déjà écrit le communiqué de victoire, au cas où.',
+      'Programme du jour complet. Le candidat demande s\u2019il peut au moins déjeuner.'], act);
     switch (act.type) {
       case 'terrain': var mL = estRange(act);
-        return mL && mL.hi >= 0.003 ? mL.txt + ' au sondage avec ' + rn + ' ? Je réserve la plus grande salle de la ville !' : 'Un meeting en ' + rn + ' : je préviens la presse locale.';
-      case 'medias': return 'La télé, ça touche toute la France d\u2019un coup. Mais l\u2019effet s\u2019use : pense aussi au terrain.';
-      case 'mobiliser': return 'Aller chercher ceux qui ne votent plus en ' + rn + ' : c\'est souvent là que tout se joue.';
-      case 'reseaux': return 'Les réseaux sociaux… carton ou flop. Croisons les doigts !';
-      case 'imposer': return 'Demain, tout le monde parlera de notre sujet. Malin.';
-      case 'contre': return 'Ça va faire du bruit… et nous coûter une casserole 🍳.';
-      case 'militants': return 'Des militants en ' + rn + ' : ils rapporteront à chaque tour.';
-      case 'fonds': return 'On renfloue les caisses. Les donateurs adorent les petits-fours.';
-      case 'reforme': return 'Montrer ce qu\'on fait là où on gouverne : du concret, j\'adore.';
+        if (petite) return luluPick(['Un meeting en ' + rn + ' ? Courageux. Je réserve une salle… de taille raisonnable.',
+          'En ' + rn + ', chaque voix compte. Surtout qu\u2019il n\u2019y en a pas énormément.'], act);
+        return mL && mL.hi >= 0.003 ? luluPick([mL.txt + ' au sondage avec ' + rn + ' ? Je réserve la plus grande salle de la ville !',
+          mL.txt + ' en ' + rn + ' : je commande les drapeaux et les sandwichs triangle.'], act) : 'Un meeting en ' + rn + ' : je préviens la presse locale. Elle viendra peut-être.';
+      case 'medias': return luluPick(['La télé, ça touche toute la France d\u2019un coup. Mais l\u2019effet s\u2019use : pense aussi au terrain.',
+        'Plateau télé : j\u2019ai briefé le maquilleur. Le fond de teint, lui, ne s\u2019use pas. Ton effet, si.'], act);
+      case 'mobiliser': return luluPick(['Aller chercher ceux qui ne votent plus en ' + rn + ' : c\'est souvent là que tout se joue.',
+        'Porte-à-porte en ' + rn + '. Rappel aux militants : on sonne, on sourit, on ne parle pas du programme en entier.'], act);
+      case 'reseaux': return luluPick(['Les réseaux sociaux… carton ou flop. Croisons les doigts !', 'Une vidéo de 30 secondes. Le stagiaire jure qu\u2019elle va « percer ». Le stagiaire a 19 ans.'], act);
+      case 'imposer': return 'Demain, tout le monde parlera de notre sujet. Ils diront qu\u2019ils y avaient pensé avant, évidemment.';
+      case 'contre': return luluPick(['Ça va faire du bruit… et nous coûter une casserole 🍳.', 'Une attaque frontale. J\u2019appelle l\u2019avocat, juste pour prendre un café.'], act);
+      case 'militants': return 'Des militants en ' + rn + ' : ils rapporteront à chaque tour. Et ils apportent les croissants.';
+      case 'fonds': return luluPick(['On renfloue les caisses. Les donateurs adorent les petits-fours.', 'Dîner de levée de fonds : 200 € le couvert, le saumon est en option.'], act);
+      case 'reforme': return 'Montrer ce qu\'on fait là où on gouverne : du concret, j\'adore. Enfin, du concret de campagne.';
       case 'card': return E.cardHot(g, act.card) ? 'Pile le sujet du jour : « ' + D.CARDS[act.card].name + ' » va faire un carton (+50 %) !' : 'Tu sors une carte maîtresse : « ' + D.CARDS[act.card].name + ' » !';
       case 'clan': return 'Je n\u2019ai rien vu, rien entendu. Mais si ça sort, on est cuits 🙈';
-      case 'enquete': return 'On fouille… mais si on se fait prendre, ça nous retombe dessus.';
+      case 'enquete': return luluPick(['On fouille… mais si on se fait prendre, ça nous retombe dessus.', 'J\u2019ai engagé un détective. Il porte un imperméable en plein mois d\u2019août : discret.'], act);
       case 'rupture': return 'Rompre ? Leurs électeurs ne l\'oublieront pas de sitôt.';
+      case 'repos': return 'Une journée off. Officiellement, le candidat « travaille sur ses dossiers ».';
     }
     return 'Noté !';
   }
@@ -1616,7 +1669,7 @@
   }
   var lastJournal = '';
   function renderActu() {
-    $('actu-body').innerHTML = (lastPaper ? '<button type="button" class="btn" id="actu-une">📰 Revoir la une du jour</button>' : '') + (g.news ? newsHtml(g.news) : '') + (lastJournal ? '<div class="actu-pages"><div class="actu-mast">Le Quotidien National</div>' + lastJournal + '</div>' : '');
+    $('actu-body').innerHTML = (lastPaper ? '<button type="button" class="btn" id="actu-une">📰 Revoir la une du jour</button>' : '') + (g.news ? newsHtml(g.news) : '') + (lastJournal ? '<div class="actu-pages">' + lastJournal + '</div>' : '');
     var b = $('actu-une'); if (b) b.addEventListener('click', function () { showPaper(lastPaper, 'Retour à la carte', null); });
   }
 

@@ -834,6 +834,9 @@
     { id: 'patrimoine', title: 'Journées du patrimoine',   text: 'Chaque parti gagne 1 soutien dans la région historique où il est le plus fort.' },
     { id: 'mecene',     title: 'Mécène généreux',          text: 'Le dernier au classement gagne 3 €.' },
     { id: 'bouchons', title: 'Bouchons sur le périph',   text: "Le parti qui contrôle l'Île-de-France perd 1 soutien." },
+    { id: 'meme',       title: 'Une affiche devient un mème', text: 'L\u2019affiche d\u2019un parti tiré au sort est détournée sur les réseaux : à pile ou face, coup de pouce (+0,3 pt) ou ridicule (−0,2 pt).' },   // v5.18
+    { id: 'college',    title: 'Sondage dans les collèges',   text: 'Le dernier du classement arrive en tête chez les moins de 18 ans. Ils ne votent pas, mais des parents amusés lui donnent 2 €.' },   // v5.18
+    { id: 'grimace',    title: 'La grimace en direct',        text: 'Le favori goûte un fromage devant les caméras et grimace : −0,2 pt au sondage.' },   // v5.18
     { id: 'calme',      title: 'Rentrée tranquille',       text: 'Il ne se passe rien. Profitez-en.' },
     { id: 'division2',  title: 'Congrès houleux',          text: "Division : chaque parti perd 1 soutien dans sa région la plus forte (2 pour Les Rescapés)." }
   ];
